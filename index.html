@@ -14,24 +14,29 @@
     .next-btn { width: 90%; padding: 20px; background: #4CAF50; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin: 8px 0; }
     label { color: #888; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 5px; }
     .exercise-name { color: white; font-size: 1.8rem; font-weight: bold; display: block; }
-    .stat-row { display: flex; justify-content: space-between; width: 100%; margin: 5px 0; border-bottom: 1px solid #222; padding: 8px 0; }
     .comparison { background: #1e2a1e; color: #81c784; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: left; font-size: 0.9rem; border-left: 4px solid #4CAF50; }
+    .hist-card { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 3px solid #555; }
+    .hist-date { color: #4CAF50; font-weight: bold; font-size: 0.9rem; }
+    .hist-stats { font-size: 0.8rem; color: #bbb; margin-top: 5px; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
 
+  <!-- Pantalla Bienvenida -->
   <div id="view-welcome" class="view active">
-    <h2 id="today-date"></h2>
+    <h2 id="display-date"></h2>
+    <input type="date" id="date-hacker" style="background:#222; color:white; border:1px solid #444; padding:5px; margin-bottom:20px;" onchange="updateActiveDate()">
     <div id="check-msg"></div>
     <button class="next-btn" onclick="startWorkout()">EMPEZAR ENTRENAMIENTO</button>
+    <button class="next-btn" style="background:#455a64" onclick="showHistory()">VER HISTORIAL 📊</button>
     <button class="next-btn" style="background:#333" onclick="showExit()">HOY NO, GRACIAS</button>
 
     <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
-      <button class="next-btn" style="background:#455a64; font-size:0.9rem; padding:12px;" onclick="exportJSON()">EXPORTAR JSON</button>
-      <button class="next-btn" style="background:#455a64; font-size:0.9rem; padding:12px;" onclick="document.getElementById('fileInput').click()">IMPORTAR JSON</button>
+      <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="exportJSON()">EXPORTAR JSON</button>
+      <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="document.getElementById('fileInput').click()">IMPORTAR JSON</button>
       <input type="file" id="fileInput" style="display:none" onchange="importJSON(event)" accept=".json">
-      <button class="next-btn" style="background:#b71c1c; font-size: 0.8rem; padding: 10px;" onclick="clearAllData()">BORRAR TODO EL HISTORIAL</button>
+      <button class="next-btn" style="background:#b71c1c; font-size: 0.7rem; padding: 10px;" onclick="clearAllData()">BORRAR TODO EL HISTORIAL</button>
     </div>
   </div>
 
@@ -44,13 +49,19 @@
     <div style="margin-top: 20px;">
       <span id="finalTime" style="font-size: 2.5rem; font-weight: bold; color: #4CAF50;"></span>
     </div>
-    <button class="next-btn" style="background:#333" onclick="location.reload()">VOLVER AL INICIO</button>
+    <button class="next-btn" onclick="location.reload()">VOLVER AL INICIO</button>
+  </div>
+
+  <div id="view-history" class="view">
+    <h2>TU HISTORIAL</h2>
+    <div id="history-list"></div>
+    <button class="next-btn" style="background:#333" onclick="location.reload()">VOLVER</button>
   </div>
 
   <div id="view-exit" class="view">
     <h1 style="font-size: 4rem;">👋</h1>
     <h2>¡Entendido!</h2>
-    <p>Descansa y nos vemos mañana para darlo todo.</p>
+    <p>Descansa y nos vemos mañana.</p>
     <button class="next-btn" onclick="location.reload()">VOLVER</button>
   </div>
 
@@ -68,18 +79,20 @@
 
     let results = {};
     let startTime;
-    const todayKey = new Date().toISOString().split('T')[0];
+    let activeDate = new Date().toISOString().split('T')[0];
     let history = JSON.parse(localStorage.getItem('workout_history') || '{}');
 
-    document.getElementById('today-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-    updateWelcomeMsg();
+    // Inicializar fecha
+    document.getElementById('date-hacker').value = activeDate;
+    updateActiveDate();
 
-    function updateWelcomeMsg() {
-      if (history[todayKey]) {
-        document.getElementById('check-msg').innerHTML = `<p style="color:#ffa726">⚠️ Ya has entrenado hoy.<br>Si sigues, se sobrescribirá.</p>`;
-      } else {
-        document.getElementById('check-msg').innerHTML = `<p>¿Listo para los 15 minutos de gloria?</p>`;
-      }
+    function updateActiveDate() {
+      activeDate = document.getElementById('date-hacker').value;
+      const d = new Date(activeDate);
+      document.getElementById('display-date').innerText = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+      document.getElementById('check-msg').innerHTML = history[activeDate]
+        ? `<p style="color:#ffa726">⚠️ Sesión ya registrada.</p>`
+        : `<p>¿Listo para los 15 minutos?</p>`;
     }
 
     function startWorkout() {
@@ -123,17 +136,17 @@
 
     function finish() {
       const durationSec = Math.floor((Date.now() - startTime) / 1000);
-      const totalSent = config.filter(c => c.type === 'sent').reduce((acc, c) => acc + results[c.id], 0);
-      const totalFlex = config.filter(c => c.type === 'flex').reduce((acc, c) => acc + results[c.id], 0);
-      const totalDom = config.filter(c => c.type === 'dom').reduce((acc, c) => acc + results[c.id], 0);
+      const totals = {
+        totalSent: config.filter(c => c.type === 'sent').reduce((acc, c) => acc + results[c.id], 0),
+        totalFlex: config.filter(c => c.type === 'flex').reduce((acc, c) => acc + results[c.id], 0),
+        totalDom: config.filter(c => c.type === 'dom').reduce((acc, c) => acc + results[c.id], 0)
+      };
 
-      const currentData = { date: todayKey, duration: durationSec, totalSent, totalFlex, totalDom, ...results };
-      const keys = Object.keys(history).sort();
-      const lastKey = keys.filter(k => k < todayKey).pop();
-      const lastSession = lastKey ? history[lastKey] : null;
+      const currentData = { date: activeDate, duration: durationSec, ...totals, ...results };
+      const lastKey = Object.keys(history).sort().filter(k => k < activeDate).pop();
+      showSummary(currentData, history[lastKey]);
 
-      showSummary(currentData, lastSession);
-      history[todayKey] = currentData;
+      history[activeDate] = currentData;
       localStorage.setItem('workout_history', JSON.stringify(history));
     }
 
@@ -149,16 +162,31 @@
         const dF = cur.totalFlex - prev.totalFlex;
         const dD = cur.totalDom - prev.totalDom;
         const dT = prev.duration - cur.duration;
-        document.getElementById('comparison-box').innerHTML = `<b>VS. ANTERIOR:</b><br>• Sentadillas: ${dS>=0?'+':''}${dS}<br>• Flexiones: ${dF>=0?'+':''}${dF}<br>• Dominadas: ${dD>=0?'+':''}${dD}<br>• Tiempo: ${dT>=0?'🚀 ':'🐢 '}${Math.abs(dT)}s ${dT>=0?'menos':'más'}`;
+        document.getElementById('comparison-box').innerHTML = `<b>VS. ANTERIOR:</b><br>• Sent: ${dS>=0?'+':''}${dS} | Flex: ${dF>=0?'+':''}${dF} | Dom: ${dD>=0?'+':''}${dD}<br>• Tiempo: ${dT>=0?'🚀 ':'🐢 '}${Math.abs(dT)}s`;
       }
       document.getElementById('statsList').innerHTML = config.map(c => `<div class="stat-row"><span>${c.name}</span><span>${results[c.id]}</span></div>`).join('');
     }
 
+    function showHistory() {
+      document.getElementById('view-welcome').classList.remove('active');
+      document.getElementById('view-history').classList.add('active');
+      const list = document.getElementById('history-list');
+      const sortedKeys = Object.keys(history).sort().reverse();
+      list.innerHTML = sortedKeys.map(k => {
+        const s = history[k];
+        return `<div class="hist-card">
+          <div class="hist-date">${k}</div>
+          <div class="hist-stats">S: ${s.totalSent} | F: ${s.totalFlex} | D: ${s.totalDom} | ⏱️ ${Math.floor(s.duration/60)}m ${s.duration%60}s</div>
+        </div>`;
+      }).join('');
+    }
+
     function exportJSON() {
       const blob = new Blob([JSON.stringify(history, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `entreno_bak_${todayKey}.json`;
+      a.href = url;
+      a.download = `workout_export_${activeDate}.json`;
       a.click();
     }
 
@@ -167,16 +195,16 @@
       reader.onload = (e) => {
         try {
           const imported = JSON.parse(e.target.result);
-          if (confirm("Se borrarán los datos actuales. ¿Continuar?")) {
+          if (confirm("Se sobrescribirá el historial actual. ¿Continuar?")) {
             localStorage.setItem('workout_history', JSON.stringify(imported));
             location.reload();
           }
-        } catch (err) { alert("Archivo JSON no válido"); }
+        } catch (err) { alert("Error al leer el archivo JSON."); }
       };
       reader.readAsText(event.target.files[0]);
     }
 
-    function clearAllData() { if (confirm("¿Borrar historial?")) { localStorage.removeItem('workout_history'); location.reload(); } }
+    function clearAllData() { if (confirm("¿Borrar todo el historial?")) { localStorage.removeItem('workout_history'); location.reload(); } }
     function showExit() { document.getElementById('view-welcome').classList.remove('active'); document.getElementById('view-exit').classList.add('active'); }
   </script>
 </body>
