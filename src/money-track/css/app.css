@@ -99,6 +99,19 @@ h1, h2 {
   margin-bottom: 20px;
 }
 
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background: var(--bg-color);
+  padding: 10px 20px;
+  margin: -20px -20px 20px -20px;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 label {
   display: block;
   font-size: 0.9rem;
