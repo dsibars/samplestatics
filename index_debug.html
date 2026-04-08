@@ -90,7 +90,12 @@ const TRANSLATIONS = {
     desc_dom_b: "Agarre cerrado supinado, enfócate en la contracción.",
     desc_rest: "Recupera tu aliento y prepárate para la próxima serie.",
     desc_plank: "Mantén apretado el core con el cuerpo en línea recta apoyado en los antebrazos.",
-    desc_lunge: "Da un paso al frente y baja tu cadera hasta que ambas rodillas formen 90 grados."
+    desc_lunge: "Da un paso al frente y baja tu cadera hasta que ambas rodillas formen 90 grados.",
+    add_exercise: "+ AÑADIR EJERCICIO",
+    select_exercise: "Seleccionar Ejercicio",
+    reps: "Objetivo (Reps/Segs)",
+    tag: "Etiqueta (Opcional)",
+    add_to_routine: "AÑADIR A LA RUTINA"
   },
   en: {
     today_btn: "TODAY",
@@ -140,7 +145,12 @@ const TRANSLATIONS = {
     desc_dom_b: "Close supinated grip, focus on the bicep contraction.",
     desc_rest: "Catch your breath and prepare for the next set.",
     desc_plank: "Keep core tight with body in a straight line supported by forearms.",
-    desc_lunge: "Step forward and lower your hips until both knees form a 90 degree angle."
+    desc_lunge: "Step forward and lower your hips until both knees form a 90 degree angle.",
+    add_exercise: "+ ADD EXERCISE",
+    select_exercise: "Select Exercise",
+    reps: "Target (Reps/Secs)",
+    tag: "Tag (Optional)",
+    add_to_routine: "ADD TO ROUTINE"
   },
   ca: {
     today_btn: "AVUI",
@@ -190,7 +200,12 @@ const TRANSLATIONS = {
     desc_dom_b: "Agafament tancat supinat, enfoca't en la contracció.",
     desc_rest: "Recupera l'alè i prepara't per a la propera sèrie.",
     desc_plank: "Mantingues el core ajustat amb el cos recte recolzat en els avantbraços.",
-    desc_lunge: "Fes un pas endavant i baixa fins que els dos genolls formin 90 graus."
+    desc_lunge: "Fes un pas endavant i baixa fins que els dos genolls formin 90 graus.",
+    add_exercise: "+ AFEGIR EXERCICI",
+    select_exercise: "Seleccionar Exercici",
+    reps: "Objectiu (Reps/Segs)",
+    tag: "Etiqueta (Opcional)",
+    add_to_routine: "AFEGIR A LA RUTINA"
   },
   eu: {
     today_btn: "GAUR",
@@ -240,7 +255,12 @@ const TRANSLATIONS = {
     desc_dom_b: "Helduleku itxia supinatua, enfokatu kontrakzioan.",
     desc_rest: "Hartu arnasa eta prestatu hurrengo serierako.",
     desc_plank: "Mantendu sabelaldea estututa gorputza lerro zuzenean besaurretan finkatuta.",
-    desc_lunge: "Eman pauso bat aurrera eta jaitsi bi belaunak 90 gradu osatu arte."
+    desc_lunge: "Eman pauso bat aurrera eta jaitsi bi belaunak 90 gradu osatu arte.",
+    add_exercise: "+ GEHITU ARIKETA",
+    select_exercise: "Aukeratu Ariketa",
+    reps: "Helburua (Erep./Seg.)",
+    tag: "Etiketa (Aukerakoa)",
+    add_to_routine: "ERRUTINARA GEHITU"
   },
   gl: {
     today_btn: "HOXE",
@@ -290,7 +310,12 @@ const TRANSLATIONS = {
     desc_dom_b: "Agarre pechado supinado, enfócate na contracción.",
     desc_rest: "Recupera o alento e prepárate para a próxima serie.",
     desc_plank: "Mantén apretado o core co corpo en liña recta apoiado nos antebrazos.",
-    desc_lunge: "Dá un paso á fronte e baixa ata que ambos xeonllos formen 90 graos."
+    desc_lunge: "Dá un paso á fronte e baixa ata que ambos xeonllos formen 90 graos.",
+    add_exercise: "+ ENGADIR EXERCICIO",
+    select_exercise: "Seleccionar Exercicio",
+    reps: "Obxectivo (Reps/Segs)",
+    tag: "Etiqueta (Opcional)",
+    add_to_routine: "ENGADIR Á RUTINA"
   }
 };
 let currentLang = localStorage.getItem("workout_lang") || "es";
@@ -445,6 +470,32 @@ function closeRoutine() {
   document.getElementById("view-routine").classList.remove("active");
   document.getElementById("view-settings").classList.add("active");
 }
+function openAddExercise() {
+  document.getElementById("view-routine").classList.remove("active");
+  document.getElementById("view-add-exercise").classList.add("active");
+  const select = document.getElementById("builder-ex");
+  select.innerHTML = Object.keys(EXERCISES).map((k) => `<option value="${k}">${t(EXERCISES[k].name)}</option>`).join("");
+  document.getElementById("builder-start").value = 10;
+  document.getElementById("builder-tag").value = "";
+  updateExercisePreview();
+}
+function closeAddExercise() {
+  document.getElementById("view-add-exercise").classList.remove("active");
+  document.getElementById("view-routine").classList.add("active");
+}
+function updateExercisePreview() {
+  const k = document.getElementById("builder-ex").value;
+  document.getElementById("builder-desc").innerHTML = t(EXERCISES[k].desc);
+}
+function appendNewExercise() {
+  const ex = document.getElementById("builder-ex").value;
+  const start = parseInt(document.getElementById("builder-start").value) || 0;
+  const tag = document.getElementById("builder-tag").value.trim() || t(EXERCISES[ex].name);
+  state.routine.unshift({ ex, start, tag });
+  localStorage.setItem("workout_routine", JSON.stringify(state.routine));
+  closeAddExercise();
+  renderRoutineList();
+}
 function exportJSON() {
   const exportData = {
     version: 3,
@@ -476,6 +527,7 @@ function importJSON(event) {
 function clearAllData() {
   if (confirm(t("delete_confirm"))) {
     localStorage.removeItem("workout_history_v2");
+    localStorage.removeItem("workout_routine");
     location.reload();
   }
 }
@@ -494,7 +546,8 @@ function finish() {
     date: state.activeDate,
     duration: totalTime,
     steps: state.results,
-    totals
+    totals,
+    routine: JSON.parse(JSON.stringify(state.routine))
   };
   const lastKey = Object.keys(state.history).sort().filter((k) => k < state.activeDate).pop();
   const prevData = state.history[lastKey];
@@ -638,6 +691,10 @@ window.routineDragEnter = routineDragEnter;
 window.routineDragLeave = routineDragLeave;
 window.routineDrop = routineDrop;
 window.removeRoutineStep = removeRoutineStep;
+window.openAddExercise = openAddExercise;
+window.closeAddExercise = closeAddExercise;
+window.updateExercisePreview = updateExercisePreview;
+window.appendNewExercise = appendNewExercise;
 window.t = t;</script>
   <style rel="stylesheet" crossorigin>body {
   font-family: sans-serif;
@@ -869,11 +926,38 @@ input[type="date"], select {
   <div id="view-routine" class="view">
     <h2 data-i18n="routine">Rutina</h2>
     
+    <button class="next-btn" style="background: transparent; border: 2px dashed #4CAF50; color: #4CAF50; width: 100%; max-width: 450px; padding: 15px; margin-bottom: 15px;" onclick="openAddExercise()" data-i18n="add_exercise">+ AÑADIR EJERCICIO</button>
+
     <div id="routine-list" style="text-align:left; margin-bottom: 20px; max-width: 450px; margin: 0 auto;">
       <!-- Populated via JS JS -->
     </div>
     
     <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeRoutine()" data-i18n="back">VOLVER</button>
+  </div>
+
+    <!-- View: Add Exercise Builder -->
+  <div id="view-add-exercise" class="view">
+    <h2 style="color: #4CAF50" data-i18n="add_exercise">+ AÑADIR</h2>
+    
+    <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+      <label data-i18n="select_exercise">Seleccionar Ejercicio</label>
+      <select id="builder-ex" onchange="updateExercisePreview()" style="width: 100%; padding: 12px; background: #222; color: white; border: 1px solid #4CAF50; border-radius: 8px; margin-bottom: 5px; font-size: 1rem;">
+        <!-- Populated dynamically via JS -->
+      </select>
+      
+      <div id="builder-desc" style="font-size: 0.85rem; color: #aaa; margin-bottom: 20px; font-style: italic; min-height: 40px;">
+        <!-- Dynamic desc -->
+      </div>
+
+      <label data-i18n="reps">Objetivo (Reps/Segs)</label>
+      <input type="number" id="builder-start" value="10" min="0" style="width: 100%; background: #222; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; box-sizing: border-box; margin-bottom: 20px;">
+
+      <label data-i18n="tag">Etiqueta (Opcional)</label>
+      <input type="text" id="builder-tag" placeholder="Ej: Calentamiento, Al Fallo..." style="width: 100%; background: #222; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; box-sizing: border-box; margin-bottom: 20px;">
+    </div>
+    
+    <button class="next-btn" style="background:#4CAF50; margin-top: 10px;" onclick="appendNewExercise()" data-i18n="add_to_routine">AÑADIR A LA RUTINA</button>
+    <button class="next-btn" style="background:#333; margin-top: 10px;" onclick="closeAddExercise()" data-i18n="back">CANCELAR</button>
   </div>
 
     <!-- View: Active Workout Engine -->

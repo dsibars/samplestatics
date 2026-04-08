@@ -1,0 +1,24 @@
+  <!-- View: Add Exercise Builder -->
+  <div id="view-add-exercise" class="view">
+    <h2 style="color: #4CAF50" data-i18n="add_exercise">+ AÑADIR</h2>
+    
+    <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+      <label data-i18n="select_exercise">Seleccionar Ejercicio</label>
+      <select id="builder-ex" onchange="updateExercisePreview()" style="width: 100%; padding: 12px; background: #222; color: white; border: 1px solid #4CAF50; border-radius: 8px; margin-bottom: 5px; font-size: 1rem;">
+        <!-- Populated dynamically via JS -->
+      </select>
+      
+      <div id="builder-desc" style="font-size: 0.85rem; color: #aaa; margin-bottom: 20px; font-style: italic; min-height: 40px;">
+        <!-- Dynamic desc -->
+      </div>
+
+      <label data-i18n="reps">Objetivo (Reps/Segs)</label>
+      <input type="number" id="builder-start" value="10" min="0" style="width: 100%; background: #222; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; box-sizing: border-box; margin-bottom: 20px;">
+
+      <label data-i18n="tag">Etiqueta (Opcional)</label>
+      <input type="text" id="builder-tag" placeholder="Ej: Calentamiento, Al Fallo..." style="width: 100%; background: #222; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; box-sizing: border-box; margin-bottom: 20px;">
+    </div>
+    
+    <button class="next-btn" style="background:#4CAF50; margin-top: 10px;" onclick="appendNewExercise()" data-i18n="add_to_routine">AÑADIR A LA RUTINA</button>
+    <button class="next-btn" style="background:#333; margin-top: 10px;" onclick="closeAddExercise()" data-i18n="back">CANCELAR</button>
+  </div>

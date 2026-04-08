@@ -14,7 +14,8 @@ export function finish() {
     date: state.activeDate, 
     duration: totalTime, 
     steps: state.results, 
-    totals: totals 
+    totals: totals,
+    routine: JSON.parse(JSON.stringify(state.routine))
   };
   
   const lastKey = Object.keys(state.history).sort().filter(k => k < state.activeDate).pop();

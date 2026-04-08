@@ -10,7 +10,8 @@ export const TRANSLATIONS = {
     desc_dom_b: "Agarre cerrado supinado, enfócate en la contracción.",
     desc_rest: "Recupera tu aliento y prepárate para la próxima serie.",
     desc_plank: "Mantén apretado el core con el cuerpo en línea recta apoyado en los antebrazos.",
-    desc_lunge: "Da un paso al frente y baja tu cadera hasta que ambas rodillas formen 90 grados."
+    desc_lunge: "Da un paso al frente y baja tu cadera hasta que ambas rodillas formen 90 grados.",
+    add_exercise: "+ AÑADIR EJERCICIO", select_exercise: "Seleccionar Ejercicio", reps: "Objetivo (Reps/Segs)", tag: "Etiqueta (Opcional)", add_to_routine: "AÑADIR A LA RUTINA"
   },
   en: {
     today_btn: "TODAY", ready: "Ready?", already_registered: "⚠️ Already registered.", start_workout: "START WORKOUT", view_history: "VIEW HISTORY 📊", not_today: "NOT TODAY, THANKS", settings: "SETTINGS ⚙️", language: "Language", change_date: "Change current date", routine: "Routine", edit_routine: "EDIT ROUTINE ✏️", local_data: "Local Data", export_json: "EXPORT JSON", import_json: "IMPORT JSON", erase_history: "ERASE ALL HISTORY", back: "BACK", back_home: "BACK HOME", dev_alert: "Feature in development", delete_confirm: "Delete history?", next: "NEXT", finish: "FINISH", goal_met: "GOAL MET! 🥪", first_day: "<b>First day!</b> Tomorrow we compare.", vs_previous: "<b>VS. PREVIOUS:</b><br>", time: "Time", history_title: "HISTORY", grouped: "GROUPED AND RESULTS:", understood: "Understood!", rest: "Rest and see you tomorrow.",
@@ -23,7 +24,8 @@ export const TRANSLATIONS = {
     desc_dom_b: "Close supinated grip, focus on the bicep contraction.",
     desc_rest: "Catch your breath and prepare for the next set.",
     desc_plank: "Keep core tight with body in a straight line supported by forearms.",
-    desc_lunge: "Step forward and lower your hips until both knees form a 90 degree angle."
+    desc_lunge: "Step forward and lower your hips until both knees form a 90 degree angle.",
+    add_exercise: "+ ADD EXERCISE", select_exercise: "Select Exercise", reps: "Target (Reps/Secs)", tag: "Tag (Optional)", add_to_routine: "ADD TO ROUTINE"
   },
   ca: {
     today_btn: "AVUI", ready: "A punt?", already_registered: "⚠️ Ja registrat.", start_workout: "COMENÇAR ENTRENAMENT", view_history: "VEURE HISTORIAL 📊", not_today: "AVUI NO, GRÀCIES", settings: "CONFIGURACIÓ ⚙️", language: "Idioma", change_date: "Canviar data actual", routine: "Rutina", edit_routine: "EDITAR RUTINA ✏️", local_data: "Dades locals", export_json: "EXPORTAR JSON", import_json: "IMPORTAR JSON", erase_history: "ESBORRAR HISTORIAL", back: "TORNAR", back_home: "TORNAR A L'INICI", dev_alert: "En desenvolupament", delete_confirm: "Esborrar historial?", next: "SEGÜENT", finish: "FINALITZAR", goal_met: "OBJECTIU ASSOLIT! 🥪", first_day: "<b>Primer dia!</b> Demà comparem.", vs_previous: "<b>VS. ANTERIOR:</b><br>", time: "Temps", history_title: "HISTORIAL", grouped: "AGRUPAT I COMPULSIÓ:", understood: "Entès!", rest: "Descansa i ens veiem demà.",
@@ -36,7 +38,8 @@ export const TRANSLATIONS = {
     desc_dom_b: "Agafament tancat supinat, enfoca't en la contracció.",
     desc_rest: "Recupera l'alè i prepara't per a la propera sèrie.",
     desc_plank: "Mantingues el core ajustat amb el cos recte recolzat en els avantbraços.",
-    desc_lunge: "Fes un pas endavant i baixa fins que els dos genolls formin 90 graus."
+    desc_lunge: "Fes un pas endavant i baixa fins que els dos genolls formin 90 graus.",
+    add_exercise: "+ AFEGIR EXERCICI", select_exercise: "Seleccionar Exercici", reps: "Objectiu (Reps/Segs)", tag: "Etiqueta (Opcional)", add_to_routine: "AFEGIR A LA RUTINA"
   },
   eu: {
     today_btn: "GAUR", ready: "Prest?", already_registered: "⚠️ Erregistratuta.", start_workout: "HASI ENTRENAMENDUA", view_history: "IKUSI HISTORIALA 📊", not_today: "GAUR EZ, ESKERRIK ASKO", settings: "EZARPENAK ⚙️", language: "Hizkuntza", change_date: "Aldatu data", routine: "Errutina", edit_routine: "EDITATU ERRUTINA ✏️", local_data: "Datu lokalak", export_json: "ESPORTATU JSON", import_json: "INPORTATU JSON", erase_history: "EZABATU HISTORIALA", back: "ITZULI", back_home: "HASIERARA ITZULI", dev_alert: "Garapenean", delete_confirm: "Historiala ezabatu?", next: "HURRENGOA", finish: "AMAITU", goal_met: "HELBURUA LORTUTA! 🥪", first_day: "<b>Lehen eguna!</b> Bihar konparatuko dugu.", vs_previous: "<b>VS. AURREKOA:</b><br>", time: "Denbora", history_title: "HISTORIALA", grouped: "ELKARTUTA ETA EMAITZAK:", understood: "Ulertuta!", rest: "Atseden hartu eta bihar arte.",
@@ -49,7 +52,8 @@ export const TRANSLATIONS = {
     desc_dom_b: "Helduleku itxia supinatua, enfokatu kontrakzioan.",
     desc_rest: "Hartu arnasa eta prestatu hurrengo serierako.",
     desc_plank: "Mantendu sabelaldea estututa gorputza lerro zuzenean besaurretan finkatuta.",
-    desc_lunge: "Eman pauso bat aurrera eta jaitsi bi belaunak 90 gradu osatu arte."
+    desc_lunge: "Eman pauso bat aurrera eta jaitsi bi belaunak 90 gradu osatu arte.",
+    add_exercise: "+ GEHITU ARIKETA", select_exercise: "Aukeratu Ariketa", reps: "Helburua (Erep./Seg.)", tag: "Etiketa (Aukerakoa)", add_to_routine: "ERRUTINARA GEHITU"
   },
   gl: {
     today_btn: "HOXE", ready: "Listo?", already_registered: "⚠️ Xa rexistrado.", start_workout: "COMEZAR ADESTRAMENTO", view_history: "VER HISTORIAL 📊", not_today: "HOXE NON, GRAZAS", settings: "AXUSTES ⚙️", language: "Idioma", change_date: "Cambiar data actual", routine: "Rutina", edit_routine: "EDITAR RUTINA ✏️", local_data: "Datos locais", export_json: "EXPORTAR JSON", import_json: "IMPORTAR JSON", erase_history: "BORRAR O HISTORIAL", back: "VOLVER", back_home: "VOLVER AO INICIO", dev_alert: "En desenvolvemento", delete_confirm: "Borrar historial?", next: "SEGUINTE", finish: "FINALIZAR", goal_met: "OBXECTIVO CUMPRIDO! 🥪", first_day: "<b>Primeiro día!</b> Mañá comparamos.", vs_previous: "<b>VS. ANTERIOR:</b><br>", time: "Tempo", history_title: "HISTORIAL", grouped: "AGRUPADO E COMPULSIÓN:", understood: "Entendido!", rest: "Descansa ata mañá.",
@@ -62,7 +66,8 @@ export const TRANSLATIONS = {
     desc_dom_b: "Agarre pechado supinado, enfócate na contracción.",
     desc_rest: "Recupera o alento e prepárate para a próxima serie.",
     desc_plank: "Mantén apretado o core co corpo en liña recta apoiado nos antebrazos.",
-    desc_lunge: "Dá un paso á fronte e baixa ata que ambos xeonllos formen 90 graos."
+    desc_lunge: "Dá un paso á fronte e baixa ata que ambos xeonllos formen 90 graos.",
+    add_exercise: "+ ENGADIR EXERCICIO", select_exercise: "Seleccionar Exercicio", reps: "Obxectivo (Reps/Segs)", tag: "Etiqueta (Opcional)", add_to_routine: "ENGADIR Á RUTINA"
   }
 };
 

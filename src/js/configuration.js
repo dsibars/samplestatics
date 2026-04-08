@@ -135,6 +135,41 @@ export function closeRoutine() {
   document.getElementById('view-settings').classList.add('active');
 }
 
+export function openAddExercise() {
+  document.getElementById('view-routine').classList.remove('active');
+  document.getElementById('view-add-exercise').classList.add('active');
+  
+  const select = document.getElementById('builder-ex');
+  select.innerHTML = Object.keys(EXERCISES).map(k => `<option value="${k}">${t(EXERCISES[k].name)}</option>`).join('');
+  
+  document.getElementById('builder-start').value = 10;
+  document.getElementById('builder-tag').value = '';
+  
+  updateExercisePreview();
+}
+
+export function closeAddExercise() {
+  document.getElementById('view-add-exercise').classList.remove('active');
+  document.getElementById('view-routine').classList.add('active');
+}
+
+export function updateExercisePreview() {
+  const k = document.getElementById('builder-ex').value;
+  document.getElementById('builder-desc').innerHTML = t(EXERCISES[k].desc);
+}
+
+export function appendNewExercise() {
+  const ex = document.getElementById('builder-ex').value;
+  const start = parseInt(document.getElementById('builder-start').value) || 0;
+  const tag = document.getElementById('builder-tag').value.trim() || t(EXERCISES[ex].name);
+  
+  state.routine.unshift({ ex, start, tag });
+  localStorage.setItem('workout_routine', JSON.stringify(state.routine));
+  
+  closeAddExercise();
+  renderRoutineList();
+}
+
 export function exportJSON() { 
   const exportData = {
     version: 3,
@@ -171,6 +206,7 @@ export function importJSON(event) {
 export function clearAllData() { 
   if (confirm(t('delete_confirm'))) { 
     localStorage.removeItem('workout_history_v2'); 
+    localStorage.removeItem('workout_routine'); 
     location.reload(); 
   } 
 }
