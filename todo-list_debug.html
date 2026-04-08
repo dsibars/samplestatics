@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Todo List - Daily Focus</title>
+  <script type="module" crossorigin>(function polyfill() {
+  const relList = document.createElement("link").relList;
+  if (relList && relList.supports && relList.supports("modulepreload")) {
+    return;
+  }
+  for (const link of document.querySelectorAll('link[rel="modulepreload"]')) {
+    processPreload(link);
+  }
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== "childList") {
+        continue;
+      }
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === "LINK" && node.rel === "modulepreload")
+          processPreload(node);
+      }
+    }
+  }).observe(document, { childList: true, subtree: true });
+  function getFetchOpts(link) {
+    const fetchOpts = {};
+    if (link.integrity) fetchOpts.integrity = link.integrity;
+    if (link.referrerPolicy) fetchOpts.referrerPolicy = link.referrerPolicy;
+    if (link.crossOrigin === "use-credentials")
+      fetchOpts.credentials = "include";
+    else if (link.crossOrigin === "anonymous") fetchOpts.credentials = "omit";
+    else fetchOpts.credentials = "same-origin";
+    return fetchOpts;
+  }
+  function processPreload(link) {
+    if (link.ep)
+      return;
+    link.ep = true;
+    const fetchOpts = getFetchOpts(link);
+    fetch(link.href, fetchOpts);
+  }
+})();
+const state = {
+  tasks: JSON.parse(localStorage.getItem("todo_list_tasks") || "[]"),
+  currentView: "welcome"
+};
+function saveState() {
+  localStorage.setItem("todo_list_tasks", JSON.stringify(state.tasks));
+}
+const TRANSLATIONS = {
+  es: {
+    app_title: "Tareas Diarias",
+    tasks: "Tareas",
+    no_tasks: "¡Día libre! No hay tareas para hoy.",
+    add_task: "NUEVA TAREA",
+    task_name: "Tarea",
+    task_desc: "Descripción",
+    date: "Fecha",
+    save: "GUARDAR",
+    back: "VOLVER",
+    settings: "AJUSTES ⚙️",
+    lang: "Idioma",
+    local_data: "Datos Locales",
+    export: "EXPORTAR",
+    import: "IMPORTAR",
+    erase_all: "BORRAR TODO",
+    erase_confirm: "¿Estás seguro? Se borrarán todas las tareas.",
+    back_home: "SALIR AL HUB"
+  },
+  en: {
+    app_title: "Daily Todo",
+    tasks: "Tasks",
+    no_tasks: "Day off! No tasks for today.",
+    add_task: "NEW TASK",
+    task_name: "Task",
+    task_desc: "Description",
+    date: "Date",
+    save: "SAVE",
+    back: "BACK",
+    settings: "SETTINGS ⚙️",
+    lang: "Language",
+    local_data: "Local Data",
+    export: "EXPORT",
+    import: "IMPORT",
+    erase_all: "ERASE EVERYTHING",
+    erase_confirm: "Are you sure? This will delete all tasks.",
+    back_home: "EXIT TO HUB"
+  },
+  ca: {
+    app_title: "Tasques Diàries",
+    tasks: "Tasques",
+    no_tasks: "Dia lliure! No hi ha tasques per avui.",
+    add_task: "NOVA TASCA",
+    task_name: "Tasca",
+    task_desc: "Descripció",
+    date: "Data",
+    save: "DESAR",
+    back: "TORNAR",
+    settings: "CONFIGURACIÓ ⚙️",
+    lang: "Idioma",
+    local_data: "Dades Locals",
+    export: "EXPORTAR",
+    import: "IMPORTAR",
+    erase_all: "ESBORRAR TOT",
+    erase_confirm: "Estàs segur? S'esborraran totes les tasques.",
+    back_home: "SORTIR AL HUB"
+  },
+  eu: {
+    app_title: "Eguneroko Atazak",
+    tasks: "Atazak",
+    no_tasks: "Egun librea! Ez dago atazarik gaurko.",
+    add_task: "ATAZA BERRIA",
+    task_name: "Ataza",
+    task_desc: "Deskribapena",
+    date: "Data",
+    save: "GORDE",
+    back: "ITZULI",
+    settings: "EZARPENAK ⚙️",
+    lang: "Hizkuntza",
+    local_data: "Datu Lokalak",
+    export: "EXPORTATU",
+    import: "IMPORTATU",
+    erase_all: "DENA EZABATU",
+    erase_confirm: "Ziur zaude? Ataza guztiak ezabatuko dira.",
+    back_home: "HUBERA IRTEN"
+  },
+  gl: {
+    app_title: "Tarefas Diarias",
+    tasks: "Tarefas",
+    no_tasks: "Día libre! Non hai tarefas para hoxe.",
+    add_task: "NOVA TAREFA",
+    task_name: "Tarefa",
+    task_desc: "Descrición",
+    date: "Data",
+    save: "GARDAR",
+    back: "VOLVER",
+    settings: "AXUSTES ⚙️",
+    lang: "Idioma",
+    local_data: "Datos Locales",
+    export: "EXPORTAR",
+    import: "IMPORTAR",
+    erase_all: "BORRAR TODO",
+    erase_confirm: "Estás seguro? Borraranse todas as tarefas.",
+    back_home: "SAÍR AO HUB"
+  }
+};
+const SHARED_KEY = "static_apps_lang";
+let currentLang = localStorage.getItem(SHARED_KEY) || "es";
+function t(key) {
+  if (!TRANSLATIONS[currentLang]) return key;
+  return TRANSLATIONS[currentLang][key] || TRANSLATIONS["es"][key] || key;
+}
+function applyTranslations() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.innerHTML = t(el.getAttribute("data-i18n"));
+  });
+}
+window.showView = (viewId) => {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.getElementById(`view-${viewId}`).classList.add("active");
+  state.currentView = viewId;
+  window.scrollTo(0, 0);
+  renderView(viewId);
+};
+function renderView(viewId) {
+  applyTranslations();
+  if (viewId === "welcome") renderTodoList();
+  if (viewId === "settings") renderSettings();
+}
+function renderTodoList() {
+  const container = document.getElementById("todo-list-container");
+  if (!container) return;
+  const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const todayTasks = state.tasks.filter((t2) => t2.date === today);
+  if (todayTasks.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 40px 20px; color: var(--text-dim);">
+        <div style="font-size: 4rem; margin-bottom: 20px;">☕</div>
+        <p data-i18n="no_tasks">${t("no_tasks")}</p>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = todayTasks.map((task) => `
+    <div class="todo-item ${task.completed ? "completed" : ""}" onclick="toggleTask(${task.id})">
+      <div class="todo-checkbox">
+        ${task.completed ? "✓" : ""}
+      </div>
+      <div class="todo-content">
+        <h3>${task.name}</h3>
+        ${task.desc ? `<p>${task.desc}</p>` : ""}
+      </div>
+    </div>
+  `).join("");
+}
+window.toggleTask = (id) => {
+  const task = state.tasks.find((t2) => t2.id === id);
+  if (task) {
+    task.completed = !task.completed;
+    saveState();
+    renderTodoList();
+  }
+};
+window.addTask = () => {
+  const name = document.getElementById("task-name").value.trim();
+  const desc = document.getElementById("task-desc").value.trim();
+  const date = document.getElementById("task-date").value;
+  if (!name || !date) return;
+  state.tasks.push({
+    id: Date.now(),
+    name,
+    desc,
+    date,
+    completed: false
+  });
+  saveState();
+  document.getElementById("task-name").value = "";
+  document.getElementById("task-desc").value = "";
+  showView("welcome");
+};
+function renderSettings() {
+  const langSelector = document.getElementById("lang-selector");
+  if (langSelector) langSelector.value = currentLang;
+  document.getElementById("task-date").value = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+}
+window.changeLanguage = () => {
+  const val = document.getElementById("lang-selector").value;
+  localStorage.setItem("static_apps_lang", val);
+  location.reload();
+};
+window.exportData = () => {
+  const data = { version: 1, tasks: state.tasks };
+  const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = "todo_backup.json";
+  a.click();
+};
+window.importData = (event) => {
+  const r = new FileReader();
+  r.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.tasks) {
+        state.tasks = data.tasks;
+        saveState();
+        location.reload();
+      }
+    } catch (err) {
+      alert("Invalid file");
+    }
+  };
+  r.readAsText(event.target.files[0]);
+};
+window.clearAllData = () => {
+  if (confirm(t("erase_confirm"))) {
+    localStorage.removeItem("todo_list_tasks");
+    location.reload();
+  }
+};
+window.onload = () => {
+  applyTranslations();
+  renderTodoList();
+};</script>
+  <style rel="stylesheet" crossorigin>:root {
+  --bg-color: #f8fafc;
+  --text-main: #0f172a;
+  --text-dim: #64748b;
+  --accent: #6366f1;
+  --accent-light: #e0e7ff;
+  --card-bg: #ffffff;
+  --border: #e2e8f0;
+  --success: #10b981;
+}
+
+[data-theme="dark"] {
+  --bg-color: #0f172a;
+  --text-main: #f8fafc;
+  --text-dim: #94a3b8;
+  --accent: #818cf8;
+  --accent-light: #1e293b;
+  --card-bg: #1e293b;
+  --border: #334155;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.view {
+  display: none;
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.view.active {
+  display: flex;
+  flex-direction: column;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background: var(--bg-color);
+  padding: 15px 20px;
+  margin: -20px -20px 20px -20px;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 15px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+.btn-secondary { background: var(--accent-light); color: var(--accent); }
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.todo-item:active { transform: scale(0.97); }
+
+.todo-checkbox {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: all 0.2s;
+}
+
+.todo-item.completed .todo-checkbox {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.todo-content h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.todo-content p {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.todo-item.completed {
+  opacity: 0.6;
+}
+
+.todo-item.completed .todo-content h3 {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-main);
+  box-sizing: border-box;
+  font-size: 1rem;
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+  font-weight: 600;
+}</style>
+</head>
+<body>
+  <!-- Views -->
+  <div id="view-welcome" class="view active">
+  <div class="sticky-header">
+    <h2 data-i18n="app_title">Daily Todo</h2>
+    <button class="btn btn-secondary" style="width: auto; padding: 10px; margin: 0;" onclick="showView('settings')">⚙️</button>
+  </div>
+
+  <div id="todo-list-container">
+    <!-- To be filled by JS -->
+  </div>
+  
+  <div style="margin-top: 40px; text-align: center;">
+    <button class="btn btn-secondary" style="background: transparent; color: var(--text-dim);" onclick="location.href='index.html'" data-i18n="back_home">EXIT TO HUB</button>
+  </div>
+</div>
+
+  <div id="view-settings" class="view">
+  <div class="sticky-header">
+    <h2 data-i18n="settings">SETTINGS ⚙️</h2>
+    <button class="btn btn-secondary" style="width: auto; padding: 10px 20px; margin: 0;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+
+  <div class="card">
+    <h3 data-i18n="add_task">NEW TASK</h3>
+    <div class="form-group">
+      <label data-i18n="task_name">Task</label>
+      <input type="text" id="task-name" placeholder="...">
+    </div>
+    <div class="form-group">
+      <label data-i18n="task_desc">Description</label>
+      <textarea id="task-desc" rows="2"></textarea>
+    </div>
+    <div class="form-group">
+      <label data-i18n="date">Date</label>
+      <input type="date" id="task-date">
+    </div>
+    <button class="btn btn-primary" onclick="addTask()" data-i18n="save">SAVE</button>
+  </div>
+
+  <div class="card">
+    <label data-i18n="lang">Language</label>
+    <select id="lang-selector" onchange="changeLanguage()">
+      <option value="es">Español</option>
+      <option value="en">English</option>
+      <option value="ca">Català</option>
+      <option value="eu">Euskera</option>
+      <option value="gl">Galego</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <h3 data-i18n="local_data">Local Data</h3>
+    <button class="btn btn-secondary" onclick="exportData()" data-i18n="export">EXPORT</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">IMPORT</button>
+    <input type="file" id="import-file" style="display:none" onchange="importData(event)" accept=".json">
+    <button class="btn btn-danger" onclick="clearAllData()" data-i18n="erase_all" style="margin-top: 20px; background: #ef4444; color: white; border: none; border-radius: 12px; padding: 10px; width: 100%;">ERASE ALL</button>
+  </div>
+</div>
+
+
+</body>
+</html>
