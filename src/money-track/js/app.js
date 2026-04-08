@@ -167,16 +167,35 @@ window.deleteTx = (id) => {
 // --- People Logic ---
 function renderPeople() {
   const list = document.getElementById('people-list');
+  if (!list) return;
+
   list.innerHTML = state.people.length > 0 ? '' : `<p data-i18n="no_people" style="text-align:center; color:#555;">No people</p>`;
   
+  // Pre-calculate balances for performance
+  const balances = {};
+  state.people.forEach(p => balances[p] = 0);
+  state.transactions.forEach(tx => {
+    if (balances[tx.person] !== undefined) {
+      if (tx.type === 'owe_me') balances[tx.person] += tx.amount;
+      else balances[tx.person] -= tx.amount;
+    }
+  });
+
   state.people.forEach(p => {
     const card = document.createElement('div');
     card.className = 'card';
     card.style = 'display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
     card.onclick = () => showPersonStats(p);
     
+    const balance = balances[p];
+    const balanceClass = balance >= 0 ? 'positive' : 'negative';
+    const balanceText = (balance >= 0 ? '+' : '-') + formatCurrency(balance);
+
     card.innerHTML = `
-      <span style="font-weight:bold; font-size:1.1rem;">${p}</span>
+      <div style="display:flex; flex-direction:column;">
+        <span style="font-weight:bold; font-size:1.1rem;">${p}</span>
+        <span class="${balanceClass}" style="font-size:0.9rem;">${balanceText}</span>
+      </div>
       <button onclick="event.stopPropagation(); removePerson('${p}')" style="background:none; border:none; color:#f87171; font-size:1.5rem;">×</button>
     `;
     list.appendChild(card);
