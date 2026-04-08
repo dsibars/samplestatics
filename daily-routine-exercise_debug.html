@@ -373,14 +373,14 @@ const TRANSLATIONS = {
     removed: "Eliminado"
   }
 };
-let currentLang = localStorage.getItem("workout_lang") || "es";
+let currentLang = localStorage.getItem("static_apps_lang") || "es";
 function t(key) {
   if (!TRANSLATIONS[currentLang]) return key;
   return TRANSLATIONS[currentLang][key] || TRANSLATIONS["es"][key] || key;
 }
 function changeLanguage() {
   currentLang = document.getElementById("lang-selector").value;
-  localStorage.setItem("workout_lang", currentLang);
+  localStorage.setItem("static_apps_lang", currentLang);
   location.reload();
 }
 function applyTranslations() {

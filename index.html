@@ -17,12 +17,27 @@
             min-height: 100vh;
             padding: 20px;
         }
+        .lang-control {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .lang-control select {
+            background: #1e293b;
+            color: white;
+            border: 1px solid #334155;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
         h1 {
             font-size: 2.5rem;
             margin-bottom: 2rem;
             background: linear-gradient(to right, #38bdf8, #818cf8);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-fill-color: transparent;
         }
         .app-list {
             display: grid;
@@ -71,16 +86,29 @@
             text-transform: uppercase;
         }
     </style>
+  <script type="module" crossorigin>(function(){const o=document.createElement("link").relList;if(o&&o.supports&&o.supports("modulepreload"))return;for(const t of document.querySelectorAll('link[rel="modulepreload"]'))s(t);new MutationObserver(t=>{for(const e of t)if(e.type==="childList")for(const i of e.addedNodes)i.tagName==="LINK"&&i.rel==="modulepreload"&&s(i)}).observe(document,{childList:!0,subtree:!0});function c(t){const e={};return t.integrity&&(e.integrity=t.integrity),t.referrerPolicy&&(e.referrerPolicy=t.referrerPolicy),t.crossOrigin==="use-credentials"?e.credentials="include":t.crossOrigin==="anonymous"?e.credentials="omit":e.credentials="same-origin",e}function s(t){if(t.ep)return;t.ep=!0;const e=c(t);fetch(t.href,e)}})();const r={es:{hub_title:"Panel de Aplicaciones",app_workout_title:"Entrenamiento Diario",app_workout_desc:"Un rastreador de entrenamiento de 15 minutos con historial y estadísticas.",static_badge:"App Estática",lang:"Idioma"},en:{hub_title:"App Hub",app_workout_title:"Daily Routine Exercise",app_workout_desc:"A simple 15-minute workout tracker with history and statistics.",static_badge:"Static App",lang:"Language"},ca:{hub_title:"Panell d'Aplicacions",app_workout_title:"Entrenament Diari",app_workout_desc:"Un rastrejador d'entrenament de 15 minuts amb historial i estadístiques.",static_badge:"App Estàtica",lang:"Idioma"},eu:{hub_title:"Aplikazioen Panela",app_workout_title:"Eguneroko Entrenamendua",app_workout_desc:"15 minutuko entrenamendu-aztergailua historia eta estatistikekin.",static_badge:"App Estatikoa",lang:"Hizkuntza"},gl:{hub_title:"Panel de Aplicacións",app_workout_title:"Adestramento Diario",app_workout_desc:"Un rastreador de adestramento de 15 minutos con historial e estatísticas.",static_badge:"App Estática",lang:"Idioma"}};let n=localStorage.getItem("static_apps_lang")||"es";function l(a){return r[n]&&(r[n][a]||r.es[a])||a}function u(){n=document.getElementById("lang-selector").value,localStorage.setItem("static_apps_lang",n),location.reload()}function d(){document.documentElement.lang=n;const a=document.getElementById("lang-selector");a&&(a.value=n),document.querySelectorAll("[data-i18n]").forEach(o=>{o.innerHTML=l(o.getAttribute("data-i18n"))})}window.onload=()=>{d()};window.changeLanguage=u;</script>
 </head>
 <body>
-    <h1>App Hub</h1>
+    <div class="lang-control">
+        <label for="lang-selector" data-i18n="lang">Language</label>
+        <select id="lang-selector" onchange="changeLanguage()">
+            <option value="es">Español</option>
+            <option value="en">English</option>
+            <option value="ca">Català</option>
+            <option value="eu">Euskara</option>
+            <option value="gl">Galego</option>
+        </select>
+    </div>
+
+    <h1 data-i18n="hub_title">App Hub</h1>
     <div class="app-list">
         <a href="./daily-routine-exercise.html" class="app-card">
-            <span class="badge">Static App</span>
-            <h2>Daily Routine Exercise</h2>
-            <p>A simple 15-minute workout tracker with history and statistics.</p>
+            <span class="badge" data-i18n="static_badge">Static App</span>
+            <h2 data-i18n="app_workout_title">Daily Routine Exercise</h2>
+            <p data-i18n="app_workout_desc">A simple 15-minute workout tracker with history and statistics.</p>
         </a>
         <!-- Add more apps here manually as we create them -->
     </div>
+
 </body>
 </html>
