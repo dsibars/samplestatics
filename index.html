@@ -189,21 +189,48 @@
 
   <!-- View: Welcome & Actions Menu -->
   <div id="view-welcome" class="view active">
+    <!-- Settings Icon -->
+    <div style="position: absolute; top: 20px; right: 20px; font-size: 2rem; cursor: pointer; -webkit-tap-highlight-color: transparent;" onclick="showSettings()">⚙️</div>
+
     <h2 id="display-date"></h2>
-    <input type="date" id="date-hacker" onchange="updateActiveDate()">
     <div id="check-msg" style="margin-bottom: 20px;"></div>
     
     <button class="next-btn" onclick="startWorkout()">EMPEZAR ENTRENAMIENTO</button>
     <button class="next-btn" style="background:#455a64" onclick="showHistory()">VER HISTORIAL 📊</button>
     <button class="next-btn" style="background:#333" onclick="showExit()">HOY NO, GRACIAS</button>
+  </div>
+
+  <!-- View: Settings / Configuration -->
+  <div id="view-settings" class="view">
+    <h2>AJUSTES ⚙️</h2>
     
-    <!-- Utilities -->
-    <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 20px;">
+    <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+      <label>Idioma</label>
+      <select style="width: 100%; padding: 12px; background: #222; color: white; border: 1px solid #444; border-radius: 8px; margin-bottom: 20px; font-size: 1rem;">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+        <option value="ca">Català</option>
+        <option value="eu">Euskera</option>
+        <option value="gl">Galego</option>
+      </select>
+
+      <label>Cambiar fecha actual</label>
+      <input type="date" id="date-hacker" onchange="updateActiveDate()" style="width: 100%; box-sizing: border-box;">
+
+      <label>Rutina</label>
+      <button class="next-btn" style="background:#3949ab; width: 100%; margin: 5px 0 20px 0; font-size: 0.9rem;" onclick="alert('Funcionalidad en desarrollo')">EDITAR RUTINA ✏️</button>
+    </div>
+
+    <!-- Utilities moved from welcome -->
+    <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 20px;">
+      <label style="text-align: center;">Datos locales</label>
       <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="exportJSON()">EXPORTAR JSON</button>
       <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="document.getElementById('fileInput').click()">IMPORTAR JSON</button>
       <input type="file" id="fileInput" style="display:none" onchange="importJSON(event)" accept=".json">
       <button class="next-btn" style="background:#b71c1c; font-size: 0.7rem; padding: 10px;" onclick="clearAllData()">BORRAR TODO EL HISTORIAL</button>
     </div>
+
+    <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeSettings()">VOLVER</button>
   </div>
 
   <!-- View: Active Workout Engine -->
@@ -469,7 +496,21 @@
       document.getElementById(`card-${i}`).classList.toggle('open'); 
     }
 
-    // --- 6. Utilities ---
+    // --- 6. Configuration / Settings Logic ---
+    
+    function showSettings() {
+      document.getElementById('view-welcome').classList.remove('active');
+      document.getElementById('view-settings').classList.add('active');
+    }
+
+    function closeSettings() {
+      // Re-trigger visual updates if date changed
+      updateActiveDate();
+      document.getElementById('view-settings').classList.remove('active');
+      document.getElementById('view-welcome').classList.add('active');
+    }
+
+    // --- 7. Utilities ---
 
     function exportJSON() { 
       const b = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' }); 
