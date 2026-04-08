@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Guerra de 15 Minutos</title>
+  <script type="module" crossorigin>(function polyfill() {
+  const relList = document.createElement("link").relList;
+  if (relList && relList.supports && relList.supports("modulepreload")) {
+    return;
+  }
+  for (const link of document.querySelectorAll('link[rel="modulepreload"]')) {
+    processPreload(link);
+  }
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== "childList") {
+        continue;
+      }
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === "LINK" && node.rel === "modulepreload")
+          processPreload(node);
+      }
+    }
+  }).observe(document, { childList: true, subtree: true });
+  function getFetchOpts(link) {
+    const fetchOpts = {};
+    if (link.integrity) fetchOpts.integrity = link.integrity;
+    if (link.referrerPolicy) fetchOpts.referrerPolicy = link.referrerPolicy;
+    if (link.crossOrigin === "use-credentials")
+      fetchOpts.credentials = "include";
+    else if (link.crossOrigin === "anonymous") fetchOpts.credentials = "omit";
+    else fetchOpts.credentials = "same-origin";
+    return fetchOpts;
+  }
+  function processPreload(link) {
+    if (link.ep)
+      return;
+    link.ep = true;
+    const fetchOpts = getFetchOpts(link);
+    fetch(link.href, fetchOpts);
+  }
+})();
+const TRANSLATIONS = {
+  es: {
+    today_btn: "HOY",
+    ready: "¿Listo?",
+    already_registered: "⚠️ Ya registrado.",
+    start_workout: "EMPEZAR ENTRENAMIENTO",
+    view_history: "VER HISTORIAL 📊",
+    not_today: "HOY NO, GRACIAS",
+    settings: "AJUSTES ⚙️",
+    language: "Idioma",
+    change_date: "Cambiar fecha actual",
+    routine: "Rutina",
+    edit_routine: "EDITAR RUTINA ✏️",
+    local_data: "Datos locales",
+    export_json: "EXPORTAR JSON",
+    import_json: "IMPORTAR JSON",
+    erase_history: "BORRAR TODO EL HISTORIAL",
+    back: "VOLVER",
+    back_home: "VOLVER AL INICIO",
+    dev_alert: "Funcionalidad en desarrollo",
+    delete_confirm: "¿Borrar historial?",
+    next: "SIGUIENTE",
+    finish: "FINALIZAR",
+    goal_met: "¡OBJETIVO CUMPLIDO! 🥪",
+    first_day: "<b>¡Primer día!</b> Mañana comparamos.",
+    vs_previous: "<b>VS. ANTERIOR:</b><br>",
+    time: "Tiempo",
+    history_title: "HISTORIAL",
+    grouped: "AGRUPADO Y COMPULSIÓN:",
+    understood: "¡Entendido!",
+    rest: "Descansa y nos vemos mañana.",
+    "Calentamiento": "Calentamiento",
+    "Al Fallo": "Al Fallo",
+    "Recuperación": "Recuperación",
+    "Lenta/Negativa": "Lenta/Negativa",
+    "Recorrido Total": "Recorrido Total",
+    "Sentadillas": "Sentadillas",
+    "Flexiones": "Flexiones",
+    "Dom. Espalda": "Dom. Espalda",
+    "Dom. Bíceps": "Dom. Bíceps"
+  },
+  en: {
+    today_btn: "TODAY",
+    ready: "Ready?",
+    already_registered: "⚠️ Already registered.",
+    start_workout: "START WORKOUT",
+    view_history: "VIEW HISTORY 📊",
+    not_today: "NOT TODAY, THANKS",
+    settings: "SETTINGS ⚙️",
+    language: "Language",
+    change_date: "Change current date",
+    routine: "Routine",
+    edit_routine: "EDIT ROUTINE ✏️",
+    local_data: "Local Data",
+    export_json: "EXPORT JSON",
+    import_json: "IMPORT JSON",
+    erase_history: "ERASE ALL HISTORY",
+    back: "BACK",
+    back_home: "BACK HOME",
+    dev_alert: "Feature in development",
+    delete_confirm: "Delete history?",
+    next: "NEXT",
+    finish: "FINISH",
+    goal_met: "GOAL MET! 🥪",
+    first_day: "<b>First day!</b> Tomorrow we compare.",
+    vs_previous: "<b>VS. PREVIOUS:</b><br>",
+    time: "Time",
+    history_title: "HISTORY",
+    grouped: "GROUPED AND RESULTS:",
+    understood: "Understood!",
+    rest: "Rest and see you tomorrow.",
+    "Calentamiento": "Warmup",
+    "Al Fallo": "To Failure",
+    "Recuperación": "Recovery",
+    "Lenta/Negativa": "Slow/Negative",
+    "Recorrido Total": "Full Range",
+    "Sentadillas": "Squats",
+    "Flexiones": "Push-ups",
+    "Dom. Espalda": "Pull-ups (Back)",
+    "Dom. Bíceps": "Pull-ups (Biceps)"
+  },
+  ca: {
+    today_btn: "AVUI",
+    ready: "A punt?",
+    already_registered: "⚠️ Ja registrat.",
+    start_workout: "COMENÇAR ENTRENAMENT",
+    view_history: "VEURE HISTORIAL 📊",
+    not_today: "AVUI NO, GRÀCIES",
+    settings: "CONFIGURACIÓ ⚙️",
+    language: "Idioma",
+    change_date: "Canviar data actual",
+    routine: "Rutina",
+    edit_routine: "EDITAR RUTINA ✏️",
+    local_data: "Dades locals",
+    export_json: "EXPORTAR JSON",
+    import_json: "IMPORTAR JSON",
+    erase_history: "ESBORRAR HISTORIAL",
+    back: "TORNAR",
+    back_home: "TORNAR A L'INICI",
+    dev_alert: "En desenvolupament",
+    delete_confirm: "Esborrar historial?",
+    next: "SEGÜENT",
+    finish: "FINALITZAR",
+    goal_met: "OBJECTIU ASSOLIT! 🥪",
+    first_day: "<b>Primer dia!</b> Demà comparem.",
+    vs_previous: "<b>VS. ANTERIOR:</b><br>",
+    time: "Temps",
+    history_title: "HISTORIAL",
+    grouped: "AGRUPAT I COMPULSIÓ:",
+    understood: "Entès!",
+    rest: "Descansa i ens veiem demà.",
+    "Calentamiento": "Escalfament",
+    "Al Fallo": "A la fallada",
+    "Recuperación": "Recuperació",
+    "Lenta/Negativa": "Lenta/Negativa",
+    "Recorrido Total": "Recorregut Total",
+    "Sentadillas": "Sentadetes",
+    "Flexiones": "Flexions",
+    "Dom. Espalda": "Dom. Esquena",
+    "Dom. Bíceps": "Dom. Bíceps"
+  },
+  eu: {
+    today_btn: "GAUR",
+    ready: "Prest?",
+    already_registered: "⚠️ Erregistratuta.",
+    start_workout: "HASI ENTRENAMENDUA",
+    view_history: "IKUSI HISTORIALA 📊",
+    not_today: "GAUR EZ, ESKERRIK ASKO",
+    settings: "EZARPENAK ⚙️",
+    language: "Hizkuntza",
+    change_date: "Aldatu data",
+    routine: "Errutina",
+    edit_routine: "EDITATU ERRUTINA ✏️",
+    local_data: "Datu lokalak",
+    export_json: "ESPORTATU JSON",
+    import_json: "INPORTATU JSON",
+    erase_history: "EZABATU HISTORIALA",
+    back: "ITZULI",
+    back_home: "HASIERARA ITZULI",
+    dev_alert: "Garapenean",
+    delete_confirm: "Historiala ezabatu?",
+    next: "HURRENGOA",
+    finish: "AMAITU",
+    goal_met: "HELBURUA LORTUTA! 🥪",
+    first_day: "<b>Lehen eguna!</b> Bihar konparatuko dugu.",
+    vs_previous: "<b>VS. AURREKOA:</b><br>",
+    time: "Denbora",
+    history_title: "HISTORIALA",
+    grouped: "ELKARTUTA ETA EMAITZAK:",
+    understood: "Ulertuta!",
+    rest: "Atseden hartu eta bihar arte.",
+    "Calentamiento": "Beroketa",
+    "Al Fallo": "Hutsegitera",
+    "Recuperación": "Errekuperazioa",
+    "Lenta/Negativa": "Geldoa/Negatiboa",
+    "Recorrido Total": "Ibilbide Osoa",
+    "Sentadillas": "Kokorikatzeak",
+    "Flexiones": "Flexioak",
+    "Dom. Espalda": "Bizkarreko Dom.",
+    "Dom. Bíceps": "Bizezpeko Dom."
+  },
+  gl: {
+    today_btn: "HOXE",
+    ready: "Listo?",
+    already_registered: "⚠️ Xa rexistrado.",
+    start_workout: "COMEZAR ADESTRAMENTO",
+    view_history: "VER HISTORIAL 📊",
+    not_today: "HOXE NON, GRAZAS",
+    settings: "AXUSTES ⚙️",
+    language: "Idioma",
+    change_date: "Cambiar data actual",
+    routine: "Rutina",
+    edit_routine: "EDITAR RUTINA ✏️",
+    local_data: "Datos locais",
+    export_json: "EXPORTAR JSON",
+    import_json: "IMPORTAR JSON",
+    erase_history: "BORRAR O HISTORIAL",
+    back: "VOLVER",
+    back_home: "VOLVER AO INICIO",
+    dev_alert: "En desenvolvemento",
+    delete_confirm: "Borrar historial?",
+    next: "SEGUINTE",
+    finish: "FINALIZAR",
+    goal_met: "OBXECTIVO CUMPRIDO! 🥪",
+    first_day: "<b>Primeiro día!</b> Mañá comparamos.",
+    vs_previous: "<b>VS. ANTERIOR:</b><br>",
+    time: "Tempo",
+    history_title: "HISTORIAL",
+    grouped: "AGRUPADO E COMPULSIÓN:",
+    understood: "Entendido!",
+    rest: "Descansa ata mañá.",
+    "Calentamiento": "Quecemento",
+    "Al Fallo": "Ao Fallo",
+    "Recuperación": "Recuperación",
+    "Lenta/Negativa": "Lenta/Negativa",
+    "Recorrido Total": "Percorrido Total",
+    "Sentadillas": "Sentadillas",
+    "Flexiones": "Flexións",
+    "Dom. Espalda": "Dom. Costas",
+    "Dom. Bíceps": "Dom. Bíceps"
+  }
+};
+let currentLang = localStorage.getItem("workout_lang") || "es";
+function t(key) {
+  if (!TRANSLATIONS[currentLang]) return key;
+  return TRANSLATIONS[currentLang][key] || TRANSLATIONS["es"][key] || key;
+}
+function applyTranslations() {
+  document.documentElement.lang = currentLang;
+  document.getElementById("lang-selector").value = currentLang;
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.innerHTML = t(el.getAttribute("data-i18n"));
+  });
+  if (activeDate) updateActiveDate();
+}
+function changeLanguage() {
+  currentLang = document.getElementById("lang-selector").value;
+  localStorage.setItem("workout_lang", currentLang);
+  applyTranslations();
+}
+const EXERCISES = {
+  SENT: { name: "Sentadillas" },
+  FLEX: { name: "Flexiones" },
+  DOM_E: { name: "Dom. Espalda" },
+  DOM_B: { name: "Dom. Bíceps" }
+};
+const ROUTINE = [
+  { ex: "SENT", start: 20, tag: "Calentamiento" },
+  { ex: "FLEX", start: 8, tag: "Al Fallo" },
+  { ex: "SENT", start: 20, tag: "Recuperación" },
+  { ex: "DOM_E", start: 2, tag: "Lenta/Negativa" },
+  { ex: "SENT", start: 20, tag: "Recuperación" },
+  { ex: "DOM_B", start: 3, tag: "Recorrido Total" },
+  { ex: "SENT", start: 20, tag: "Recuperación" },
+  { ex: "FLEX", start: 6, tag: "Al Fallo" }
+];
+let history = JSON.parse(localStorage.getItem("workout_history_v2") || "{}");
+let results = [];
+let startTime, stepStartTime, activeDate = "";
+window.onload = () => {
+  applyTranslations();
+  updateActiveDate();
+};
+function resetToToday() {
+  localStorage.removeItem("workout_manual_date");
+  updateActiveDate();
+}
+function updateActiveDate(manualDateStr = null) {
+  if (manualDateStr) {
+    activeDate = manualDateStr;
+    localStorage.setItem("workout_manual_date", activeDate);
+  } else if (localStorage.getItem("workout_manual_date")) {
+    activeDate = localStorage.getItem("workout_manual_date");
+  } else {
+    const now = /* @__PURE__ */ new Date();
+    activeDate = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
+  document.getElementById("date-hacker").value = activeDate;
+  const d = /* @__PURE__ */ new Date(activeDate + "T00:00:00");
+  document.getElementById("display-date").innerText = d.toLocaleDateString(currentLang, {
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  });
+  const isDynamic = !localStorage.getItem("workout_manual_date");
+  document.getElementById("btn-today").style.display = isDynamic ? "none" : "block";
+  const isRegistered = history[activeDate] !== void 0;
+  document.getElementById("check-msg").innerHTML = isRegistered ? `<p style="color:#ffa726">${t("already_registered")}</p>` : `<p>${t("ready")}</p>`;
+}
+function startWorkout() {
+  startTime = Date.now();
+  stepStartTime = startTime;
+  results = ROUTINE.map((s) => ({ ...s, value: s.start, duration: 0 }));
+  document.getElementById("view-welcome").classList.remove("active");
+  renderStep(0);
+}
+function renderStep(idx) {
+  const step = results[idx];
+  const ex = EXERCISES[step.ex];
+  const engine = document.getElementById("workout-engine");
+  const isLastStep = idx === ROUTINE.length - 1;
+  const buttonLabel = isLastStep ? t("finish") : t("next");
+  engine.innerHTML = `
+    <label>${t(step.tag)} (${idx + 1}/${ROUTINE.length})</label>
+    <span class="exercise-name">${t(ex.name)}</span>
+    <div class="counter-container">
+      <button class="btn-circle" onclick="changeVal(${idx}, -1)">-</button>
+      <div class="val" id="val-${idx}">${step.value}</div>
+      <button class="btn-circle" onclick="changeVal(${idx}, 1)">+</button>
+    </div>
+    <button class="next-btn" onclick="processStep(${idx})">${buttonLabel}</button>
+  `;
+  engine.classList.add("active");
+}
+function changeVal(idx, delta) {
+  results[idx].value = Math.max(0, results[idx].value + delta);
+  document.getElementById(`val-${idx}`).innerText = results[idx].value;
+}
+function processStep(idx) {
+  const now = Date.now();
+  results[idx].duration = Math.floor((now - stepStartTime) / 1e3);
+  if (idx === ROUTINE.length - 1) {
+    finish();
+  } else {
+    stepStartTime = now;
+    renderStep(idx + 1);
+  }
+}
+function finish() {
+  const totalTime = results.reduce((acc, s) => acc + s.duration, 0);
+  const totals = results.reduce((acc, s) => {
+    const name = EXERCISES[s.ex].name;
+    acc[name] = (acc[name] || 0) + s.value;
+    return acc;
+  }, {});
+  const sessionData = {
+    date: activeDate,
+    duration: totalTime,
+    steps: results,
+    totals
+  };
+  const lastKey = Object.keys(history).sort().filter((k) => k < activeDate).pop();
+  const prevData = history[lastKey];
+  showSummary(sessionData, prevData);
+  history[activeDate] = sessionData;
+  localStorage.setItem("workout_history_v2", JSON.stringify(history));
+}
+function showSummary(cur, prev) {
+  document.getElementById("workout-engine").classList.remove("active");
+  document.getElementById("view-summary").classList.add("active");
+  const minutes = Math.floor(cur.duration / 60);
+  const seconds = cur.duration % 60;
+  document.getElementById("finalTime").innerText = `${minutes}m ${seconds}s`;
+  if (!prev) {
+    document.getElementById("comparison-box").innerHTML = t("first_day");
+  } else {
+    let compHtml = t("vs_previous");
+    Object.keys(cur.totals).forEach((name) => {
+      const prevVal = prev.totals[name] || 0;
+      const diff = cur.totals[name] - prevVal;
+      const sign = diff >= 0 ? "+" : "";
+      compHtml += `• ${t(name)}: ${sign}${diff}<br>`;
+    });
+    const dT = prev.duration - cur.duration;
+    const speedIcon = dT >= 0 ? "🚀 " : "🐢 ";
+    compHtml += `• ${t("time")}: ${speedIcon}${Math.abs(dT)}s`;
+    document.getElementById("comparison-box").innerHTML = compHtml;
+  }
+  document.getElementById("statsList").innerHTML = Object.keys(cur.totals).map((n) => `
+    <div class="stat-row">
+      <span>${t(n)}</span>
+      <b>${cur.totals[n]}</b>
+    </div>
+  `).join("");
+}
+function showHistory() {
+  document.getElementById("view-welcome").classList.remove("active");
+  document.getElementById("view-history").classList.add("active");
+  const list = document.getElementById("history-list");
+  const sortedKeys = Object.keys(history).sort().reverse();
+  list.innerHTML = sortedKeys.map((k, i) => {
+    const s = history[k];
+    const prevK = sortedKeys.slice(i + 1).find((key) => key < k);
+    const prevS = prevK ? history[prevK] : null;
+    const mins = Math.floor(s.duration / 60);
+    const secs = s.duration % 60;
+    const stepsHtml = s.steps.map((st) => `
+      <div>${t(st.tag)} ${t(EXERCISES[st.ex].name)}: <b>${st.value}</b></div>
+    `).join("");
+    const totalsHtml = Object.keys(s.totals).map((name) => {
+      const diff = prevS ? s.totals[name] - (prevS.totals[name] || 0) : null;
+      const sign = diff >= 0 ? "+" : "";
+      const diffClass = diff >= 0 ? "pos" : "neg";
+      const diffText = diff !== null ? `<span class="delta ${diffClass}">(${sign}${diff})</span>` : "";
+      return `<div>• ${t(name)}: <b>${s.totals[name]}</b> ${diffText}</div>`;
+    }).join("");
+    return `
+      <div class="hist-card">
+        <div class="hist-header" onclick="toggleCard(${i})">
+          <div>
+            <span class="hist-date">${k}</span><br>
+            <small>${mins}m ${secs}s</small>
+          </div>
+          <span>▼</span>
+        </div>
+        
+        <div id="card-${i}" class="hist-details">
+          ${stepsHtml}
+          <div class="hist-total-row">${t("grouped")}</div>
+          ${totalsHtml}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+function toggleCard(i) {
+  document.getElementById(`card-${i}`).classList.toggle("open");
+}
+function showSettings() {
+  document.getElementById("view-welcome").classList.remove("active");
+  document.getElementById("view-settings").classList.add("active");
+}
+function closeSettings() {
+  updateActiveDate();
+  document.getElementById("view-settings").classList.remove("active");
+  document.getElementById("view-welcome").classList.add("active");
+}
+function exportJSON() {
+  const b = new Blob([JSON.stringify(history, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = `workout.json`;
+  a.click();
+}
+function importJSON(event) {
+  const r = new FileReader();
+  r.onload = (e) => {
+    history = JSON.parse(e.target.result);
+    localStorage.setItem("workout_history_v2", JSON.stringify(history));
+    location.reload();
+  };
+  r.readAsText(event.target.files);
+}
+function clearAllData() {
+  if (confirm(t("delete_confirm"))) {
+    localStorage.removeItem("workout_history_v2");
+    location.reload();
+  }
+}
+function showExit() {
+  document.getElementById("view-welcome").classList.remove("active");
+  document.getElementById("view-exit").classList.add("active");
+}
+window.startWorkout = startWorkout;
+window.changeVal = changeVal;
+window.processStep = processStep;
+window.showHistory = showHistory;
+window.toggleCard = toggleCard;
+window.showSettings = showSettings;
+window.closeSettings = closeSettings;
+window.exportJSON = exportJSON;
+window.importJSON = importJSON;
+window.clearAllData = clearAllData;
+window.showExit = showExit;
+window.changeLanguage = changeLanguage;
+window.updateActiveDate = updateActiveDate;
+window.resetToToday = resetToToday;
+window.t = t;</script>
+  <style rel="stylesheet" crossorigin>body {
+  font-family: sans-serif;
+  background: #121212;
+  color: white;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  touch-action: manipulation;
+  overflow: hidden;
+}
+
+.view {
+  display: none;
+  text-align: center;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.view.active {
+  display: block;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.counter-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.val {
+  font-size: 5rem;
+  font-weight: bold;
+  min-width: 120px;
+  color: #4CAF50;
+}
+
+.btn-circle {
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  border: 2px solid #4CAF50;
+  background: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-circle:active {
+  background: #4CAF50;
+}
+
+.next-btn {
+  width: 90%;
+  max-width: 400px;
+  padding: 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin: 8px auto;
+  display: block;
+}
+
+label {
+  color: #888;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.exercise-name {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.comparison {
+  background: #1e2a1e;
+  color: #81c784;
+  padding: 15px;
+  border-radius: 10px;
+  margin: 15px auto;
+  text-align: left;
+  font-size: 0.9rem;
+  border-left: 4px solid #4CAF50;
+  max-width: 400px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  width: 90%;
+  max-width: 400px;
+  margin: 5px auto;
+  border-bottom: 1px solid #222;
+  padding: 10px 0;
+}
+
+.hist-card {
+  background: #1e1e1e;
+  border-radius: 10px;
+  margin: 10px auto;
+  text-align: left;
+  max-width: 450px;
+  border-left: 3px solid #555;
+}
+
+.hist-header {
+  padding: 15px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hist-details {
+  display: none;
+  padding: 15px;
+  background: #252525;
+  font-size: 0.85rem;
+  border-top: 1px solid #333;
+}
+
+.hist-details.open {
+  display: block;
+}
+
+.hist-total-row {
+  color: #4CAF50;
+  border-top: 1px solid #444;
+  margin-top: 8px;
+  padding-top: 4px;
+  font-weight: bold;
+}
+
+.delta {
+  font-size: 0.8rem;
+  margin-left: 5px;
+}
+
+.pos { color: #81c784; }
+.neg { color: #f44336; }
+
+input[type="date"] {
+  background: #222;
+  color: white;
+  border: 1px solid #444;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 1rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}</style>
+</head>
+<body>
+
+  <!-- ==========================================
+       HTML STRUCTURE (VIEWS)
+       ========================================== -->
+
+  <!-- View: Welcome & Actions Menu -->
+  <div id="view-welcome" class="view active">
+    <!-- Settings Icon -->
+    <div style="position: absolute; top: 20px; right: 20px; font-size: 2rem; cursor: pointer; -webkit-tap-highlight-color: transparent;" onclick="showSettings()">⚙️</div>
+
+    <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 5px;">
+      <h2 id="display-date" style="margin: 0;"></h2>
+      <button id="btn-today" onclick="resetToToday()" style="background: #4CAF50; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: none;" data-i18n="today_btn">HOY</button>
+    </div>
+    
+    <div id="check-msg" style="margin-bottom: 20px;"></div>
+    
+    <button class="next-btn" onclick="startWorkout()" data-i18n="start_workout">EMPEZAR ENTRENAMIENTO</button>
+    <button class="next-btn" style="background:#455a64" onclick="showHistory()" data-i18n="view_history">VER HISTORIAL 📊</button>
+    <button class="next-btn" style="background:#333" onclick="showExit()" data-i18n="not_today">HOY NO, GRACIAS</button>
+  </div>
+
+  <!-- View: Settings / Configuration -->
+  <div id="view-settings" class="view">
+    <h2 data-i18n="settings">AJUSTES ⚙️</h2>
+    
+    <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+      <label data-i18n="language">Idioma</label>
+      <select id="lang-selector" onchange="changeLanguage()" style="width: 100%; padding: 12px; background: #222; color: white; border: 1px solid #444; border-radius: 8px; margin-bottom: 20px; font-size: 1rem;">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+        <option value="ca">Català</option>
+        <option value="eu">Euskera</option>
+        <option value="gl">Galego</option>
+      </select>
+
+      <label data-i18n="change_date">Cambiar fecha actual</label>
+      <input type="date" id="date-hacker" onchange="updateActiveDate(this.value)" style="width: 100%; box-sizing: border-box;">
+
+      <label data-i18n="routine">Rutina</label>
+      <button class="next-btn" style="background:#3949ab; width: 100%; margin: 5px 0 20px 0; font-size: 0.9rem;" onclick="alert(t('dev_alert'))" data-i18n="edit_routine">EDITAR RUTINA ✏️</button>
+    </div>
+
+    <!-- Utilities moved from welcome -->
+    <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 20px;">
+      <label style="text-align: center;" data-i18n="local_data">Datos locales</label>
+      <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="exportJSON()" data-i18n="export_json">EXPORTAR JSON</button>
+      <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="document.getElementById('fileInput').click()" data-i18n="import_json">IMPORTAR JSON</button>
+      <input type="file" id="fileInput" style="display:none" onchange="importJSON(event)" accept=".json">
+      <button class="next-btn" style="background:#b71c1c; font-size: 0.7rem; padding: 10px;" onclick="clearAllData()" data-i18n="erase_history">BORRAR TODO EL HISTORIAL</button>
+    </div>
+
+    <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeSettings()" data-i18n="back">VOLVER</button>
+  </div>
+
+  <!-- View: Active Workout Engine -->
+  <div id="workout-engine" class="view">
+    <!-- Populated dynamically via JS renderStep() -->
+  </div>
+
+  <!-- View: Post Workout Summary -->
+  <div id="view-summary" class="view">
+    <h2 data-i18n="goal_met">¡OBJETIVO CUMPLIDO! 🥪</h2>
+    <div id="comparison-box" class="comparison"></div>
+    <div id="statsList"></div>
+    <div style="margin-top: 20px;">
+      <span id="finalTime" style="font-size: 2.5rem; font-weight: bold; color: #4CAF50;"></span>
+    </div>
+    <button class="next-btn" onclick="location.reload()" data-i18n="back_home">VOLVER AL INICIO</button>
+  </div>
+
+  <!-- View: Complete History List -->
+  <div id="view-history" class="view">
+    <h2 data-i18n="history_title">HISTORIAL</h2>
+    <div id="history-list"></div>
+    <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="location.reload()" data-i18n="back">VOLVER</button>
+  </div>
+
+  <!-- View: Goodbye / Exit Screen -->
+  <div id="view-exit" class="view">
+    <h1 style="font-size: 4rem;">👋</h1>
+    <h2 data-i18n="understood">¡Entendido!</h2>
+    <p data-i18n="rest">Descansa y nos vemos mañana.</p>
+    <button class="next-btn" onclick="location.reload()" data-i18n="back">VOLVER</button>
+  </div>
+
+  <!-- ==========================================
+       SCRIPTS & ENTRY POINT
+       ========================================== -->
+</body>
+</html>

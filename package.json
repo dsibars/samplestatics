@@ -1,0 +1,13 @@
+{
+  "name": "15min-workout",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build:prod": "vite build",
+    "build:debug": "vite build -m debug"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0",
+    "vite-plugin-singlefile": "^2.0.1"
+  }
+}
