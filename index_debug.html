@@ -2573,6 +2573,13 @@ function renderRoutineList() {
     }
   });
 }
+function removeRoutineStep(idx) {
+  if (confirm("¿Borrar ejercicio?")) {
+    state.routine.splice(idx, 1);
+    localStorage.setItem("workout_routine", JSON.stringify(state.routine));
+    renderRoutineList();
+  }
+}
 function closeRoutine() {
   document.getElementById("view-routine").classList.remove("active");
   document.getElementById("view-settings").classList.add("active");
