@@ -1,0 +1,37 @@
+<div id="view-general_stats" class="view">
+  <h2 data-i18n="stats">STATISTICS 📊</h2>
+
+  <div class="card">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+      <div>
+        <label data-i18n="date_from">From</label>
+        <input type="date" id="stats-from" onchange="renderGeneralStats()">
+      </div>
+      <div>
+        <label data-i18n="date_to">To</label>
+        <input type="date" id="stats-to" onchange="renderGeneralStats()">
+      </div>
+    </div>
+
+    <h3 data-i18n="period_summary" style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 10px;">Period Summary</h3>
+    <div style="font-size: 2rem; font-weight: bold;" id="stats-period-net">$0.00</div>
+    <div class="balance-grid">
+      <div class="balance-item">
+        <span class="label" data-i18n="total_owe_me">Owes me</span>
+        <span class="value positive" id="stats-period-plus">$0.00</span>
+      </div>
+      <div class="balance-item">
+        <span class="label" data-i18n="total_i_owe">I owe</span>
+        <span class="value negative" id="stats-period-minus">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="stats-person-breakdown">
+    <!-- To be filled by JS: List of persons with their net for this period -->
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>

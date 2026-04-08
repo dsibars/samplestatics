@@ -74,7 +74,16 @@ const TRANSLATIONS = {
     back_home: "SALIR AL HUB",
     net_with: "Balance con",
     payments: "Movimientos",
-    lang: "Idioma"
+    lang: "Idioma",
+    stats: "ESTADÍSTICAS 📊",
+    date_from: "Desde",
+    date_to: "Hasta",
+    period_summary: "Resumen del periodo",
+    local_data: "Datos Locales",
+    export_json: "EXPORTAR JSON",
+    import_json: "IMPORTAR JSON",
+    erase_all: "BORRAR TODO",
+    erase_confirm: "¿Estás seguro? Se borrarán todos los movimientos y personas."
   },
   en: {
     dashboard: "Dashboard",
@@ -99,7 +108,16 @@ const TRANSLATIONS = {
     back_home: "EXIT TO HUB",
     net_with: "Balance with",
     payments: "Transactions",
-    lang: "Language"
+    lang: "Language",
+    stats: "STATISTICS 📊",
+    date_from: "From",
+    date_to: "To",
+    period_summary: "Period Summary",
+    local_data: "Local Data",
+    export_json: "EXPORT JSON",
+    import_json: "IMPORT JSON",
+    erase_all: "ERASE EVERYTHING",
+    erase_confirm: "Are you sure? This will delete all transactions and people."
   },
   ca: {
     dashboard: "Resum",
@@ -124,7 +142,16 @@ const TRANSLATIONS = {
     back_home: "SORTIR AL HUB",
     net_with: "Balanç amb",
     payments: "Moviments",
-    lang: "Idioma"
+    lang: "Idioma",
+    stats: "ESTADÍSTIQUES 📊",
+    date_from: "Des de",
+    date_to: "Fins a",
+    period_summary: "Resum del període",
+    local_data: "Dades Locals",
+    export_json: "EXPORTAR JSON",
+    import_json: "IMPORTAR JSON",
+    erase_all: "ESBORRAR TOT",
+    erase_confirm: "Estàs segur? S'esborraran tots els moviments i persones."
   },
   eu: {
     dashboard: "Laburpena",
@@ -149,7 +176,16 @@ const TRANSLATIONS = {
     back_home: "HUBERA IRTEN",
     net_with: "Balanzea honekin:",
     payments: "Mugimenduak",
-    lang: "Hizkuntza"
+    lang: "Hizkuntza",
+    stats: "ESTATISTIKAK 📊",
+    date_from: "Noiztik",
+    date_to: "Noiz arte",
+    period_summary: "Epearen laburpena",
+    local_data: "Datu Lokalak",
+    export_json: "EXPORTATU JSON",
+    import_json: "IMPORTATU JSON",
+    erase_all: "DENA EZABATU",
+    erase_confirm: "Ziur zaude? Mugimendu eta pertsona guztiak ezabatuko dira."
   },
   gl: {
     dashboard: "Resumo",
@@ -174,7 +210,16 @@ const TRANSLATIONS = {
     back_home: "SAÍR AO HUB",
     net_with: "Balance con",
     payments: "Movementos",
-    lang: "Idioma"
+    lang: "Idioma",
+    stats: "ESTADÍSTICAS 📊",
+    date_from: "Desde",
+    date_to: "Ata",
+    period_summary: "Resumo do periodo",
+    local_data: "Datos Locais",
+    export_json: "EXPORTAR JSON",
+    import_json: "IMPORTAR JSON",
+    erase_all: "BORRAR TODO",
+    erase_confirm: "Estás seguro? Borraranse todos os movementos e persoas."
   }
 };
 const SHARED_KEY = "static_apps_lang";
@@ -201,6 +246,8 @@ function renderView(viewId) {
   if (viewId === "transaction") renderTransactionForm();
   if (viewId === "history") renderHistory();
   if (viewId === "people") renderPeople();
+  if (viewId === "general_stats") renderGeneralStats();
+  if (viewId === "settings") renderSettings();
 }
 function renderDashboard() {
   const totals = calculateTotals();
@@ -209,9 +256,9 @@ function renderDashboard() {
   document.getElementById("total-plus").innerText = formatCurrency(totals.plus);
   document.getElementById("total-minus").innerText = formatCurrency(totals.minus);
 }
-function calculateTotals() {
+function calculateTotals(transactions = state.transactions) {
   let plus = 0, minus = 0;
-  state.transactions.forEach((tx) => {
+  transactions.forEach((tx) => {
     if (tx.type === "owe_me") plus += tx.amount;
     else minus += tx.amount;
   });
@@ -247,6 +294,7 @@ window.saveTransaction = () => {
 function renderHistory(personFilter = null) {
   const listId = personFilter ? "person-history-list" : "history-list";
   const list = document.getElementById(listId);
+  if (!list) return;
   const filtered = personFilter ? state.transactions.filter((t2) => t2.person === personFilter) : state.transactions;
   list.innerHTML = filtered.map((tx) => `
     <div class="tx-item">
@@ -312,6 +360,85 @@ function showPersonStats(name) {
   balanceEl.className = net >= 0 ? "positive" : "negative";
   renderHistory(name);
 }
+window.renderGeneralStats = () => {
+  const fromInput = document.getElementById("stats-from");
+  const toInput = document.getElementById("stats-to");
+  if (!fromInput.value) {
+    const d = /* @__PURE__ */ new Date();
+    d.setDate(d.getDate() - 30);
+    fromInput.value = d.toISOString().split("T")[0];
+    toInput.value = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  }
+  const from = /* @__PURE__ */ new Date(fromInput.value + "T00:00:00");
+  const to = /* @__PURE__ */ new Date(toInput.value + "T23:59:59");
+  const filtered = state.transactions.filter((tx) => {
+    const d = new Date(tx.date);
+    return d >= from && d <= to;
+  });
+  const totals = calculateTotals(filtered);
+  document.getElementById("stats-period-net").innerText = (totals.net >= 0 ? "+" : "-") + formatCurrency(totals.net);
+  document.getElementById("stats-period-net").className = totals.net >= 0 ? "positive" : "negative";
+  document.getElementById("stats-period-plus").innerText = formatCurrency(totals.plus);
+  document.getElementById("stats-period-minus").innerText = formatCurrency(totals.minus);
+  const personMap = {};
+  state.people.forEach((p) => personMap[p] = 0);
+  filtered.forEach((tx) => {
+    if (tx.type === "owe_me") personMap[tx.person] += tx.amount;
+    else personMap[tx.person] -= tx.amount;
+  });
+  const list = document.getElementById("stats-person-breakdown");
+  list.innerHTML = Object.entries(personMap).filter(([_, val]) => val !== 0).sort((a, b) => b[1] - a[1]).map(([name, val]) => `
+      <div class="tx-item">
+        <span>${name}</span>
+        <span class="${val >= 0 ? "positive" : "negative"}">${val >= 0 ? "+" : "-"}${formatCurrency(val)}</span>
+      </div>
+    `).join("");
+};
+function renderSettings() {
+  const selector = document.getElementById("lang-selector");
+  if (selector) selector.value = currentLang;
+}
+window.changeLanguage = () => {
+  const val = document.getElementById("lang-selector").value;
+  localStorage.setItem("static_apps_lang", val);
+  location.reload();
+};
+window.exportData = () => {
+  const data = {
+    version: 1,
+    transactions: state.transactions,
+    people: state.people
+  };
+  const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = "balance_backup.json";
+  a.click();
+};
+window.importData = (event) => {
+  const r = new FileReader();
+  r.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.transactions && data.people) {
+        state.transactions = data.transactions;
+        state.people = data.people;
+        saveState();
+        location.reload();
+      }
+    } catch (err) {
+      alert("Invalid JSON file");
+    }
+  };
+  r.readAsText(event.target.files[0]);
+};
+window.clearAllData = () => {
+  if (confirm(t("erase_confirm"))) {
+    localStorage.removeItem("balance_history");
+    localStorage.removeItem("balance_people");
+    location.reload();
+  }
+};
 function formatCurrency(val) {
   return Math.abs(val).toLocaleString(void 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -484,8 +611,10 @@ input, select, textarea {
   </div>
 
   <button class="btn btn-primary" onclick="showView('transaction')" data-i18n="add_tx">ADD TRANSACTION</button>
+  <button class="btn btn-secondary" onclick="showView('general_stats')" data-i18n="stats">STATISTICS 📊</button>
   <button class="btn btn-secondary" onclick="showView('history')" data-i18n="history">HISTORY 📜</button>
   <button class="btn btn-secondary" onclick="showView('people')" data-i18n="people">PEOPLE 👥</button>
+  <button class="btn btn-secondary" onclick="showView('settings')" data-i18n="settings">SETTINGS ⚙️</button>
 
   <div style="margin-top: 40px; text-align: center;">
     <button class="btn btn-secondary" style="background: transparent; color: #555;" onclick="location.href='index.html'" data-i18n="back_home">EXIT TO HUB</button>
@@ -572,6 +701,71 @@ input, select, textarea {
 
   <!-- Missing partial: ./pages/people.html in money-track -->
   <!-- Missing partial: ./pages/stats.html in money-track -->
+  <div id="view-general_stats" class="view">
+  <h2 data-i18n="stats">STATISTICS 📊</h2>
+
+  <div class="card">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+      <div>
+        <label data-i18n="date_from">From</label>
+        <input type="date" id="stats-from" onchange="renderGeneralStats()">
+      </div>
+      <div>
+        <label data-i18n="date_to">To</label>
+        <input type="date" id="stats-to" onchange="renderGeneralStats()">
+      </div>
+    </div>
+
+    <h3 data-i18n="period_summary" style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 10px;">Period Summary</h3>
+    <div style="font-size: 2rem; font-weight: bold;" id="stats-period-net">$0.00</div>
+    <div class="balance-grid">
+      <div class="balance-item">
+        <span class="label" data-i18n="total_owe_me">Owes me</span>
+        <span class="value positive" id="stats-period-plus">$0.00</span>
+      </div>
+      <div class="balance-item">
+        <span class="label" data-i18n="total_i_owe">I owe</span>
+        <span class="value negative" id="stats-period-minus">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="stats-person-breakdown">
+    <!-- To be filled by JS: List of persons with their net for this period -->
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
+  <div id="view-settings" class="view">
+  <h2 data-i18n="settings">SETTINGS ⚙️</h2>
+
+  <div class="form-group">
+    <label data-i18n="lang">Language</label>
+    <select id="lang-selector" onchange="changeLanguage()">
+      <option value="es">Español</option>
+      <option value="en">English</option>
+      <option value="ca">Català</option>
+      <option value="eu">Euskara</option>
+      <option value="gl">Galego</option>
+    </select>
+  </div>
+
+  <div class="card" style="margin-top: 30px;">
+    <h3 data-i18n="local_data">Local Data</h3>
+    <button class="btn btn-secondary" onclick="exportData()" data-i18n="export_json">EXPORT JSON</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" data-i18n="import_json">IMPORT JSON</button>
+    <input type="file" id="import-file" style="display:none" onchange="importData(event)" accept=".json">
+    <button class="btn btn-danger" onclick="clearAllData()" data-i18n="erase_all" style="margin-top: 20px;">ERASE EVERYTHING</button>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
 
 </body>
 </html>

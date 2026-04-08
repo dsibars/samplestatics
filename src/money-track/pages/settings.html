@@ -1,0 +1,26 @@
+<div id="view-settings" class="view">
+  <h2 data-i18n="settings">SETTINGS ⚙️</h2>
+
+  <div class="form-group">
+    <label data-i18n="lang">Language</label>
+    <select id="lang-selector" onchange="changeLanguage()">
+      <option value="es">Español</option>
+      <option value="en">English</option>
+      <option value="ca">Català</option>
+      <option value="eu">Euskara</option>
+      <option value="gl">Galego</option>
+    </select>
+  </div>
+
+  <div class="card" style="margin-top: 30px;">
+    <h3 data-i18n="local_data">Local Data</h3>
+    <button class="btn btn-secondary" onclick="exportData()" data-i18n="export_json">EXPORT JSON</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" data-i18n="import_json">IMPORT JSON</button>
+    <input type="file" id="import-file" style="display:none" onchange="importData(event)" accept=".json">
+    <button class="btn btn-danger" onclick="clearAllData()" data-i18n="erase_all" style="margin-top: 20px;">ERASE EVERYTHING</button>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>

@@ -16,6 +16,8 @@ function renderView(viewId) {
   if (viewId === 'transaction') renderTransactionForm();
   if (viewId === 'history') renderHistory();
   if (viewId === 'people') renderPeople();
+  if (viewId === 'general_stats') renderGeneralStats();
+  if (viewId === 'settings') renderSettings();
 }
 
 // --- Dashboard Logic ---
@@ -27,9 +29,9 @@ function renderDashboard() {
   document.getElementById('total-minus').innerText = formatCurrency(totals.minus);
 }
 
-function calculateTotals() {
+function calculateTotals(transactions = state.transactions) {
   let plus = 0, minus = 0;
-  state.transactions.forEach(tx => {
+  transactions.forEach(tx => {
     if (tx.type === 'owe_me') plus += tx.amount;
     else minus += tx.amount;
   });
@@ -75,6 +77,8 @@ window.saveTransaction = () => {
 function renderHistory(personFilter = null) {
   const listId = personFilter ? 'person-history-list' : 'history-list';
   const list = document.getElementById(listId);
+  if (!list) return;
+
   const filtered = personFilter 
     ? state.transactions.filter(t => t.person === personFilter)
     : state.transactions;
@@ -154,6 +158,103 @@ function showPersonStats(name) {
 
   renderHistory(name);
 }
+
+// --- General Stats Logic ---
+window.renderGeneralStats = () => {
+  const fromInput = document.getElementById('stats-from');
+  const toInput = document.getElementById('stats-to');
+  
+  if (!fromInput.value) {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    fromInput.value = d.toISOString().split('T')[0];
+    toInput.value = new Date().toISOString().split('T')[0];
+  }
+
+  const from = new Date(fromInput.value + 'T00:00:00');
+  const to = new Date(toInput.value + 'T23:59:59');
+
+  const filtered = state.transactions.filter(tx => {
+    const d = new Date(tx.date);
+    return d >= from && d <= to;
+  });
+
+  const totals = calculateTotals(filtered);
+  document.getElementById('stats-period-net').innerText = (totals.net >= 0 ? '+' : '-') + formatCurrency(totals.net);
+  document.getElementById('stats-period-net').className = totals.net >= 0 ? 'positive' : 'negative';
+  document.getElementById('stats-period-plus').innerText = formatCurrency(totals.plus);
+  document.getElementById('stats-period-minus').innerText = formatCurrency(totals.minus);
+
+  // Per person breakdown
+  const personMap = {};
+  state.people.forEach(p => personMap[p] = 0);
+  filtered.forEach(tx => {
+    if (tx.type === 'owe_me') personMap[tx.person] += tx.amount;
+    else personMap[tx.person] -= tx.amount;
+  });
+
+  const list = document.getElementById('stats-person-breakdown');
+  list.innerHTML = Object.entries(personMap)
+    .filter(([_, val]) => val !== 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, val]) => `
+      <div class="tx-item">
+        <span>${name}</span>
+        <span class="${val >= 0 ? 'positive' : 'negative'}">${val >= 0 ? '+' : '-'}${formatCurrency(val)}</span>
+      </div>
+    `).join('');
+};
+
+// --- Settings Logic ---
+function renderSettings() {
+  const selector = document.getElementById('lang-selector');
+  if (selector) selector.value = currentLang;
+}
+
+window.changeLanguage = () => {
+  const val = document.getElementById('lang-selector').value;
+  localStorage.setItem('static_apps_lang', val);
+  location.reload();
+};
+
+window.exportData = () => {
+  const data = {
+    version: 1,
+    transactions: state.transactions,
+    people: state.people
+  };
+  const b = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = "balance_backup.json";
+  a.click();
+};
+
+window.importData = (event) => {
+  const r = new FileReader();
+  r.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.transactions && data.people) {
+        state.transactions = data.transactions;
+        state.people = data.people;
+        saveState();
+        location.reload();
+      }
+    } catch (err) {
+      alert("Invalid JSON file");
+    }
+  };
+  r.readAsText(event.target.files[0]);
+};
+
+window.clearAllData = () => {
+  if (confirm(t('erase_confirm'))) {
+    localStorage.removeItem('balance_history');
+    localStorage.removeItem('balance_people');
+    location.reload();
+  }
+};
 
 // --- Helpers ---
 function formatCurrency(val) {
