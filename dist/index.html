@@ -59,7 +59,10 @@
 </div>
 
   <div id="view-transaction" class="view">
-  <h2 data-i18n="add_tx">ADD TRANSACTION</h2>
+  <div class="sticky-header">
+    <h2 data-i18n="add_tx" style="margin:0">ADD TRANSACTION</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
 
   <div class="toggle-group" id="tx-type-toggle">
     <div class="toggle-btn active" data-type="owe_me" data-i18n="owe_me">Owes me</div>
@@ -101,7 +104,10 @@
 </div>
 
 <div id="view-people" class="view">
-  <h2 data-i18n="people">PEOPLE 👥</h2>
+  <div class="sticky-header">
+    <h2 data-i18n="people" style="margin:0">PEOPLE 👥</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
   
   <div class="card" style="margin-bottom: 20px;">
     <div class="form-group">
@@ -140,7 +146,10 @@
   <!-- Missing partial: ./pages/people.html in money-track -->
   <!-- Missing partial: ./pages/stats.html in money-track -->
   <div id="view-general_stats" class="view">
-  <h2 data-i18n="stats">STATISTICS 📊</h2>
+  <div class="sticky-header">
+    <h2 data-i18n="stats" style="margin:0">STATISTICS 📊</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
 
   <div class="card">
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
@@ -178,7 +187,10 @@
 </div>
 
   <div id="view-settings" class="view">
-  <h2 data-i18n="settings">SETTINGS ⚙️</h2>
+  <div class="sticky-header">
+    <h2 data-i18n="settings" style="margin:0">SETTINGS ⚙️</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
 
   <div class="form-group">
     <label data-i18n="lang">Language</label>

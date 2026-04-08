@@ -1,5 +1,8 @@
 <div id="view-transaction" class="view">
-  <h2 data-i18n="add_tx">ADD TRANSACTION</h2>
+  <div class="sticky-header">
+    <h2 data-i18n="add_tx" style="margin:0">ADD TRANSACTION</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
 
   <div class="toggle-group" id="tx-type-toggle">
     <div class="toggle-btn active" data-type="owe_me" data-i18n="owe_me">Owes me</div>
