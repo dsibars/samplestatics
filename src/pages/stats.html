@@ -1,0 +1,29 @@
+  <!-- View: Advanced Statistics -->
+  <div id="view-stats" class="view">
+    <h2 data-i18n="adv_stats">Estadísticas Avanzadas</h2>
+    
+    <div class="stats-filters">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <div style="flex:1;">
+                <label style="font-size:0.7rem; display:block;" data-i18n="date_from">Desde</label>
+                <input type="date" id="stats-from" class="small-input" onchange="renderStatistics()">
+            </div>
+            <div style="flex:1;">
+                <label style="font-size:0.7rem; display:block;" data-i18n="date_to">Hasta</label>
+                <input type="date" id="stats-to" class="small-input" onchange="renderStatistics()">
+            </div>
+        </div>
+
+        <select id="stats-type" class="small-input" style="width:100%; margin-bottom:15px;" onchange="renderStatistics()">
+            <option value="ex_evol" data-i18n="ex_evol">Evolución Ejercicios</option>
+            <option value="routine_evol" data-i18n="routine_evol">Evolución Rutina</option>
+            <option value="time_evol" data-i18n="time_evol">Evolución Tiempo</option>
+        </select>
+    </div>
+
+    <div id="stats-content" style="text-align:left; max-width: 450px; margin: 0 auto; min-height: 200px;">
+        <!-- Rendered results -->
+    </div>
+
+    <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeStats()" data-i18n="back">VOLVER</button>
+  </div>

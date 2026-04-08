@@ -95,7 +95,18 @@ const TRANSLATIONS = {
     select_exercise: "Seleccionar Ejercicio",
     reps: "Objetivo (Reps/Segs)",
     tag: "Etiqueta (Opcional)",
-    add_to_routine: "AÑADIR A LA RUTINA"
+    add_to_routine: "AÑADIR A LA RUTINA",
+    adv_stats: "ESTADÍSTICAS AVANZADAS 📈",
+    date_from: "Desde",
+    date_to: "Hasta",
+    ex_evol: "Evolución Ejercicios",
+    routine_evol: "Evolución Rutina",
+    time_evol: "Evolución Tiempo",
+    total_workouts: "ENTRENAMIENTOS TOTALES",
+    avg_time: "TEMPO MEDIO",
+    total_reps: "REPETICIONES TOTALES",
+    added: "Engadido",
+    removed: "Eliminado"
   },
   en: {
     today_btn: "TODAY",
@@ -150,7 +161,18 @@ const TRANSLATIONS = {
     select_exercise: "Select Exercise",
     reps: "Target (Reps/Secs)",
     tag: "Tag (Optional)",
-    add_to_routine: "ADD TO ROUTINE"
+    add_to_routine: "ADD TO ROUTINE",
+    adv_stats: "ADVANCED STATISTICS 📈",
+    date_from: "From",
+    date_to: "To",
+    ex_evol: "Exercise Evolution",
+    routine_evol: "Routine Evolution",
+    time_evol: "Time Evolution",
+    total_workouts: "TOTAL WORKOUTS",
+    avg_time: "AVG TIME",
+    total_reps: "TOTAL REPETITIONS",
+    added: "Added",
+    removed: "Removed"
   },
   ca: {
     today_btn: "AVUI",
@@ -205,7 +227,18 @@ const TRANSLATIONS = {
     select_exercise: "Seleccionar Exercici",
     reps: "Objectiu (Reps/Segs)",
     tag: "Etiqueta (Opcional)",
-    add_to_routine: "AFEGIR A LA RUTINA"
+    add_to_routine: "AFEGIR A LA RUTINA",
+    adv_stats: "ESTADÍSTIQUES AVANÇADES 📈",
+    date_from: "Des de",
+    date_to: "Fins a",
+    ex_evol: "Evolució Exercicis",
+    routine_evol: "Evolució Rutina",
+    time_evol: "Evolució Temps",
+    total_workouts: "ENTRENAMENTS TOTALS",
+    avg_time: "TEMPS MITJÀ",
+    total_reps: "REPETICIONS TOTALS",
+    added: "Afegit",
+    removed: "Eliminat"
   },
   eu: {
     today_btn: "GAUR",
@@ -260,7 +293,18 @@ const TRANSLATIONS = {
     select_exercise: "Aukeratu Ariketa",
     reps: "Helburua (Erep./Seg.)",
     tag: "Etiketa (Aukerakoa)",
-    add_to_routine: "ERRUTINARA GEHITU"
+    add_to_routine: "ERRUTINARA GEHITU",
+    adv_stats: "ESTADISTIKA AURRERATUAK 📈",
+    date_from: "Noiztik",
+    date_to: "Noiz arte",
+    ex_evol: "Ariketen Bilakaera",
+    routine_evol: "Errutinaren Bilakaera",
+    time_evol: "Denboraren Bilakaera",
+    total_workouts: "GUZTIZKO ENTRENAMENDUAK",
+    avg_time: "BATEZ BESTEKO DENBORA",
+    total_reps: "GUZTIZKO ERREPIKAPENAK",
+    added: "Gehituta",
+    removed: "Ezabatuta"
   },
   gl: {
     today_btn: "HOXE",
@@ -315,7 +359,18 @@ const TRANSLATIONS = {
     select_exercise: "Seleccionar Exercicio",
     reps: "Obxectivo (Reps/Segs)",
     tag: "Etiqueta (Opcional)",
-    add_to_routine: "ENGADIR Á RUTINA"
+    add_to_routine: "ENGADIR Á RUTINA",
+    adv_stats: "ESTADÍSTICAS AVANZADAS 📈",
+    date_from: "Desde",
+    date_to: "Ata",
+    ex_evol: "Evolución Exercicios",
+    routine_evol: "Evolución Rutina",
+    time_evol: "Evolución Tempo",
+    total_workouts: "ESTREOS TOTAIS",
+    avg_time: "TEMPO MEDIO",
+    total_reps: "REPETICIÓNS TOTAIS",
+    added: "Engadido",
+    removed: "Eliminado"
   }
 };
 let currentLang = localStorage.getItem("workout_lang") || "es";
@@ -2503,6 +2558,199 @@ _extends(Remove, {
 });
 Sortable.mount(new AutoScrollPlugin());
 Sortable.mount(Remove, Revert);
+function finish() {
+  const totalTime = state.results.reduce((acc, s) => acc + s.duration, 0);
+  const totals = state.results.reduce((acc, s) => {
+    const name = EXERCISES[s.ex].name;
+    acc[name] = (acc[name] || 0) + s.value;
+    return acc;
+  }, {});
+  const sessionData = {
+    date: state.activeDate,
+    duration: totalTime,
+    steps: state.results,
+    totals,
+    routine: JSON.parse(JSON.stringify(state.routine))
+  };
+  const lastKey = Object.keys(state.history).sort().filter((k) => k < state.activeDate).pop();
+  const prevData = state.history[lastKey];
+  showSummary(sessionData, prevData);
+  state.history[state.activeDate] = sessionData;
+  localStorage.setItem("workout_history_v2", JSON.stringify(state.history));
+}
+function showSummary(cur, prev) {
+  document.getElementById("workout-engine").classList.remove("active");
+  document.getElementById("view-summary").classList.add("active");
+  const minutes = Math.floor(cur.duration / 60);
+  const seconds = cur.duration % 60;
+  document.getElementById("finalTime").innerText = `${minutes}m ${seconds}s`;
+  if (!prev) {
+    document.getElementById("comparison-box").innerHTML = t("first_day");
+  } else {
+    let compHtml = t("vs_previous");
+    Object.keys(cur.totals).forEach((name) => {
+      const prevVal = prev.totals[name] || 0;
+      const diff = cur.totals[name] - prevVal;
+      const sign = diff >= 0 ? "+" : "";
+      compHtml += `• ${t(name)}: ${sign}${diff}<br>`;
+    });
+    const dT = prev.duration - cur.duration;
+    const speedIcon = dT >= 0 ? "🚀 " : "🐢 ";
+    compHtml += `• ${t("time")}: ${speedIcon}${Math.abs(dT)}s`;
+    document.getElementById("comparison-box").innerHTML = compHtml;
+  }
+  document.getElementById("statsList").innerHTML = Object.keys(cur.totals).map((n) => `
+    <div class="stat-row">
+      <span>${t(n)}</span>
+      <b>${cur.totals[n]}</b>
+    </div>
+  `).join("");
+}
+function showHistory() {
+  document.getElementById("view-welcome").classList.remove("active");
+  document.getElementById("view-history").classList.add("active");
+  const list = document.getElementById("history-list");
+  const sortedKeys = Object.keys(state.history).sort().reverse();
+  list.innerHTML = sortedKeys.map((k, i) => {
+    const s = state.history[k];
+    const prevK = sortedKeys.slice(i + 1).find((key) => key < k);
+    const prevS = prevK ? state.history[prevK] : null;
+    const mins = Math.floor(s.duration / 60);
+    const secs = s.duration % 60;
+    const stepsHtml = s.steps.map((st) => `
+      <div>${t(st.tag)} ${t(EXERCISES[st.ex].name)}: <b>${st.value}</b></div>
+    `).join("");
+    const totalsHtml = Object.keys(s.totals).map((name) => {
+      const diff = prevS ? s.totals[name] - (prevS.totals[name] || 0) : null;
+      const sign = diff >= 0 ? "+" : "";
+      const diffClass = diff >= 0 ? "pos" : "neg";
+      const diffText = diff !== null ? `<span class="delta ${diffClass}">(${sign}${diff})</span>` : "";
+      return `<div>• ${t(name)}: <b>${s.totals[name]}</b> ${diffText}</div>`;
+    }).join("");
+    return `
+      <div class="hist-card">
+        <div class="hist-header" onclick="toggleCard(${i})">
+          <div>
+            <span class="hist-date">${k}</span><br>
+            <small>${mins}m ${secs}s</small>
+          </div>
+          <span>▼</span>
+        </div>
+        
+        <div id="card-${i}" class="hist-details">
+          ${stepsHtml}
+          <div class="hist-total-row">${t("grouped")}</div>
+          ${totalsHtml}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+function toggleCard(i) {
+  document.getElementById(`card-${i}`).classList.toggle("open");
+}
+function renderStatistics() {
+  const from = document.getElementById("stats-from").value;
+  const to = document.getElementById("stats-to").value;
+  const type = document.getElementById("stats-type").value;
+  const content = document.getElementById("stats-content");
+  if (!from || !to) return;
+  const entries = Object.keys(state.history).filter((k) => k >= from && k <= to).sort().map((k) => state.history[k]);
+  if (entries.length === 0) {
+    content.innerHTML = `<div style="text-align:center; padding: 40px; color:#666;">Sin datos para este rango.</div>`;
+    return;
+  }
+  if (type === "ex_evol") renderExEvol(entries, content);
+  else if (type === "routine_evol") renderRoutineEvol(entries, content);
+  else if (type === "time_evol") renderTimeEvol(entries, content);
+}
+function renderExEvol(entries, container) {
+  const allEx = /* @__PURE__ */ new Set();
+  entries.forEach((e) => Object.keys(e.totals).forEach((n) => allEx.add(n)));
+  container.innerHTML = Array.from(allEx).map((name) => {
+    const firstEntry = entries.find((e) => e.totals[name] !== void 0);
+    const lastEntry = [...entries].reverse().find((e) => e.totals[name] !== void 0);
+    const firstVal = firstEntry.totals[name];
+    const lastVal = lastEntry.totals[name];
+    const maxVal = Math.max(firstVal, lastVal, 1);
+    const diff = lastVal - firstVal;
+    const sign = diff >= 0 ? "+" : "";
+    const color = diff >= 0 ? "#4CAF50" : "#e53935";
+    return `
+      <div class="evol-row">
+        <div class="evol-label">
+          <span>${t(name)}</span>
+          <b style="color:${color}">${lastVal} (${sign}${diff})</b>
+        </div>
+        <div class="evol-bar-container" title="Initial: ${firstVal}">
+          <div class="evol-bar" style="width: ${lastVal / maxVal * 100}%"></div>
+          <div style="position:absolute; left:0; top:0; height:100%; border-right: 2px solid white; width: ${firstVal / maxVal * 100}%; opacity: 0.3;"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+function renderRoutineEvol(entries, container) {
+  const milestones = [];
+  let lastRoutineStr = null;
+  entries.forEach((e) => {
+    const currentRoutineStr = JSON.stringify(e.routine);
+    if (currentRoutineStr !== lastRoutineStr) {
+      const changes = [];
+      if (lastRoutineStr) {
+        const lastRoutine = JSON.parse(lastRoutineStr);
+        const currentRoutine = e.routine;
+        const lastTags = lastRoutine.map((r) => r.tag + r.ex);
+        const currentTags = currentRoutine.map((r) => r.tag + r.ex);
+        currentRoutine.forEach((r) => {
+          if (!lastTags.includes(r.tag + r.ex)) {
+            changes.push(`<div class="milestone-change"><span class="change-add">+</span> ${t("added")}: ${t(r.tag)}</div>`);
+          }
+        });
+        lastRoutine.forEach((r) => {
+          if (!currentTags.includes(r.tag + r.ex)) {
+            changes.push(`<div class="milestone-change"><span class="change-rem">-</span> ${t("removed")}: ${t(r.tag)}</div>`);
+          }
+        });
+      }
+      milestones.unshift({
+        date: e.date,
+        changes: changes.length > 0 ? changes.join("") : "<i>Inicio de secuencia / Cambio mayor</i>"
+      });
+      lastRoutineStr = currentRoutineStr;
+    }
+  });
+  container.innerHTML = milestones.map((m) => `
+    <div class="milestone">
+      <span class="milestone-date">${m.date}</span>
+      ${m.changes}
+    </div>
+  `).join("");
+}
+function renderTimeEvol(entries, container) {
+  const totalWorkouts = entries.length;
+  const totalSeconds = entries.reduce((acc, e) => acc + e.duration, 0);
+  const avgSeconds = Math.round(totalSeconds / totalWorkouts);
+  const totalReps = entries.reduce((acc, e) => {
+    return acc + Object.values(e.totals).reduce((a, v) => a + v, 0);
+  }, 0);
+  container.innerHTML = `
+    <div class="stats-grid">
+      <div class="stats-card">
+        <big>${totalWorkouts}</big>
+        <label data-i18n="total_workouts">Entrenamientos</label>
+      </div>
+      <div class="stats-card">
+        <big>${Math.floor(avgSeconds / 60)}m ${avgSeconds % 60}s</big>
+        <label data-i18n="avg_time">Tiempo Medio</label>
+      </div>
+      <div class="stats-card" style="grid-column: span 2;">
+        <big>${totalReps}</big>
+        <label data-i18n="total_reps">Total Repeticiones</label>
+      </div>
+    </div>
+  `;
+}
 function resetToToday() {
   localStorage.removeItem("workout_manual_date");
   updateActiveDate();
@@ -2649,97 +2897,21 @@ function showExit() {
   document.getElementById("view-welcome").classList.remove("active");
   document.getElementById("view-exit").classList.add("active");
 }
-function finish() {
-  const totalTime = state.results.reduce((acc, s) => acc + s.duration, 0);
-  const totals = state.results.reduce((acc, s) => {
-    const name = EXERCISES[s.ex].name;
-    acc[name] = (acc[name] || 0) + s.value;
-    return acc;
-  }, {});
-  const sessionData = {
-    date: state.activeDate,
-    duration: totalTime,
-    steps: state.results,
-    totals,
-    routine: JSON.parse(JSON.stringify(state.routine))
-  };
-  const lastKey = Object.keys(state.history).sort().filter((k) => k < state.activeDate).pop();
-  const prevData = state.history[lastKey];
-  showSummary(sessionData, prevData);
-  state.history[state.activeDate] = sessionData;
-  localStorage.setItem("workout_history_v2", JSON.stringify(state.history));
-}
-function showSummary(cur, prev) {
-  document.getElementById("workout-engine").classList.remove("active");
-  document.getElementById("view-summary").classList.add("active");
-  const minutes = Math.floor(cur.duration / 60);
-  const seconds = cur.duration % 60;
-  document.getElementById("finalTime").innerText = `${minutes}m ${seconds}s`;
-  if (!prev) {
-    document.getElementById("comparison-box").innerHTML = t("first_day");
-  } else {
-    let compHtml = t("vs_previous");
-    Object.keys(cur.totals).forEach((name) => {
-      const prevVal = prev.totals[name] || 0;
-      const diff = cur.totals[name] - prevVal;
-      const sign = diff >= 0 ? "+" : "";
-      compHtml += `• ${t(name)}: ${sign}${diff}<br>`;
-    });
-    const dT = prev.duration - cur.duration;
-    const speedIcon = dT >= 0 ? "🚀 " : "🐢 ";
-    compHtml += `• ${t("time")}: ${speedIcon}${Math.abs(dT)}s`;
-    document.getElementById("comparison-box").innerHTML = compHtml;
-  }
-  document.getElementById("statsList").innerHTML = Object.keys(cur.totals).map((n) => `
-    <div class="stat-row">
-      <span>${t(n)}</span>
-      <b>${cur.totals[n]}</b>
-    </div>
-  `).join("");
-}
-function showHistory() {
+function showStats() {
   document.getElementById("view-welcome").classList.remove("active");
-  document.getElementById("view-history").classList.add("active");
-  const list = document.getElementById("history-list");
-  const sortedKeys = Object.keys(state.history).sort().reverse();
-  list.innerHTML = sortedKeys.map((k, i) => {
-    const s = state.history[k];
-    const prevK = sortedKeys.slice(i + 1).find((key) => key < k);
-    const prevS = prevK ? state.history[prevK] : null;
-    const mins = Math.floor(s.duration / 60);
-    const secs = s.duration % 60;
-    const stepsHtml = s.steps.map((st) => `
-      <div>${t(st.tag)} ${t(EXERCISES[st.ex].name)}: <b>${st.value}</b></div>
-    `).join("");
-    const totalsHtml = Object.keys(s.totals).map((name) => {
-      const diff = prevS ? s.totals[name] - (prevS.totals[name] || 0) : null;
-      const sign = diff >= 0 ? "+" : "";
-      const diffClass = diff >= 0 ? "pos" : "neg";
-      const diffText = diff !== null ? `<span class="delta ${diffClass}">(${sign}${diff})</span>` : "";
-      return `<div>• ${t(name)}: <b>${s.totals[name]}</b> ${diffText}</div>`;
-    }).join("");
-    return `
-      <div class="hist-card">
-        <div class="hist-header" onclick="toggleCard(${i})">
-          <div>
-            <span class="hist-date">${k}</span><br>
-            <small>${mins}m ${secs}s</small>
-          </div>
-          <span>▼</span>
-        </div>
-        
-        <div id="card-${i}" class="hist-details">
-          ${stepsHtml}
-          <div class="hist-total-row">${t("grouped")}</div>
-          ${totalsHtml}
-        </div>
-      </div>
-    `;
-  }).join("");
+  document.getElementById("view-stats").classList.add("active");
+  const to = new Date(state.activeDate);
+  const from = new Date(to);
+  from.setDate(from.getDate() - 30);
+  document.getElementById("stats-from").value = from.toISOString().split("T")[0];
+  document.getElementById("stats-to").value = to.toISOString().split("T")[0];
+  renderStatistics();
 }
-function toggleCard(i) {
-  document.getElementById(`card-${i}`).classList.toggle("open");
+function closeStats() {
+  document.getElementById("view-stats").classList.remove("active");
+  document.getElementById("view-welcome").classList.add("active");
 }
+window.renderStatistics = renderStatistics;
 function startWorkout() {
   state.startTime = Date.now();
   state.stepStartTime = state.startTime;
@@ -2804,6 +2976,8 @@ window.openAddExercise = openAddExercise;
 window.closeAddExercise = closeAddExercise;
 window.updateExercisePreview = updateExercisePreview;
 window.appendNewExercise = appendNewExercise;
+window.showStats = showStats;
+window.closeStats = closeStats;
 window.t = t;</script>
   <style rel="stylesheet" crossorigin>body {
   font-family: sans-serif;
@@ -2974,6 +3148,112 @@ input[type="date"], select {
   margin: 5px auto;
   border-bottom: 1px solid #222;
   padding: 10px 0;
+}
+
+.stats-filters {
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    max-width: 450px;
+    margin: 0 auto 20px auto;
+}
+
+.small-input {
+    background: #333;
+    color: white;
+    border: 1px solid #4CAF50;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+/* Evolution Bars */
+
+.evol-row {
+    margin-bottom: 15px;
+}
+
+.evol-label {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.evol-bar-container {
+    height: 12px;
+    background: #333;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.evol-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #81c784);
+    transition: width 0.5s ease;
+}
+
+/* Milestone Cards */
+
+.milestone {
+    background: #252525;
+    border-left: 3px solid #5e35b1;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.milestone-date {
+    color: #5e35b1;
+    font-weight: bold;
+    font-size: 0.75rem;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.milestone-change {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+}
+
+.change-add { color: #4CAF50; }
+
+.change-rem { color: #e53935; }
+
+/* Grid for Volume items */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.stats-card {
+    background: #222;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.stats-card big {
+    display: block;
+    font-size: 1.8rem;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.stats-card label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
 }</style>
 </head>
 <body>
@@ -2995,6 +3275,7 @@ input[type="date"], select {
     
     <button class="next-btn" onclick="startWorkout()" data-i18n="start_workout">EMPEZAR ENTRENAMIENTO</button>
     <button class="next-btn" style="background:#455a64" onclick="showHistory()" data-i18n="view_history">VER HISTORIAL 📊</button>
+    <button class="next-btn" style="background:#5e35b1" onclick="showStats()" data-i18n="adv_stats">ESTADÍSTICAS AVANZADAS 📈</button>
     <button class="next-btn" style="background:#333" onclick="showExit()" data-i18n="not_today">HOY NO, GRACIAS</button>
   </div>
 
@@ -3029,6 +3310,36 @@ input[type="date"], select {
     </div>
 
     <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeSettings()" data-i18n="back">VOLVER</button>
+  </div>
+
+    <!-- View: Advanced Statistics -->
+  <div id="view-stats" class="view">
+    <h2 data-i18n="adv_stats">Estadísticas Avanzadas</h2>
+    
+    <div class="stats-filters">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <div style="flex:1;">
+                <label style="font-size:0.7rem; display:block;" data-i18n="date_from">Desde</label>
+                <input type="date" id="stats-from" class="small-input" onchange="renderStatistics()">
+            </div>
+            <div style="flex:1;">
+                <label style="font-size:0.7rem; display:block;" data-i18n="date_to">Hasta</label>
+                <input type="date" id="stats-to" class="small-input" onchange="renderStatistics()">
+            </div>
+        </div>
+
+        <select id="stats-type" class="small-input" style="width:100%; margin-bottom:15px;" onchange="renderStatistics()">
+            <option value="ex_evol" data-i18n="ex_evol">Evolución Ejercicios</option>
+            <option value="routine_evol" data-i18n="routine_evol">Evolución Rutina</option>
+            <option value="time_evol" data-i18n="time_evol">Evolución Tiempo</option>
+        </select>
+    </div>
+
+    <div id="stats-content" style="text-align:left; max-width: 450px; margin: 0 auto; min-height: 200px;">
+        <!-- Rendered results -->
+    </div>
+
+    <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeStats()" data-i18n="back">VOLVER</button>
   </div>
 
     <!-- View: Routine Reader / Editor -->

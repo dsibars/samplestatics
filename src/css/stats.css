@@ -1,0 +1,101 @@
+.stats-filters {
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    max-width: 450px;
+    margin: 0 auto 20px auto;
+}
+
+.small-input {
+    background: #333;
+    color: white;
+    border: 1px solid #4CAF50;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+/* Evolution Bars */
+.evol-row {
+    margin-bottom: 15px;
+}
+
+.evol-label {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.evol-bar-container {
+    height: 12px;
+    background: #333;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.evol-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #81c784);
+    transition: width 0.5s ease;
+}
+
+/* Milestone Cards */
+.milestone {
+    background: #252525;
+    border-left: 3px solid #5e35b1;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.milestone-date {
+    color: #5e35b1;
+    font-weight: bold;
+    font-size: 0.75rem;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.milestone-change {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+}
+
+.change-add { color: #4CAF50; }
+.change-rem { color: #e53935; }
+
+/* Grid for Volume items */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.stats-card {
+    background: #222;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.stats-card big {
+    display: block;
+    font-size: 1.8rem;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.stats-card label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+}
