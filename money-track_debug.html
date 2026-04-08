@@ -439,6 +439,34 @@ window.clearAllData = () => {
     location.reload();
   }
 };
+window.generateDummyData = () => {
+  if (!confirm("Generate 1000 dummy transactions for performance testing?")) return;
+  const testNames = ["Emma Watson", "Tony Stark", "Bruce Wayne", "Clark Kent", "Diana Prince"];
+  testNames.forEach((name) => {
+    if (!state.people.includes(name)) state.people.push(name);
+  });
+  const now = /* @__PURE__ */ new Date();
+  const sixMonthsAgo = /* @__PURE__ */ new Date();
+  sixMonthsAgo.setMonth(now.getMonth() - 6);
+  for (let i = 0; i < 1e3; i++) {
+    const randomPerson = testNames[Math.floor(Math.random() * testNames.length)];
+    const randomAmount = Math.random() * 5e4 + 10;
+    const randomType = Math.random() > 0.5 ? "owe_me" : "i_owe";
+    const randomDate = new Date(sixMonthsAgo.getTime() + Math.random() * (now.getTime() - sixMonthsAgo.getTime()));
+    state.transactions.push({
+      id: Date.now() + i,
+      date: randomDate.toISOString(),
+      amount: parseFloat(randomAmount.toFixed(2)),
+      person: randomPerson,
+      desc: "Stress Test #" + (i + 1),
+      type: randomType
+    });
+  }
+  state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  saveState();
+  alert("Generated 1000 transactions! App will reload now.");
+  location.reload();
+};
 function formatCurrency(val) {
   return Math.abs(val).toLocaleString(void 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -533,6 +561,15 @@ h1, h2 {
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-secondary { background: var(--border); color: var(--text-main); }
 .btn-danger { background: var(--expense); color: #fff; }
+
+.btn-ghost {
+  background: transparent;
+  color: #334155;
+  font-size: 0.7rem;
+  border: 1px dashed #334155;
+  margin-top: 50px;
+  opacity: 0.5;
+}
 
 .form-group {
   margin-bottom: 20px;
@@ -764,6 +801,8 @@ input, select, textarea {
   <div style="margin-top: 20px;">
     <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
   </div>
+
+  <button class="btn btn-ghost" onclick="generateDummyData()" style="width: auto; padding: 10px; float: right;">STRESS TEST (1000 TX)</button>
 </div>
 
 

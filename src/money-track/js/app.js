@@ -256,6 +256,44 @@ window.clearAllData = () => {
   }
 };
 
+window.generateDummyData = () => {
+  if (!confirm("Generate 1000 dummy transactions for performance testing?")) return;
+
+  const testNames = ["Emma Watson", "Tony Stark", "Bruce Wayne", "Clark Kent", "Diana Prince"];
+  testNames.forEach(name => {
+    if (!state.people.includes(name)) state.people.push(name);
+  });
+
+  const now = new Date();
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(now.getMonth() - 6);
+
+  for (let i = 0; i < 1000; i++) {
+    const randomPerson = testNames[Math.floor(Math.random() * testNames.length)];
+    const randomAmount = (Math.random() * 50000) + 10;
+    const randomType = Math.random() > 0.5 ? 'owe_me' : 'i_owe';
+    
+    // Spread over last 6 months
+    const randomDate = new Date(sixMonthsAgo.getTime() + Math.random() * (now.getTime() - sixMonthsAgo.getTime()));
+
+    state.transactions.push({
+      id: Date.now() + i,
+      date: randomDate.toISOString(),
+      amount: parseFloat(randomAmount.toFixed(2)),
+      person: randomPerson,
+      desc: "Stress Test #" + (i + 1),
+      type: randomType
+    });
+  }
+
+  // Sort by date so history looks correct
+  state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  saveState();
+  alert("Generated 1000 transactions! App will reload now.");
+  location.reload();
+};
+
 // --- Helpers ---
 function formatCurrency(val) {
   return Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
