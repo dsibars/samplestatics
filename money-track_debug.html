@@ -757,7 +757,6 @@ input, select, textarea {
 
   <div style="margin-top: 20px;">
     <button class="btn btn-primary" onclick="saveTransaction()" data-i18n="save">SAVE</button>
-    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
   </div>
 </div>
 
@@ -788,10 +787,6 @@ input, select, textarea {
 
   <div id="people-list">
     <!-- To be filled by JS -->
-  </div>
-
-  <div style="margin-top: 20px;">
-    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
   </div>
 </div>
 
@@ -849,10 +844,6 @@ input, select, textarea {
   <div id="stats-person-breakdown">
     <!-- To be filled by JS: List of persons with their net for this period -->
   </div>
-
-  <div style="margin-top: 20px;">
-    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
-  </div>
 </div>
 
   <div id="view-settings" class="view">
@@ -878,10 +869,6 @@ input, select, textarea {
     <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" data-i18n="import_json">IMPORT JSON</button>
     <input type="file" id="import-file" style="display:none" onchange="importData(event)" accept=".json">
     <button class="btn btn-danger" onclick="clearAllData()" data-i18n="erase_all" style="margin-top: 20px;">ERASE EVERYTHING</button>
-  </div>
-
-  <div style="margin-top: 20px;">
-    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
   </div>
 
   <button class="btn btn-ghost" onclick="generateDummyData()" style="width: auto; padding: 10px; float: right;">STRESS TEST (1000 TX)</button>
