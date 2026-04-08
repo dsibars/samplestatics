@@ -4,39 +4,200 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Guerra de 15 Minutos</title>
+
+  <!-- ==========================================
+       STYLES
+       ========================================== -->
   <style>
-    body { font-family: sans-serif; background: #121212; color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; touch-action: manipulation; overflow: hidden; }
-    .view { display: none; text-align: center; width: 100%; padding: 20px; box-sizing: border-box; }
-    .view.active { display: block; overflow-y: auto; max-height: 100vh; }
-    .counter-container { display: flex; justify-content: center; align-items: center; margin: 20px 0; }
-    .val { font-size: 5rem; font-weight: bold; min-width: 120px; color: #4CAF50; }
-    .btn-circle { width: 75px; height: 75px; border-radius: 50%; border: 2px solid #4CAF50; background: none; color: white; font-size: 2rem; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .btn-circle:active { background: #4CAF50; }
-    .next-btn { width: 90%; max-width: 400px; padding: 20px; background: #4CAF50; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin: 8px auto; display: block; }
-    label { color: #888; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 5px; }
-    .exercise-name { color: white; font-size: 1.8rem; font-weight: bold; display: block; margin-bottom: 10px; }
-    .comparison { background: #1e2a1e; color: #81c784; padding: 15px; border-radius: 10px; margin: 15px auto; text-align: left; font-size: 0.9rem; border-left: 4px solid #4CAF50; max-width: 400px; }
-    .stat-row { display: flex; justify-content: space-between; width: 90%; max-width: 400px; margin: 5px auto; border-bottom: 1px solid #222; padding: 10px 0; }
-    .hist-card { background: #1e1e1e; border-radius: 10px; margin: 10px auto; text-align: left; max-width: 450px; border-left: 3px solid #555; }
-    .hist-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    .hist-details { display: none; padding: 15px; background: #252525; font-size: 0.85rem; border-top: 1px solid #333; }
-    .hist-details.open { display: block; }
-    .hist-total-row { color: #4CAF50; border-top: 1px solid #444; margin-top: 8px; padding-top: 4px; font-weight: bold; }
-    .delta { font-size: 0.8rem; margin-left: 5px; }
-    .pos { color: #81c784; } .neg { color: #f44336; }
-    input[type="date"] { background: #222; color: white; border: 1px solid #444; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 1rem; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: white;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      touch-action: manipulation;
+      overflow: hidden;
+    }
+
+    .view {
+      display: none;
+      text-align: center;
+      width: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .view.active {
+      display: block;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    .counter-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 20px 0;
+    }
+
+    .val {
+      font-size: 5rem;
+      font-weight: bold;
+      min-width: 120px;
+      color: #4CAF50;
+    }
+
+    .btn-circle {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      border: 2px solid #4CAF50;
+      background: none;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-circle:active {
+      background: #4CAF50;
+    }
+
+    .next-btn {
+      width: 90%;
+      max-width: 400px;
+      padding: 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      margin: 8px auto;
+      display: block;
+    }
+
+    label {
+      color: #888;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .exercise-name {
+      color: white;
+      font-size: 1.8rem;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .comparison {
+      background: #1e2a1e;
+      color: #81c784;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px auto;
+      text-align: left;
+      font-size: 0.9rem;
+      border-left: 4px solid #4CAF50;
+      max-width: 400px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      width: 90%;
+      max-width: 400px;
+      margin: 5px auto;
+      border-bottom: 1px solid #222;
+      padding: 10px 0;
+    }
+
+    .hist-card {
+      background: #1e1e1e;
+      border-radius: 10px;
+      margin: 10px auto;
+      text-align: left;
+      max-width: 450px;
+      border-left: 3px solid #555;
+    }
+
+    .hist-header {
+      padding: 15px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hist-details {
+      display: none;
+      padding: 15px;
+      background: #252525;
+      font-size: 0.85rem;
+      border-top: 1px solid #333;
+    }
+
+    .hist-details.open {
+      display: block;
+    }
+
+    .hist-total-row {
+      color: #4CAF50;
+      border-top: 1px solid #444;
+      margin-top: 8px;
+      padding-top: 4px;
+      font-weight: bold;
+    }
+
+    .delta {
+      font-size: 0.8rem;
+      margin-left: 5px;
+    }
+
+    .pos { color: #81c784; }
+    .neg { color: #f44336; }
+
+    input[type="date"] {
+      background: #222;
+      color: white;
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 1rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
 
+  <!-- ==========================================
+       HTML STRUCTURE (VIEWS)
+       ========================================== -->
+
+  <!-- View: Welcome & Actions Menu -->
   <div id="view-welcome" class="view active">
     <h2 id="display-date"></h2>
     <input type="date" id="date-hacker" onchange="updateActiveDate()">
     <div id="check-msg" style="margin-bottom: 20px;"></div>
+    
     <button class="next-btn" onclick="startWorkout()">EMPEZAR ENTRENAMIENTO</button>
     <button class="next-btn" style="background:#455a64" onclick="showHistory()">VER HISTORIAL 📊</button>
     <button class="next-btn" style="background:#333" onclick="showExit()">HOY NO, GRACIAS</button>
+    
+    <!-- Utilities -->
     <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 20px;">
       <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="exportJSON()">EXPORTAR JSON</button>
       <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="document.getElementById('fileInput').click()">IMPORTAR JSON</button>
@@ -45,8 +206,12 @@
     </div>
   </div>
 
-  <div id="workout-engine" class="view"></div>
+  <!-- View: Active Workout Engine -->
+  <div id="workout-engine" class="view">
+    <!-- Populated dynamically via JS renderStep() -->
+  </div>
 
+  <!-- View: Post Workout Summary -->
   <div id="view-summary" class="view">
     <h2>¡OBJETIVO CUMPLIDO! 🥪</h2>
     <div id="comparison-box" class="comparison"></div>
@@ -57,12 +222,14 @@
     <button class="next-btn" onclick="location.reload()">VOLVER AL INICIO</button>
   </div>
 
+  <!-- View: Complete History List -->
   <div id="view-history" class="view">
     <h2>HISTORIAL</h2>
     <div id="history-list"></div>
     <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="location.reload()">VOLVER</button>
   </div>
 
+  <!-- View: Goodbye / Exit Screen -->
   <div id="view-exit" class="view">
     <h1 style="font-size: 4rem;">👋</h1>
     <h2>¡Entendido!</h2>
@@ -70,22 +237,42 @@
     <button class="next-btn" onclick="location.reload()">VOLVER</button>
   </div>
 
+  <!-- ==========================================
+       SCRIPTS
+       ========================================== -->
   <script>
-    const EXERCISES = { SENT: { name: "Sentadillas" }, FLEX: { name: "Flexiones" }, DOM_E: { name: "Dom. Espalda" }, DOM_B: { name: "Dom. Bíceps" } };
+    // --- 1. State and Configuration ---
+    
+    const EXERCISES = { 
+      SENT: { name: "Sentadillas" }, 
+      FLEX: { name: "Flexiones" }, 
+      DOM_E: { name: "Dom. Espalda" }, 
+      DOM_B: { name: "Dom. Bíceps" } 
+    };
+    
     const ROUTINE = [
-      { ex: 'SENT', start: 20, tag: 'Calentamiento' }, { ex: 'FLEX', start: 8, tag: 'Al Fallo' },
-      { ex: 'SENT', start: 20, tag: 'Recuperación' }, { ex: 'DOM_E', start: 2, tag: 'Lenta/Negativa' },
-      { ex: 'SENT', start: 20, tag: 'Recuperación' }, { ex: 'DOM_B', start: 3, tag: 'Recorrido Total' },
-      { ex: 'SENT', start: 20, tag: 'Recuperación' }, { ex: 'FLEX', start: 6, tag: 'Al Fallo' }
+      { ex: 'SENT', start: 20, tag: 'Calentamiento' }, 
+      { ex: 'FLEX', start: 8, tag: 'Al Fallo' },
+      { ex: 'SENT', start: 20, tag: 'Recuperación' }, 
+      { ex: 'DOM_E', start: 2, tag: 'Lenta/Negativa' },
+      { ex: 'SENT', start: 20, tag: 'Recuperación' }, 
+      { ex: 'DOM_B', start: 3, tag: 'Recorrido Total' },
+      { ex: 'SENT', start: 20, tag: 'Recuperación' }, 
+      { ex: 'FLEX', start: 6, tag: 'Al Fallo' }
     ];
 
     let history = JSON.parse(localStorage.getItem('workout_history_v2') || '{}');
     let results = [];
     let startTime, stepStartTime, activeDate = "";
 
+    // --- 2. Initialization & Validation ---
+
     window.onload = () => {
       const now = new Date();
-      activeDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      activeDate = now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0');
+                   
       document.getElementById('date-hacker').value = activeDate;
       updateActiveDate();
     };
@@ -93,37 +280,99 @@
     function updateActiveDate() {
       activeDate = document.getElementById('date-hacker').value;
       const d = new Date(activeDate + 'T00:00:00');
-      document.getElementById('display-date').innerText = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-      document.getElementById('check-msg').innerHTML = history[activeDate] ? `<p style="color:#ffa726">⚠️ Ya registrado.</p>` : `<p>¿Listo?</p>`;
+      
+      document.getElementById('display-date').innerText = d.toLocaleDateString('es-ES', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      });
+      
+      const isRegistered = history[activeDate] !== undefined;
+      document.getElementById('check-msg').innerHTML = isRegistered 
+        ? `<p style="color:#ffa726">⚠️ Ya registrado.</p>` 
+        : `<p>¿Listo?</p>`;
     }
 
+    // --- 3. Workout Engine Execution ---
+
     function startWorkout() {
-      startTime = Date.now(); stepStartTime = startTime;
+      startTime = Date.now(); 
+      stepStartTime = startTime;
+      
+      // Initialize results with the starting value and 0 duration
       results = ROUTINE.map(s => ({ ...s, value: s.start, duration: 0 }));
+      
+      // Navigate to the engine view
       document.getElementById('view-welcome').classList.remove('active');
       renderStep(0);
     }
 
     function renderStep(idx) {
-      const step = results[idx]; const ex = EXERCISES[step.ex];
+      const step = results[idx]; 
+      const ex = EXERCISES[step.ex];
       const engine = document.getElementById('workout-engine');
-      engine.innerHTML = `<label>${step.tag} (${idx + 1}/${ROUTINE.length})</label><span class="exercise-name">${ex.name}</span><div class="counter-container"><button class="btn-circle" onclick="changeVal(${idx}, -1)">-</button><div class="val" id="val-${idx}">${step.value}</div><button class="btn-circle" onclick="changeVal(${idx}, 1)">+</button></div><button class="next-btn" onclick="processStep(${idx})">${idx === ROUTINE.length - 1 ? 'FINALIZAR' : 'SIGUIENTE'}</button>`;
+      
+      const isLastStep = idx === ROUTINE.length - 1;
+      const buttonLabel = isLastStep ? 'FINALIZAR' : 'SIGUIENTE';
+      
+      engine.innerHTML = `
+        <label>${step.tag} (${idx + 1}/${ROUTINE.length})</label>
+        <span class="exercise-name">${ex.name}</span>
+        <div class="counter-container">
+          <button class="btn-circle" onclick="changeVal(${idx}, -1)">-</button>
+          <div class="val" id="val-${idx}">${step.value}</div>
+          <button class="btn-circle" onclick="changeVal(${idx}, 1)">+</button>
+        </div>
+        <button class="next-btn" onclick="processStep(${idx})">${buttonLabel}</button>
+      `;
+      
       engine.classList.add('active');
     }
 
-    function changeVal(idx, delta) { results[idx].value = Math.max(0, results[idx].value + delta); document.getElementById(`val-${idx}`).innerText = results[idx].value; }
+    function changeVal(idx, delta) { 
+      results[idx].value = Math.max(0, results[idx].value + delta); 
+      document.getElementById(`val-${idx}`).innerText = results[idx].value; 
+    }
 
     function processStep(idx) {
-      const now = Date.now(); results[idx].duration = Math.floor((now - stepStartTime) / 1000);
-      if (idx === ROUTINE.length - 1) finish(); else { stepStartTime = now; renderStep(idx + 1); }
+      const now = Date.now(); 
+      
+      // Calculate duration spent on the current step in seconds
+      results[idx].duration = Math.floor((now - stepStartTime) / 1000);
+      
+      if (idx === ROUTINE.length - 1) {
+        finish(); 
+      } else { 
+        stepStartTime = now; 
+        renderStep(idx + 1); 
+      }
     }
+
+    // --- 4. Summaries and Metrics ---
 
     function finish() {
       const totalTime = results.reduce((acc, s) => acc + s.duration, 0);
-      const totals = results.reduce((acc, s) => { const name = EXERCISES[s.ex].name; acc[name] = (acc[name] || 0) + s.value; return acc; }, {});
-      const sessionData = { date: activeDate, duration: totalTime, steps: results, totals };
+      
+      const totals = results.reduce((acc, s) => { 
+        const name = EXERCISES[s.ex].name; 
+        acc[name] = (acc[name] || 0) + s.value; 
+        return acc; 
+      }, {});
+      
+      const sessionData = { 
+        date: activeDate, 
+        duration: totalTime, 
+        steps: results, 
+        totals: totals 
+      };
+      
+      // Get the most recent history entry chronologically prior to activeDate to compare
       const lastKey = Object.keys(history).sort().filter(k => k < activeDate).pop();
-      showSummary(sessionData, history[lastKey]);
+      const prevData = history[lastKey];
+      
+      showSummary(sessionData, prevData);
+      
+      // Save
       history[activeDate] = sessionData;
       localStorage.setItem('workout_history_v2', JSON.stringify(history));
     }
@@ -131,54 +380,126 @@
     function showSummary(cur, prev) {
       document.getElementById('workout-engine').classList.remove('active');
       document.getElementById('view-summary').classList.add('active');
-      document.getElementById('finalTime').innerText = `${Math.floor(cur.duration/60)}m ${cur.duration%60}s`;
-      if(!prev) document.getElementById('comparison-box').innerHTML = "<b>¡Primer día!</b> Mañana comparamos.";
-      else {
+      
+      const minutes = Math.floor(cur.duration / 60);
+      const seconds = cur.duration % 60;
+      document.getElementById('finalTime').innerText = `${minutes}m ${seconds}s`;
+      
+      if (!prev) {
+        document.getElementById('comparison-box').innerHTML = "<b>¡Primer día!</b> Mañana comparamos.";
+      } else {
         let compHtml = "<b>VS. ANTERIOR:</b><br>";
+        
         Object.keys(cur.totals).forEach(name => {
-          const diff = cur.totals[name] - (prev.totals[name] || 0);
-          compHtml += `• ${name}: ${diff >= 0 ? '+' : ''}${diff}<br>`;
+          const prevVal = prev.totals[name] || 0;
+          const diff = cur.totals[name] - prevVal;
+          const sign = diff >= 0 ? '+' : '';
+          compHtml += `• ${name}: ${sign}${diff}<br>`;
         });
+        
         const dT = prev.duration - cur.duration;
-        compHtml += `• Tiempo: ${dT >= 0 ? '🚀 ' : '🐢 '}${Math.abs(dT)}s`;
+        const speedIcon = dT >= 0 ? '🚀 ' : '🐢 ';
+        compHtml += `• Tiempo: ${speedIcon}${Math.abs(dT)}s`;
+        
         document.getElementById('comparison-box').innerHTML = compHtml;
       }
-      document.getElementById('statsList').innerHTML = Object.keys(cur.totals).map(n => `<div class="stat-row"><span>${n}</span><b>${cur.totals[n]}</b></div>`).join('');
+      
+      // Render totals list
+      document.getElementById('statsList').innerHTML = Object.keys(cur.totals).map(n => `
+        <div class="stat-row">
+          <span>${n}</span>
+          <b>${cur.totals[n]}</b>
+        </div>
+      `).join('');
     }
+
+    // --- 5. History Browser ---
 
     function showHistory() {
       document.getElementById('view-welcome').classList.remove('active');
       document.getElementById('view-history').classList.add('active');
+      
       const list = document.getElementById('history-list');
       const sortedKeys = Object.keys(history).sort().reverse();
+      
       list.innerHTML = sortedKeys.map((k, i) => {
         const s = history[k];
         const prevK = sortedKeys.slice(i + 1).find(key => key < k);
         const prevS = prevK ? history[prevK] : null;
+        
+        const mins = Math.floor(s.duration / 60);
+        const secs = s.duration % 60;
+        
+        // 1. Steps HTML
+        const stepsHtml = s.steps.map(st => `
+          <div>${st.tag} ${EXERCISES[st.ex].name}: <b>${st.value}</b></div>
+        `).join('');
+        
+        // 2. Compulsion / Differences HTML
+        const totalsHtml = Object.keys(s.totals).map(name => {
+          const diff = prevS ? s.totals[name] - (prevS.totals[name] || 0) : null;
+          const sign = diff >= 0 ? '+' : '';
+          const diffClass = diff >= 0 ? 'pos' : 'neg';
+          const diffText = diff !== null ? `<span class="delta ${diffClass}">(${sign}${diff})</span>` : '';
+          
+          return `<div>• ${name}: <b>${s.totals[name]}</b> ${diffText}</div>`;
+        }).join('');
+
         return `
           <div class="hist-card">
             <div class="hist-header" onclick="toggleCard(${i})">
-              <div><span class="hist-date">${k}</span><br><small>${Math.floor(s.duration/60)}m ${s.duration%60}s</small></div>
+              <div>
+                <span class="hist-date">${k}</span><br>
+                <small>${mins}m ${secs}s</small>
+              </div>
               <span>▼</span>
             </div>
+            
             <div id="card-${i}" class="hist-details">
-              ${s.steps.map(st => `<div>${st.tag} ${EXERCISES[st.ex].name}: <b>${st.value}</b></div>`).join('')}
+              ${stepsHtml}
               <div class="hist-total-row">AGRUPADO Y COMPULSIÓN:</div>
-              ${Object.keys(s.totals).map(name => {
-                const diff = prevS ? s.totals[name] - (prevS.totals[name] || 0) : null;
-                const diffText = diff !== null ? `<span class="delta ${diff >= 0 ? 'pos' : 'neg'}">(${diff >= 0 ? '+' : ''}${diff})</span>` : '';
-                return `<div>• ${name}: <b>${s.totals[name]}</b> ${diffText}</div>`;
-              }).join('')}
+              ${totalsHtml}
             </div>
-          </div>`;
+          </div>
+        `;
       }).join('');
     }
 
-    function toggleCard(i) { document.getElementById(`card-${i}`).classList.toggle('open'); }
-    function exportJSON() { const b = new Blob([JSON.stringify(history, null, 2)], {type: 'application/json'}); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `workout.json`; a.click(); }
-    function importJSON(event) { const r = new FileReader(); r.onload = (e) => { history = JSON.parse(e.target.result); localStorage.setItem('workout_history_v2', JSON.stringify(history)); location.reload(); }; r.readAsText(event.target.files); }
-    function clearAllData() { if(confirm("¿Borrar historial?")) { localStorage.removeItem('workout_history_v2'); location.reload(); } }
-    function showExit() { document.getElementById('view-welcome').classList.remove('active'); document.getElementById('view-exit').classList.add('active'); }
+    function toggleCard(i) { 
+      document.getElementById(`card-${i}`).classList.toggle('open'); 
+    }
+
+    // --- 6. Utilities ---
+
+    function exportJSON() { 
+      const b = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' }); 
+      const a = document.createElement("a"); 
+      a.href = URL.createObjectURL(b); 
+      a.download = `workout.json`; 
+      a.click(); 
+    }
+
+    function importJSON(event) { 
+      const r = new FileReader(); 
+      r.onload = (e) => { 
+        history = JSON.parse(e.target.result); 
+        localStorage.setItem('workout_history_v2', JSON.stringify(history)); 
+        location.reload(); 
+      }; 
+      r.readAsText(event.target.files); 
+    }
+
+    function clearAllData() { 
+      if (confirm("¿Borrar historial?")) { 
+        localStorage.removeItem('workout_history_v2'); 
+        location.reload(); 
+      } 
+    }
+
+    function showExit() { 
+      document.getElementById('view-welcome').classList.remove('active'); 
+      document.getElementById('view-exit').classList.add('active'); 
+    }
   </script>
 </body>
 </html>
