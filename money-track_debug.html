@@ -83,7 +83,15 @@ const TRANSLATIONS = {
     export_json: "EXPORTAR",
     import_json: "IMPORTAR",
     erase_all: "BORRAR TODO",
-    erase_confirm: "¿Estás seguro? Se borrarán todos los movimientos y personas."
+    erase_confirm: "¿Estás seguro? Se borrarán todos los movimientos y personas.",
+    paid: "Pagado",
+    include_paid: "Incluir pagados",
+    mark_paid: "Marcar pagado",
+    mark_unpaid: "Desmarcar pagado",
+    show_paid: "Ver pagados",
+    of_total: "del total",
+    of: "de",
+    pending_to_pay: "pendiente de pago"
   },
   en: {
     dashboard: "Dashboard",
@@ -117,7 +125,15 @@ const TRANSLATIONS = {
     export_json: "EXPORT",
     import_json: "IMPORT",
     erase_all: "ERASE EVERYTHING",
-    erase_confirm: "Are you sure? This will delete all transactions and people."
+    erase_confirm: "Are you sure? This will delete all transactions and people.",
+    paid: "Paid",
+    include_paid: "Include paid",
+    mark_paid: "Mark paid",
+    mark_unpaid: "Unmark paid",
+    show_paid: "Show paid",
+    of_total: "of total",
+    of: "of",
+    pending_to_pay: "pending"
   },
   ca: {
     dashboard: "Resum",
@@ -151,7 +167,15 @@ const TRANSLATIONS = {
     export_json: "EXPORTAR",
     import_json: "IMPORTAR",
     erase_all: "ESBORRAR TOT",
-    erase_confirm: "Estàs segur? S'esborraran tots els moviments i persones."
+    erase_confirm: "Estàs segur? S'esborraran tots els moviments i persones.",
+    paid: "Pagat",
+    include_paid: "Incloure pagats",
+    mark_paid: "Marcar pagat",
+    mark_unpaid: "Desmarcar pagat",
+    show_paid: "Veure pagats",
+    of_total: "del total",
+    of: "de",
+    pending_to_pay: "pendent de pagament"
   },
   eu: {
     dashboard: "Laburpena",
@@ -185,7 +209,15 @@ const TRANSLATIONS = {
     export_json: "EXPORTATU",
     import_json: "IMPORTATU",
     erase_all: "DENA EZABATU",
-    erase_confirm: "Ziur zaude? Mugimendu eta pertsona guztiak ezabatuko dira."
+    erase_confirm: "Ziur zaude? Mugimendu eta pertsona guztiak ezabatuko dira.",
+    paid: "Pagatua",
+    include_paid: "Sartu pagatuak",
+    mark_paid: "Markatu pagatu gisa",
+    mark_unpaid: "Desmarkatu pagatua",
+    show_paid: "Ikusi pagatuak",
+    of_total: "guztira",
+    of: "/",
+    pending_to_pay: "ordaintzeko zain"
   },
   gl: {
     dashboard: "Resumo",
@@ -219,7 +251,15 @@ const TRANSLATIONS = {
     export_json: "EXPORTAR",
     import_json: "IMPORTAR",
     erase_all: "BORRAR TODO",
-    erase_confirm: "Estás seguro? Borraranse todos os movementos e persoas."
+    erase_confirm: "Estás seguro? Borraranse todos os movementos e persoas.",
+    paid: "Pagado",
+    include_paid: "Incluír pagados",
+    mark_paid: "Marcar pagado",
+    mark_unpaid: "Desmarcar pagado",
+    show_paid: "Ver pagados",
+    of_total: "do total",
+    of: "de",
+    pending_to_pay: "pendente de pago"
   }
 };
 const SHARED_KEY = "static_apps_lang";
@@ -237,7 +277,7 @@ function applyTranslations() {
 let currentPage = 0;
 const PAGE_SIZE = 20;
 let currentObserver = null;
-let currentPersonFilter = null;
+window.currentPersonFilter = null;
 window.showView = (viewId) => {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   document.getElementById(`view-${viewId}`).classList.add("active");
@@ -250,7 +290,7 @@ function renderView(viewId) {
   if (viewId === "welcome") renderDashboard();
   if (viewId === "transaction") renderTransactionForm();
   if (viewId === "history") {
-    currentPersonFilter = null;
+    window.currentPersonFilter = null;
     renderHistory(true);
   }
   if (viewId === "people") renderPeople();
@@ -267,6 +307,7 @@ function renderDashboard() {
 function calculateTotals(transactions = state.transactions) {
   let plus = 0, minus = 0;
   transactions.forEach((tx) => {
+    if (tx.paid) return;
     if (tx.type === "owe_me") plus += tx.amount;
     else minus += tx.amount;
   });
@@ -287,6 +328,7 @@ window.saveTransaction = () => {
   const person = document.getElementById("tx-person").value;
   const desc = document.getElementById("tx-desc").value;
   const type = document.querySelector("#tx-type-toggle .toggle-btn.active").dataset.type;
+  const paid = document.getElementById("tx-paid").checked;
   if (!amount || !person) return;
   state.transactions.unshift({
     id: Date.now(),
@@ -294,12 +336,14 @@ window.saveTransaction = () => {
     amount,
     person,
     desc,
-    type
+    type,
+    paid
   });
   saveState();
   showView("welcome");
 };
 function renderHistory(reset = false) {
+  var _a, _b;
   const isPersonStats = state.currentView === "stats";
   const listId = isPersonStats ? "person-history-list" : "history-list";
   const sentinelId = isPersonStats ? "stats-sentinel" : "history-sentinel";
@@ -310,23 +354,31 @@ function renderHistory(reset = false) {
     list.innerHTML = "";
     setupInfiniteScroll(sentinelId);
   }
-  const allFiltered = currentPersonFilter ? state.transactions.filter((t2) => t2.person === currentPersonFilter) : state.transactions;
+  const showPaid = state.currentView === "stats" ? (_a = document.getElementById("stats-show-paid")) == null ? void 0 : _a.checked : (_b = document.getElementById("history-show-paid")) == null ? void 0 : _b.checked;
+  const allFiltered = window.currentPersonFilter ? state.transactions.filter((t2) => t2.person === window.currentPersonFilter) : state.transactions;
+  const displayFiltered = showPaid ? allFiltered : allFiltered.filter((t2) => !t2.paid);
   const start = currentPage * PAGE_SIZE;
   const end = start + PAGE_SIZE;
-  const batch = allFiltered.slice(start, end);
+  const batch = displayFiltered.slice(start, end);
   if (batch.length === 0 && reset) {
     list.innerHTML = `<p style="text-align:center; color:#555; padding:20px;">No records found</p>`;
     return;
   }
   const html = batch.map((tx) => `
-    <div class="tx-item">
+    <div class="tx-item ${tx.paid ? "paid" : ""}">
       <div class="tx-info">
-        <h3>${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - ' + tx.desc + "</span>" : ""}</h3>
+        <h3>
+          ${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - ' + tx.desc + "</span>" : ""}
+          ${tx.paid ? `<span class="paid-badge">${t("paid")}</span>` : ""}
+        </h3>
         <span>${new Date(tx.date).toLocaleDateString(currentLang)}</span>
       </div>
       <div class="tx-amount ${tx.type === "owe_me" ? "positive" : "negative"}">
         ${tx.type === "owe_me" ? "+" : "-"}${formatCurrency(tx.amount)}
-        <button onclick="deleteTx(${tx.id})" style="border:none; background:none; color:#555; margin-left:10px; cursor:pointer;">×</button>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:5px; justify-content: flex-end;">
+          <button class="btn-paid-toggle" onclick="togglePaid(${tx.id})">${tx.paid ? t("mark_unpaid") : t("mark_paid")}</button>
+          <button onclick="deleteTx(${tx.id})" style="border:none; background:none; color:#555; cursor:pointer; font-size:1.2rem;">×</button>
+        </div>
       </div>
     </div>
   `).join("");
@@ -334,10 +386,19 @@ function renderHistory(reset = false) {
   div.innerHTML = html;
   while (div.firstChild) list.appendChild(div.firstChild);
   currentPage++;
-  if (allFiltered.length <= currentPage * PAGE_SIZE && currentObserver) {
+  if (displayFiltered.length <= currentPage * PAGE_SIZE && currentObserver) {
     currentObserver.disconnect();
   }
 }
+window.togglePaid = (id) => {
+  const tx = state.transactions.find((t2) => t2.id === id);
+  if (tx) {
+    tx.paid = !tx.paid;
+    saveState();
+    renderHistory(true);
+    if (state.currentView === "welcome") renderDashboard();
+  }
+};
 function setupInfiniteScroll(sentinelId) {
   if (currentObserver) currentObserver.disconnect();
   const sentinel = document.getElementById(sentinelId);
@@ -363,6 +424,7 @@ function renderPeople() {
   const balances = {};
   state.people.forEach((p) => balances[p] = 0);
   state.transactions.forEach((tx) => {
+    if (tx.paid) return;
     if (balances[tx.person] !== void 0) {
       if (tx.type === "owe_me") balances[tx.person] += tx.amount;
       else balances[tx.person] -= tx.amount;
@@ -402,18 +464,33 @@ window.removePerson = (name) => {
   renderPeople();
 };
 window.showPersonStats = (name) => {
-  currentPersonFilter = name;
+  var _a;
+  window.currentPersonFilter = name;
   showView("stats");
   document.getElementById("stats-title").innerText = `${t("net_with")} ${name}`;
+  const showPaid = ((_a = document.getElementById("stats-show-paid")) == null ? void 0 : _a.checked) || false;
   const personTxs = state.transactions.filter((t2) => t2.person === name);
-  let net = 0;
+  let pendingNet = 0;
+  let paidVolume = 0;
   personTxs.forEach((tx) => {
-    if (tx.type === "owe_me") net += tx.amount;
-    else net -= tx.amount;
+    if (tx.paid) {
+      paidVolume += tx.amount;
+    } else {
+      if (tx.type === "owe_me") pendingNet += tx.amount;
+      else pendingNet -= tx.amount;
+    }
   });
   const balanceEl = document.getElementById("person-net-balance");
-  balanceEl.innerText = formatCurrency(net);
-  balanceEl.className = net >= 0 ? "positive" : "negative";
+  balanceEl.innerText = formatCurrency(pendingNet);
+  balanceEl.className = pendingNet >= 0 ? "positive" : "negative";
+  const totalVolEl = document.getElementById("person-total-volume");
+  if (showPaid && paidVolume > 0) {
+    const totalNet = pendingNet + (pendingNet >= 0 ? paidVolume : -paidVolume);
+    totalVolEl.innerText = `${t("of_total")} ${formatCurrency(totalNet)}`;
+    totalVolEl.style.display = "block";
+  } else {
+    totalVolEl.style.display = "none";
+  }
   renderHistory(true);
 };
 window.renderGeneralStats = () => {
@@ -429,24 +506,35 @@ window.renderGeneralStats = () => {
   const to = /* @__PURE__ */ new Date(toInput.value + "T23:59:59");
   const filtered = state.transactions.filter((tx) => {
     const d = new Date(tx.date);
-    return d >= from && d <= to;
+    return d >= from && d <= to && !tx.paid;
   });
   const totals = calculateTotals(filtered);
   document.getElementById("stats-period-net").innerText = (totals.net >= 0 ? "+" : "-") + formatCurrency(totals.net);
   document.getElementById("stats-period-net").className = totals.net >= 0 ? "positive" : "negative";
   document.getElementById("stats-period-plus").innerText = formatCurrency(totals.plus);
   document.getElementById("stats-period-minus").innerText = formatCurrency(totals.minus);
-  const personMap = {};
-  state.people.forEach((p) => personMap[p] = 0);
-  filtered.forEach((tx) => {
-    if (tx.type === "owe_me") personMap[tx.person] += tx.amount;
-    else personMap[tx.person] -= tx.amount;
+  const statsMap = {};
+  state.people.forEach((p) => statsMap[p] = { balance: 0, count: 0 });
+  state.transactions.forEach((tx) => {
+    const d = new Date(tx.date);
+    if (d < from || d > to) return;
+    if (tx.paid) return;
+    if (statsMap[tx.person]) {
+      statsMap[tx.person].count++;
+      const val = tx.type === "owe_me" ? tx.amount : -tx.amount;
+      statsMap[tx.person].balance += val;
+    }
   });
   const list = document.getElementById("stats-person-breakdown");
-  list.innerHTML = Object.entries(personMap).filter(([_, val]) => val !== 0).sort((a, b) => b[1] - a[1]).map(([name, val]) => `
-      <div class="tx-item" onclick="showPersonStats('${name}')" style="cursor:pointer;">
-        <span>${name}</span>
-        <span class="${val >= 0 ? "positive" : "negative"}">${val >= 0 ? "+" : "-"}${formatCurrency(val)}</span>
+  list.innerHTML = Object.entries(statsMap).filter(([_, stats]) => stats.count > 0).sort((a, b) => b[1].balance - a[1].balance).map(([name, stats]) => `
+      <div class="tx-item" onclick="showPersonStats('${name}')" style="cursor:pointer; display: flex; flex-direction: column; align-items: stretch; gap: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: bold;">${name}</span>
+          <span class="${stats.balance >= 0 ? "positive" : "negative"}">${stats.balance >= 0 ? "+" : "-"}${formatCurrency(stats.balance)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim);">
+          <span>${stats.count} tx</span>
+        </div>
       </div>
     `).join("");
 };
@@ -496,7 +584,7 @@ window.clearAllData = () => {
   }
 };
 window.generateDummyData = () => {
-  if (!confirm("Generate 1000000 dummy transactions for performance testing?")) return;
+  if (!confirm("Generate 10,000 dummy transactions for performance testing?")) return;
   const testNames = ["Emma Watson", "Tony Stark", "Bruce Wayne", "Clark Kent", "Diana Prince"];
   testNames.forEach((name) => {
     if (!state.people.includes(name)) state.people.push(name);
@@ -504,10 +592,11 @@ window.generateDummyData = () => {
   const now = /* @__PURE__ */ new Date();
   const sixMonthsAgo = /* @__PURE__ */ new Date();
   sixMonthsAgo.setMonth(now.getMonth() - 6);
-  for (let i = 0; i < 1e6; i++) {
+  for (let i = 0; i < 1e4; i++) {
     const randomPerson = testNames[Math.floor(Math.random() * testNames.length)];
     const randomAmount = Math.random() * 5e4 + 10;
     const randomType = Math.random() > 0.5 ? "owe_me" : "i_owe";
+    const randomPaid = Math.random() < 0.1;
     const randomDate = new Date(sixMonthsAgo.getTime() + Math.random() * (now.getTime() - sixMonthsAgo.getTime()));
     state.transactions.push({
       id: Date.now() + i,
@@ -515,12 +604,13 @@ window.generateDummyData = () => {
       amount: parseFloat(randomAmount.toFixed(2)),
       person: randomPerson,
       desc: "Stress Test #" + (i + 1),
-      type: randomType
+      type: randomType,
+      paid: randomPaid
     });
   }
   state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
   saveState();
-  alert("Generated 1,000,000 transactions! App will reload now.");
+  alert("Generated 10,000 transactions! App will reload now.");
   location.reload();
 };
 function formatCurrency(val) {
@@ -696,6 +786,102 @@ input, select, textarea {
 .toggle-btn.active {
   background: var(--accent);
   color: white;
+}
+
+/* Paid status styles */
+.tx-item.paid {
+  opacity: 0.5;
+}
+
+.tx-item.paid .tx-amount {
+  text-decoration: line-through;
+}
+
+.paid-badge {
+  font-size: 0.6rem;
+  background: var(--border);
+  color: var(--text-dim);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  margin-bottom: 15px;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border);
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .slider {
+  background-color: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.btn-paid-toggle {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-dim);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.btn-paid-toggle:hover {
+  background: var(--border);
+  color: var(--text-main);
 }</style>
 </head>
 <body>
@@ -755,6 +941,14 @@ input, select, textarea {
     <textarea id="tx-desc" rows="3"></textarea>
   </div>
 
+  <div class="filter-bar">
+    <label for="tx-paid" data-i18n="paid" style="margin:0; cursor:pointer;">Paid</label>
+    <label class="switch">
+      <input type="checkbox" id="tx-paid">
+      <span class="slider"></span>
+    </label>
+  </div>
+
   <div style="margin-top: 20px;">
     <button class="btn btn-primary" onclick="saveTransaction()" data-i18n="save">SAVE</button>
   </div>
@@ -764,6 +958,13 @@ input, select, textarea {
   <div class="sticky-header">
     <h2 data-i18n="history" style="margin:0">HISTORY 📜</h2>
     <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+  <div class="filter-bar">
+    <label for="history-show-paid" data-i18n="show_paid" style="margin:0; cursor:pointer;">Show paid</label>
+    <label class="switch">
+      <input type="checkbox" id="history-show-paid" onchange="renderHistory(true)">
+      <span class="slider"></span>
+    </label>
   </div>
   <div id="history-list">
     <!-- To be filled by JS -->
@@ -798,9 +999,18 @@ input, select, textarea {
   <div class="card" style="text-align: center;">
     <span class="label" data-i18n="total_balance">Net Balance</span>
     <div id="person-net-balance" style="font-size: 2rem; font-weight: bold;">$0.00</div>
+    <div id="person-total-volume" style="font-size: 0.9rem; color: var(--text-dim); margin-top: 5px; display: none;"></div>
   </div>
   
-  <h3 data-i18n="payments">Transactions</h3>
+  <div class="filter-bar">
+    <label for="stats-show-paid" data-i18n="show_paid" style="margin:0; cursor:pointer;">Show paid</label>
+    <label class="switch">
+      <input type="checkbox" id="stats-show-paid" onchange="showPersonStats(window.currentPersonFilter)">
+      <span class="slider"></span>
+    </label>
+  </div>
+  
+  <h3 data-i18n="payments" style="padding: 0 20px;">Transactions</h3>
   <div id="person-history-list">
     <!-- To be filled by JS -->
   </div>
@@ -826,6 +1036,7 @@ input, select, textarea {
         <input type="date" id="stats-to" onchange="renderGeneralStats()">
       </div>
     </div>
+
 
     <h3 data-i18n="period_summary" style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 10px;">Period Summary</h3>
     <div style="font-size: 2rem; font-weight: bold;" id="stats-period-net">$0.00</div>

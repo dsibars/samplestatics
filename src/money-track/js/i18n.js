@@ -8,7 +8,9 @@ export const TRANSLATIONS = {
     net_with: "Balance con", payments: "Movimientos", lang: "Idioma",
     stats: "ESTADÍSTICAS 📊", date_from: "Desde", date_to: "Hasta", period_summary: "Resumen del periodo",
     local_data: "Datos Locales", export_json: "EXPORTAR", import_json: "IMPORTAR", erase_all: "BORRAR TODO",
-    erase_confirm: "¿Estás seguro? Se borrarán todos los movimientos y personas."
+    erase_confirm: "¿Estás seguro? Se borrarán todos los movimientos y personas.",
+    paid: "Pagado", include_paid: "Incluir pagados", mark_paid: "Marcar pagado", mark_unpaid: "Desmarcar pagado", show_paid: "Ver pagados",
+    of_total: "del total", of: "de", pending_to_pay: "pendiente de pago"
   },
   en: {
     dashboard: "Dashboard", add_tx: "ADD TRANSACTION", history: "HISTORY 📜", people: "PEOPLE 👥", 
@@ -19,7 +21,9 @@ export const TRANSLATIONS = {
     net_with: "Balance with", payments: "Transactions", lang: "Language",
     stats: "STATISTICS 📊", date_from: "From", date_to: "To", period_summary: "Period Summary",
     local_data: "Local Data", export_json: "EXPORT", import_json: "IMPORT", erase_all: "ERASE EVERYTHING",
-    erase_confirm: "Are you sure? This will delete all transactions and people."
+    erase_confirm: "Are you sure? This will delete all transactions and people.",
+    paid: "Paid", include_paid: "Include paid", mark_paid: "Mark paid", mark_unpaid: "Unmark paid", show_paid: "Show paid",
+    of_total: "of total", of: "of", pending_to_pay: "pending"
   },
   ca: {
     dashboard: "Resum", add_tx: "AFEGIR MOVIMENT", history: "HISTORIAL 📜", people: "PERSONES 👥", 
@@ -30,7 +34,9 @@ export const TRANSLATIONS = {
     net_with: "Balanç amb", payments: "Moviments", lang: "Idioma",
     stats: "ESTADÍSTIQUES 📊", date_from: "Des de", date_to: "Fins a", period_summary: "Resum del període",
     local_data: "Dades Locals", export_json: "EXPORTAR", import_json: "IMPORTAR", erase_all: "ESBORRAR TOT",
-    erase_confirm: "Estàs segur? S'esborraran tots els moviments i persones."
+    erase_confirm: "Estàs segur? S'esborraran tots els moviments i persones.",
+    paid: "Pagat", include_paid: "Incloure pagats", mark_paid: "Marcar pagat", mark_unpaid: "Desmarcar pagat", show_paid: "Veure pagats",
+    of_total: "del total", of: "de", pending_to_pay: "pendent de pagament"
   },
   eu: {
     dashboard: "Laburpena", add_tx: "GEHITU MUGIMENDUA", history: "HISTORIALA 📜", people: "PERTSONAK 👥", 
@@ -41,7 +47,9 @@ export const TRANSLATIONS = {
     net_with: "Balanzea honekin:", payments: "Mugimenduak", lang: "Hizkuntza",
     stats: "ESTATISTIKAK 📊", date_from: "Noiztik", date_to: "Noiz arte", period_summary: "Epearen laburpena",
     local_data: "Datu Lokalak", export_json: "EXPORTATU", import_json: "IMPORTATU", erase_all: "DENA EZABATU",
-    erase_confirm: "Ziur zaude? Mugimendu eta pertsona guztiak ezabatuko dira."
+    erase_confirm: "Ziur zaude? Mugimendu eta pertsona guztiak ezabatuko dira.",
+    paid: "Pagatua", include_paid: "Sartu pagatuak", mark_paid: "Markatu pagatu gisa", mark_unpaid: "Desmarkatu pagatua", show_paid: "Ikusi pagatuak",
+    of_total: "guztira", of: "/", pending_to_pay: "ordaintzeko zain"
   },
   gl: {
     dashboard: "Resumo", add_tx: "ENGADIR MOVEMENTO", history: "HISTORIAL 📜", people: "PERSOAS 👥", 
@@ -52,7 +60,9 @@ export const TRANSLATIONS = {
     net_with: "Balance con", payments: "Movementos", lang: "Idioma",
     stats: "ESTADÍSTICAS 📊", date_from: "Desde", date_to: "Ata", period_summary: "Resumo do periodo",
     local_data: "Datos Locais", export_json: "EXPORTAR", import_json: "IMPORTAR", erase_all: "BORRAR TODO",
-    erase_confirm: "Estás seguro? Borraranse todos os movementos e persoas."
+    erase_confirm: "Estás seguro? Borraranse todos os movementos e persoas.",
+    paid: "Pagado", include_paid: "Incluír pagados", mark_paid: "Marcar pagado", mark_unpaid: "Desmarcar pagado", show_paid: "Ver pagados",
+    of_total: "do total", of: "de", pending_to_pay: "pendente de pago"
   }
 };
 

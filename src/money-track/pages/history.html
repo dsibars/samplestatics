@@ -3,6 +3,13 @@
     <h2 data-i18n="history" style="margin:0">HISTORY 📜</h2>
     <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
   </div>
+  <div class="filter-bar">
+    <label for="history-show-paid" data-i18n="show_paid" style="margin:0; cursor:pointer;">Show paid</label>
+    <label class="switch">
+      <input type="checkbox" id="history-show-paid" onchange="renderHistory(true)">
+      <span class="slider"></span>
+    </label>
+  </div>
   <div id="history-list">
     <!-- To be filled by JS -->
   </div>
@@ -36,9 +43,18 @@
   <div class="card" style="text-align: center;">
     <span class="label" data-i18n="total_balance">Net Balance</span>
     <div id="person-net-balance" style="font-size: 2rem; font-weight: bold;">$0.00</div>
+    <div id="person-total-volume" style="font-size: 0.9rem; color: var(--text-dim); margin-top: 5px; display: none;"></div>
   </div>
   
-  <h3 data-i18n="payments">Transactions</h3>
+  <div class="filter-bar">
+    <label for="stats-show-paid" data-i18n="show_paid" style="margin:0; cursor:pointer;">Show paid</label>
+    <label class="switch">
+      <input type="checkbox" id="stats-show-paid" onchange="showPersonStats(window.currentPersonFilter)">
+      <span class="slider"></span>
+    </label>
+  </div>
+  
+  <h3 data-i18n="payments" style="padding: 0 20px;">Transactions</h3>
   <div id="person-history-list">
     <!-- To be filled by JS -->
   </div>
