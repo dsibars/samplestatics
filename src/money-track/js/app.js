@@ -277,7 +277,7 @@ window.renderGeneralStats = () => {
     .filter(([_, val]) => val !== 0)
     .sort((a, b) => b[1] - a[1])
     .map(([name, val]) => `
-      <div class="tx-item">
+      <div class="tx-item" onclick="showPersonStats('${name}')" style="cursor:pointer;">
         <span>${name}</span>
         <span class="${val >= 0 ? 'positive' : 'negative'}">${val >= 0 ? '+' : '-'}${formatCurrency(val)}</span>
       </div>
