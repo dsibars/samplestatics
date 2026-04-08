@@ -1,0 +1,30 @@
+<div id="view-transaction" class="view">
+  <h2 data-i18n="add_tx">ADD TRANSACTION</h2>
+
+  <div class="toggle-group" id="tx-type-toggle">
+    <div class="toggle-btn active" data-type="owe_me" data-i18n="owe_me">Owes me</div>
+    <div class="toggle-btn" data-type="i_owe" data-i18n="i_owe">I owe</div>
+  </div>
+
+  <div class="form-group">
+    <label data-i18n="amount">Amount</label>
+    <input type="number" id="tx-amount" step="0.01" placeholder="0.00">
+  </div>
+
+  <div class="form-group">
+    <label data-i18n="person">Person</label>
+    <select id="tx-person">
+      <!-- To be filled by JS -->
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label data-i18n="desc">Description (Optional)</label>
+    <textarea id="tx-desc" rows="3"></textarea>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-primary" onclick="saveTransaction()" data-i18n="save">SAVE</button>
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>

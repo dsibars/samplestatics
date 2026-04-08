@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Balance - Pocket Ledger</title>
+  <script type="module" crossorigin>(function polyfill() {
+  const relList = document.createElement("link").relList;
+  if (relList && relList.supports && relList.supports("modulepreload")) {
+    return;
+  }
+  for (const link of document.querySelectorAll('link[rel="modulepreload"]')) {
+    processPreload(link);
+  }
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== "childList") {
+        continue;
+      }
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === "LINK" && node.rel === "modulepreload")
+          processPreload(node);
+      }
+    }
+  }).observe(document, { childList: true, subtree: true });
+  function getFetchOpts(link) {
+    const fetchOpts = {};
+    if (link.integrity) fetchOpts.integrity = link.integrity;
+    if (link.referrerPolicy) fetchOpts.referrerPolicy = link.referrerPolicy;
+    if (link.crossOrigin === "use-credentials")
+      fetchOpts.credentials = "include";
+    else if (link.crossOrigin === "anonymous") fetchOpts.credentials = "omit";
+    else fetchOpts.credentials = "same-origin";
+    return fetchOpts;
+  }
+  function processPreload(link) {
+    if (link.ep)
+      return;
+    link.ep = true;
+    const fetchOpts = getFetchOpts(link);
+    fetch(link.href, fetchOpts);
+  }
+})();
+const state = {
+  transactions: JSON.parse(localStorage.getItem("balance_history") || "[]"),
+  people: JSON.parse(localStorage.getItem("balance_people") || "[]"),
+  currentView: "welcome"
+};
+function saveState() {
+  localStorage.setItem("balance_history", JSON.stringify(state.transactions));
+  localStorage.setItem("balance_people", JSON.stringify(state.people));
+}
+const TRANSLATIONS = {
+  es: {
+    dashboard: "Resumen",
+    add_tx: "AÑADIR MOVIMIENTO",
+    history: "HISTORIAL 📜",
+    people: "PERSONAS 👥",
+    i_owe: "Yo debo",
+    owe_me: "Me deben",
+    amount: "Cantidad",
+    person: "Persona",
+    desc: "Descripción (Opcional)",
+    save: "GUARDAR",
+    back: "VOLVER",
+    total_balance: "Balance Neto",
+    total_i_owe: "Yo debo",
+    total_owe_me: "Me deben",
+    no_people: "No hay personas. ¡Añade una!",
+    add_person: "AÑADIR PERSONA",
+    person_name: "Nombre",
+    delete_confirm: "¿Borrar este registro?",
+    settings: "AJUSTES ⚙️",
+    back_home: "SALIR AL HUB",
+    net_with: "Balance con",
+    payments: "Movimientos",
+    lang: "Idioma"
+  },
+  en: {
+    dashboard: "Dashboard",
+    add_tx: "ADD TRANSACTION",
+    history: "HISTORY 📜",
+    people: "PEOPLE 👥",
+    i_owe: "I owe",
+    owe_me: "Owes me",
+    amount: "Amount",
+    person: "Person",
+    desc: "Description (Optional)",
+    save: "SAVE",
+    back: "BACK",
+    total_balance: "Net Balance",
+    total_i_owe: "I owe",
+    total_owe_me: "Owes me",
+    no_people: "No people found. Add one!",
+    add_person: "ADD PERSON",
+    person_name: "Name",
+    delete_confirm: "Delete this record?",
+    settings: "SETTINGS ⚙️",
+    back_home: "EXIT TO HUB",
+    net_with: "Balance with",
+    payments: "Transactions",
+    lang: "Language"
+  },
+  ca: {
+    dashboard: "Resum",
+    add_tx: "AFEGIR MOVIMENT",
+    history: "HISTORIAL 📜",
+    people: "PERSONES 👥",
+    i_owe: "Jo debó",
+    owe_me: "Em deuen",
+    amount: "Quantitat",
+    person: "Persona",
+    desc: "Descripció (Opcional)",
+    save: "DESAR",
+    back: "TORNAR",
+    total_balance: "Balanç Net",
+    total_i_owe: "Jo debó",
+    total_owe_me: "Em deuen",
+    no_people: "No hi ha persones. Afegeix una!",
+    add_person: "AFEGIR PERSONA",
+    person_name: "Nom",
+    delete_confirm: "Esborrar aquest registre?",
+    settings: "CONFIGURACIÓ ⚙️",
+    back_home: "SORTIR AL HUB",
+    net_with: "Balanç amb",
+    payments: "Moviments",
+    lang: "Idioma"
+  },
+  eu: {
+    dashboard: "Laburpena",
+    add_tx: "GEHITU MUGIMENDUA",
+    history: "HISTORIALA 📜",
+    people: "PERTSONAK 👥",
+    i_owe: "Zor dut",
+    owe_me: "Zor didate",
+    amount: "Zenbatekoa",
+    person: "Pertsona",
+    desc: "Deskribapena (Aukerakoa)",
+    save: "GORDE",
+    back: "ITZULI",
+    total_balance: "Balanç Netoa",
+    total_i_owe: "Zor dut",
+    total_owe_me: "Zor didate",
+    no_people: "Ez dago pertsonarik. Gehitu bat!",
+    add_person: "GEHITU PERTSONA",
+    person_name: "Izena",
+    delete_confirm: "Erregistro hau ezabatu?",
+    settings: "EZARPENAK ⚙️",
+    back_home: "HUBERA IRTEN",
+    net_with: "Balanzea honekin:",
+    payments: "Mugimenduak",
+    lang: "Hizkuntza"
+  },
+  gl: {
+    dashboard: "Resumo",
+    add_tx: "ENGADIR MOVEMENTO",
+    history: "HISTORIAL 📜",
+    people: "PERSOAS 👥",
+    i_owe: "Eu debo",
+    owe_me: "Débenme",
+    amount: "Cantidade",
+    person: "Persoa",
+    desc: "Descrición (Opcional)",
+    save: "GARDAR",
+    back: "VOLVER",
+    total_balance: "Balance Neto",
+    total_i_owe: "Eu debo",
+    total_owe_me: "Débenme",
+    no_people: "Non hai persoas. Engade unha!",
+    add_person: "ENGADIR PERSOA",
+    person_name: "Nome",
+    delete_confirm: "Borrar este rexistro?",
+    settings: "AXUSTES ⚙️",
+    back_home: "SAÍR AO HUB",
+    net_with: "Balance con",
+    payments: "Movementos",
+    lang: "Idioma"
+  }
+};
+const SHARED_KEY = "static_apps_lang";
+let currentLang = localStorage.getItem(SHARED_KEY) || "es";
+function t(key) {
+  if (!TRANSLATIONS[currentLang]) return key;
+  return TRANSLATIONS[currentLang][key] || TRANSLATIONS["es"][key] || key;
+}
+function applyTranslations() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.innerHTML = t(el.getAttribute("data-i18n"));
+  });
+}
+window.showView = (viewId) => {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.getElementById(`view-${viewId}`).classList.add("active");
+  state.currentView = viewId;
+  renderView(viewId);
+};
+function renderView(viewId) {
+  applyTranslations();
+  if (viewId === "welcome") renderDashboard();
+  if (viewId === "transaction") renderTransactionForm();
+  if (viewId === "history") renderHistory();
+  if (viewId === "people") renderPeople();
+}
+function renderDashboard() {
+  const totals = calculateTotals();
+  document.getElementById("main-balance").innerText = formatCurrency(totals.net);
+  document.getElementById("main-balance").className = totals.net >= 0 ? "positive" : "negative";
+  document.getElementById("total-plus").innerText = formatCurrency(totals.plus);
+  document.getElementById("total-minus").innerText = formatCurrency(totals.minus);
+}
+function calculateTotals() {
+  let plus = 0, minus = 0;
+  state.transactions.forEach((tx) => {
+    if (tx.type === "owe_me") plus += tx.amount;
+    else minus += tx.amount;
+  });
+  return { plus, minus, net: plus - minus };
+}
+function renderTransactionForm() {
+  const select = document.getElementById("tx-person");
+  select.innerHTML = state.people.map((p) => `<option value="${p}">${p}</option>`).join("");
+  document.querySelectorAll("#tx-type-toggle .toggle-btn").forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll("#tx-type-toggle .toggle-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    };
+  });
+}
+window.saveTransaction = () => {
+  const amount = parseFloat(document.getElementById("tx-amount").value);
+  const person = document.getElementById("tx-person").value;
+  const desc = document.getElementById("tx-desc").value;
+  const type = document.querySelector("#tx-type-toggle .toggle-btn.active").dataset.type;
+  if (!amount || !person) return;
+  state.transactions.unshift({
+    id: Date.now(),
+    date: (/* @__PURE__ */ new Date()).toISOString(),
+    amount,
+    person,
+    desc,
+    type
+  });
+  saveState();
+  showView("welcome");
+};
+function renderHistory(personFilter = null) {
+  const listId = personFilter ? "person-history-list" : "history-list";
+  const list = document.getElementById(listId);
+  const filtered = personFilter ? state.transactions.filter((t2) => t2.person === personFilter) : state.transactions;
+  list.innerHTML = filtered.map((tx) => `
+    <div class="tx-item">
+      <div class="tx-info">
+        <h3>${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - ' + tx.desc + "</span>" : ""}</h3>
+        <span>${new Date(tx.date).toLocaleDateString(currentLang)}</span>
+      </div>
+      <div class="tx-amount ${tx.type === "owe_me" ? "positive" : "negative"}">
+        ${tx.type === "owe_me" ? "+" : "-"}${formatCurrency(tx.amount)}
+        <button onclick="deleteTx(${tx.id})" style="border:none; background:none; color:#555; margin-left:10px; cursor:pointer;">×</button>
+      </div>
+    </div>
+  `).join("");
+}
+window.deleteTx = (id) => {
+  if (confirm(t("delete_confirm"))) {
+    state.transactions = state.transactions.filter((t2) => t2.id !== id);
+    saveState();
+    renderView(state.currentView);
+  }
+};
+function renderPeople() {
+  const list = document.getElementById("people-list");
+  list.innerHTML = state.people.length > 0 ? "" : `<p data-i18n="no_people" style="text-align:center; color:#555;">No people</p>`;
+  state.people.forEach((p) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style = "display:flex; justify-content:space-between; align-items:center; cursor:pointer;";
+    card.onclick = () => showPersonStats(p);
+    card.innerHTML = `
+      <span style="font-weight:bold; font-size:1.1rem;">${p}</span>
+      <button onclick="event.stopPropagation(); removePerson('${p}')" style="background:none; border:none; color:#f87171; font-size:1.5rem;">×</button>
+    `;
+    list.appendChild(card);
+  });
+  applyTranslations();
+}
+window.addPerson = () => {
+  const name = document.getElementById("new-person-name").value.trim();
+  if (name && !state.people.includes(name)) {
+    state.people.push(name);
+    saveState();
+    renderPeople();
+    document.getElementById("new-person-name").value = "";
+  }
+};
+window.removePerson = (name) => {
+  state.people = state.people.filter((p) => p !== name);
+  saveState();
+  renderPeople();
+};
+function showPersonStats(name) {
+  showView("stats");
+  document.getElementById("stats-title").innerText = `${t("net_with")} ${name}`;
+  const personTxs = state.transactions.filter((t2) => t2.person === name);
+  let net = 0;
+  personTxs.forEach((tx) => {
+    if (tx.type === "owe_me") net += tx.amount;
+    else net -= tx.amount;
+  });
+  const balanceEl = document.getElementById("person-net-balance");
+  balanceEl.innerText = formatCurrency(net);
+  balanceEl.className = net >= 0 ? "positive" : "negative";
+  renderHistory(name);
+}
+function formatCurrency(val) {
+  return Math.abs(val).toLocaleString(void 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+window.onload = () => {
+  applyTranslations();
+  renderDashboard();
+};</script>
+  <style rel="stylesheet" crossorigin>:root {
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --text-main: #f8fafc;
+  --text-dim: #94a3b8;
+  --accent: #38bdf8;
+  --income: #4ade80;
+  --expense: #f87171;
+  --border: #334155;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
+.view {
+  display: none;
+  padding: 20px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.view.active {
+  display: block;
+}
+
+h1, h2 {
+  margin-top: 0;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.balance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.balance-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.balance-item .label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.balance-item .value {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.positive { color: var(--income); }
+.negative { color: var(--expense); }
+
+.btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: opacity 0.2s;
+}
+
+.btn:active {
+  opacity: 0.8;
+}
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--border); color: var(--text-main); }
+.btn-danger { background: var(--expense); color: #fff; }
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 14px;
+  background: #00000033;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: white;
+  font-size: 1.1rem;
+  box-sizing: border-box;
+}
+
+.tx-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tx-info h3 { margin: 0; font-size: 1rem; }
+.tx-info span { font-size: 0.8rem; color: var(--text-dim); }
+
+.tx-amount { font-weight: bold; font-size: 1.1rem; }
+
+.toggle-group {
+  display: flex;
+  background: var(--border);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.toggle-btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: var(--accent);
+  color: white;
+}</style>
+</head>
+<body>
+  <!-- Views -->
+  <div id="view-welcome" class="view active">
+  <div class="card" style="text-align: center; background: linear-gradient(135deg, #1e293b, #0f172a);">
+    <h2 data-i18n="dashboard">Dashboard</h2>
+    <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;" id="main-balance">$0.00</div>
+    <div class="balance-grid">
+      <div class="balance-item">
+        <span class="label" data-i18n="total_owe_me">Owes me</span>
+        <span class="value positive" id="total-plus">$0.00</span>
+      </div>
+      <div class="balance-item">
+        <span class="label" data-i18n="total_i_owe">I owe</span>
+        <span class="value negative" id="total-minus">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="showView('transaction')" data-i18n="add_tx">ADD TRANSACTION</button>
+  <button class="btn btn-secondary" onclick="showView('history')" data-i18n="history">HISTORY 📜</button>
+  <button class="btn btn-secondary" onclick="showView('people')" data-i18n="people">PEOPLE 👥</button>
+
+  <div style="margin-top: 40px; text-align: center;">
+    <button class="btn btn-secondary" style="background: transparent; color: #555;" onclick="location.href='index.html'" data-i18n="back_home">EXIT TO HUB</button>
+  </div>
+</div>
+
+  <div id="view-transaction" class="view">
+  <h2 data-i18n="add_tx">ADD TRANSACTION</h2>
+
+  <div class="toggle-group" id="tx-type-toggle">
+    <div class="toggle-btn active" data-type="owe_me" data-i18n="owe_me">Owes me</div>
+    <div class="toggle-btn" data-type="i_owe" data-i18n="i_owe">I owe</div>
+  </div>
+
+  <div class="form-group">
+    <label data-i18n="amount">Amount</label>
+    <input type="number" id="tx-amount" step="0.01" placeholder="0.00">
+  </div>
+
+  <div class="form-group">
+    <label data-i18n="person">Person</label>
+    <select id="tx-person">
+      <!-- To be filled by JS -->
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label data-i18n="desc">Description (Optional)</label>
+    <textarea id="tx-desc" rows="3"></textarea>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-primary" onclick="saveTransaction()" data-i18n="save">SAVE</button>
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
+  <div id="view-history" class="view">
+  <h2 data-i18n="history">HISTORY 📜</h2>
+  <div id="history-list">
+    <!-- To be filled by JS -->
+  </div>
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
+<div id="view-people" class="view">
+  <h2 data-i18n="people">PEOPLE 👥</h2>
+  
+  <div class="card" style="margin-bottom: 20px;">
+    <div class="form-group">
+      <label data-i18n="person_name">Name</label>
+      <input type="text" id="new-person-name" placeholder="...">
+    </div>
+    <button class="btn btn-primary" onclick="addPerson()" data-i18n="add_person">ADD PERSON</button>
+  </div>
+
+  <div id="people-list">
+    <!-- To be filled by JS -->
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
+<div id="view-stats" class="view">
+  <h2 id="stats-title">Stats - Person</h2>
+  <div class="card" style="text-align: center;">
+    <span class="label" data-i18n="total_balance">Net Balance</span>
+    <div id="person-net-balance" style="font-size: 2rem; font-weight: bold;">$0.00</div>
+  </div>
+  
+  <h3 data-i18n="payments">Transactions</h3>
+  <div id="person-history-list">
+    <!-- To be filled by JS -->
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('people')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
+  <!-- Missing partial: ./pages/people.html in money-track -->
+  <!-- Missing partial: ./pages/stats.html in money-track -->
+
+</body>
+</html>

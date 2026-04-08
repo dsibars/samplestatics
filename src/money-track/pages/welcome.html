@@ -1,0 +1,24 @@
+<div id="view-welcome" class="view active">
+  <div class="card" style="text-align: center; background: linear-gradient(135deg, #1e293b, #0f172a);">
+    <h2 data-i18n="dashboard">Dashboard</h2>
+    <div style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;" id="main-balance">$0.00</div>
+    <div class="balance-grid">
+      <div class="balance-item">
+        <span class="label" data-i18n="total_owe_me">Owes me</span>
+        <span class="value positive" id="total-plus">$0.00</span>
+      </div>
+      <div class="balance-item">
+        <span class="label" data-i18n="total_i_owe">I owe</span>
+        <span class="value negative" id="total-minus">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="showView('transaction')" data-i18n="add_tx">ADD TRANSACTION</button>
+  <button class="btn btn-secondary" onclick="showView('history')" data-i18n="history">HISTORY 📜</button>
+  <button class="btn btn-secondary" onclick="showView('people')" data-i18n="people">PEOPLE 👥</button>
+
+  <div style="margin-top: 40px; text-align: center;">
+    <button class="btn btn-secondary" style="background: transparent; color: #555;" onclick="location.href='index.html'" data-i18n="back_home">EXIT TO HUB</button>
+  </div>
+</div>
