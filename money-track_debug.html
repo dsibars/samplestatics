@@ -234,17 +234,25 @@ function applyTranslations() {
     el.innerHTML = t(el.getAttribute("data-i18n"));
   });
 }
+let currentPage = 0;
+const PAGE_SIZE = 20;
+let currentObserver = null;
+let currentPersonFilter = null;
 window.showView = (viewId) => {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   document.getElementById(`view-${viewId}`).classList.add("active");
   state.currentView = viewId;
+  window.scrollTo(0, 0);
   renderView(viewId);
 };
 function renderView(viewId) {
   applyTranslations();
   if (viewId === "welcome") renderDashboard();
   if (viewId === "transaction") renderTransactionForm();
-  if (viewId === "history") renderHistory();
+  if (viewId === "history") {
+    currentPersonFilter = null;
+    renderHistory(true);
+  }
   if (viewId === "people") renderPeople();
   if (viewId === "general_stats") renderGeneralStats();
   if (viewId === "settings") renderSettings();
@@ -291,12 +299,26 @@ window.saveTransaction = () => {
   saveState();
   showView("welcome");
 };
-function renderHistory(personFilter = null) {
-  const listId = personFilter ? "person-history-list" : "history-list";
+function renderHistory(reset = false) {
+  const isPersonStats = state.currentView === "stats";
+  const listId = isPersonStats ? "person-history-list" : "history-list";
+  const sentinelId = isPersonStats ? "stats-sentinel" : "history-sentinel";
   const list = document.getElementById(listId);
   if (!list) return;
-  const filtered = personFilter ? state.transactions.filter((t2) => t2.person === personFilter) : state.transactions;
-  list.innerHTML = filtered.map((tx) => `
+  if (reset) {
+    currentPage = 0;
+    list.innerHTML = "";
+    setupInfiniteScroll(sentinelId);
+  }
+  const allFiltered = currentPersonFilter ? state.transactions.filter((t2) => t2.person === currentPersonFilter) : state.transactions;
+  const start = currentPage * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  const batch = allFiltered.slice(start, end);
+  if (batch.length === 0 && reset) {
+    list.innerHTML = `<p style="text-align:center; color:#555; padding:20px;">No records found</p>`;
+    return;
+  }
+  const html = batch.map((tx) => `
     <div class="tx-item">
       <div class="tx-info">
         <h3>${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - ' + tx.desc + "</span>" : ""}</h3>
@@ -308,12 +330,30 @@ function renderHistory(personFilter = null) {
       </div>
     </div>
   `).join("");
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  while (div.firstChild) list.appendChild(div.firstChild);
+  currentPage++;
+  if (allFiltered.length <= currentPage * PAGE_SIZE && currentObserver) {
+    currentObserver.disconnect();
+  }
+}
+function setupInfiniteScroll(sentinelId) {
+  if (currentObserver) currentObserver.disconnect();
+  const sentinel = document.getElementById(sentinelId);
+  if (!sentinel) return;
+  currentObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      renderHistory(false);
+    }
+  }, { threshold: 0.1 });
+  currentObserver.observe(sentinel);
 }
 window.deleteTx = (id) => {
   if (confirm(t("delete_confirm"))) {
     state.transactions = state.transactions.filter((t2) => t2.id !== id);
     saveState();
-    renderView(state.currentView);
+    renderHistory(true);
   }
 };
 function renderPeople() {
@@ -346,7 +386,8 @@ window.removePerson = (name) => {
   saveState();
   renderPeople();
 };
-function showPersonStats(name) {
+window.showPersonStats = (name) => {
+  currentPersonFilter = name;
   showView("stats");
   document.getElementById("stats-title").innerText = `${t("net_with")} ${name}`;
   const personTxs = state.transactions.filter((t2) => t2.person === name);
@@ -358,8 +399,8 @@ function showPersonStats(name) {
   const balanceEl = document.getElementById("person-net-balance");
   balanceEl.innerText = formatCurrency(net);
   balanceEl.className = net >= 0 ? "positive" : "negative";
-  renderHistory(name);
-}
+  renderHistory(true);
+};
 window.renderGeneralStats = () => {
   const fromInput = document.getElementById("stats-from");
   const toInput = document.getElementById("stats-to");
@@ -690,13 +731,14 @@ input, select, textarea {
 </div>
 
   <div id="view-history" class="view">
-  <h2 data-i18n="history">HISTORY 📜</h2>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 data-i18n="history" style="margin:0">HISTORY 📜</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
   <div id="history-list">
     <!-- To be filled by JS -->
   </div>
-  <div style="margin-top: 20px;">
-    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
-  </div>
+  <div id="history-sentinel" style="height: 20px; margin-top: 10px;"></div>
 </div>
 
 <div id="view-people" class="view">
@@ -720,7 +762,10 @@ input, select, textarea {
 </div>
 
 <div id="view-stats" class="view">
-  <h2 id="stats-title">Stats - Person</h2>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 id="stats-title" style="margin:0">Stats - Person</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('people')" data-i18n="back">BACK</button>
+  </div>
   <div class="card" style="text-align: center;">
     <span class="label" data-i18n="total_balance">Net Balance</span>
     <div id="person-net-balance" style="font-size: 2rem; font-weight: bold;">$0.00</div>
@@ -730,10 +775,7 @@ input, select, textarea {
   <div id="person-history-list">
     <!-- To be filled by JS -->
   </div>
-
-  <div style="margin-top: 20px;">
-    <button class="btn btn-secondary" onclick="showView('people')" data-i18n="back">BACK</button>
-  </div>
+  <div id="stats-sentinel" style="height: 20px; margin-top: 10px;"></div>
 </div>
 
   <!-- Missing partial: ./pages/people.html in money-track -->

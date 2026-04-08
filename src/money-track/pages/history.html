@@ -1,11 +1,12 @@
 <div id="view-history" class="view">
-  <h2 data-i18n="history">HISTORY 📜</h2>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 data-i18n="history" style="margin:0">HISTORY 📜</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
   <div id="history-list">
     <!-- To be filled by JS -->
   </div>
-  <div style="margin-top: 20px;">
-    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
-  </div>
+  <div id="history-sentinel" style="height: 20px; margin-top: 10px;"></div>
 </div>
 
 <div id="view-people" class="view">
@@ -29,7 +30,10 @@
 </div>
 
 <div id="view-stats" class="view">
-  <h2 id="stats-title">Stats - Person</h2>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 id="stats-title" style="margin:0">Stats - Person</h2>
+    <button class="btn btn-secondary" style="width: auto; margin:0; padding: 10px 20px;" onclick="showView('people')" data-i18n="back">BACK</button>
+  </div>
   <div class="card" style="text-align: center;">
     <span class="label" data-i18n="total_balance">Net Balance</span>
     <div id="person-net-balance" style="font-size: 2rem; font-weight: bold;">$0.00</div>
@@ -39,8 +43,5 @@
   <div id="person-history-list">
     <!-- To be filled by JS -->
   </div>
-
-  <div style="margin-top: 20px;">
-    <button class="btn btn-secondary" onclick="showView('people')" data-i18n="back">BACK</button>
-  </div>
+  <div id="stats-sentinel" style="height: 20px; margin-top: 10px;"></div>
 </div>

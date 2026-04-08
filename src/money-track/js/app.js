@@ -2,11 +2,21 @@ import '../css/app.css';
 import { state, saveState } from './state.js';
 import { applyTranslations, t, currentLang } from './i18n.js';
 
+// --- Pagination & Observer State ---
+let currentPage = 0;
+const PAGE_SIZE = 20;
+let currentObserver = null;
+let currentPersonFilter = null;
+
 // --- View Router ---
 window.showView = (viewId) => {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`view-${viewId}`).classList.add('active');
   state.currentView = viewId;
+  
+  // Always scroll to top when changing views
+  window.scrollTo(0, 0);
+  
   renderView(viewId);
 };
 
@@ -14,10 +24,16 @@ function renderView(viewId) {
   applyTranslations();
   if (viewId === 'welcome') renderDashboard();
   if (viewId === 'transaction') renderTransactionForm();
-  if (viewId === 'history') renderHistory();
+  if (viewId === 'history') {
+    currentPersonFilter = null;
+    renderHistory(true);
+  }
   if (viewId === 'people') renderPeople();
   if (viewId === 'general_stats') renderGeneralStats();
   if (viewId === 'settings') renderSettings();
+  if (viewId === 'stats') {
+    // This is handled by showPersonStats(name)
+  }
 }
 
 // --- Dashboard Logic ---
@@ -73,17 +89,34 @@ window.saveTransaction = () => {
   showView('welcome');
 };
 
-// --- History Logic ---
-function renderHistory(personFilter = null) {
-  const listId = personFilter ? 'person-history-list' : 'history-list';
+// --- History & Infinite Scroll Logic ---
+function renderHistory(reset = false) {
+  const isPersonStats = state.currentView === 'stats';
+  const listId = isPersonStats ? 'person-history-list' : 'history-list';
+  const sentinelId = isPersonStats ? 'stats-sentinel' : 'history-sentinel';
   const list = document.getElementById(listId);
   if (!list) return;
 
-  const filtered = personFilter 
-    ? state.transactions.filter(t => t.person === personFilter)
+  if (reset) {
+    currentPage = 0;
+    list.innerHTML = '';
+    setupInfiniteScroll(sentinelId);
+  }
+
+  const allFiltered = currentPersonFilter 
+    ? state.transactions.filter(t => t.person === currentPersonFilter)
     : state.transactions;
 
-  list.innerHTML = filtered.map(tx => `
+  const start = currentPage * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  const batch = allFiltered.slice(start, end);
+
+  if (batch.length === 0 && reset) {
+    list.innerHTML = `<p style="text-align:center; color:#555; padding:20px;">No records found</p>`;
+    return;
+  }
+
+  const html = batch.map(tx => `
     <div class="tx-item">
       <div class="tx-info">
         <h3>${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - '+tx.desc+'</span>' : ''}</h3>
@@ -95,13 +128,39 @@ function renderHistory(personFilter = null) {
       </div>
     </div>
   `).join('');
+
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  while (div.firstChild) list.appendChild(div.firstChild);
+
+  currentPage++;
+  
+  // If no more items, disconnect observer
+  if (allFiltered.length <= currentPage * PAGE_SIZE && currentObserver) {
+    currentObserver.disconnect();
+  }
+}
+
+function setupInfiniteScroll(sentinelId) {
+  if (currentObserver) currentObserver.disconnect();
+  
+  const sentinel = document.getElementById(sentinelId);
+  if (!sentinel) return;
+
+  currentObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      renderHistory(false);
+    }
+  }, { threshold: 0.1 });
+
+  currentObserver.observe(sentinel);
 }
 
 window.deleteTx = (id) => {
   if (confirm(t('delete_confirm'))) {
     state.transactions = state.transactions.filter(t => t.id !== id);
     saveState();
-    renderView(state.currentView);
+    renderHistory(true);
   }
 };
 
@@ -141,7 +200,8 @@ window.removePerson = (name) => {
   renderPeople();
 };
 
-function showPersonStats(name) {
+window.showPersonStats = (name) => {
+  currentPersonFilter = name;
   showView('stats');
   document.getElementById('stats-title').innerText = `${t('net_with')} ${name}`;
   
@@ -156,7 +216,7 @@ function showPersonStats(name) {
   balanceEl.innerText = formatCurrency(net);
   balanceEl.className = net >= 0 ? 'positive' : 'negative';
 
-  renderHistory(name);
+  renderHistory(true);
 }
 
 // --- General Stats Logic ---
