@@ -2,7 +2,7 @@ import '../css/base.css';
 import '../css/app.css';
 
 import { applyTranslations, changeLanguage, t } from './i18n.js';
-import { updateActiveDate, resetToToday, showSettings, closeSettings, exportJSON, importJSON, clearAllData, showExit } from './configuration.js';
+import { updateActiveDate, resetToToday, showSettings, closeSettings, exportJSON, importJSON, clearAllData, showExit, showRoutine, closeRoutine } from './configuration.js';
 import { startWorkout, processStep, changeVal } from './workout.js';
 import { showHistory, toggleCard } from './statistics.js';
 
@@ -27,4 +27,6 @@ window.showExit = showExit;
 window.changeLanguage = changeLanguage;
 window.updateActiveDate = updateActiveDate;
 window.resetToToday = resetToToday;
+window.showRoutine = showRoutine;
+window.closeRoutine = closeRoutine;
 window.t = t;

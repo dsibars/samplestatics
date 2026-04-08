@@ -80,7 +80,17 @@ const TRANSLATIONS = {
     "Sentadillas": "Sentadillas",
     "Flexiones": "Flexiones",
     "Dom. Espalda": "Dom. Espalda",
-    "Dom. Bíceps": "Dom. Bíceps"
+    "Dom. Bíceps": "Dom. Bíceps",
+    "Descanso": "Descanso",
+    "Plancha": "Plancha",
+    "Zancadas": "Zancadas",
+    desc_sent: "Mantén la espalda recta y baja como si te sentaras en una silla.",
+    desc_flex: "Baja el pecho hasta rozar el suelo manteniendo el cuerpo recto.",
+    desc_dom_e: "Agarre abierto, tira hasta que la barbilla pase la barra.",
+    desc_dom_b: "Agarre cerrado supinado, enfócate en la contracción.",
+    desc_rest: "Recupera tu aliento y prepárate para la próxima serie.",
+    desc_plank: "Mantén apretado el core con el cuerpo en línea recta apoyado en los antebrazos.",
+    desc_lunge: "Da un paso al frente y baja tu cadera hasta que ambas rodillas formen 90 grados."
   },
   en: {
     today_btn: "TODAY",
@@ -120,7 +130,17 @@ const TRANSLATIONS = {
     "Sentadillas": "Squats",
     "Flexiones": "Push-ups",
     "Dom. Espalda": "Pull-ups (Back)",
-    "Dom. Bíceps": "Pull-ups (Biceps)"
+    "Dom. Bíceps": "Pull-ups (Biceps)",
+    "Descanso": "Rest",
+    "Plancha": "Plank",
+    "Zancadas": "Lunges",
+    desc_sent: "Keep your back straight and lower as if sitting in a chair.",
+    desc_flex: "Lower your chest until it brushes the floor keeping your body straight.",
+    desc_dom_e: "Wide grip, pull until your chin passes the bar.",
+    desc_dom_b: "Close supinated grip, focus on the bicep contraction.",
+    desc_rest: "Catch your breath and prepare for the next set.",
+    desc_plank: "Keep core tight with body in a straight line supported by forearms.",
+    desc_lunge: "Step forward and lower your hips until both knees form a 90 degree angle."
   },
   ca: {
     today_btn: "AVUI",
@@ -160,7 +180,17 @@ const TRANSLATIONS = {
     "Sentadillas": "Sentadetes",
     "Flexiones": "Flexions",
     "Dom. Espalda": "Dom. Esquena",
-    "Dom. Bíceps": "Dom. Bíceps"
+    "Dom. Bíceps": "Dom. Bíceps",
+    "Descanso": "Descans",
+    "Plancha": "Planxa",
+    "Zancadas": "Gambades",
+    desc_sent: "Mantingues l'esquena recta i baixa com si seguessis en una cadira.",
+    desc_flex: "Baixa el pit fins fregar el terra mantenint el cos recte.",
+    desc_dom_e: "Agafament obert, estira fins que la barbeta passi la barra.",
+    desc_dom_b: "Agafament tancat supinat, enfoca't en la contracció.",
+    desc_rest: "Recupera l'alè i prepara't per a la propera sèrie.",
+    desc_plank: "Mantingues el core ajustat amb el cos recte recolzat en els avantbraços.",
+    desc_lunge: "Fes un pas endavant i baixa fins que els dos genolls formin 90 graus."
   },
   eu: {
     today_btn: "GAUR",
@@ -200,7 +230,17 @@ const TRANSLATIONS = {
     "Sentadillas": "Kokorikatzeak",
     "Flexiones": "Flexioak",
     "Dom. Espalda": "Bizkarreko Dom.",
-    "Dom. Bíceps": "Bizezpeko Dom."
+    "Dom. Bíceps": "Bizezpeko Dom.",
+    "Descanso": "Atsedenaldia",
+    "Plancha": "Ohol",
+    "Zancadas": "Zangokadak",
+    desc_sent: "Mantendu bizkarra zuzen eta jaitsi aulki batean esertzen zaren bezala.",
+    desc_flex: "Jaitsi bularra lurra ukitu arte gorputza zuzen mantenduz.",
+    desc_dom_e: "Helduleku irekia, tira kokotsa barra pasa arte.",
+    desc_dom_b: "Helduleku itxia supinatua, enfokatu kontrakzioan.",
+    desc_rest: "Hartu arnasa eta prestatu hurrengo serierako.",
+    desc_plank: "Mantendu sabelaldea estututa gorputza lerro zuzenean besaurretan finkatuta.",
+    desc_lunge: "Eman pauso bat aurrera eta jaitsi bi belaunak 90 gradu osatu arte."
   },
   gl: {
     today_btn: "HOXE",
@@ -240,7 +280,17 @@ const TRANSLATIONS = {
     "Sentadillas": "Sentadillas",
     "Flexiones": "Flexións",
     "Dom. Espalda": "Dom. Costas",
-    "Dom. Bíceps": "Dom. Bíceps"
+    "Dom. Bíceps": "Dom. Bíceps",
+    "Descanso": "Descanso",
+    "Plancha": "A Prancha",
+    "Zancadas": "Zancanadas",
+    desc_sent: "Mantén as costas rectas e baixa como se te sentases nunha cadeira.",
+    desc_flex: "Baixa o peito ata rozar o chan mantendo o corpo recto.",
+    desc_dom_e: "Agarre aberto, tira ata que a reixa pase a barra.",
+    desc_dom_b: "Agarre pechado supinado, enfócate na contracción.",
+    desc_rest: "Recupera o alento e prepárate para a próxima serie.",
+    desc_plank: "Mantén apretado o core co corpo en liña recta apoiado nos antebrazos.",
+    desc_lunge: "Dá un paso á fronte e baixa ata que ambos xeonllos formen 90 graos."
   }
 };
 let currentLang = localStorage.getItem("workout_lang") || "es";
@@ -261,10 +311,13 @@ function applyTranslations() {
   });
 }
 const EXERCISES = {
-  SENT: { name: "Sentadillas" },
-  FLEX: { name: "Flexiones" },
-  DOM_E: { name: "Dom. Espalda" },
-  DOM_B: { name: "Dom. Bíceps" }
+  SENT: { name: "Sentadillas", desc: "desc_sent" },
+  FLEX: { name: "Flexiones", desc: "desc_flex" },
+  DOM_E: { name: "Dom. Espalda", desc: "desc_dom_e" },
+  DOM_B: { name: "Dom. Bíceps", desc: "desc_dom_b" },
+  REST: { name: "Descanso", desc: "desc_rest" },
+  PLANK: { name: "Plancha", desc: "desc_plank" },
+  LUNGE: { name: "Zancadas", desc: "desc_lunge" }
 };
 const DEFAULT_ROUTINE = [
   { ex: "SENT", start: 20, tag: "Calentamiento" },
@@ -318,6 +371,25 @@ function closeSettings() {
   updateActiveDate();
   document.getElementById("view-settings").classList.remove("active");
   document.getElementById("view-welcome").classList.add("active");
+}
+function showRoutine() {
+  document.getElementById("view-settings").classList.remove("active");
+  document.getElementById("view-routine").classList.add("active");
+  const list = document.getElementById("routine-list");
+  list.innerHTML = state.routine.map((step) => {
+    const ex = EXERCISES[step.ex];
+    return `
+      <div style="background:#222; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50;">
+        <div style="font-weight:bold; color:#4CAF50; font-size: 0.9rem;">${t(step.tag)} (${step.start})</div>
+        <div style="font-size:1.2rem; margin: 8px 0;">${t(ex.name)}</div>
+        <div style="font-size:0.85rem; color:#aaa;">${t(ex.desc)}</div>
+      </div>
+    `;
+  }).join("");
+}
+function closeRoutine() {
+  document.getElementById("view-routine").classList.remove("active");
+  document.getElementById("view-settings").classList.add("active");
 }
 function exportJSON() {
   const exportData = {
@@ -504,6 +576,8 @@ window.showExit = showExit;
 window.changeLanguage = changeLanguage;
 window.updateActiveDate = updateActiveDate;
 window.resetToToday = resetToToday;
+window.showRoutine = showRoutine;
+window.closeRoutine = closeRoutine;
 window.t = t;</script>
   <style rel="stylesheet" crossorigin>body {
   font-family: sans-serif;
@@ -716,7 +790,7 @@ input[type="date"], select {
       <input type="date" id="date-hacker" onchange="updateActiveDate(this.value)" style="width: 100%; box-sizing: border-box;">
 
       <label data-i18n="routine">Rutina</label>
-      <button class="next-btn" style="background:#3949ab; width: 100%; margin: 5px 0 20px 0; font-size: 0.9rem;" onclick="alert(t('dev_alert'))" data-i18n="edit_routine">EDITAR RUTINA ✏️</button>
+      <button class="next-btn" style="background:#3949ab; width: 100%; margin: 5px 0 20px 0; font-size: 0.9rem;" onclick="showRoutine()" data-i18n="edit_routine">EDITAR RUTINA ✏️</button>
     </div>
 
     <!-- Utilities moved from welcome -->
@@ -729,6 +803,17 @@ input[type="date"], select {
     </div>
 
     <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeSettings()" data-i18n="back">VOLVER</button>
+  </div>
+
+    <!-- View: Routine Reader / Editor -->
+  <div id="view-routine" class="view">
+    <h2 data-i18n="routine">Rutina</h2>
+    
+    <div id="routine-list" style="text-align:left; margin-bottom: 20px; max-width: 450px; margin: 0 auto;">
+      <!-- Populated via JS JS -->
+    </div>
+    
+    <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeRoutine()" data-i18n="back">VOLVER</button>
   </div>
 
     <!-- View: Active Workout Engine -->

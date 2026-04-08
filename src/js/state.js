@@ -1,8 +1,11 @@
 export const EXERCISES = { 
-  SENT: { name: "Sentadillas" }, 
-  FLEX: { name: "Flexiones" }, 
-  DOM_E: { name: "Dom. Espalda" }, 
-  DOM_B: { name: "Dom. Bíceps" } 
+  SENT: { name: "Sentadillas", desc: "desc_sent" }, 
+  FLEX: { name: "Flexiones", desc: "desc_flex" }, 
+  DOM_E: { name: "Dom. Espalda", desc: "desc_dom_e" }, 
+  DOM_B: { name: "Dom. Bíceps", desc: "desc_dom_b" },
+  REST: { name: "Descanso", desc: "desc_rest" },
+  PLANK: { name: "Plancha", desc: "desc_plank" },
+  LUNGE: { name: "Zancadas", desc: "desc_lunge" }
 };
 
 export const DEFAULT_ROUTINE = [

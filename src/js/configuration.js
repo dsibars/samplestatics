@@ -1,4 +1,4 @@
-import { state, DEFAULT_ROUTINE } from './state.js';
+import { state, EXERCISES, DEFAULT_ROUTINE } from './state.js';
 import { currentLang, t, applyTranslations } from './i18n.js';
 
 export function resetToToday() {
@@ -46,6 +46,28 @@ export function closeSettings() {
   updateActiveDate();
   document.getElementById('view-settings').classList.remove('active');
   document.getElementById('view-welcome').classList.add('active');
+}
+
+export function showRoutine() {
+  document.getElementById('view-settings').classList.remove('active');
+  document.getElementById('view-routine').classList.add('active');
+  
+  const list = document.getElementById('routine-list');
+  list.innerHTML = state.routine.map(step => {
+    const ex = EXERCISES[step.ex];
+    return `
+      <div style="background:#222; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50;">
+        <div style="font-weight:bold; color:#4CAF50; font-size: 0.9rem;">${t(step.tag)} (${step.start})</div>
+        <div style="font-size:1.2rem; margin: 8px 0;">${t(ex.name)}</div>
+        <div style="font-size:0.85rem; color:#aaa;">${t(ex.desc)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+export function closeRoutine() {
+  document.getElementById('view-routine').classList.remove('active');
+  document.getElementById('view-settings').classList.add('active');
 }
 
 export function exportJSON() { 
