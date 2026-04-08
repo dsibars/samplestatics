@@ -5,6 +5,8 @@ export const TRANSLATIONS = {
     app_workout_desc: "Rastreador de ejercicios con historial y estadísticas avanzadas.",
     app_money_title: "Balance",
     app_money_desc: "Control de gastos y deudas personales con amigos.",
+    app_todo_title: "Lista de Tareas",
+    app_todo_desc: "Gestor sencillo de tareas diarias para un enfoque profesional.",
     static_badge: "App Estática",
     lang: "Idioma"
   },
@@ -14,6 +16,8 @@ export const TRANSLATIONS = {
     app_workout_desc: "Exercise tracker with history and advanced statistics.",
     app_money_title: "Balance",
     app_money_desc: "Track personal expenses and debts with friends.",
+    app_todo_title: "Todo List",
+    app_todo_desc: "Simple daily task manager for professional focus.",
     static_badge: "Static App",
     lang: "Language"
   },
@@ -23,6 +27,8 @@ export const TRANSLATIONS = {
     app_workout_desc: "Rastrejador d'exercicis amb historial i estadístiques avançades.",
     app_money_title: "Balance",
     app_money_desc: "Control de despeses i deutes personals amb amics.",
+    app_todo_title: "Llista de Tasques",
+    app_todo_desc: "Gestor senzill de tasques diàries per a un enfocament professional.",
     static_badge: "App Estàtica",
     lang: "Idioma"
   },
@@ -32,6 +38,8 @@ export const TRANSLATIONS = {
     app_workout_desc: "Ariketen jarraitzailea historia eta estatistika aurreratuekin.",
     app_money_title: "Balance",
     app_money_desc: "Gastu eta lagunarteko zorraren kontrolerako aplikazioa.",
+    app_todo_title: "Ataza Zerrenda",
+    app_todo_desc: "Eguneroko ataza kudeatzaile sinplea ikuspegi profesionalerako.",
     static_badge: "App Estatikoa",
     lang: "Hizkuntza"
   },
@@ -41,6 +49,8 @@ export const TRANSLATIONS = {
     app_workout_desc: "Rastreador de exercicios con historial e estatísticas avanzadas.",
     app_money_title: "Balance",
     app_money_desc: "Control de gastos e débedas persoais con amigos.",
+    app_todo_title: "Lista de Tareas",
+    app_todo_desc: "Gestor sencillo de tareas diarias para un enfoque profesional.",
     static_badge: "App Estática",
     lang: "Idioma"
   }
