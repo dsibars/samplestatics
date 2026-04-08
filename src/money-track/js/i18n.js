@@ -7,7 +7,7 @@ export const TRANSLATIONS = {
     delete_confirm: "¿Borrar este registro?", settings: "AJUSTES ⚙️", back_home: "SALIR AL HUB",
     net_with: "Balance con", payments: "Movimientos", lang: "Idioma",
     stats: "ESTADÍSTICAS 📊", date_from: "Desde", date_to: "Hasta", period_summary: "Resumen del periodo",
-    local_data: "Datos Locales", export_json: "EXPORTAR JSON", import_json: "IMPORTAR JSON", erase_all: "BORRAR TODO",
+    local_data: "Datos Locales", export_json: "EXPORTAR", import_json: "IMPORTAR", erase_all: "BORRAR TODO",
     erase_confirm: "¿Estás seguro? Se borrarán todos los movimientos y personas."
   },
   en: {
@@ -18,7 +18,7 @@ export const TRANSLATIONS = {
     delete_confirm: "Delete this record?", settings: "SETTINGS ⚙️", back_home: "EXIT TO HUB",
     net_with: "Balance with", payments: "Transactions", lang: "Language",
     stats: "STATISTICS 📊", date_from: "From", date_to: "To", period_summary: "Period Summary",
-    local_data: "Local Data", export_json: "EXPORT JSON", import_json: "IMPORT JSON", erase_all: "ERASE EVERYTHING",
+    local_data: "Local Data", export_json: "EXPORT", import_json: "IMPORT", erase_all: "ERASE EVERYTHING",
     erase_confirm: "Are you sure? This will delete all transactions and people."
   },
   ca: {
@@ -29,7 +29,7 @@ export const TRANSLATIONS = {
     delete_confirm: "Esborrar aquest registre?", settings: "CONFIGURACIÓ ⚙️", back_home: "SORTIR AL HUB",
     net_with: "Balanç amb", payments: "Moviments", lang: "Idioma",
     stats: "ESTADÍSTIQUES 📊", date_from: "Des de", date_to: "Fins a", period_summary: "Resum del període",
-    local_data: "Dades Locals", export_json: "EXPORTAR JSON", import_json: "IMPORTAR JSON", erase_all: "ESBORRAR TOT",
+    local_data: "Dades Locals", export_json: "EXPORTAR", import_json: "IMPORTAR", erase_all: "ESBORRAR TOT",
     erase_confirm: "Estàs segur? S'esborraran tots els moviments i persones."
   },
   eu: {
@@ -40,7 +40,7 @@ export const TRANSLATIONS = {
     delete_confirm: "Erregistro hau ezabatu?", settings: "EZARPENAK ⚙️", back_home: "HUBERA IRTEN",
     net_with: "Balanzea honekin:", payments: "Mugimenduak", lang: "Hizkuntza",
     stats: "ESTATISTIKAK 📊", date_from: "Noiztik", date_to: "Noiz arte", period_summary: "Epearen laburpena",
-    local_data: "Datu Lokalak", export_json: "EXPORTATU JSON", import_json: "IMPORTATU JSON", erase_all: "DENA EZABATU",
+    local_data: "Datu Lokalak", export_json: "EXPORTATU", import_json: "IMPORTATU", erase_all: "DENA EZABATU",
     erase_confirm: "Ziur zaude? Mugimendu eta pertsona guztiak ezabatuko dira."
   },
   gl: {
@@ -51,7 +51,7 @@ export const TRANSLATIONS = {
     delete_confirm: "Borrar este rexistro?", settings: "AXUSTES ⚙️", back_home: "SAÍR AO HUB",
     net_with: "Balance con", payments: "Movementos", lang: "Idioma",
     stats: "ESTADÍSTICAS 📊", date_from: "Desde", date_to: "Ata", period_summary: "Resumo do periodo",
-    local_data: "Datos Locais", export_json: "EXPORTAR JSON", import_json: "IMPORTAR JSON", erase_all: "BORRAR TODO",
+    local_data: "Datos Locais", export_json: "EXPORTAR", import_json: "IMPORTAR", erase_all: "BORRAR TODO",
     erase_confirm: "Estás seguro? Borraranse todos os movementos e persoas."
   }
 };
