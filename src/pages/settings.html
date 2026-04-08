@@ -1,0 +1,32 @@
+  <!-- View: Settings / Configuration -->
+  <div id="view-settings" class="view">
+    <h2 data-i18n="settings">AJUSTES ⚙️</h2>
+    
+    <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+      <label data-i18n="language">Idioma</label>
+      <select id="lang-selector" onchange="changeLanguage()" style="width: 100%; padding: 12px; background: #222; color: white; border: 1px solid #444; border-radius: 8px; margin-bottom: 20px; font-size: 1rem;">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+        <option value="ca">Català</option>
+        <option value="eu">Euskera</option>
+        <option value="gl">Galego</option>
+      </select>
+
+      <label data-i18n="change_date">Cambiar fecha actual</label>
+      <input type="date" id="date-hacker" onchange="updateActiveDate(this.value)" style="width: 100%; box-sizing: border-box;">
+
+      <label data-i18n="routine">Rutina</label>
+      <button class="next-btn" style="background:#3949ab; width: 100%; margin: 5px 0 20px 0; font-size: 0.9rem;" onclick="alert(t('dev_alert'))" data-i18n="edit_routine">EDITAR RUTINA ✏️</button>
+    </div>
+
+    <!-- Utilities moved from welcome -->
+    <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 20px;">
+      <label style="text-align: center;" data-i18n="local_data">Datos locales</label>
+      <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="exportJSON()" data-i18n="export_json">EXPORTAR JSON</button>
+      <button class="next-btn" style="background:#263238; font-size:0.8rem; padding:10px;" onclick="document.getElementById('fileInput').click()" data-i18n="import_json">IMPORTAR JSON</button>
+      <input type="file" id="fileInput" style="display:none" onchange="importJSON(event)" accept=".json">
+      <button class="next-btn" style="background:#b71c1c; font-size: 0.7rem; padding: 10px;" onclick="clearAllData()" data-i18n="erase_history">BORRAR TODO EL HISTORIAL</button>
+    </div>
+
+    <button class="next-btn" style="background:#333; margin-top: 20px;" onclick="closeSettings()" data-i18n="back">VOLVER</button>
+  </div>

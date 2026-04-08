@@ -25,3 +25,27 @@ export const TRANSLATIONS = {
     "Sentadillas": "Sentadillas", "Flexiones": "Flexións", "Dom. Espalda": "Dom. Costas", "Dom. Bíceps": "Dom. Bíceps"
   }
 };
+
+export let currentLang = localStorage.getItem('workout_lang') || 'es';
+
+export function t(key) {
+  if (!TRANSLATIONS[currentLang]) return key;
+  return TRANSLATIONS[currentLang][key] || TRANSLATIONS['es'][key] || key;
+}
+
+export function changeLanguage() {
+  currentLang = document.getElementById('lang-selector').value;
+  localStorage.setItem('workout_lang', currentLang);
+  // Hack required because applyTranslations is circularly loaded in setup
+  // but global window dispatch handles it. We just reload to be 100% clean
+  location.reload(); 
+}
+
+export function applyTranslations() {
+  document.documentElement.lang = currentLang;
+  document.getElementById('lang-selector').value = currentLang;
+  
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.innerHTML = t(el.getAttribute('data-i18n'));
+  });
+}

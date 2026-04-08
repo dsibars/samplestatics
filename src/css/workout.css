@@ -1,0 +1,37 @@
+.counter-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.val {
+  font-size: 5rem;
+  font-weight: bold;
+  min-width: 120px;
+  color: #4CAF50;
+}
+
+.btn-circle {
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  border: 2px solid #4CAF50;
+  background: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-circle:active {
+  background: #4CAF50;
+}
+
+.exercise-name {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10px;
+}
