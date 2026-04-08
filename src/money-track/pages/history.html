@@ -1,0 +1,46 @@
+<div id="view-history" class="view">
+  <h2 data-i18n="history">HISTORY 📜</h2>
+  <div id="history-list">
+    <!-- To be filled by JS -->
+  </div>
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
+<div id="view-people" class="view">
+  <h2 data-i18n="people">PEOPLE 👥</h2>
+  
+  <div class="card" style="margin-bottom: 20px;">
+    <div class="form-group">
+      <label data-i18n="person_name">Name</label>
+      <input type="text" id="new-person-name" placeholder="...">
+    </div>
+    <button class="btn btn-primary" onclick="addPerson()" data-i18n="add_person">ADD PERSON</button>
+  </div>
+
+  <div id="people-list">
+    <!-- To be filled by JS -->
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('welcome')" data-i18n="back">BACK</button>
+  </div>
+</div>
+
+<div id="view-stats" class="view">
+  <h2 id="stats-title">Stats - Person</h2>
+  <div class="card" style="text-align: center;">
+    <span class="label" data-i18n="total_balance">Net Balance</span>
+    <div id="person-net-balance" style="font-size: 2rem; font-weight: bold;">$0.00</div>
+  </div>
+  
+  <h3 data-i18n="payments">Transactions</h3>
+  <div id="person-history-list">
+    <!-- To be filled by JS -->
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="btn btn-secondary" onclick="showView('people')" data-i18n="back">BACK</button>
+  </div>
+</div>

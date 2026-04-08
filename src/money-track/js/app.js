@@ -1,0 +1,267 @@
+import '../css/app.css';
+import { state, saveState } from './state.js';
+import { applyTranslations, t, currentLang } from './i18n.js';
+
+// --- View Router ---
+window.showView = (viewId) => {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${viewId}`).classList.add('active');
+  state.currentView = viewId;
+  renderView(viewId);
+};
+
+function renderView(viewId) {
+  applyTranslations();
+  if (viewId === 'welcome') renderDashboard();
+  if (viewId === 'transaction') renderTransactionForm();
+  if (viewId === 'history') renderHistory();
+  if (viewId === 'people') renderPeople();
+  if (viewId === 'general_stats') renderGeneralStats();
+  if (viewId === 'settings') renderSettings();
+}
+
+// --- Dashboard Logic ---
+function renderDashboard() {
+  const totals = calculateTotals();
+  document.getElementById('main-balance').innerText = formatCurrency(totals.net);
+  document.getElementById('main-balance').className = totals.net >= 0 ? 'positive' : 'negative';
+  document.getElementById('total-plus').innerText = formatCurrency(totals.plus);
+  document.getElementById('total-minus').innerText = formatCurrency(totals.minus);
+}
+
+function calculateTotals(transactions = state.transactions) {
+  let plus = 0, minus = 0;
+  transactions.forEach(tx => {
+    if (tx.type === 'owe_me') plus += tx.amount;
+    else minus += tx.amount;
+  });
+  return { plus, minus, net: plus - minus };
+}
+
+// --- Transaction Logic ---
+function renderTransactionForm() {
+  const select = document.getElementById('tx-person');
+  select.innerHTML = state.people.map(p => `<option value="${p}">${p}</option>`).join('');
+  
+  // Toggle Logic
+  document.querySelectorAll('#tx-type-toggle .toggle-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('#tx-type-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+}
+
+window.saveTransaction = () => {
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  const person = document.getElementById('tx-person').value;
+  const desc = document.getElementById('tx-desc').value;
+  const type = document.querySelector('#tx-type-toggle .toggle-btn.active').dataset.type;
+
+  if (!amount || !person) return;
+
+  state.transactions.unshift({
+    id: Date.now(),
+    date: new Date().toISOString(),
+    amount,
+    person,
+    desc,
+    type
+  });
+
+  saveState();
+  showView('welcome');
+};
+
+// --- History Logic ---
+function renderHistory(personFilter = null) {
+  const listId = personFilter ? 'person-history-list' : 'history-list';
+  const list = document.getElementById(listId);
+  if (!list) return;
+
+  const filtered = personFilter 
+    ? state.transactions.filter(t => t.person === personFilter)
+    : state.transactions;
+
+  list.innerHTML = filtered.map(tx => `
+    <div class="tx-item">
+      <div class="tx-info">
+        <h3>${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - '+tx.desc+'</span>' : ''}</h3>
+        <span>${new Date(tx.date).toLocaleDateString(currentLang)}</span>
+      </div>
+      <div class="tx-amount ${tx.type === 'owe_me' ? 'positive' : 'negative'}">
+        ${tx.type === 'owe_me' ? '+' : '-'}${formatCurrency(tx.amount)}
+        <button onclick="deleteTx(${tx.id})" style="border:none; background:none; color:#555; margin-left:10px; cursor:pointer;">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.deleteTx = (id) => {
+  if (confirm(t('delete_confirm'))) {
+    state.transactions = state.transactions.filter(t => t.id !== id);
+    saveState();
+    renderView(state.currentView);
+  }
+};
+
+// --- People Logic ---
+function renderPeople() {
+  const list = document.getElementById('people-list');
+  list.innerHTML = state.people.length > 0 ? '' : `<p data-i18n="no_people" style="text-align:center; color:#555;">No people</p>`;
+  
+  state.people.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style = 'display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
+    card.onclick = () => showPersonStats(p);
+    
+    card.innerHTML = `
+      <span style="font-weight:bold; font-size:1.1rem;">${p}</span>
+      <button onclick="event.stopPropagation(); removePerson('${p}')" style="background:none; border:none; color:#f87171; font-size:1.5rem;">×</button>
+    `;
+    list.appendChild(card);
+  });
+  applyTranslations();
+}
+
+window.addPerson = () => {
+  const name = document.getElementById('new-person-name').value.trim();
+  if (name && !state.people.includes(name)) {
+    state.people.push(name);
+    saveState();
+    renderPeople();
+    document.getElementById('new-person-name').value = '';
+  }
+};
+
+window.removePerson = (name) => {
+  state.people = state.people.filter(p => p !== name);
+  saveState();
+  renderPeople();
+};
+
+function showPersonStats(name) {
+  showView('stats');
+  document.getElementById('stats-title').innerText = `${t('net_with')} ${name}`;
+  
+  const personTxs = state.transactions.filter(t => t.person === name);
+  let net = 0;
+  personTxs.forEach(tx => {
+    if (tx.type === 'owe_me') net += tx.amount;
+    else net -= tx.amount;
+  });
+
+  const balanceEl = document.getElementById('person-net-balance');
+  balanceEl.innerText = formatCurrency(net);
+  balanceEl.className = net >= 0 ? 'positive' : 'negative';
+
+  renderHistory(name);
+}
+
+// --- General Stats Logic ---
+window.renderGeneralStats = () => {
+  const fromInput = document.getElementById('stats-from');
+  const toInput = document.getElementById('stats-to');
+  
+  if (!fromInput.value) {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    fromInput.value = d.toISOString().split('T')[0];
+    toInput.value = new Date().toISOString().split('T')[0];
+  }
+
+  const from = new Date(fromInput.value + 'T00:00:00');
+  const to = new Date(toInput.value + 'T23:59:59');
+
+  const filtered = state.transactions.filter(tx => {
+    const d = new Date(tx.date);
+    return d >= from && d <= to;
+  });
+
+  const totals = calculateTotals(filtered);
+  document.getElementById('stats-period-net').innerText = (totals.net >= 0 ? '+' : '-') + formatCurrency(totals.net);
+  document.getElementById('stats-period-net').className = totals.net >= 0 ? 'positive' : 'negative';
+  document.getElementById('stats-period-plus').innerText = formatCurrency(totals.plus);
+  document.getElementById('stats-period-minus').innerText = formatCurrency(totals.minus);
+
+  // Per person breakdown
+  const personMap = {};
+  state.people.forEach(p => personMap[p] = 0);
+  filtered.forEach(tx => {
+    if (tx.type === 'owe_me') personMap[tx.person] += tx.amount;
+    else personMap[tx.person] -= tx.amount;
+  });
+
+  const list = document.getElementById('stats-person-breakdown');
+  list.innerHTML = Object.entries(personMap)
+    .filter(([_, val]) => val !== 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, val]) => `
+      <div class="tx-item">
+        <span>${name}</span>
+        <span class="${val >= 0 ? 'positive' : 'negative'}">${val >= 0 ? '+' : '-'}${formatCurrency(val)}</span>
+      </div>
+    `).join('');
+};
+
+// --- Settings Logic ---
+function renderSettings() {
+  const selector = document.getElementById('lang-selector');
+  if (selector) selector.value = currentLang;
+}
+
+window.changeLanguage = () => {
+  const val = document.getElementById('lang-selector').value;
+  localStorage.setItem('static_apps_lang', val);
+  location.reload();
+};
+
+window.exportData = () => {
+  const data = {
+    version: 1,
+    transactions: state.transactions,
+    people: state.people
+  };
+  const b = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = "balance_backup.json";
+  a.click();
+};
+
+window.importData = (event) => {
+  const r = new FileReader();
+  r.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.transactions && data.people) {
+        state.transactions = data.transactions;
+        state.people = data.people;
+        saveState();
+        location.reload();
+      }
+    } catch (err) {
+      alert("Invalid JSON file");
+    }
+  };
+  r.readAsText(event.target.files[0]);
+};
+
+window.clearAllData = () => {
+  if (confirm(t('erase_confirm'))) {
+    localStorage.removeItem('balance_history');
+    localStorage.removeItem('balance_people');
+    location.reload();
+  }
+};
+
+// --- Helpers ---
+function formatCurrency(val) {
+  return Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+window.onload = () => {
+  applyTranslations();
+  renderDashboard();
+};
