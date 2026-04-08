@@ -182,3 +182,26 @@ export function showExit() {
   document.getElementById('view-welcome').classList.remove('active'); 
   document.getElementById('view-exit').classList.add('active'); 
 }
+
+export function showStats() {
+  document.getElementById('view-welcome').classList.remove('active');
+  document.getElementById('view-stats').classList.add('active');
+  
+  // Set default dates: 30 days ago and today
+  const to = new Date(state.activeDate);
+  const from = new Date(to);
+  from.setDate(from.getDate() - 30);
+  
+  document.getElementById('stats-from').value = from.toISOString().split('T')[0];
+  document.getElementById('stats-to').value = to.toISOString().split('T')[0];
+  
+  renderStatistics();
+}
+
+export function closeStats() {
+  document.getElementById('view-stats').classList.remove('active');
+  document.getElementById('view-welcome').classList.add('active');
+}
+
+import { renderStatistics } from './statistics.js';
+window.renderStatistics = renderStatistics;
