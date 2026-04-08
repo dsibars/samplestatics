@@ -2,7 +2,7 @@ import '../css/base.css';
 import '../css/app.css';
 
 import { applyTranslations, changeLanguage, t } from './i18n.js';
-import { updateActiveDate, resetToToday, showSettings, closeSettings, exportJSON, importJSON, clearAllData, showExit, showRoutine, closeRoutine } from './configuration.js';
+import { updateActiveDate, resetToToday, showSettings, closeSettings, exportJSON, importJSON, clearAllData, showExit, showRoutine, closeRoutine, routineDragStart, routineDragOver, routineDragEnter, routineDragLeave, routineDrop, removeRoutineStep } from './configuration.js';
 import { startWorkout, processStep, changeVal } from './workout.js';
 import { showHistory, toggleCard } from './statistics.js';
 
@@ -29,4 +29,10 @@ window.updateActiveDate = updateActiveDate;
 window.resetToToday = resetToToday;
 window.showRoutine = showRoutine;
 window.closeRoutine = closeRoutine;
+window.routineDragStart = routineDragStart;
+window.routineDragOver = routineDragOver;
+window.routineDragEnter = routineDragEnter;
+window.routineDragLeave = routineDragLeave;
+window.routineDrop = routineDrop;
+window.removeRoutineStep = removeRoutineStep;
 window.t = t;

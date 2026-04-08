@@ -51,18 +51,83 @@ export function closeSettings() {
 export function showRoutine() {
   document.getElementById('view-settings').classList.remove('active');
   document.getElementById('view-routine').classList.add('active');
-  
+  renderRoutineList();
+}
+
+export function renderRoutineList() {
   const list = document.getElementById('routine-list');
-  list.innerHTML = state.routine.map(step => {
+  list.innerHTML = state.routine.map((step, idx) => {
     const ex = EXERCISES[step.ex];
     return `
-      <div style="background:#222; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50;">
+      <div draggable="true" 
+           ondragstart="routineDragStart(event, ${idx})" 
+           ondragover="routineDragOver(event)" 
+           ondragenter="routineDragEnter(event)" 
+           ondragleave="routineDragLeave(event)" 
+           ondrop="routineDrop(event, ${idx})"
+           style="background:#222; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50; cursor: grab; position: relative; transition: all 0.2s;">
+        
+        <button onclick="removeRoutineStep(${idx})" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 2px solid #f44336; color: #f44336; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">X</button>
+        
         <div style="font-weight:bold; color:#4CAF50; font-size: 0.9rem;">${t(step.tag)} (${step.start})</div>
-        <div style="font-size:1.2rem; margin: 8px 0;">${t(ex.name)}</div>
+        <div style="font-size:1.2rem; margin: 8px 0; padding-right: 35px;">${t(ex.name)}</div>
         <div style="font-size:0.85rem; color:#aaa;">${t(ex.desc)}</div>
+        
+        <div style="position:absolute; bottom: 10px; right: 10px; color: #555; font-size: 1.5rem;">☰</div>
       </div>
     `;
   }).join('');
+}
+
+let draggedItemIndex = null;
+
+export function routineDragStart(e, idx) {
+  draggedItemIndex = idx;
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+export function routineDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+export function routineDragEnter(e) {
+  e.preventDefault();
+  e.currentTarget.style.opacity = '0.5';
+  e.currentTarget.style.border = '2px dashed #4CAF50';
+}
+
+export function routineDragLeave(e) {
+  e.currentTarget.style.opacity = '1';
+  e.currentTarget.style.border = 'none';
+  e.currentTarget.style.borderLeft = '4px solid #4CAF50';
+}
+
+export function routineDrop(e, targetIdx) {
+  e.preventDefault();
+  e.currentTarget.style.opacity = '1';
+  e.currentTarget.style.border = 'none';
+  e.currentTarget.style.borderLeft = '4px solid #4CAF50';
+  
+  if (draggedItemIndex === null || draggedItemIndex === targetIdx) return;
+  
+  const draggedStep = state.routine[draggedItemIndex];
+  state.routine.splice(draggedItemIndex, 1);
+  state.routine.splice(targetIdx, 0, draggedStep);
+  
+  saveRoutineAndRender();
+}
+
+export function removeRoutineStep(idx) {
+  if (confirm("¿Borrar ejercicio?")) {
+    state.routine.splice(idx, 1);
+    saveRoutineAndRender();
+  }
+}
+
+function saveRoutineAndRender() {
+  localStorage.setItem('workout_routine', JSON.stringify(state.routine));
+  renderRoutineList();
 }
 
 export function closeRoutine() {
