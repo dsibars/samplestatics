@@ -1,8 +1,5 @@
   <!-- View: Welcome & Actions Menu -->
   <div id="view-welcome" class="view active">
-    <!-- Settings Icon -->
-    <div style="position: absolute; top: 20px; right: 20px; font-size: 2rem; cursor: pointer; -webkit-tap-highlight-color: transparent;" onclick="showSettings()">⚙️</div>
-
     <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 5px;">
       <h2 id="display-date" style="margin: 0;"></h2>
       <button id="btn-today" onclick="resetToToday()" style="background: #4CAF50; color: white; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: none;" data-i18n="today_btn">HOY</button>
@@ -13,5 +10,6 @@
     <button class="next-btn" onclick="startWorkout()" data-i18n="start_workout">EMPEZAR ENTRENAMIENTO</button>
     <button class="next-btn" style="background:#455a64" onclick="showHistory()" data-i18n="view_history">VER HISTORIAL 📊</button>
     <button class="next-btn" style="background:#5e35b1" onclick="showStats()" data-i18n="adv_stats">ESTADÍSTICAS AVANZADAS 📈</button>
+    <button class="next-btn" style="background:#607d8b" onclick="showSettings()" data-i18n="settings">AJUSTES ⚙️</button>
     <button class="next-btn" style="background:#333" onclick="showExit()" data-i18n="not_today">HOY NO, GRACIAS</button>
   </div>
