@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state, DEFAULT_ROUTINE } from './state.js';
 import { currentLang, t, applyTranslations } from './i18n.js';
 
 export function resetToToday() {
@@ -49,7 +49,12 @@ export function closeSettings() {
 }
 
 export function exportJSON() { 
-  const b = new Blob([JSON.stringify(state.history, null, 2)], { type: 'application/json' }); 
+  const exportData = {
+    version: 3,
+    history: state.history,
+    routine: state.routine
+  };
+  const b = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' }); 
   const a = document.createElement("a"); 
   a.href = URL.createObjectURL(b); 
   a.download = `workout.json`; 
@@ -59,7 +64,17 @@ export function exportJSON() {
 export function importJSON(event) { 
   const r = new FileReader(); 
   r.onload = (e) => { 
-    state.history = JSON.parse(e.target.result); 
+    const data = JSON.parse(e.target.result); 
+    
+    // Backwards compatibility for raw historic JSON
+    if (data.version && data.version >= 3) {
+      state.history = data.history || {};
+      state.routine = data.routine || DEFAULT_ROUTINE;
+      localStorage.setItem('workout_routine', JSON.stringify(state.routine));
+    } else {
+      state.history = data;
+    }
+    
     localStorage.setItem('workout_history_v2', JSON.stringify(state.history)); 
     location.reload(); 
   }; 

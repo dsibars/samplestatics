@@ -266,7 +266,7 @@ const EXERCISES = {
   DOM_E: { name: "Dom. Espalda" },
   DOM_B: { name: "Dom. Bíceps" }
 };
-const ROUTINE = [
+const DEFAULT_ROUTINE = [
   { ex: "SENT", start: 20, tag: "Calentamiento" },
   { ex: "FLEX", start: 8, tag: "Al Fallo" },
   { ex: "SENT", start: 20, tag: "Recuperación" },
@@ -278,6 +278,7 @@ const ROUTINE = [
 ];
 const state = {
   history: JSON.parse(localStorage.getItem("workout_history_v2") || "{}"),
+  routine: JSON.parse(localStorage.getItem("workout_routine") || JSON.stringify(DEFAULT_ROUTINE)),
   results: [],
   startTime: null,
   stepStartTime: null,
@@ -319,7 +320,12 @@ function closeSettings() {
   document.getElementById("view-welcome").classList.add("active");
 }
 function exportJSON() {
-  const b = new Blob([JSON.stringify(state.history, null, 2)], { type: "application/json" });
+  const exportData = {
+    version: 3,
+    history: state.history,
+    routine: state.routine
+  };
+  const b = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(b);
   a.download = `workout.json`;
@@ -328,7 +334,14 @@ function exportJSON() {
 function importJSON(event) {
   const r = new FileReader();
   r.onload = (e) => {
-    state.history = JSON.parse(e.target.result);
+    const data = JSON.parse(e.target.result);
+    if (data.version && data.version >= 3) {
+      state.history = data.history || {};
+      state.routine = data.routine || DEFAULT_ROUTINE;
+      localStorage.setItem("workout_routine", JSON.stringify(state.routine));
+    } else {
+      state.history = data;
+    }
     localStorage.setItem("workout_history_v2", JSON.stringify(state.history));
     location.reload();
   };
@@ -437,7 +450,7 @@ function toggleCard(i) {
 function startWorkout() {
   state.startTime = Date.now();
   state.stepStartTime = state.startTime;
-  state.results = ROUTINE.map((s) => ({ ...s, value: s.start, duration: 0 }));
+  state.results = state.routine.map((s) => ({ ...s, value: s.start, duration: 0 }));
   document.getElementById("view-welcome").classList.remove("active");
   renderStep(0);
 }
@@ -445,10 +458,10 @@ function renderStep(idx) {
   const step = state.results[idx];
   const ex = EXERCISES[step.ex];
   const engine = document.getElementById("workout-engine");
-  const isLastStep = idx === ROUTINE.length - 1;
+  const isLastStep = idx === state.routine.length - 1;
   const buttonLabel = isLastStep ? t("finish") : t("next");
   engine.innerHTML = `
-    <label>${t(step.tag)} (${idx + 1}/${ROUTINE.length})</label>
+    <label>${t(step.tag)} (${idx + 1}/${state.routine.length})</label>
     <span class="exercise-name">${t(ex.name)}</span>
     <div class="counter-container">
       <button class="btn-circle" onclick="changeVal(${idx}, -1)">-</button>
@@ -466,7 +479,7 @@ function changeVal(idx, delta) {
 function processStep(idx) {
   const now = Date.now();
   state.results[idx].duration = Math.floor((now - state.stepStartTime) / 1e3);
-  if (idx === ROUTINE.length - 1) {
+  if (idx === state.routine.length - 1) {
     finish();
   } else {
     state.stepStartTime = now;

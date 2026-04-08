@@ -5,7 +5,7 @@ export const EXERCISES = {
   DOM_B: { name: "Dom. Bíceps" } 
 };
 
-export const ROUTINE = [
+export const DEFAULT_ROUTINE = [
   { ex: 'SENT', start: 20, tag: 'Calentamiento' }, 
   { ex: 'FLEX', start: 8, tag: 'Al Fallo' },
   { ex: 'SENT', start: 20, tag: 'Recuperación' }, 
@@ -18,6 +18,7 @@ export const ROUTINE = [
 
 export const state = {
   history: JSON.parse(localStorage.getItem('workout_history_v2') || '{}'),
+  routine: JSON.parse(localStorage.getItem('workout_routine') || JSON.stringify(DEFAULT_ROUTINE)),
   results: [],
   startTime: null,
   stepStartTime: null,

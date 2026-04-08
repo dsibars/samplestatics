@@ -1,4 +1,4 @@
-import { state, ROUTINE, EXERCISES } from './state.js';
+import { state, EXERCISES } from './state.js';
 import { t } from './i18n.js';
 import { finish } from './statistics.js';
 
@@ -6,7 +6,7 @@ export function startWorkout() {
   state.startTime = Date.now(); 
   state.stepStartTime = state.startTime;
   
-  state.results = ROUTINE.map(s => ({ ...s, value: s.start, duration: 0 }));
+  state.results = state.routine.map(s => ({ ...s, value: s.start, duration: 0 }));
   
   document.getElementById('view-welcome').classList.remove('active');
   renderStep(0);
@@ -17,11 +17,11 @@ export function renderStep(idx) {
   const ex = EXERCISES[step.ex];
   const engine = document.getElementById('workout-engine');
   
-  const isLastStep = idx === ROUTINE.length - 1;
+  const isLastStep = idx === state.routine.length - 1;
   const buttonLabel = isLastStep ? t('finish') : t('next');
   
   engine.innerHTML = `
-    <label>${t(step.tag)} (${idx + 1}/${ROUTINE.length})</label>
+    <label>${t(step.tag)} (${idx + 1}/${state.routine.length})</label>
     <span class="exercise-name">${t(ex.name)}</span>
     <div class="counter-container">
       <button class="btn-circle" onclick="changeVal(${idx}, -1)">-</button>
@@ -44,7 +44,7 @@ export function processStep(idx) {
   
   state.results[idx].duration = Math.floor((now - state.stepStartTime) / 1000);
   
-  if (idx === ROUTINE.length - 1) {
+  if (idx === state.routine.length - 1) {
     finish(); 
   } else { 
     state.stepStartTime = now; 
