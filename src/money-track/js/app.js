@@ -13,10 +13,10 @@ window.showView = (viewId) => {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`view-${viewId}`).classList.add('active');
   state.currentView = viewId;
-  
+
   // Always scroll to top when changing views
   window.scrollTo(0, 0);
-  
+
   renderView(viewId);
 };
 
@@ -58,7 +58,7 @@ function calculateTotals(transactions = state.transactions) {
 function renderTransactionForm() {
   const select = document.getElementById('tx-person');
   select.innerHTML = state.people.map(p => `<option value="${p}">${p}</option>`).join('');
-  
+
   // Toggle Logic
   document.querySelectorAll('#tx-type-toggle .toggle-btn').forEach(btn => {
     btn.onclick = () => {
@@ -103,7 +103,7 @@ function renderHistory(reset = false) {
     setupInfiniteScroll(sentinelId);
   }
 
-  const allFiltered = currentPersonFilter 
+  const allFiltered = currentPersonFilter
     ? state.transactions.filter(t => t.person === currentPersonFilter)
     : state.transactions;
 
@@ -119,7 +119,7 @@ function renderHistory(reset = false) {
   const html = batch.map(tx => `
     <div class="tx-item">
       <div class="tx-info">
-        <h3>${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - '+tx.desc+'</span>' : ''}</h3>
+        <h3>${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - ' + tx.desc + '</span>' : ''}</h3>
         <span>${new Date(tx.date).toLocaleDateString(currentLang)}</span>
       </div>
       <div class="tx-amount ${tx.type === 'owe_me' ? 'positive' : 'negative'}">
@@ -134,7 +134,7 @@ function renderHistory(reset = false) {
   while (div.firstChild) list.appendChild(div.firstChild);
 
   currentPage++;
-  
+
   // If no more items, disconnect observer
   if (allFiltered.length <= currentPage * PAGE_SIZE && currentObserver) {
     currentObserver.disconnect();
@@ -143,7 +143,7 @@ function renderHistory(reset = false) {
 
 function setupInfiniteScroll(sentinelId) {
   if (currentObserver) currentObserver.disconnect();
-  
+
   const sentinel = document.getElementById(sentinelId);
   if (!sentinel) return;
 
@@ -170,7 +170,7 @@ function renderPeople() {
   if (!list) return;
 
   list.innerHTML = state.people.length > 0 ? '' : `<p data-i18n="no_people" style="text-align:center; color:#555;">No people</p>`;
-  
+
   // Pre-calculate balances for performance
   const balances = {};
   state.people.forEach(p => balances[p] = 0);
@@ -186,7 +186,7 @@ function renderPeople() {
     card.className = 'card';
     card.style = 'display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
     card.onclick = () => showPersonStats(p);
-    
+
     const balance = balances[p];
     const balanceClass = balance >= 0 ? 'positive' : 'negative';
     const balanceText = (balance >= 0 ? '+' : '-') + formatCurrency(balance);
@@ -223,7 +223,7 @@ window.showPersonStats = (name) => {
   currentPersonFilter = name;
   showView('stats');
   document.getElementById('stats-title').innerText = `${t('net_with')} ${name}`;
-  
+
   const personTxs = state.transactions.filter(t => t.person === name);
   let net = 0;
   personTxs.forEach(tx => {
@@ -242,7 +242,7 @@ window.showPersonStats = (name) => {
 window.renderGeneralStats = () => {
   const fromInput = document.getElementById('stats-from');
   const toInput = document.getElementById('stats-to');
-  
+
   if (!fromInput.value) {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -336,7 +336,7 @@ window.clearAllData = () => {
 };
 
 window.generateDummyData = () => {
-  if (!confirm("Generate 1000 dummy transactions for performance testing?")) return;
+  if (!confirm("Generate 1000000 dummy transactions for performance testing?")) return;
 
   const testNames = ["Emma Watson", "Tony Stark", "Bruce Wayne", "Clark Kent", "Diana Prince"];
   testNames.forEach(name => {
@@ -347,11 +347,11 @@ window.generateDummyData = () => {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(now.getMonth() - 6);
 
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 1000000; i++) {
     const randomPerson = testNames[Math.floor(Math.random() * testNames.length)];
     const randomAmount = (Math.random() * 50000) + 10;
     const randomType = Math.random() > 0.5 ? 'owe_me' : 'i_owe';
-    
+
     // Spread over last 6 months
     const randomDate = new Date(sixMonthsAgo.getTime() + Math.random() * (now.getTime() - sixMonthsAgo.getTime()));
 
@@ -369,7 +369,7 @@ window.generateDummyData = () => {
   state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   saveState();
-  alert("Generated 1000 transactions! App will reload now.");
+  alert("Generated 1,000,000 transactions! App will reload now.");
   location.reload();
 };
 

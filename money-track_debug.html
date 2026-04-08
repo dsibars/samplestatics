@@ -496,7 +496,7 @@ window.clearAllData = () => {
   }
 };
 window.generateDummyData = () => {
-  if (!confirm("Generate 1000 dummy transactions for performance testing?")) return;
+  if (!confirm("Generate 1000000 dummy transactions for performance testing?")) return;
   const testNames = ["Emma Watson", "Tony Stark", "Bruce Wayne", "Clark Kent", "Diana Prince"];
   testNames.forEach((name) => {
     if (!state.people.includes(name)) state.people.push(name);
@@ -504,7 +504,7 @@ window.generateDummyData = () => {
   const now = /* @__PURE__ */ new Date();
   const sixMonthsAgo = /* @__PURE__ */ new Date();
   sixMonthsAgo.setMonth(now.getMonth() - 6);
-  for (let i = 0; i < 1e3; i++) {
+  for (let i = 0; i < 1e6; i++) {
     const randomPerson = testNames[Math.floor(Math.random() * testNames.length)];
     const randomAmount = Math.random() * 5e4 + 10;
     const randomType = Math.random() > 0.5 ? "owe_me" : "i_owe";
@@ -520,7 +520,7 @@ window.generateDummyData = () => {
   }
   state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
   saveState();
-  alert("Generated 1000 transactions! App will reload now.");
+  alert("Generated 1,000,000 transactions! App will reload now.");
   location.reload();
 };
 function formatCurrency(val) {
