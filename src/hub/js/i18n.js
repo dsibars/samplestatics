@@ -36,7 +36,16 @@ export const TRANSLATIONS = {
   }
 };
 
-export let currentLang = localStorage.getItem('static_apps_lang') || 'es';
+// Handle migration and shared persistence
+const SHARED_KEY = 'static_apps_lang';
+const OLD_KEY = 'workout_lang';
+
+// Migration
+if (!localStorage.getItem(SHARED_KEY) && localStorage.getItem(OLD_KEY)) {
+  localStorage.setItem(SHARED_KEY, localStorage.getItem(OLD_KEY));
+}
+
+export let currentLang = localStorage.getItem(SHARED_KEY) || 'es';
 
 export function t(key) {
   if (!TRANSLATIONS[currentLang]) return key;

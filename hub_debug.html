@@ -37,7 +37,7 @@
             margin-bottom: 2rem;
             background: linear-gradient(to right, #38bdf8, #818cf8);
             -webkit-background-clip: text;
-            -webkit-fill-color: transparent;
+            -webkit-text-fill-color: transparent;
         }
         .app-list {
             display: grid;
@@ -160,7 +160,12 @@ const TRANSLATIONS = {
     lang: "Idioma"
   }
 };
-let currentLang = localStorage.getItem("static_apps_lang") || "es";
+const SHARED_KEY = "static_apps_lang";
+const OLD_KEY = "workout_lang";
+if (!localStorage.getItem(SHARED_KEY) && localStorage.getItem(OLD_KEY)) {
+  localStorage.setItem(SHARED_KEY, localStorage.getItem(OLD_KEY));
+}
+let currentLang = localStorage.getItem(SHARED_KEY) || "es";
 function t(key) {
   if (!TRANSLATIONS[currentLang]) return key;
   return TRANSLATIONS[currentLang][key] || TRANSLATIONS["es"][key] || key;
