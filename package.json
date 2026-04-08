@@ -9,5 +9,8 @@
   "devDependencies": {
     "vite": "^5.2.0",
     "vite-plugin-singlefile": "^2.0.1"
+  },
+  "dependencies": {
+    "sortablejs": "^1.15.7"
   }
 }
