@@ -1,3 +1,5 @@
+import { Progression } from './Progression.js';
+
 export class Tower {
     constructor(gridX, gridY, cellSize, definition) {
         this.gridX = gridX;
@@ -9,7 +11,15 @@ export class Tower {
         this.y = gridY * cellSize + cellSize / 2;
         
         this.definition = definition;
-        this.stats = { ...definition.stats };
+        
+        const modifiers = Progression.getTowerModifiers(definition.id);
+        
+        this.stats = { 
+            ...definition.stats,
+            damage: definition.stats.damage + modifiers.damageAdd,
+            cooldownMs: Math.max(100, Math.floor(definition.stats.cooldownMs * modifiers.cooldownMult))
+        };
+        
         this.presentation = { ...definition.presentation };
         
         // Convert range from cells to pixels

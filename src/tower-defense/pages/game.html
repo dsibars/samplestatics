@@ -13,7 +13,7 @@
   </div>
   
   <div id="next-wave-overlay" style="display: none; position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 50;">
-      <button class="menu-btn primary" onclick="startNextWave()" style="padding: 10px 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,255,200,0.5);">Start Wave</button>
+      <button class="menu-btn primary" onclick="startNextWave()" style="padding: 10px 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,255,200,0.5);" data-i18n="btn_start_wave">Start Wave</button>
   </div>
   
   <div id="tower-popup" class="tower-popup" style="display: none;">
@@ -23,30 +23,45 @@
 
   <div id="win-overlay" class="game-overlay" style="display: none;">
     <div class="glass-card">
-      <h2 class="title" style="font-size: 2rem;">WAVE DEFEATED!</h2>
-      <p class="subtitle" style="margin-bottom: 20px;">The fortress stands strong.</p>
+      <h2 class="title" style="font-size: 2rem;" data-i18n="title_win">WAVE DEFEATED!</h2>
+      <p class="subtitle" style="margin-bottom: 20px;" data-i18n="subtitle_win">The fortress stands strong.</p>
       <div class="menu-actions">
         <button id="btn-next-stage" class="menu-btn primary" onclick="startNextStage()">
-          <span class="icon">⏭️</span> NEXT STAGE
+          <span class="icon">⏭️</span> <span data-i18n="btn_next_level">NEXT STAGE</span>
         </button>
         <button class="menu-btn secondary" onclick="showMenu()">
-          <span class="icon">🏠</span> MAIN MENU
+          <span class="icon">🏠</span> <span data-i18n="btn_hub">MAIN MENU</span>
         </button>
       </div>
     </div>
   </div>
   
-
   <div id="lose-overlay" class="game-overlay" style="display: none;">
     <div class="glass-card" style="border-color: var(--danger);">
-      <h2 class="title" style="font-size: 2rem; background: var(--danger); -webkit-background-clip: text;">DEFEATED!</h2>
-      <p class="subtitle" style="margin-bottom: 20px;">The fortress has fallen.</p>
+      <h2 class="title" style="font-size: 2rem; background: var(--danger); -webkit-background-clip: text;" data-i18n="title_lose">DEFEATED!</h2>
+      <p class="subtitle" style="margin-bottom: 20px;" data-i18n="subtitle_lose">The fortress has fallen.</p>
       <div class="menu-actions">
         <button class="menu-btn primary" onclick="restartStage()" style="background: var(--danger); color: white;">
-          <span class="icon">🔄</span> TRY AGAIN
+          <span class="icon">🔄</span> <span data-i18n="btn_try_again">TRY AGAIN</span>
         </button>
         <button class="menu-btn secondary" onclick="showMenu()">
-          <span class="icon">🏠</span> MAIN MENU
+          <span class="icon">🏠</span> <span data-i18n="btn_hub">MAIN MENU</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="quit-overlay" class="game-overlay" style="display: none;">
+    <div class="glass-card">
+      <h2 class="title" style="font-size: 2rem;" data-i18n="quit_title">PAUSED</h2>
+      <p class="subtitle" id="quit-cores-msg" style="margin-bottom: 20px;"></p>
+      <p class="subtitle" style="margin-bottom: 20px; font-size: 0.9rem; opacity: 0.8;" data-i18n="quit_msg">Do you want to return to menu? Progress will be saved.</p>
+      <div class="menu-actions">
+        <button class="menu-btn primary" onclick="confirmQuit()">
+          <span class="icon">🚪</span> <span data-i18n="btn_return_menu">RETURN TO MENU</span>
+        </button>
+        <button class="menu-btn secondary" onclick="resumeGame()">
+          <span class="icon">▶️</span> <span data-i18n="btn_continue">CONTINUE</span>
         </button>
       </div>
     </div>

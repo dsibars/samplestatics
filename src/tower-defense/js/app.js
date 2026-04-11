@@ -1,6 +1,8 @@
 import '../css/style.css';
 import { TowerDefenseGame } from './game.js';
 import { applyTranslations, changeLanguage, t, currentLang } from './i18n.js';
+import { Progression } from './models/Progression.js';
+import { TOWER_TYPES } from './models/TowerDefinitions.js';
 
 let game = null;
 
@@ -9,17 +11,50 @@ function showView(viewId) {
     document.querySelectorAll('.view').forEach(view => {
         view.classList.remove('active');
     });
-    document.getElementById(viewId).classList.add('active');
+    const el = document.getElementById(viewId);
+    if (el) el.classList.add('active');
 }
 
 window.showMenu = () => {
-    if (game) game.stop();
+    // If we are in-game and it's running, show confirmation instead
+    if (game && game.isRunning) {
+        game.pause();
+        const msgEl = document.getElementById('quit-cores-msg');
+        if (msgEl) msgEl.innerText = `${t('cores_recovered')}: +${game.sessionCores}`;
+        document.getElementById('quit-overlay').style.display = 'flex';
+        return;
+    }
+
     const stageMenu = document.getElementById('stage-select-menu');
     if (stageMenu) stageMenu.style.display = 'none';
     const mainActions = document.getElementById('main-menu-actions');
     if (mainActions) mainActions.style.display = 'flex';
+    
+    updateCoresUI();
     showView('view-menu');
 };
+
+window.confirmQuit = () => {
+    if (game) {
+        Progression.addCores(game.sessionCores);
+        game.stop();
+    }
+    document.getElementById('quit-overlay').style.display = 'none';
+    window.showMenu();
+};
+
+window.resumeGame = () => {
+    document.getElementById('quit-overlay').style.display = 'none';
+    if (game) game.resume();
+};
+
+function updateCoresUI() {
+    const val = Progression.cores;
+    const menuEl = document.getElementById('menu-cores-val');
+    const labEl = document.getElementById('lab-cores-val');
+    if (menuEl) menuEl.innerText = val;
+    if (labEl) labEl.innerText = val;
+}
 
 window.showStageSelect = () => {
     document.getElementById('main-menu-actions').style.display = 'none';
@@ -36,7 +71,7 @@ window.showStageSelect = () => {
         btn.className = `menu-btn ${locked ? 'secondary' : 'primary'}`;
         if (locked) btn.style.opacity = '0.5';
         
-        btn.innerHTML = `<span class="icon">${locked ? '🔒' : '⭐'}</span> Stage ${i}`;
+        btn.innerHTML = `<span class="icon">${locked ? '🔒' : '⭐'}</span> ${t('stage')} ${i}`;
         if (!locked) {
             btn.onclick = () => window.startGame(i);
         }
@@ -45,7 +80,7 @@ window.showStageSelect = () => {
     
     const backBtn = document.createElement('button');
     backBtn.className = 'menu-btn secondary';
-    backBtn.innerText = '← BACK';
+    backBtn.innerText = t('btn_back');
     backBtn.onclick = () => {
         stageMenu.style.display = 'none';
         document.getElementById('main-menu-actions').style.display = 'flex';
@@ -64,6 +99,9 @@ window.startGame = (stageId) => {
 window.clearGameData = () => {
     if (confirm('Are you sure you want to completely wipe your progression?')) {
         localStorage.removeItem('td_max_stage');
+        localStorage.removeItem(Progression.coreKey);
+        localStorage.removeItem(Progression.labKey);
+        Progression.loadState();
         alert('Data wiped successfully!');
         window.showMenu();
     }
@@ -73,8 +111,108 @@ window.showSettings = () => {
     showView('view-settings');
 };
 
+// --- Laboratory ---
+
+const SKILLS_META = [
+    { id: 'STARTING_MONEY', key: 'skill_start_money', currentEffect: (lvl) => `+${lvl * 10}` },
+    { id: 'BOUNTY_HUNTER', key: 'skill_bounty', currentEffect: (lvl) => `+${lvl * 10}%` },
+    { id: 'BASE_HEALTH', key: 'skill_health', currentEffect: (lvl) => `+${lvl * 2}` },
+    { id: 'CHRONO_SLOW', key: 'skill_slow', currentEffect: (lvl) => `-${lvl * 5}%` },
+    { id: 'WEAK_ENEMIES', key: 'skill_weak', currentEffect: (lvl) => `-${lvl * 5}%` }
+];
+
+window.showLaboratory = () => {
+    updateLaboratoryUI();
+    showView('view-laboratory');
+    window.switchLabTab('towers');
+};
+
+window.switchLabTab = (tab) => {
+    document.getElementById('lab-content-towers').style.display = tab === 'towers' ? 'flex' : 'none';
+    document.getElementById('lab-content-skills').style.display = tab === 'skills' ? 'flex' : 'none';
+    
+    document.getElementById('tab-towers').className = tab === 'towers' ? 'menu-btn primary' : 'menu-btn secondary';
+    document.getElementById('tab-skills').className = tab === 'skills' ? 'menu-btn primary' : 'menu-btn secondary';
+};
+
+function updateLaboratoryUI() {
+    updateCoresUI();
+    const cores = Progression.cores;
+    
+    // Render Towers
+    const towContainer = document.getElementById('lab-content-towers');
+    if (towContainer) {
+        towContainer.innerHTML = '';
+        TOWER_TYPES.forEach(tower => {
+            const unlocked = Progression.isTowerUnlocked(tower.id) || tower.id === 'BASIC_BLASTER';
+            const level = Progression.lab.towers[tower.id]?.level || 1;
+            
+            let btnHtml = '';
+            if (!unlocked) {
+                const cost = Progression.getTowerCostToUnlock(tower.id);
+                const canAfford = cores >= cost;
+                btnHtml = `<button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.unlockTowerMeta('${tower.id}')">Unlock (🔮 ${cost})</button>`;
+            } else {
+                const cost = Progression.getTowerCostToUpgrade(tower.id);
+                const canAfford = cores >= cost;
+                btnHtml = `
+                    <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">${t('lvl')} ${level}</div>
+                    <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.upgradeTowerMeta('${tower.id}')">Upgrade (🔮 ${cost})</button>
+                `;
+            }
+            
+            towContainer.innerHTML += `
+                <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin:0; color: ${tower.presentation.color};">${t(tower.id === 'BASIC_BLASTER' ? 'tower_basic_blaster' : 'tower_heavy_cannon')}</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">${t(tower.id === 'BASIC_BLASTER' ? 'tower_basic_desc' : 'tower_heavy_desc')}</p>
+                    </div>
+                    <div style="text-align: right; min-width: 120px;">
+                        ${btnHtml}
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    // Render Skills
+    const skillContainer = document.getElementById('lab-content-skills');
+    if (skillContainer) {
+        skillContainer.innerHTML = '';
+        SKILLS_META.forEach(skillDef => {
+            const level = Progression.lab.skills[skillDef.id]?.level || 0;
+            const cost = Progression.getSkillCostToUpgrade(skillDef.id);
+            const canAfford = cores >= cost;
+            
+            skillContainer.innerHTML += `
+                <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin:0; color: #fff;">${t(skillDef.key)}</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; color: #00ff88;">${t('current_effect')} ${skillDef.currentEffect(level)}</p>
+                    </div>
+                    <div style="text-align: right; min-width: 120px;">
+                        <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">${t('lvl')} ${level}</div>
+                        <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.upgradeSkillMeta('${skillDef.id}')">Upgrade (🔮 ${cost})</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+}
+
+window.unlockTowerMeta = (towerId) => {
+    if (Progression.unlockTower(towerId)) updateLaboratoryUI();
+};
+window.upgradeTowerMeta = (towerId) => {
+    if (Progression.upgradeTower(towerId)) updateLaboratoryUI();
+};
+window.upgradeSkillMeta = (skillId) => {
+    if (Progression.upgradeSkill(skillId)) updateLaboratoryUI();
+};
+
 // --- Initialization ---
 window.onload = () => {
+    updateCoresUI();
     applyTranslations();
     console.log(`Tower Defense Experiment Initialized (Lang: ${currentLang})`);
 };

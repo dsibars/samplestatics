@@ -5,6 +5,7 @@ import { STAGES } from './models/Stages.js';
 import { Tower } from './models/Tower.js';
 import { TOWER_TYPES } from './models/TowerDefinitions.js';
 import { Particle } from './models/Particle.js';
+import { Progression } from './models/Progression.js';
 import { t } from './i18n.js';
 
 export class TowerDefenseGame {
@@ -29,6 +30,7 @@ export class TowerDefenseGame {
         this.pendingTowerCell = null;
         this.popupOpenTime = 0;
         this.gameStartTime = 0;
+        this.sessionCores = 0;
         
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -130,6 +132,12 @@ export class TowerDefenseGame {
         content.innerHTML = '';
         
         TOWER_TYPES.forEach(type => {
+            if (!Progression.isTowerUnlocked(type.id) && type.id !== 'BASIC_BLASTER') return;
+            
+            const modifiers = Progression.getTowerModifiers(type.id);
+            const actualDamage = type.stats.damage + modifiers.damageAdd;
+            const actualCooldown = Math.max(100, Math.floor(type.stats.cooldownMs * modifiers.cooldownMult));
+            
             const canAfford = this.money >= type.cost;
             const btn = document.createElement('div');
             btn.className = `tower-option ${canAfford ? '' : 'disabled'}`;
@@ -140,9 +148,9 @@ export class TowerDefenseGame {
                 </div>
                 <div class="tower-opt-desc">${type.description}</div>
                 <div class="tower-opt-stats">
-                    <span>${t('stats_damage')} ${type.stats.damage}</span>
+                    <span>${t('stats_damage')} ${actualDamage}</span>
                     <span>${t('stats_range')} ${type.stats.range}</span>
-                    <span>${t('stats_cooldown')} ${type.stats.cooldownMs}ms</span>
+                    <span>${t('stats_cooldown')} ${actualCooldown}ms</span>
                 </div>
             `;
             
@@ -219,8 +227,11 @@ export class TowerDefenseGame {
         this.scenario = new Scenario(stageConfig.scenarioId);
         this.resize();
         
-        this.lives = 20;
-        this.money = stageConfig.startingMoney || 100;
+        this.sessionCores = 0;
+        const globalMods = Progression.getGlobalModifiers();
+        
+        this.lives = 20 + globalMods.baseHealthAdd;
+        this.money = (stageConfig.startingMoney || 100) + globalMods.startingMoneyAdd;
         this.wave = 1;
         this.enemies = [];
         this.towers = [];
@@ -259,10 +270,20 @@ export class TowerDefenseGame {
         this.isRunning = false;
     }
 
+    pause() {
+        this.isRunning = false;
+    }
+
+    resume() {
+        this.isRunning = true;
+        this.lastTime = performance.now();
+        this.loop(this.lastTime);
+    }
+
     updateStats() {
         document.getElementById('stat-lives').innerText = `❤️ ${this.lives}`;
         document.getElementById('stat-money').innerText = `💰 ${this.money}`;
-        document.getElementById('stat-wave').innerText = `🌊 Wave ${this.wave}`;
+        document.getElementById('stat-wave').innerText = `🌊 ${t('stat_wave')} ${this.wave}`;
     }
 
     loop(timestamp) {
@@ -313,6 +334,7 @@ export class TowerDefenseGame {
                 }
             } else if (enemy.isDead) { // Killed by tower
                 this.money += enemy.stats.reward;
+                this.sessionCores += enemy.stats.coreReward || 1;
                 this.updateStats();
                 
                 // Spawn death particles
@@ -412,14 +434,18 @@ export class TowerDefenseGame {
 
     gameLose() {
         this.stop();
+        Progression.addCores(this.sessionCores);
         const loseOverlay = document.getElementById('lose-overlay');
         if (loseOverlay) {
+            loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/(Cores Recovered: \+\d+)/g, ''); // Clear old
+            loseOverlay.innerHTML += `<div style="margin-top:10px; color:#00ff88; font-weight:bold;">Cores Recovered: +${this.sessionCores}</div>`;
             loseOverlay.style.display = 'flex';
         }
     }
 
     gameWin() {
         this.stop();
+        Progression.addCores(this.sessionCores);
         
         const maxStageStr = localStorage.getItem('td_max_stage') || '1';
         let maxStage = parseInt(maxStageStr, 10);
@@ -430,6 +456,8 @@ export class TowerDefenseGame {
         
         const winOverlay = document.getElementById('win-overlay');
         if (winOverlay) {
+            winOverlay.querySelector('.core-msg')?.remove();
+            winOverlay.innerHTML += `<div class="core-msg" style="margin-top:10px; color:#00ff88; font-weight:bold; position: relative; z-index: 10;">Cores Recovered: +${this.sessionCores}</div>`;
             winOverlay.style.display = 'flex';
             
             // Check if next stage exists

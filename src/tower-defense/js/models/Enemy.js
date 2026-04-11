@@ -1,3 +1,5 @@
+import { Progression } from './Progression.js';
+
 export class Enemy {
     constructor(path, cellSize, stats, presentation, adjustments = {}) {
         this.path = path;
@@ -9,9 +11,15 @@ export class Enemy {
             speed: stats.speed || 2,
             damage: stats.damage || 1,
             reward: stats.reward || 5,
+            coreReward: stats.coreReward || 1,
             ...stats 
         };
         
+        const modifiers = Progression.getGlobalModifiers();
+        this.stats.hp *= modifiers.enemyHpMult;
+        this.stats.speed *= modifiers.enemySpeedMult;
+        this.stats.reward = Math.ceil(this.stats.reward * modifiers.bountyMult);
+
         this.maxHp = this.stats.hp;
         
         // Presentation: Visual properties

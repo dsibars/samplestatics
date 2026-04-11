@@ -3,7 +3,8 @@ export const FAST_ENEMY = {
         hp: 3,
         speed: 4.5, 
         damage: 1,
-        reward: 6
+        reward: 6,
+        coreReward: 1
     },
     presentation: { 
         color: '#ffea00', 
@@ -16,7 +17,8 @@ export const STRONG_ENEMY = {
         hp: 40,
         speed: 0.7, 
         damage: 5,
-        reward: 40
+        reward: 40,
+        coreReward: 5
     },
     presentation: { 
         color: '#ff0000', 
@@ -30,6 +32,7 @@ export const ADAPTIVE_ENEMY = {
         speed: 1.8, 
         damage: 2,
         reward: 12,
+        coreReward: 3,
         burstDuration: 1000,
         burstSpeedMult: 1.5
     },

@@ -1,0 +1,36 @@
+<div id="view-laboratory" class="view">
+  <div class="menu-container" style="flex-direction: column;">
+    <div class="glass-card" style="max-width: 600px; width: 100%; position: relative;">
+      
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 class="title" style="font-size: 1.8rem; margin: 0;" data-i18n="menu_lab">LABORATORY</h1>
+        <div style="background: rgba(0, 242, 255, 0.2); border: 1px solid var(--primary); padding: 5px 15px; border-radius: 20px; color: var(--primary); font-weight: bold;">
+            🔮 <span id="lab-cores-val">0</span>
+        </div>
+      </div>
+      
+      <!-- Tabs -->
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <button id="tab-towers" class="menu-btn primary" style="padding: 10px; flex: 1; border-radius: 8px;" onclick="switchLabTab('towers')" data-i18n="lab_towers">ARMORY</button>
+          <button id="tab-skills" class="menu-btn secondary" style="padding: 10px; flex: 1; border-radius: 8px;" onclick="switchLabTab('skills')" data-i18n="lab_skills">TECH TREE</button>
+      </div>
+      
+      <!-- Towers Content -->
+      <div id="lab-content-towers" style="display: flex; flex-direction: column; gap: 15px; height: 350px; overflow-y: auto;">
+          <!-- Populated via JS -->
+      </div>
+      
+      <!-- Skills Content -->
+      <div id="lab-content-skills" style="display: none; flex-direction: column; gap: 15px; height: 350px; overflow-y: auto;">
+          <!-- Populated via JS -->
+      </div>
+      
+      <!-- Footer -->
+      <div style="margin-top: 20px; text-align: center;">
+        <button class="menu-btn secondary" style="width: 100%; border-radius: 8px;" onclick="showMenu()" data-i18n="btn_back">← BACK</button>
+      </div>
+      
+    </div>
+  </div>
+</div>
