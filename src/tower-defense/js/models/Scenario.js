@@ -16,24 +16,28 @@ export class Scenario {
         }
 
         if (this.id === 'SCENARIO_1_STRAIGHT') {
-            this._drawPath([{x: 0, y: 5}, {x: 39, y: 5}]);
+            // A slightly winding direct path (Valley)
+            this._drawPath([
+                {x: 0, y: 5}, {x: 12, y: 5}, {x: 12, y: 2}, {x: 28, y: 2}, {x: 28, y: 8}, {x: 35, y: 8}, {x: 39, y: 5}
+            ]);
             this.matrix[5][0] = 2; // spawn
             this.matrix[5][39] = 3; // goal
             this.paths.push(this._calculatePath(0, 5, 39, 5));
         } else if (this.id === 'SCENARIO_2_CURVE') {
+            // S-Curve (The Snake)
             this._drawPath([
-                {x: 0, y: 2}, {x: 10, y: 2}, {x: 10, y: 8}, {x: 30, y: 8}, {x: 30, y: 5}, {x: 39, y: 5}
+                {x: 0, y: 2}, {x: 6, y: 2}, {x: 6, y: 8}, {x: 18, y: 8}, {x: 18, y: 2}, {x: 30, y: 2}, {x: 30, y: 5}, {x: 39, y: 5}
             ]);
             this.matrix[2][0] = 2;
             this.matrix[5][39] = 3;
             this.paths.push(this._calculatePath(0, 2, 39, 5));
         } else if (this.id === 'SCENARIO_3_MULTI') {
+            // Complex Crossroads/Z-shape
             this._drawPath([
-                {x: 0, y: 8}, {x: 20, y: 8}, {x: 20, y: 2}, {x: 39, y: 2}
+                {x: 0, y: 8}, {x: 8, y: 8}, {x: 8, y: 1}, {x: 20, y: 1}, {x: 20, y: 8}, {x: 32, y: 8}, {x: 32, y: 2}, {x: 39, y: 2}
             ]);
             this.matrix[8][0] = 2;
             this.matrix[2][39] = 3;
-            // First span array
             this.paths.push(this._calculatePath(0, 8, 39, 2));
         } else {
             // Default fallback

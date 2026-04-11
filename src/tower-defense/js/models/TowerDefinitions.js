@@ -4,11 +4,11 @@ export const BASIC_BLASTER = {
     id: 'BASIC_BLASTER',
     get name() { return t('tower_basic_blaster'); },
     get description() { return t('tower_basic_desc'); },
-    cost: 30,
+    cost: 25,
     stats: { 
         damage: 1, 
         range: 3, // In grid cells
-        cooldownMs: 800 
+        cooldownMs: 600 
     },
     presentation: { 
         color: '#00f2ff', 
@@ -20,11 +20,11 @@ export const HEAVY_CANNON = {
     id: 'HEAVY_CANNON',
     get name() { return t('tower_heavy_cannon'); },
     get description() { return t('tower_heavy_desc'); },
-    cost: 60,
+    cost: 70,
     stats: { 
-        damage: 3, 
-        range: 4, 
-        cooldownMs: 2000 
+        damage: 8, 
+        range: 5, 
+        cooldownMs: 2500 
     },
     presentation: { 
         color: '#7000ff', 

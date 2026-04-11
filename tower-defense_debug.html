@@ -59,16 +59,26 @@ class Scenario {
       this.matrix.push(new Array(this.gridWidth).fill(0));
     }
     if (this.id === "SCENARIO_1_STRAIGHT") {
-      this._drawPath([{ x: 0, y: 5 }, { x: 39, y: 5 }]);
+      this._drawPath([
+        { x: 0, y: 5 },
+        { x: 12, y: 5 },
+        { x: 12, y: 2 },
+        { x: 28, y: 2 },
+        { x: 28, y: 8 },
+        { x: 35, y: 8 },
+        { x: 39, y: 5 }
+      ]);
       this.matrix[5][0] = 2;
       this.matrix[5][39] = 3;
       this.paths.push(this._calculatePath(0, 5, 39, 5));
     } else if (this.id === "SCENARIO_2_CURVE") {
       this._drawPath([
         { x: 0, y: 2 },
-        { x: 10, y: 2 },
-        { x: 10, y: 8 },
-        { x: 30, y: 8 },
+        { x: 6, y: 2 },
+        { x: 6, y: 8 },
+        { x: 18, y: 8 },
+        { x: 18, y: 2 },
+        { x: 30, y: 2 },
         { x: 30, y: 5 },
         { x: 39, y: 5 }
       ]);
@@ -78,8 +88,12 @@ class Scenario {
     } else if (this.id === "SCENARIO_3_MULTI") {
       this._drawPath([
         { x: 0, y: 8 },
+        { x: 8, y: 8 },
+        { x: 8, y: 1 },
+        { x: 20, y: 1 },
         { x: 20, y: 8 },
-        { x: 20, y: 2 },
+        { x: 32, y: 8 },
+        { x: 32, y: 2 },
         { x: 39, y: 2 }
       ]);
       this.matrix[8][0] = 2;
@@ -315,9 +329,9 @@ class EnemySpawner {
 const FAST_ENEMY = {
   stats: {
     hp: 3,
-    speed: 4,
+    speed: 4.5,
     damage: 1,
-    reward: 5
+    reward: 6
   },
   presentation: {
     color: "#ffea00",
@@ -326,10 +340,10 @@ const FAST_ENEMY = {
 };
 const STRONG_ENEMY = {
   stats: {
-    hp: 15,
-    speed: 0.8,
+    hp: 40,
+    speed: 0.7,
     damage: 5,
-    reward: 10
+    reward: 40
   },
   presentation: {
     color: "#ff0000",
@@ -338,10 +352,10 @@ const STRONG_ENEMY = {
 };
 const ADAPTIVE_ENEMY = {
   stats: {
-    hp: 8,
-    speed: 1.5,
+    hp: 12,
+    speed: 1.8,
     damage: 2,
-    reward: 7,
+    reward: 12,
     burstDuration: 1e3,
     burstSpeedMult: 1.5
   },
@@ -353,63 +367,73 @@ const ADAPTIVE_ENEMY = {
 const STAGES = {
   1: {
     scenarioId: "SCENARIO_1_STRAIGHT",
-    startingMoney: 60,
+    startingMoney: 75,
     waves: {
-      1: [{ type: FAST_ENEMY, amount: 5, delayMs: 1500, pathIndex: 0 }],
-      2: [{ type: FAST_ENEMY, amount: 10, delayMs: 1200, pathIndex: 0 }]
+      1: [{ type: FAST_ENEMY, amount: 8, delayMs: 1200, pathIndex: 0 }],
+      2: [{ type: FAST_ENEMY, amount: 15, delayMs: 800, pathIndex: 0 }]
     }
   },
   2: {
     scenarioId: "SCENARIO_2_CURVE",
     startingMoney: 80,
     waves: {
-      1: [{ type: FAST_ENEMY, amount: 8, delayMs: 1200, pathIndex: 0 }],
-      2: [{ type: STRONG_ENEMY, amount: 3, delayMs: 2500, pathIndex: 0 }],
-      3: [{ type: FAST_ENEMY, amount: 15, delayMs: 800, pathIndex: 0 }]
+      1: [{ type: FAST_ENEMY, amount: 10, delayMs: 1e3, pathIndex: 0 }],
+      2: [{ type: ADAPTIVE_ENEMY, amount: 5, delayMs: 1500, pathIndex: 0 }],
+      3: [
+        { type: FAST_ENEMY, amount: 10, delayMs: 800, pathIndex: 0 },
+        { type: STRONG_ENEMY, amount: 1, delayMs: 5e3, pathIndex: 0 }
+        // Introduces the tank
+      ]
     }
   },
   3: {
     scenarioId: "SCENARIO_3_MULTI",
-    startingMoney: 100,
+    startingMoney: 120,
     waves: {
-      1: [{ type: FAST_ENEMY, amount: 10, delayMs: 1e3, pathIndex: 0 }],
-      2: [{ type: STRONG_ENEMY, amount: 5, delayMs: 2e3, pathIndex: 0 }],
+      1: [{ type: ADAPTIVE_ENEMY, amount: 10, delayMs: 1200, pathIndex: 0 }],
+      2: [{ type: STRONG_ENEMY, amount: 3, delayMs: 3e3, pathIndex: 0 }],
       3: [
-        { type: FAST_ENEMY, amount: 10, delayMs: 1e3, pathIndex: 0 },
-        { type: STRONG_ENEMY, amount: 4, delayMs: 1500, pathIndex: 0 }
+        { type: FAST_ENEMY, amount: 20, delayMs: 500, pathIndex: 0 },
+        { type: ADAPTIVE_ENEMY, amount: 10, delayMs: 1e3, pathIndex: 0 }
       ]
     }
   },
   4: {
     scenarioId: "SCENARIO_1_STRAIGHT",
-    startingMoney: 120,
+    startingMoney: 150,
     waves: {
-      1: [{ type: ADAPTIVE_ENEMY, amount: 5, delayMs: 1500, pathIndex: 0 }],
-      2: [{ type: STRONG_ENEMY, amount: 10, delayMs: 1500, pathIndex: 0 }],
+      1: [{ type: STRONG_ENEMY, amount: 5, delayMs: 2500, pathIndex: 0 }],
+      2: [{ type: ADAPTIVE_ENEMY, amount: 15, delayMs: 800, pathIndex: 0 }],
       3: [
-        { type: FAST_ENEMY, amount: 20, delayMs: 500, pathIndex: 0 },
-        { type: ADAPTIVE_ENEMY, amount: 5, delayMs: 1e3, pathIndex: 0 }
+        { type: STRONG_ENEMY, amount: 3, delayMs: 3e3, pathIndex: 0 },
+        { type: FAST_ENEMY, amount: 30, delayMs: 300, pathIndex: 0 }
       ]
     }
   },
   5: {
     scenarioId: "SCENARIO_2_CURVE",
-    startingMoney: 150,
+    startingMoney: 200,
     waves: {
-      1: [{ type: ADAPTIVE_ENEMY, amount: 10, delayMs: 1200, pathIndex: 0 }],
-      2: [{ type: STRONG_ENEMY, amount: 8, delayMs: 2e3, pathIndex: 0 }],
-      3: [{ type: ADAPTIVE_ENEMY, amount: 15, delayMs: 1e3, pathIndex: 0 }]
+      1: [{ type: ADAPTIVE_ENEMY, amount: 20, delayMs: 1e3, pathIndex: 0 }],
+      2: [{ type: STRONG_ENEMY, amount: 10, delayMs: 2e3, pathIndex: 0 }],
+      3: [
+        { type: FAST_ENEMY, amount: 50, delayMs: 200, pathIndex: 0 },
+        { type: STRONG_ENEMY, amount: 5, delayMs: 1e3, pathIndex: 0 }
+      ]
     }
   },
   6: {
     scenarioId: "SCENARIO_3_MULTI",
-    startingMoney: 200,
+    startingMoney: 300,
     waves: {
-      1: [{ type: ADAPTIVE_ENEMY, amount: 15, delayMs: 1e3, pathIndex: 0 }],
-      2: [{ type: STRONG_ENEMY, amount: 15, delayMs: 1500, pathIndex: 0 }],
+      1: [{ type: STRONG_ENEMY, amount: 15, delayMs: 1500, pathIndex: 0 }],
+      2: [
+        { type: ADAPTIVE_ENEMY, amount: 30, delayMs: 700, pathIndex: 0 },
+        { type: STRONG_ENEMY, amount: 5, delayMs: 1e3, pathIndex: 0 }
+      ],
       3: [
-        { type: ADAPTIVE_ENEMY, amount: 20, delayMs: 800, pathIndex: 0 },
-        { type: STRONG_ENEMY, amount: 10, delayMs: 1e3, pathIndex: 0 }
+        { type: FAST_ENEMY, amount: 100, delayMs: 100, pathIndex: 0 },
+        { type: STRONG_ENEMY, amount: 10, delayMs: 500, pathIndex: 0 }
       ]
     }
   }
@@ -649,12 +673,12 @@ const BASIC_BLASTER = {
   get description() {
     return t("tower_basic_desc");
   },
-  cost: 30,
+  cost: 25,
   stats: {
     damage: 1,
     range: 3,
     // In grid cells
-    cooldownMs: 800
+    cooldownMs: 600
   },
   presentation: {
     color: "#00f2ff",
@@ -669,11 +693,11 @@ const HEAVY_CANNON = {
   get description() {
     return t("tower_heavy_desc");
   },
-  cost: 60,
+  cost: 70,
   stats: {
-    damage: 3,
-    range: 4,
-    cooldownMs: 2e3
+    damage: 8,
+    range: 5,
+    cooldownMs: 2500
   },
   presentation: {
     color: "#7000ff",

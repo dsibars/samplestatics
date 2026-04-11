@@ -1,9 +1,9 @@
 export const FAST_ENEMY = {
     stats: { 
         hp: 3,
-        speed: 4, 
+        speed: 4.5, 
         damage: 1,
-        reward: 5
+        reward: 6
     },
     presentation: { 
         color: '#ffea00', 
@@ -13,10 +13,10 @@ export const FAST_ENEMY = {
 
 export const STRONG_ENEMY = {
     stats: { 
-        hp: 15,
-        speed: 0.8, 
+        hp: 40,
+        speed: 0.7, 
         damage: 5,
-        reward: 10
+        reward: 40
     },
     presentation: { 
         color: '#ff0000', 
@@ -26,10 +26,10 @@ export const STRONG_ENEMY = {
 
 export const ADAPTIVE_ENEMY = {
     stats: { 
-        hp: 8,
-        speed: 1.5, 
+        hp: 12,
+        speed: 1.8, 
         damage: 2,
-        reward: 7,
+        reward: 12,
         burstDuration: 1000,
         burstSpeedMult: 1.5
     },
