@@ -96,7 +96,7 @@ window.saveTransaction = () => {
 };
 
 // --- History & Infinite Scroll Logic ---
-function renderHistory(reset = false) {
+window.renderHistory = (reset = false) => {
   const isPersonStats = state.currentView === 'stats';
   const listId = isPersonStats ? 'person-history-list' : 'history-list';
   const sentinelId = isPersonStats ? 'stats-sentinel' : 'history-sentinel';
