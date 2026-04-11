@@ -342,7 +342,7 @@ window.saveTransaction = () => {
   saveState();
   showView("welcome");
 };
-function renderHistory(reset = false) {
+window.renderHistory = (reset = false) => {
   var _a, _b;
   const isPersonStats = state.currentView === "stats";
   const listId = isPersonStats ? "person-history-list" : "history-list";
@@ -389,7 +389,7 @@ function renderHistory(reset = false) {
   if (displayFiltered.length <= currentPage * PAGE_SIZE && currentObserver) {
     currentObserver.disconnect();
   }
-}
+};
 window.togglePaid = (id) => {
   const tx = state.transactions.find((t2) => t2.id === id);
   if (tx) {
