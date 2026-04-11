@@ -26,6 +26,7 @@ export class TowerDefenseGame {
         this.money = 100;
         this.wave = 1;
         this.spawner = null;
+        this.pendingTowerCell = null;
         
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -114,11 +115,13 @@ export class TowerDefenseGame {
     }
 
     closeTowerPopup() {
+        this.pendingTowerCell = null;
         const popup = document.getElementById('tower-popup');
         if (popup) popup.style.display = 'none';
     }
 
     showTowerPopup(gridX, gridY) {
+        this.pendingTowerCell = { x: gridX, y: gridY };
         const popup = document.getElementById('tower-popup');
         const content = document.getElementById('tower-popup-content');
         
@@ -382,6 +385,18 @@ export class TowerDefenseGame {
 
         // Draw Particles
         this.particles.forEach(p => p.draw(this.ctx));
+
+        // Draw Pending Tower Selection (Highlight)
+        if (this.pendingTowerCell) {
+            this.ctx.strokeStyle = '#00f2ff';
+            this.ctx.lineWidth = 3;
+            const px = this.pendingTowerCell.x * this.cellSize;
+            const py = this.pendingTowerCell.y * this.cellSize;
+            this.ctx.strokeRect(px + 4, py + 4, this.cellSize - 8, this.cellSize - 8);
+            
+            this.ctx.fillStyle = 'rgba(0, 242, 255, 0.2)';
+            this.ctx.fillRect(px, py, this.cellSize, this.cellSize);
+        }
 
         this.ctx.restore();
     }

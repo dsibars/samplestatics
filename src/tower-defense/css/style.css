@@ -201,29 +201,41 @@ body {
 .tower-popup {
   position: absolute;
   background: var(--card-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 15px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-  min-width: 250px;
-  z-index: 100;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.9);
+  min-width: 280px;
+  z-index: 1000;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  animation: popupFadeIn 0.2s ease-out;
+}
+
+@keyframes popupFadeIn {
+  from { opacity: 0; transform: translate(-50%, -45%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
 .tower-popup-close {
   position: absolute;
-  top: 10px;
-  right: 15px;
+  top: 0px;
+  right: 0px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  font-weight: bold;
+  font-size: 1.5rem;
   color: var(--text-muted);
+  transition: color 0.2s;
 }
 
 .tower-popup-close:hover {
