@@ -538,13 +538,76 @@ const TRANSLATIONS = {
     stats_range: "Range:",
     stats_cooldown: "CD:",
     tap_to_place: "Tap an empty square to place a tower."
+  },
+  ca: {
+    app_title: "Defensa de la Torre",
+    menu_start: "INICIAR JOC",
+    menu_settings: "AJUSTOS",
+    btn_back: "← TORNAR",
+    btn_hub: "MENÚ PRINCIPAL",
+    stat_lives: "❤️ ",
+    stat_money: "💰 ",
+    stat_wave: "🌊 Onada ",
+    game_over_win: "VICTÒRIA! Has sobreviscut totes les onades.",
+    game_over_lose: "FI DEL JOC. T'has quedat sense vides.",
+    lang: "Idioma",
+    tower_basic_blaster: "Blaster Bàsic",
+    tower_basic_desc: "Barat, fiable i lleugerament molest.",
+    tower_heavy_cannon: "Canó Pesat",
+    tower_heavy_desc: "Lent però pica molt fort.",
+    stats_damage: "Dany:",
+    stats_range: "Radi:",
+    stats_cooldown: "CD:",
+    tap_to_place: "Toca un quadrat lliure per col·locar una torre."
+  },
+  eu: {
+    app_title: "Dorre Defentsa",
+    menu_start: "HASI JOKOA",
+    menu_settings: "EZARPENAK",
+    btn_back: "← ITZULI",
+    btn_hub: "MENÚ NAGUSIA",
+    stat_lives: "❤️ ",
+    stat_money: "💰 ",
+    stat_wave: "🌊 Olatua ",
+    game_over_win: "GARAIPENA! Olatu guztiak bizirik iraun dituzu.",
+    game_over_lose: "JOKOAREN AMAIERA. Bizitzarik gabe geratu zara.",
+    lang: "Hizkuntza",
+    tower_basic_blaster: "Oinarrizko Blaster",
+    tower_basic_desc: "Merkea, fidagarria eta pixka bat gogaikarria.",
+    tower_heavy_cannon: "Kanoi Astuna",
+    tower_heavy_desc: "Mantsoa baina oso gogor jotzen du.",
+    stats_damage: "Kaltea:",
+    stats_range: "Erradioa:",
+    stats_cooldown: "CD:",
+    tap_to_place: "Sakatu karratu libre bat dorre bat jartzeko."
+  },
+  gl: {
+    app_title: "Defensa da Torre",
+    menu_start: "INICIAR XOGO",
+    menu_settings: "AXUSTES",
+    btn_back: "← VOLVER",
+    btn_hub: "MENU PRINCIPAL",
+    stat_lives: "❤️ ",
+    stat_money: "💰 ",
+    stat_wave: "🌊 Oleada ",
+    game_over_win: "VICTORIA! Sobreviviches todas as oleadas.",
+    game_over_lose: "FIN DO XOGO. Quedaches sen vidas.",
+    lang: "Idioma",
+    tower_basic_blaster: "Blaster Básico",
+    tower_basic_desc: "Barato, fiable e lixeiramente molesto.",
+    tower_heavy_cannon: "Cañón Pesado",
+    tower_heavy_desc: "Lento pero pega moi duro.",
+    stats_damage: "Dano:",
+    stats_range: "Radio:",
+    stats_cooldown: "CD:",
+    tap_to_place: "Toca un cadrado libre para colocar unha torre."
   }
 };
 const SHARED_KEY = "static_apps_lang";
 let currentLang = localStorage.getItem(SHARED_KEY) || "en";
 function t(key) {
-  if (!TRANSLATIONS[currentLang]) return key;
-  return TRANSLATIONS[currentLang][key] || TRANSLATIONS["en"][key] || key;
+  const lang = TRANSLATIONS[currentLang] ? currentLang : "en";
+  return TRANSLATIONS[lang][key] || TRANSLATIONS["en"][key] || key;
 }
 function changeLanguage() {
   const selector = document.getElementById("lang-selector");
@@ -696,6 +759,7 @@ class TowerDefenseGame {
     this.isPortrait = parent.clientHeight > parent.clientWidth;
     let screenShortSide = this.isPortrait ? parent.clientWidth : parent.clientHeight;
     this.cellSize = Math.floor(screenShortSide / this.scenario.gridHeight);
+    if (this.cellSize < 20) this.cellSize = 20;
     if (this.isPortrait) {
       this.canvas.width = this.scenario.gridHeight * this.cellSize;
       this.canvas.height = this.scenario.gridWidth * this.cellSize;
@@ -707,6 +771,8 @@ class TowerDefenseGame {
       parent.style.overflowY = "hidden";
       parent.style.overflowX = "auto";
     }
+    this.canvas.style.width = this.canvas.width + "px";
+    this.canvas.style.height = this.canvas.height + "px";
   }
   closeTowerPopup() {
     const popup = document.getElementById("tower-popup");

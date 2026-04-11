@@ -85,20 +85,32 @@ export class TowerDefenseGame {
         const parent = this.canvas.parentElement;
         this.isPortrait = parent.clientHeight > parent.clientWidth;
         
+        // We always want the 10-cell axis (gridHeight) to fill the shortest screen dimension
         let screenShortSide = this.isPortrait ? parent.clientWidth : parent.clientHeight;
         this.cellSize = Math.floor(screenShortSide / this.scenario.gridHeight);
         
+        // Ensure cellSize is at least a reasonable minimum (it shouldn't be too small)
+        if (this.cellSize < 20) this.cellSize = 20;
+
         if (this.isPortrait) {
+            // In portrait, matrix columns (40) go down (canvas height)
+            // matrix rows (10) go across (canvas width)
             this.canvas.width = this.scenario.gridHeight * this.cellSize;
             this.canvas.height = this.scenario.gridWidth * this.cellSize;
             parent.style.overflowX = 'hidden';
             parent.style.overflowY = 'auto';
         } else {
+            // In landscape, matrix columns (40) go across (canvas width)
+            // matrix rows (10) go down (canvas height)
             this.canvas.width = this.scenario.gridWidth * this.cellSize;
             this.canvas.height = this.scenario.gridHeight * this.cellSize;
             parent.style.overflowY = 'hidden';
             parent.style.overflowX = 'auto';
         }
+
+        // Apply explicit CSS dimensions to prevent browser auto-scaling/squishing
+        this.canvas.style.width = this.canvas.width + 'px';
+        this.canvas.style.height = this.canvas.height + 'px';
     }
 
     closeTowerPopup() {
