@@ -437,8 +437,8 @@ export class TowerDefenseGame {
         Progression.addCores(this.sessionCores);
         const loseOverlay = document.getElementById('lose-overlay');
         if (loseOverlay) {
-            loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/(Cores Recovered: \+\d+)/g, ''); // Clear old
-            loseOverlay.innerHTML += `<div style="margin-top:10px; color:#00ff88; font-weight:bold;">Cores Recovered: +${this.sessionCores}</div>`;
+            loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/(.*: \+\d+)/g, ''); // Clear old
+            loseOverlay.innerHTML += `<div style="margin-top:10px; color:#00ff88; font-weight:bold;">${t('cores_recovered')}: +${this.sessionCores}</div>`;
             loseOverlay.style.display = 'flex';
         }
     }
@@ -457,7 +457,7 @@ export class TowerDefenseGame {
         const winOverlay = document.getElementById('win-overlay');
         if (winOverlay) {
             winOverlay.querySelector('.core-msg')?.remove();
-            winOverlay.innerHTML += `<div class="core-msg" style="margin-top:10px; color:#00ff88; font-weight:bold; position: relative; z-index: 10;">Cores Recovered: +${this.sessionCores}</div>`;
+            winOverlay.innerHTML += `<div class="core-msg" style="margin-top:10px; color:#00ff88; font-weight:bold; position: relative; z-index: 10;">${t('cores_recovered')}: +${this.sessionCores}</div>`;
             winOverlay.style.display = 'flex';
             
             // Check if next stage exists

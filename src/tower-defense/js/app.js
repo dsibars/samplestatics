@@ -151,13 +151,13 @@ function updateLaboratoryUI() {
             if (!unlocked) {
                 const cost = Progression.getTowerCostToUnlock(tower.id);
                 const canAfford = cores >= cost;
-                btnHtml = `<button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.unlockTowerMeta('${tower.id}')">Unlock (🔮 ${cost})</button>`;
+                btnHtml = `<button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.unlockTowerMeta('${tower.id}')">${t('btn_unlock')} (🔮 ${cost})</button>`;
             } else {
                 const cost = Progression.getTowerCostToUpgrade(tower.id);
                 const canAfford = cores >= cost;
                 btnHtml = `
                     <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">${t('lvl')} ${level}</div>
-                    <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.upgradeTowerMeta('${tower.id}')">Upgrade (🔮 ${cost})</button>
+                    <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.upgradeTowerMeta('${tower.id}')">${t('btn_upgrade')} (🔮 ${cost})</button>
                 `;
             }
             
@@ -192,7 +192,7 @@ function updateLaboratoryUI() {
                     </div>
                     <div style="text-align: right; min-width: 120px;">
                         <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">${t('lvl')} ${level}</div>
-                        <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.upgradeSkillMeta('${skillDef.id}')">Upgrade (🔮 ${cost})</button>
+                        <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.upgradeSkillMeta('${skillDef.id}')">${t('btn_upgrade')} (🔮 ${cost})</button>
                     </div>
                 </div>
             `;

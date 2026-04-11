@@ -701,6 +701,8 @@ const TRANSLATIONS = {
     skill_health: "Base Fortificada",
     skill_slow: "Campo Crono",
     skill_weak: "Análisis de Debilidad",
+    btn_unlock: "Desbloquear",
+    btn_upgrade: "Mejorar",
     title_win: "¡OLEADA SUPERADA!",
     subtitle_win: "La fortaleza resiste con fuerza.",
     title_lose: "¡DERROTADO!",
@@ -745,6 +747,8 @@ const TRANSLATIONS = {
     skill_health: "Fortified Base",
     skill_slow: "Chrono Field",
     skill_weak: "Weak Point Analysis",
+    btn_unlock: "Unlock",
+    btn_upgrade: "Upgrade",
     title_win: "WAVE DEFEATED!",
     subtitle_win: "The fortress stands strong.",
     title_lose: "DEFEATED!",
@@ -789,6 +793,8 @@ const TRANSLATIONS = {
     skill_health: "Base Fortificada",
     skill_slow: "Camp Crono",
     skill_weak: "Anàlisi de Debilitat",
+    btn_unlock: "Desbloquejar",
+    btn_upgrade: "Millorar",
     title_win: "ONADA SUPERADA!",
     subtitle_win: "La fortalesa resisteix amb força.",
     title_lose: "DERROTAT!",
@@ -833,6 +839,8 @@ const TRANSLATIONS = {
     skill_health: "Oinarri Indartua",
     skill_slow: "Krono Eremua",
     skill_weak: "Ahultasun Analisia",
+    btn_unlock: "Desblokeatu",
+    btn_upgrade: "Hobetu",
     title_win: "OLATUA GAINDITUTA!",
     subtitle_win: "Gotorlekuak sendo irauten du.",
     title_lose: "GARRAITUA!",
@@ -877,6 +885,8 @@ const TRANSLATIONS = {
     skill_health: "Base Fortificada",
     skill_slow: "Campo Crono",
     skill_weak: "Análise de Debilidade",
+    btn_unlock: "Desbloquear",
+    btn_upgrade: "Mellorar",
     title_win: "OLEADA SUPERADA!",
     subtitle_win: "A fortaleza resiste con forza.",
     title_lose: "DERROTADO!",
@@ -1313,8 +1323,8 @@ class TowerDefenseGame {
     Progression.addCores(this.sessionCores);
     const loseOverlay = document.getElementById("lose-overlay");
     if (loseOverlay) {
-      loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/(Cores Recovered: \+\d+)/g, "");
-      loseOverlay.innerHTML += `<div style="margin-top:10px; color:#00ff88; font-weight:bold;">Cores Recovered: +${this.sessionCores}</div>`;
+      loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/(.*: \+\d+)/g, "");
+      loseOverlay.innerHTML += `<div style="margin-top:10px; color:#00ff88; font-weight:bold;">${t("cores_recovered")}: +${this.sessionCores}</div>`;
       loseOverlay.style.display = "flex";
     }
   }
@@ -1331,7 +1341,7 @@ class TowerDefenseGame {
     const winOverlay = document.getElementById("win-overlay");
     if (winOverlay) {
       (_a = winOverlay.querySelector(".core-msg")) == null ? void 0 : _a.remove();
-      winOverlay.innerHTML += `<div class="core-msg" style="margin-top:10px; color:#00ff88; font-weight:bold; position: relative; z-index: 10;">Cores Recovered: +${this.sessionCores}</div>`;
+      winOverlay.innerHTML += `<div class="core-msg" style="margin-top:10px; color:#00ff88; font-weight:bold; position: relative; z-index: 10;">${t("cores_recovered")}: +${this.sessionCores}</div>`;
       winOverlay.style.display = "flex";
       const nextStageBtn = document.getElementById("btn-next-stage");
       if (STAGES[this.currentStageId + 1]) {
@@ -1463,13 +1473,13 @@ function updateLaboratoryUI() {
       if (!unlocked) {
         const cost = Progression.getTowerCostToUnlock(tower.id);
         const canAfford = cores >= cost;
-        btnHtml = `<button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.unlockTowerMeta('${tower.id}')">Unlock (🔮 ${cost})</button>`;
+        btnHtml = `<button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.unlockTowerMeta('${tower.id}')">${t("btn_unlock")} (🔮 ${cost})</button>`;
       } else {
         const cost = Progression.getTowerCostToUpgrade(tower.id);
         const canAfford = cores >= cost;
         btnHtml = `
                     <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">${t("lvl")} ${level}</div>
-                    <button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.upgradeTowerMeta('${tower.id}')">Upgrade (🔮 ${cost})</button>
+                    <button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.upgradeTowerMeta('${tower.id}')">${t("btn_upgrade")} (🔮 ${cost})</button>
                 `;
       }
       towContainer.innerHTML += `
@@ -1501,7 +1511,7 @@ function updateLaboratoryUI() {
                     </div>
                     <div style="text-align: right; min-width: 120px;">
                         <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">${t("lvl")} ${level}</div>
-                        <button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.upgradeSkillMeta('${skillDef.id}')">Upgrade (🔮 ${cost})</button>
+                        <button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.upgradeSkillMeta('${skillDef.id}')">${t("btn_upgrade")} (🔮 ${cost})</button>
                     </div>
                 </div>
             `;
