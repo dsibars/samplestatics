@@ -1,0 +1,58 @@
+<div id="view-game" class="view">
+  <div class="game-header">
+    <button class="back-btn" onclick="showMenu()" data-i18n="btn_back">← BACK</button>
+    <div class="game-stats">
+      <span id="stat-lives">❤️ 20</span>
+      <span id="stat-money">💰 100</span>
+      <span id="stat-wave">🌊 Wave 1</span>
+    </div>
+  </div>
+  
+  <div class="game-container">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+  
+  <div id="next-wave-overlay" style="display: none; position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 50;">
+      <button class="menu-btn primary" onclick="startNextWave()" style="padding: 10px 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,255,200,0.5);">Start Wave</button>
+  </div>
+  
+  <div id="tower-popup" class="tower-popup" style="display: none;">
+    <div class="tower-popup-close" onclick="closeTowerPopup()">✕</div>
+    <div id="tower-popup-content" class="tower-popup-content"></div>
+  </div>
+
+  <div id="win-overlay" class="game-overlay" style="display: none;">
+    <div class="glass-card">
+      <h2 class="title" style="font-size: 2rem;">WAVE DEFEATED!</h2>
+      <p class="subtitle" style="margin-bottom: 20px;">The fortress stands strong.</p>
+      <div class="menu-actions">
+        <button id="btn-next-stage" class="menu-btn primary" onclick="startNextStage()">
+          <span class="icon">⏭️</span> NEXT STAGE
+        </button>
+        <button class="menu-btn secondary" onclick="showMenu()">
+          <span class="icon">🏠</span> MAIN MENU
+        </button>
+      </div>
+    </div>
+  </div>
+  
+
+  <div id="lose-overlay" class="game-overlay" style="display: none;">
+    <div class="glass-card" style="border-color: var(--danger);">
+      <h2 class="title" style="font-size: 2rem; background: var(--danger); -webkit-background-clip: text;">DEFEATED!</h2>
+      <p class="subtitle" style="margin-bottom: 20px;">The fortress has fallen.</p>
+      <div class="menu-actions">
+        <button class="menu-btn primary" onclick="restartStage()" style="background: var(--danger); color: white;">
+          <span class="icon">🔄</span> TRY AGAIN
+        </button>
+        <button class="menu-btn secondary" onclick="showMenu()">
+          <span class="icon">🏠</span> MAIN MENU
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="game-footer">
+    <p data-i18n="tap_to_place">Tap an empty square to place a tower.</p>
+  </div>
+</div>
