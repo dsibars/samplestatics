@@ -28,6 +28,7 @@ export class TowerDefenseGame {
         this.spawner = null;
         this.pendingTowerCell = null;
         this.popupOpenTime = 0;
+        this.gameStartTime = 0;
         
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -170,6 +171,9 @@ export class TowerDefenseGame {
 
     handleCanvasClick(e) {
         if (!this.isRunning) return;
+        
+        // Prevent "leaked" clicks from the menu when the view switches instantly
+        if (performance.now() - this.gameStartTime < 300) return;
 
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -208,6 +212,7 @@ export class TowerDefenseGame {
 
     start(stageId) {
         this.isRunning = true;
+        this.gameStartTime = performance.now();
         this.currentStageId = stageId || 1;
         const stageConfig = STAGES[this.currentStageId] || STAGES[1];
         
