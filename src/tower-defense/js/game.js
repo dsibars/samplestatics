@@ -27,6 +27,7 @@ export class TowerDefenseGame {
         this.wave = 1;
         this.spawner = null;
         this.pendingTowerCell = null;
+        this.popupOpenTime = 0;
         
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -146,6 +147,8 @@ export class TowerDefenseGame {
             
             if (canAfford) {
                 btn.onclick = () => {
+                    // Prevent accidental "double-tap" selection on mobile
+                    if (performance.now() - this.popupOpenTime < 300) return;
                     this.buyTower(gridX, gridY, type);
                 };
             }
@@ -153,6 +156,7 @@ export class TowerDefenseGame {
         });
         
         popup.style.display = 'flex';
+        this.popupOpenTime = performance.now();
     }
 
     buyTower(gridX, gridY, type) {

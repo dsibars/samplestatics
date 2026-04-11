@@ -223,14 +223,30 @@ class Enemy {
     ctx.shadowBlur = 0;
     if (this.stats.hp < this.maxHp) {
       const hpPerc = Math.max(0, this.stats.hp / this.maxHp);
-      const barW = this.cellSize * 0.5;
-      const barH = 4;
-      const bx = this.x - barW / 2;
-      const by = this.y - radius - 8;
+      const barLength = this.cellSize * 0.5;
+      const barThickness = 4;
+      const transform = ctx.getTransform();
+      const isFlipped = Math.abs(transform.b) > 0.5;
+      let bx, by, bw, bh, bFillW, bFillH;
+      if (isFlipped) {
+        bx = this.x - radius - 10;
+        by = this.y - barLength / 2;
+        bw = barThickness;
+        bh = barLength;
+        bFillW = barThickness;
+        bFillH = barLength * hpPerc;
+      } else {
+        bx = this.x - barLength / 2;
+        by = this.y - radius - 10;
+        bw = barLength;
+        bh = barThickness;
+        bFillW = barLength * hpPerc;
+        bFillH = barThickness;
+      }
       ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-      ctx.fillRect(bx, by, barW, barH);
+      ctx.fillRect(bx, by, bw, bh);
       ctx.fillStyle = "#00ff88";
-      ctx.fillRect(bx, by, barW * hpPerc, barH);
+      ctx.fillRect(bx, by, bFillW, bFillH);
     }
   }
 }
@@ -712,6 +728,7 @@ class TowerDefenseGame {
     this.wave = 1;
     this.spawner = null;
     this.pendingTowerCell = null;
+    this.popupOpenTime = 0;
     this.resize();
     window.addEventListener("resize", () => this.resize());
     this.setupInputHandling();
@@ -803,12 +820,14 @@ class TowerDefenseGame {
             `;
       if (canAfford) {
         btn.onclick = () => {
+          if (performance.now() - this.popupOpenTime < 300) return;
           this.buyTower(gridX, gridY, type);
         };
       }
       content.appendChild(btn);
     });
     popup.style.display = "flex";
+    this.popupOpenTime = performance.now();
   }
   buyTower(gridX, gridY, type) {
     if (this.money >= type.cost) {

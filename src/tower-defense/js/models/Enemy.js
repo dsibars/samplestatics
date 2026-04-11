@@ -103,16 +103,40 @@ export class Enemy {
         // Draw Healthbar if damaged
         if (this.stats.hp < this.maxHp) {
             const hpPerc = Math.max(0, this.stats.hp / this.maxHp);
-            const barW = this.cellSize * 0.5;
-            const barH = 4;
-            const bx = this.x - barW / 2;
-            const by = this.y - radius - 8;
+            const barLength = this.cellSize * 0.5;
+            const barThickness = 4;
+            
+            // Detect if the coordinate system is flipped (Portrait Mode)
+            const transform = ctx.getTransform();
+            const isFlipped = Math.abs(transform.b) > 0.5; // setTransform(0, 1, 1, 0, 0, 0)
+            
+            let bx, by, bw, bh, bFillW, bFillH;
+            
+            if (isFlipped) {
+                // In flipped coords (Portrait), we want a bar that stays visual-horizontal
+                // Visual Horizontal = Logic Vertical
+                // Visual Vertical = Logic Horizontal
+                bx = this.x - radius - 10; // Offset on LogicX (ScreenY) to be "above"
+                by = this.y - barLength / 2; // Centered on LogicY (ScreenX)
+                bw = barThickness; // Logic width (Screen height)
+                bh = barLength;    // Logic height (Screen width)
+                bFillW = barThickness;
+                bFillH = barLength * hpPerc;
+            } else {
+                // Standard orientation
+                bx = this.x - barLength / 2;
+                by = this.y - radius - 10;
+                bw = barLength;
+                bh = barThickness;
+                bFillW = barLength * hpPerc;
+                bFillH = barThickness;
+            }
             
             ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-            ctx.fillRect(bx, by, barW, barH);
+            ctx.fillRect(bx, by, bw, bh);
             
             ctx.fillStyle = '#00ff88';
-            ctx.fillRect(bx, by, barW * hpPerc, barH);
+            ctx.fillRect(bx, by, bFillW, bFillH);
         }
     }
 }
