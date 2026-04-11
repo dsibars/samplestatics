@@ -7,6 +7,8 @@ export const TRANSLATIONS = {
     app_money_desc: "Control de gastos y deudas personales con amigos.",
     app_todo_title: "Lista de Tareas",
     app_todo_desc: "Gestor sencillo de tareas diarias para un enfoque profesional.",
+    app_td_title: "Defensa de la Torre",
+    app_td_desc: "Juego épico de estrategia y oleadas para poner a prueba tus defensas.",
     static_badge: "App Estática",
     lang: "Idioma"
   },
@@ -18,6 +20,8 @@ export const TRANSLATIONS = {
     app_money_desc: "Track personal expenses and debts with friends.",
     app_todo_title: "Todo List",
     app_todo_desc: "Simple daily task manager for professional focus.",
+    app_td_title: "Tower Defense",
+    app_td_desc: "Epic strategy and wave game to test your tactical defenses.",
     static_badge: "Static App",
     lang: "Language"
   },
@@ -29,6 +33,8 @@ export const TRANSLATIONS = {
     app_money_desc: "Control de despeses i deutes personals amb amics.",
     app_todo_title: "Llista de Tasques",
     app_todo_desc: "Gestor senzill de tasques diàries per a un enfocament professional.",
+    app_td_title: "Defensa de la Torre",
+    app_td_desc: "Joc èpic d'estrategia i onades per posar a prova les teves defenses.",
     static_badge: "App Estàtica",
     lang: "Idioma"
   },
@@ -40,6 +46,8 @@ export const TRANSLATIONS = {
     app_money_desc: "Gastu eta lagunarteko zorraren kontrolerako aplikazioa.",
     app_todo_title: "Ataza Zerrenda",
     app_todo_desc: "Eguneroko ataza kudeatzaile sinplea ikuspegi profesionalerako.",
+    app_td_title: "Dorre Defentsa",
+    app_td_desc: "Estrategia eta olatu joko epikoa zure defentsak probatzeko.",
     static_badge: "App Estatikoa",
     lang: "Hizkuntza"
   },
@@ -51,6 +59,8 @@ export const TRANSLATIONS = {
     app_money_desc: "Control de gastos e débedas persoais con amigos.",
     app_todo_title: "Lista de Tareas",
     app_todo_desc: "Gestor sencillo de tareas diarias para un enfoque profesional.",
+    app_td_title: "Defensa da Torre",
+    app_td_desc: "Xogo épico de estratexia e oleadas para poñer a proba as túas defensas.",
     static_badge: "App Estática",
     lang: "Idioma"
   }
