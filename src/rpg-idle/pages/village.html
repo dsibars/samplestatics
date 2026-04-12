@@ -1,0 +1,38 @@
+<div id="view-village" class="view">
+    <div class="game-header">
+        <button class="back-btn" onclick="window.showMenu()">← <span data-i18n="btn_back">BACK</span></button>
+        <div class="game-stats">
+            <span>💰 <span id="village-gold-val">0</span></span>
+            <span>🔮 <span id="village-cores-val">0</span></span>
+        </div>
+    </div>
+
+    <div class="village-container" style="flex: 1; padding: 20px; overflow-y: auto;">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button id="tab-tavern" class="menu-btn primary" onclick="window.switchVillageTab('tavern')">Tavern</button>
+            <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')">Shop</button>
+            <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')">Upgrades</button>
+        </div>
+
+        <div id="village-content-tavern" class="village-tab-content">
+            <h2 data-i18n="tavern_title">Recruit Heroes</h2>
+            <div id="tavern-hero-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <!-- Hero cards will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-shop" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="shop_title">Item Shop</h2>
+            <div id="shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Shop items will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-upgrades" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="upgrades_title">Village Upgrades</h2>
+            <div id="upgrades-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Upgrades will be injected here -->
+            </div>
+        </div>
+    </div>
+</div>

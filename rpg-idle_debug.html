@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="RPG Idle - Turn-based Combat Strategy">
+    <title>RPG Idle - Experiment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script type="module" crossorigin>(function polyfill() {
+  const relList = document.createElement("link").relList;
+  if (relList && relList.supports && relList.supports("modulepreload")) {
+    return;
+  }
+  for (const link of document.querySelectorAll('link[rel="modulepreload"]')) {
+    processPreload(link);
+  }
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== "childList") {
+        continue;
+      }
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === "LINK" && node.rel === "modulepreload")
+          processPreload(node);
+      }
+    }
+  }).observe(document, { childList: true, subtree: true });
+  function getFetchOpts(link) {
+    const fetchOpts = {};
+    if (link.integrity) fetchOpts.integrity = link.integrity;
+    if (link.referrerPolicy) fetchOpts.referrerPolicy = link.referrerPolicy;
+    if (link.crossOrigin === "use-credentials")
+      fetchOpts.credentials = "include";
+    else if (link.crossOrigin === "anonymous") fetchOpts.credentials = "omit";
+    else fetchOpts.credentials = "same-origin";
+    return fetchOpts;
+  }
+  function processPreload(link) {
+    if (link.ep)
+      return;
+    link.ep = true;
+    const fetchOpts = getFetchOpts(link);
+    fetch(link.href, fetchOpts);
+  }
+})();
+class ProgressionManager {
+  constructor() {
+    this.coreKey = "rpg_cores";
+    this.progKey = "rpg_progression";
+    this.loadState();
+  }
+  loadState() {
+    this.cores = parseInt(localStorage.getItem(this.coreKey)) || 0;
+    const defaultProg = {
+      heroes: [],
+      // Max 4
+      village: {
+        tavernLevel: 1,
+        shopLevel: 1
+      },
+      milestone: 0,
+      gold: 100,
+      inventory: {
+        tiny_potion: 0,
+        tiny_mana_potion: 0
+      },
+      upgrades: {
+        attack_boost: 0,
+        defense_boost: 0,
+        hp_boost: 0
+      }
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem(this.progKey));
+      if (saved) {
+        this.prog = { ...defaultProg, ...saved };
+      } else {
+        this.prog = defaultProg;
+      }
+    } catch (e) {
+      this.prog = defaultProg;
+    }
+  }
+  saveState() {
+    localStorage.setItem(this.coreKey, this.cores);
+    localStorage.setItem(this.progKey, JSON.stringify(this.prog));
+  }
+  addCores(amount) {
+    this.cores += amount;
+    this.saveState();
+  }
+  spendCores(amount) {
+    if (this.cores >= amount) {
+      this.cores -= amount;
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+  addGold(amount) {
+    this.prog.gold += amount;
+    this.saveState();
+  }
+  spendGold(amount) {
+    if (this.prog.gold >= amount) {
+      this.prog.gold -= amount;
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+  addHero(hero) {
+    if (this.prog.heroes.length < 4) {
+      this.prog.heroes.push(hero);
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+  updateHero(index, heroData) {
+    if (this.prog.heroes[index]) {
+      this.prog.heroes[index] = { ...this.prog.heroes[index], ...heroData };
+      this.saveState();
+    }
+  }
+  getUpgradeCost(upgradeId) {
+    const level = this.prog.upgrades[upgradeId] || 0;
+    return (level + 1) * 5;
+  }
+  buyUpgrade(upgradeId) {
+    const cost = this.getUpgradeCost(upgradeId);
+    if (this.spendCores(cost)) {
+      this.prog.upgrades[upgradeId] = (this.prog.upgrades[upgradeId] || 0) + 1;
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+  setMilestone(value) {
+    if (value > this.prog.milestone) {
+      this.prog.milestone = value;
+      this.saveState();
+    }
+  }
+  addItem(itemId, count = 1) {
+    this.prog.inventory[itemId] = (this.prog.inventory[itemId] || 0) + count;
+    this.saveState();
+  }
+  useItem(itemId) {
+    if (this.prog.inventory[itemId] > 0) {
+      this.prog.inventory[itemId]--;
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+}
+const Progression = new ProgressionManager();
+class Hero {
+  constructor(data) {
+    this.name = data.name;
+    this.level = data.level || 1;
+    this.exp = data.exp || 0;
+    const boosts = Progression.prog.upgrades || {};
+    this.maxHp = data.maxHp + (boosts.hp_boost || 0) * 10;
+    this.hp = data.hp ?? this.maxHp;
+    this.maxMp = data.maxMp;
+    this.mp = data.mp ?? data.maxMp;
+    this.strength = data.strength + (boosts.attack_boost || 0);
+    this.speed = data.speed;
+    this.defense = data.defense + (boosts.defense_boost || 0);
+    this.magicPower = data.magicPower;
+    this.skills = data.skills || ["basic_attack"];
+    this.type = data.type || "warrior";
+  }
+  static generateRandom(level = 1) {
+    const types = ["warrior", "mage"];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const names = {
+      warrior: ["Alaric", "Kaelen", "Thorne", "Valerius"],
+      mage: ["Elowen", "Zephyr", "Ione", "Thalric"]
+    };
+    const name = names[type][Math.floor(Math.random() * names[type].length)];
+    let stats = {
+      name,
+      level,
+      type,
+      exp: 0
+    };
+    if (type === "warrior") {
+      stats.maxHp = 100 + level * 20;
+      stats.maxMp = 20 + level * 5;
+      stats.strength = 15 + level * 3;
+      stats.speed = 10 + level * 1;
+      stats.defense = 10 + level * 2;
+      stats.magicPower = 5 + level * 1;
+      stats.skills = ["basic_attack", "double_attack"];
+    } else {
+      stats.maxHp = 60 + level * 10;
+      stats.maxMp = 60 + level * 15;
+      stats.strength = 5 + level * 1;
+      stats.speed = 12 + level * 1.5;
+      stats.defense = 5 + level * 1;
+      stats.magicPower = 15 + level * 4;
+      stats.skills = ["basic_attack", "basic_ice_ball"];
+    }
+    return new Hero(stats);
+  }
+  gainExp(amount) {
+    this.exp += amount;
+    const nextLevelExp = this.level * 100;
+    if (this.exp >= nextLevelExp) {
+      this.levelUp();
+    }
+  }
+  levelUp() {
+    this.level++;
+    this.exp = 0;
+    if (this.type === "warrior") {
+      this.maxHp += 20;
+      this.maxMp += 5;
+      this.strength += 3;
+      this.speed += 1;
+      this.defense += 2;
+      this.magicPower += 1;
+    } else {
+      this.maxHp += 10;
+      this.maxMp += 15;
+      this.strength += 1;
+      this.speed += 1.5;
+      this.defense += 1;
+      this.magicPower += 4;
+    }
+    this.hp = this.maxHp;
+    this.mp = this.maxMp;
+  }
+  draw(ctx, x, y, isTurn) {
+    ctx.fillStyle = this.type === "warrior" ? "#0af" : "#a0f";
+    if (this.hp <= 0) ctx.fillStyle = "#444";
+    ctx.fillRect(x - 20, y - 20, 40, 40);
+    if (isTurn) {
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 22, y - 22, 44, 44);
+    }
+    ctx.fillStyle = "#fff";
+    ctx.font = "12px Outfit";
+    ctx.textAlign = "center";
+    ctx.fillText(this.name, x, y - 30);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(x - 20, y + 25, 40, 5);
+    ctx.fillStyle = "#0f0";
+    ctx.fillRect(x - 20, y + 25, 40 * (this.hp / this.maxHp), 5);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(x - 20, y + 32, 40, 3);
+    ctx.fillStyle = "#0af";
+    ctx.fillRect(x - 20, y + 32, 40 * (this.mp / this.maxMp), 3);
+  }
+  toJSON() {
+    return {
+      name: this.name,
+      level: this.level,
+      exp: this.exp,
+      maxHp: this.maxHp,
+      hp: this.hp,
+      maxMp: this.maxMp,
+      mp: this.mp,
+      strength: this.strength,
+      speed: this.speed,
+      defense: this.defense,
+      magicPower: this.magicPower,
+      skills: this.skills,
+      type: this.type
+    };
+  }
+}
+class Enemy {
+  constructor(name, level, isBoss = false) {
+    this.name = name;
+    this.level = level;
+    this.isBoss = isBoss;
+    const mult = isBoss ? 3 : 1;
+    this.maxHp = (50 + level * 15) * mult;
+    this.hp = this.maxHp;
+    this.strength = (8 + level * 2) * mult;
+    this.speed = (8 + level * 1) * (isBoss ? 1.2 : 1);
+    this.defense = (5 + level * 1.5) * mult;
+    this.magicPower = (5 + level * 1.5) * mult;
+  }
+  static generate(level, milestone) {
+    const names = ["Slime", "Goblin", "Wolf", "Skeleton", "Orc", "Dark Knight"];
+    const name = names[Math.min(names.length - 1, Math.floor(milestone / 10))];
+    const isBoss = (milestone + 1) % 5 === 0;
+    return new Enemy(isBoss ? `Giant ${name}` : name, level, isBoss);
+  }
+  draw(ctx, x, y) {
+    ctx.fillStyle = this.isBoss ? "#f0f" : "#f55";
+    if (this.hp <= 0) ctx.fillStyle = "#444";
+    ctx.beginPath();
+    ctx.arc(x, y, this.isBoss ? 40 : 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 16px Outfit";
+    ctx.textAlign = "center";
+    ctx.fillText(`Lvl ${this.level} ${this.name}`, x, y - 50);
+    const barWidth = 120;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(x - barWidth / 2, y + 50, barWidth, 10);
+    ctx.fillStyle = "#f55";
+    ctx.fillRect(x - barWidth / 2, y + 50, barWidth * (this.hp / this.maxHp), 10);
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px Outfit";
+    ctx.fillText(`${Math.ceil(this.hp)} / ${this.maxHp}`, x, y + 60);
+  }
+}
+class CombatManager {
+  constructor(heroes, enemy, onCombatEnd, onLog) {
+    this.heroes = heroes;
+    this.enemy = enemy;
+    this.onCombatEnd = onCombatEnd;
+    this.onLog = onLog;
+    this.turnOrder = [];
+    this.currentTurnIndex = 0;
+    this.isCombatOver = false;
+    this.initTurnOrder();
+  }
+  initTurnOrder() {
+    this.turnOrder = [...this.heroes, this.enemy].sort((a, b) => b.speed - a.speed);
+  }
+  nextTurn() {
+    if (this.isCombatOver) return;
+    const participant = this.turnOrder[this.currentTurnIndex];
+    if (participant.hp <= 0) {
+      this.advanceTurn();
+      return;
+    }
+    if (participant === this.enemy) {
+      this.enemyTurn();
+    } else {
+      this.onLog(`It's ${participant.name}'s turn!`);
+    }
+  }
+  advanceTurn() {
+    if (this.checkCombatEnd()) return;
+    this.currentTurnIndex = (this.currentTurnIndex + 1) % this.turnOrder.length;
+    this.nextTurn();
+  }
+  checkCombatEnd() {
+    if (this.enemy.hp <= 0) {
+      this.isCombatOver = true;
+      this.onCombatEnd("win");
+      return true;
+    }
+    const allHeroesDead = this.heroes.every((h) => h.hp <= 0);
+    if (allHeroesDead) {
+      this.isCombatOver = true;
+      this.onCombatEnd("lose");
+      return true;
+    }
+    return false;
+  }
+  heroAction(hero, action, target) {
+    if (this.isCombatOver) return;
+    let damage = 0;
+    let logMsg = "";
+    if (action === "basic_attack") {
+      damage = Math.max(1, hero.strength - this.enemy.defense);
+      this.enemy.hp -= damage;
+      logMsg = `${hero.name} attacks ${this.enemy.name} for ${damage} damage!`;
+    } else if (action === "double_attack") {
+      if (hero.mp >= 10) {
+        hero.mp -= 10;
+        const hit1 = Math.max(1, hero.strength - this.enemy.defense);
+        const hit2 = Math.max(1, hero.strength - this.enemy.defense);
+        damage = hit1 + hit2;
+        this.enemy.hp -= damage;
+        logMsg = `${hero.name} uses Double Attack! Hits for ${hit1} and ${hit2} damage!`;
+      } else {
+        this.onLog("Not enough MP!");
+        return;
+      }
+    } else if (action === "basic_ice_ball") {
+      if (hero.mp >= 15) {
+        hero.mp -= 15;
+        damage = Math.max(1, hero.magicPower * 1.5 - this.enemy.defense * 0.5);
+        this.enemy.hp -= damage;
+        logMsg = `${hero.name} casts Ice Ball! Deals ${Math.floor(damage)} magic damage!`;
+      } else {
+        this.onLog("Not enough MP!");
+        return;
+      }
+    }
+    this.onLog(logMsg);
+    setTimeout(() => this.advanceTurn(), 500);
+  }
+  useItem(hero, itemId) {
+    if (this.isCombatOver) return;
+    if (itemId === "tiny_potion") {
+      const heal = Math.floor(hero.maxHp * 0.3);
+      hero.hp = Math.min(hero.maxHp, hero.hp + heal);
+      this.onLog(`${hero.name} uses Potion and heals ${heal} HP!`);
+    } else if (itemId === "tiny_mana_potion") {
+      const restore = Math.floor(hero.maxMp * 0.3);
+      hero.mp = Math.min(hero.maxMp, hero.mp + restore);
+      this.onLog(`${hero.name} uses Mana Potion and restores ${restore} MP!`);
+    }
+    setTimeout(() => this.advanceTurn(), 500);
+  }
+  enemyTurn() {
+    const aliveHeroes = this.heroes.filter((h) => h.hp > 0);
+    if (aliveHeroes.length === 0) return;
+    const target = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
+    const damage = Math.max(1, this.enemy.strength - target.defense);
+    target.hp -= damage;
+    this.onLog(`${this.enemy.name} attacks ${target.name} for ${damage} damage!`);
+    setTimeout(() => this.advanceTurn(), 1e3);
+  }
+}
+const translations = {
+  en: {
+    subtitle: "Adventure & Recruit",
+    btn_adventure: "ADVENTURE",
+    btn_village: "VILLAGE",
+    btn_settings: "SETTINGS",
+    btn_back: "BACK",
+    btn_quit: "QUIT",
+    settings_title: "SETTINGS",
+    lang: "Language",
+    tavern_title: "Recruit Heroes",
+    shop_title: "Item Shop",
+    current_gold: "Current Gold",
+    btn_recruit: "RECRUIT",
+    btn_buy: "BUY",
+    basic_attack: "Attack",
+    double_attack: "Double Attack (10 MP)",
+    basic_ice_ball: "Ice Ball (15 MP)",
+    tiny_potion: "Tiny Potion",
+    tiny_mana_potion: "Tiny Mana Potion",
+    hero_limit: "Hero limit reached!",
+    not_enough_gold: "Not enough gold!",
+    victory: "VICTORY!",
+    defeat: "DEFEAT",
+    milestone: "Milestone",
+    lvl: "Lvl",
+    hp: "HP",
+    mp: "MP",
+    upgrades_title: "Village Upgrades",
+    attack_boost: "Attack Boost",
+    defense_boost: "Defense Boost",
+    hp_boost: "HP Boost"
+  },
+  es: {
+    subtitle: "Aventura y Recluta",
+    btn_adventure: "AVENTURA",
+    btn_village: "ALDEA",
+    btn_settings: "AJUSTES",
+    btn_back: "VOLVER",
+    btn_quit: "SALIR",
+    settings_title: "AJUSTES",
+    lang: "Idioma",
+    tavern_title: "Reclutar Héroes",
+    shop_title: "Tienda de Objetos",
+    current_gold: "Oro Actual",
+    btn_recruit: "RECLUTAR",
+    btn_buy: "COMPRAR",
+    basic_attack: "Ataque",
+    double_attack: "Ataque Doble (10 MP)",
+    basic_ice_ball: "Bola de Hielo (15 MP)",
+    tiny_potion: "Poción Pequeña",
+    tiny_mana_potion: "Poción de Maná Pequeña",
+    hero_limit: "¡Límite de héroes alcanzado!",
+    not_enough_gold: "¡No hay suficiente oro!",
+    victory: "¡VICTORIA!",
+    defeat: "DERROTA",
+    milestone: "Hito",
+    lvl: "Niv",
+    hp: "PV",
+    mp: "PM",
+    upgrades_title: "Mejoras de la Aldea",
+    attack_boost: "Mejora de Ataque",
+    defense_boost: "Mejora de Defensa",
+    hp_boost: "Mejora de PV"
+  }
+};
+let currentLang = localStorage.getItem("rpg_lang") || "en";
+function t(key) {
+  return translations[currentLang][key] || key;
+}
+function applyTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    el.innerText = t(key);
+  });
+}
+function changeLanguage() {
+  const selector = document.getElementById("lang-selector");
+  currentLang = selector.value;
+  localStorage.setItem("rpg_lang", currentLang);
+  applyTranslations();
+}
+class RPGGame {
+  constructor() {
+    this.currentCombat = null;
+    this.currentEnemy = null;
+    this.currentMilestone = Progression.prog.milestone;
+    this.heroes = Progression.prog.heroes.map((h) => new Hero(h));
+    this.canvas = document.getElementById("combatCanvas");
+    this.ctx = this.canvas.getContext("2d");
+    this.resizeCanvas();
+    window.addEventListener("resize", () => this.resizeCanvas());
+  }
+  resizeCanvas() {
+    const container = this.canvas.parentElement;
+    this.canvas.width = container.clientWidth;
+    this.canvas.height = container.clientHeight;
+  }
+  startAdventure() {
+    this.currentMilestone = Math.floor(Progression.prog.milestone / 5) * 5;
+    this.nextCombat();
+  }
+  nextCombat() {
+    this.currentMilestone++;
+    const level = Math.max(1, Math.floor(this.currentMilestone / 2));
+    this.currentEnemy = Enemy.generate(level, this.currentMilestone);
+    this.heroes.forEach((h) => {
+      if (h.hp > 0) {
+        h.hp = Math.min(h.maxHp, h.hp + Math.floor(h.maxHp * 0.2));
+        h.mp = Math.min(h.maxMp, h.mp + Math.floor(h.maxMp * 0.2));
+      }
+    });
+    this.currentCombat = new CombatManager(
+      this.heroes,
+      this.currentEnemy,
+      (result) => this.endCombat(result),
+      (msg) => this.log(msg)
+    );
+    this.updateUI();
+    this.currentCombat.nextTurn();
+  }
+  endCombat(result) {
+    if (result === "win") {
+      const goldEarned = 10 * this.currentMilestone;
+      const expEarned = 20 * this.currentMilestone;
+      const coresEarned = this.currentEnemy.isBoss ? 5 : 0;
+      Progression.addGold(goldEarned);
+      Progression.addCores(coresEarned);
+      Progression.setMilestone(this.currentMilestone);
+      this.heroes.forEach((h) => h.gainExp(expEarned));
+      Progression.prog.heroes = this.heroes.map((h) => h.toJSON());
+      Progression.saveState();
+      document.getElementById("victory-rewards").innerHTML = `
+                <p>💰 +${goldEarned} Gold</p>
+                <p>✨ +${expEarned} EXP for all heroes</p>
+                ${coresEarned > 0 ? `<p>🔮 +${coresEarned} Cores</p>` : ""}
+            `;
+      document.getElementById("win-overlay").style.display = "flex";
+    } else {
+      document.getElementById("defeat-rewards").innerHTML = `
+                <p>Reached Milestone: ${this.currentMilestone}</p>
+            `;
+      document.getElementById("lose-overlay").style.display = "flex";
+    }
+  }
+  log(msg) {
+    const logEl = document.getElementById("combat-log");
+    const p = document.createElement("p");
+    p.innerText = msg;
+    logEl.appendChild(p);
+    logEl.scrollTop = logEl.scrollHeight;
+    const participant = this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex];
+    if (participant instanceof Hero && participant.hp > 0 && !this.currentCombat.isCombatOver) {
+      this.showActionPanel(participant);
+    } else {
+      document.getElementById("action-panel").style.display = "none";
+    }
+    this.updateUI();
+  }
+  updateUI() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    document.getElementById("combat-milestone").innerText = `Milestone: ${this.currentMilestone}`;
+    if (this.currentEnemy) {
+      this.currentEnemy.draw(this.ctx, this.canvas.width / 2, this.canvas.height * 0.3);
+    }
+    const heroSpacing = this.canvas.width / (this.heroes.length + 1);
+    this.heroes.forEach((h, i) => {
+      const isTurn = this.currentCombat && this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex] === h;
+      h.draw(this.ctx, heroSpacing * (i + 1), this.canvas.height * 0.7, isTurn);
+    });
+  }
+  showActionPanel(hero) {
+    const panel = document.getElementById("action-panel");
+    panel.style.display = "flex";
+    document.getElementById("active-hero-name").innerText = `${hero.name}'s Turn`;
+    const skillBtnContainer = document.getElementById("skill-buttons");
+    skillBtnContainer.innerHTML = "";
+    hero.skills.forEach((skill) => {
+      const btn = document.createElement("button");
+      btn.className = "menu-btn secondary";
+      btn.style = "padding: 5px; font-size: 0.7rem; flex: 1;";
+      btn.innerText = t(skill);
+      btn.onclick = () => {
+        this.currentCombat.heroAction(hero, skill, this.currentEnemy);
+      };
+      skillBtnContainer.appendChild(btn);
+    });
+    const itemBtnContainer = document.getElementById("item-buttons");
+    itemBtnContainer.innerHTML = "";
+    ["tiny_potion", "tiny_mana_potion"].forEach((itemId) => {
+      const count = Progression.prog.inventory[itemId] || 0;
+      const btn = document.createElement("button");
+      btn.className = "menu-btn secondary";
+      btn.style = "padding: 5px; font-size: 0.7rem; flex: 1;";
+      btn.innerHTML = `${t(itemId)} (${count})`;
+      btn.disabled = count <= 0;
+      btn.onclick = () => {
+        if (Progression.useItem(itemId)) {
+          this.currentCombat.useItem(hero, itemId);
+        }
+      };
+      itemBtnContainer.appendChild(btn);
+    });
+  }
+}
+let game = null;
+function showView(viewId) {
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.remove("active");
+  });
+  const el = document.getElementById(viewId);
+  if (el) el.classList.add("active");
+}
+window.showMenu = () => {
+  updateCoresUI();
+  showView("view-menu");
+};
+function updateCoresUI() {
+  document.getElementById("menu-cores-val").innerText = Progression.cores;
+}
+window.startAdventure = () => {
+  if (Progression.prog.heroes.length === 0) {
+    alert("Recruit at least one hero in the village first!");
+    window.showVillage();
+    return;
+  }
+  showView("view-game");
+  document.getElementById("combat-log").innerHTML = "";
+  document.getElementById("win-overlay").style.display = "none";
+  document.getElementById("lose-overlay").style.display = "none";
+  game = new RPGGame();
+  game.startAdventure();
+};
+window.nextCombat = () => {
+  document.getElementById("win-overlay").style.display = "none";
+  document.getElementById("combat-log").innerHTML = "";
+  if (game) game.nextCombat();
+};
+window.showVillage = () => {
+  updateVillageUI();
+  showView("view-village");
+  window.switchVillageTab("tavern");
+};
+window.switchVillageTab = (tab) => {
+  document.getElementById("village-content-tavern").style.display = tab === "tavern" ? "block" : "none";
+  document.getElementById("village-content-shop").style.display = tab === "shop" ? "block" : "none";
+  document.getElementById("village-content-upgrades").style.display = tab === "upgrades" ? "block" : "none";
+  document.getElementById("tab-tavern").className = tab === "tavern" ? "menu-btn primary" : "menu-btn secondary";
+  document.getElementById("tab-shop").className = tab === "shop" ? "menu-btn primary" : "menu-btn secondary";
+  document.getElementById("tab-upgrades").className = tab === "upgrades" ? "menu-btn primary" : "menu-btn secondary";
+};
+function updateVillageUI() {
+  document.getElementById("village-gold-val").innerText = Progression.prog.gold;
+  document.getElementById("village-cores-val").innerText = Progression.cores;
+  const tavernList = document.getElementById("tavern-hero-list");
+  tavernList.innerHTML = "";
+  Progression.prog.heroes.forEach((h, i) => {
+    const card = document.createElement("div");
+    card.style = "background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444;";
+    card.innerHTML = `
+            <div style="font-weight:bold;">${h.name}</div>
+            <div style="font-size:0.8rem; color:#aaa;">Lvl ${h.level} ${h.type}</div>
+            <div style="font-size:0.7rem; color:#aaa;">HP: ${h.maxHp} ATK: ${h.strength}</div>
+        `;
+    tavernList.appendChild(card);
+  });
+  if (Progression.prog.heroes.length < 4) {
+    const recruitCard = document.createElement("div");
+    const cost = 50 + Progression.prog.heroes.length * 50;
+    recruitCard.style = "background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center;";
+    recruitCard.innerHTML = `
+            <div style="font-weight:bold; color:var(--primary);">Recruit New Hero</div>
+            <div style="margin: 5px 0;">💰 ${cost}</div>
+            <button class="menu-btn primary" style="padding: 5px 15px; font-size:0.8rem;" onclick="window.recruitHero(${cost})">${t("btn_recruit")}</button>
+        `;
+    tavernList.appendChild(recruitCard);
+  }
+  const shopList = document.getElementById("shop-item-list");
+  shopList.innerHTML = "";
+  const items = [
+    { id: "tiny_potion", cost: 20 },
+    { id: "tiny_mana_potion", cost: 20 }
+  ];
+  items.forEach((item) => {
+    const itemRow = document.createElement("div");
+    itemRow.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
+    itemRow.innerHTML = `
+            <div>
+                <div style="font-weight:bold;">${t(item.id)}</div>
+                <div style="font-size:0.8rem; color:#aaa;">Owned: ${Progression.prog.inventory[item.id] || 0}</div>
+            </div>
+            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyItem('${item.id}', ${item.cost})">💰 ${item.cost}</button>
+        `;
+    shopList.appendChild(itemRow);
+  });
+  const upgradeList = document.getElementById("upgrades-list");
+  upgradeList.innerHTML = "";
+  const upgrades = ["attack_boost", "defense_boost", "hp_boost"];
+  upgrades.forEach((upId) => {
+    const level = Progression.prog.upgrades[upId] || 0;
+    const cost = Progression.getUpgradeCost(upId);
+    const upgradeRow = document.createElement("div");
+    upgradeRow.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
+    upgradeRow.innerHTML = `
+            <div>
+                <div style="font-weight:bold;">${t(upId)}</div>
+                <div style="font-size:0.8rem; color:#aaa;">Level: ${level}</div>
+            </div>
+            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyUpgrade('${upId}')">🔮 ${cost}</button>
+        `;
+    upgradeList.appendChild(upgradeRow);
+  });
+}
+window.recruitHero = (cost) => {
+  if (Progression.prog.gold >= cost) {
+    if (Progression.addHero(Hero.generateRandom(1).toJSON())) {
+      Progression.spendGold(cost);
+      updateVillageUI();
+    }
+  } else {
+    alert(t("not_enough_gold"));
+  }
+};
+window.buyUpgrade = (upgradeId) => {
+  if (Progression.buyUpgrade(upgradeId)) {
+    updateVillageUI();
+  } else {
+    alert("Not enough Cores!");
+  }
+};
+window.buyItem = (itemId, cost) => {
+  if (Progression.prog.gold >= cost) {
+    Progression.spendGold(cost);
+    Progression.addItem(itemId);
+    updateVillageUI();
+  } else {
+    alert(t("not_enough_gold"));
+  }
+};
+window.showSettings = () => {
+  showView("view-settings");
+  document.getElementById("lang-selector").value = localStorage.getItem("rpg_lang") || "en";
+};
+window.changeLanguage = () => {
+  changeLanguage();
+};
+window.clearGameData = () => {
+  if (confirm("Are you sure you want to completely wipe your progression?")) {
+    localStorage.removeItem("rpg_cores");
+    localStorage.removeItem("rpg_progression");
+    Progression.loadState();
+    alert("Data wiped successfully!");
+    window.showMenu();
+  }
+};
+window.onload = () => {
+  updateCoresUI();
+  applyTranslations();
+  console.log(`RPG Idle Initialized`);
+};
+window.showMenu = showMenu;
+window.showVillage = showVillage;
+window.showSettings = showSettings;
+window.startAdventure = startAdventure;
+window.nextCombat = nextCombat;
+window.switchVillageTab = switchVillageTab;
+window.recruitHero = recruitHero;
+window.buyItem = buyItem;
+window.clearGameData = clearGameData;</script>
+  <style rel="stylesheet" crossorigin>:root {
+  --primary: #00f2ff;
+  --primary-dark: #00a8b3;
+  --secondary: #7000ff;
+  --bg-dark: #0a0a0c;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --text: #ffffff;
+  --text-muted: #a0a0a0;
+  --success: #00ff88;
+  --danger: #ff0055;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.view {
+  display: none;
+  width: 100%;
+  height: 100%;
+  animation: fadeIn 0.4s ease-out;
+  position: relative;
+}
+
+.view.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 40px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+.menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.menu-btn {
+  padding: 15px;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.menu-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.menu-btn.primary {
+  background: var(--primary);
+  color: #000;
+}
+
+.menu-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  border: 1px solid var(--glass-border);
+}
+
+.menu-btn:active {
+  transform: scale(0.95);
+}
+
+.game-header {
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.game-stats {
+  display: flex;
+  gap: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 200;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 40px;
+  text-align: left;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setting-item select {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid var(--glass-border);
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#combat-log p {
+    margin-bottom: 4px;
+    animation: logEntry 0.3s ease-out;
+}
+
+@keyframes logEntry {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}</style>
+</head>
+<body>
+
+    <!-- Views -->
+    <div id="view-menu" class="view active">
+    <div class="menu-container">
+        <div class="glass-card">
+            <h1 class="title">RPG IDLE</h1>
+            <p class="subtitle" data-i18n="subtitle">Adventure & Recruit</p>
+
+            <div id="menu-cores-container" style="margin-bottom: 20px; font-weight: 600; color: var(--primary);">
+                🔮 <span id="menu-cores-val">0</span> CORES
+            </div>
+
+            <div class="menu-actions" id="main-menu-actions">
+                <button class="menu-btn primary" onclick="window.startAdventure()">
+                    <span class="icon">⚔️</span> <span data-i18n="btn_adventure">ADVENTURE</span>
+                </button>
+                <button class="menu-btn secondary" onclick="window.showVillage()">
+                    <span class="icon">🏘️</span> <span data-i18n="btn_village">VILLAGE</span>
+                </button>
+                <button class="menu-btn secondary" onclick="window.showSettings()">
+                    <span class="icon">⚙️</span> <span data-i18n="btn_settings">SETTINGS</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="view-village" class="view">
+    <div class="game-header">
+        <button class="back-btn" onclick="window.showMenu()">← <span data-i18n="btn_back">BACK</span></button>
+        <div class="game-stats">
+            <span>💰 <span id="village-gold-val">0</span></span>
+            <span>🔮 <span id="village-cores-val">0</span></span>
+        </div>
+    </div>
+
+    <div class="village-container" style="flex: 1; padding: 20px; overflow-y: auto;">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button id="tab-tavern" class="menu-btn primary" onclick="window.switchVillageTab('tavern')">Tavern</button>
+            <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')">Shop</button>
+            <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')">Upgrades</button>
+        </div>
+
+        <div id="village-content-tavern" class="village-tab-content">
+            <h2 data-i18n="tavern_title">Recruit Heroes</h2>
+            <div id="tavern-hero-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <!-- Hero cards will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-shop" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="shop_title">Item Shop</h2>
+            <div id="shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Shop items will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-upgrades" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="upgrades_title">Village Upgrades</h2>
+            <div id="upgrades-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Upgrades will be injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="view-game" class="view">
+    <div class="game-header">
+        <button class="back-btn" onclick="window.showMenu()">← <span data-i18n="btn_quit">QUIT</span></button>
+        <div class="game-stats">
+            <span id="combat-milestone">Milestone: 0</span>
+        </div>
+    </div>
+
+    <div class="combat-container" style="flex: 1; display: flex; flex-direction: column; background: #111; position: relative; overflow: hidden;">
+        <canvas id="combatCanvas" style="width: 100%; flex: 1;"></canvas>
+
+        <!-- Combat Log -->
+        <div id="combat-log" style="height: 100px; background: rgba(0,0,0,0.5); font-size: 0.8rem; padding: 10px; overflow-y: auto; border-top: 1px solid #444;">
+        </div>
+
+        <!-- Action Panel -->
+        <div id="action-panel" style="height: 120px; background: #222; padding: 10px; display: none; flex-direction: column; gap: 10px;">
+            <div id="active-hero-name" style="color: var(--primary); font-weight: bold; font-size: 0.9rem;">Hero Name's Turn</div>
+            <div style="display: flex; gap: 10px;">
+                <div id="skill-buttons" style="flex: 1; display: flex; gap: 5px;">
+                    <!-- Skill buttons -->
+                </div>
+                <div id="item-buttons" style="flex: 1; display: flex; gap: 5px;">
+                    <!-- Item buttons -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlays -->
+    <div id="win-overlay" class="game-overlay" style="display: none; flex-direction: column; gap: 20px;">
+        <h2 style="color: var(--success); font-size: 2.5rem;">VICTORY!</h2>
+        <div id="victory-rewards" style="text-align: center; color: #fff;">
+        </div>
+        <button class="menu-btn primary" onclick="window.nextCombat()">CONTINUE</button>
+    </div>
+
+    <div id="lose-overlay" class="game-overlay" style="display: none; flex-direction: column; gap: 20px;">
+        <h2 style="color: var(--danger); font-size: 2.5rem;">DEFEAT</h2>
+        <p>Your heroes were defeated.</p>
+        <div id="defeat-rewards" style="text-align: center; color: #fff;">
+        </div>
+        <button class="menu-btn primary" onclick="window.showMenu()">RETURN TO MENU</button>
+    </div>
+</div>
+
+    <div id="view-settings" class="view">
+    <div class="menu-container">
+        <div class="glass-card">
+            <h2 class="title" data-i18n="settings_title">SETTINGS</h2>
+
+            <div class="settings-list">
+                <div class="setting-item">
+                    <label data-i18n="lang">Language</label>
+                    <select id="lang-selector" onchange="window.changeLanguage()">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="menu-actions">
+                <button class="menu-btn secondary" onclick="window.clearGameData()" style="color: var(--danger); border-color: var(--danger); margin-bottom: 20px;">
+                    WIPE DATA
+                </button>
+                <button class="menu-btn primary" onclick="window.showMenu()">
+                    <span data-i18n="btn_back">BACK</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <!-- Scripts -->
+</body>
+</html>

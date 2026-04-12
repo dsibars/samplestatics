@@ -1,0 +1,26 @@
+<div id="view-settings" class="view">
+    <div class="menu-container">
+        <div class="glass-card">
+            <h2 class="title" data-i18n="settings_title">SETTINGS</h2>
+
+            <div class="settings-list">
+                <div class="setting-item">
+                    <label data-i18n="lang">Language</label>
+                    <select id="lang-selector" onchange="window.changeLanguage()">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="menu-actions">
+                <button class="menu-btn secondary" onclick="window.clearGameData()" style="color: var(--danger); border-color: var(--danger); margin-bottom: 20px;">
+                    WIPE DATA
+                </button>
+                <button class="menu-btn primary" onclick="window.showMenu()">
+                    <span data-i18n="btn_back">BACK</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
