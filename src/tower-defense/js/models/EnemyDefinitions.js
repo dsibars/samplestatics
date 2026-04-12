@@ -41,3 +41,19 @@ export const ADAPTIVE_ENEMY = {
         radiusMult: 0.35 
     }
 };
+export const HEALER_ENEMY = {
+    stats: { 
+        hp: 20,
+        speed: 1.2, 
+        damage: 2,
+        reward: 20,
+        coreReward: 4,
+        healRange: 150,    // pixel range
+        healAmount: 5,     // hp restored per tick
+        healCooldownMs: 2000 // how often it heals
+    },
+    presentation: { 
+        color: '#00ff88', 
+        radiusMult: 0.35 
+    }
+};

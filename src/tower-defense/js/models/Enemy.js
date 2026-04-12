@@ -43,6 +43,9 @@ export class Enemy {
         this.isDead = false;
         this.reachedGoal = false;
         this.speedBoostTimer = 0;
+        this.healTimer = this.stats.healCooldownMs || 0;
+        this.isHealing = false;
+        this.healAnimTimer = 0;
         
         this.nextTarget();
     }
@@ -69,8 +72,24 @@ export class Enemy {
         }
     }
 
-    update(deltaTime = 16) {
+    update(deltaTime = 16, allEnemies = []) {
         if (this.isDead) return;
+
+        // Healing Logic
+        if (this.stats.healRange) {
+            this.healTimer -= deltaTime;
+            if (this.healTimer <= 0) {
+                this.healTimer = this.stats.healCooldownMs;
+                this.performHeal(allEnemies);
+            }
+        }
+        
+        if (this.isHealing) {
+            this.healAnimTimer -= deltaTime;
+            if (this.healAnimTimer <= 0) {
+                this.isHealing = false;
+            }
+        }
 
         let currentSpeed = this.stats.speed;
         if (this.speedBoostTimer > 0) {
@@ -92,6 +111,30 @@ export class Enemy {
         }
     }
 
+    performHeal(allEnemies) {
+        let healedAnyone = false;
+        for (const ally of allEnemies) {
+            if (ally === this || ally.isDead || ally.reachedGoal) continue;
+            
+            const dx = ally.x - this.x;
+            const dy = ally.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= this.stats.healRange) {
+                if (ally.stats.hp < ally.maxHp) {
+                    ally.stats.hp = Math.min(ally.maxHp, ally.stats.hp + this.stats.healAmount);
+                    healedAnyone = true;
+                    // Could add a small local particle effect here in the future
+                }
+            }
+        }
+        
+        if (healedAnyone) {
+            this.isHealing = true;
+            this.healAnimTimer = 500; // Show heal effect for 500ms
+        }
+    }
+
     draw(ctx) {
         if (this.isDead) return;
 
@@ -107,6 +150,17 @@ export class Enemy {
         ctx.shadowColor = this.presentation.color;
         ctx.stroke();
         ctx.shadowBlur = 0;
+        
+        // Healing aura effect
+        if (this.isHealing) {
+            const progress = this.healAnimTimer / 500; // 1 to 0
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.stats.healRange * (1 - progress), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(0, 255, 136, ${progress})`; // Green wave
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+        }
         
         // Draw Healthbar if damaged
         if (this.stats.hp < this.maxHp) {

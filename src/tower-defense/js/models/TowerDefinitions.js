@@ -32,4 +32,21 @@ export const HEAVY_CANNON = {
     }
 };
 
-export const TOWER_TYPES = [BASIC_BLASTER, HEAVY_CANNON];
+export const PLASMA_NOVA = {
+    id: 'PLASMA_NOVA',
+    get name() { return t('tower_plasma_nova') || 'PLASMA NOVA'; },
+    get description() { return t('tower_plasma_desc') || 'Hits all enemies in range'; },
+    cost: 120, // In-game cost
+    stats: { 
+        damage: 1, 
+        range: 4, 
+        cooldownMs: 1500,
+        aoe: true
+    },
+    presentation: { 
+        color: '#ff00ff', 
+        radiusMult: 0.4 
+    }
+};
+
+export const TOWER_TYPES = [BASIC_BLASTER, HEAVY_CANNON, PLASMA_NOVA];

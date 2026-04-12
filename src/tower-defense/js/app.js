@@ -78,6 +78,20 @@ window.showStageSelect = () => {
         stageMenu.appendChild(btn);
     }
     
+    if (Progression.isInfiniteUnlocked()) {
+        const infBtn = document.createElement('button');
+        infBtn.className = 'menu-btn primary';
+        infBtn.style.borderStyle = 'dashed';
+        infBtn.style.borderColor = '#ff00ff';
+        infBtn.style.color = '#ff00ff';
+        
+        const maxInf = localStorage.getItem('td_max_infinite_wave') || '1';
+        infBtn.innerHTML = `<span class="icon">♾️</span> ${t('stage')} INFINITE <span style="font-size:0.8em; opacity:0.8;">(Best: ${maxInf})</span>`;
+        infBtn.onclick = () => window.startGame('infinite');
+        stageMenu.appendChild(infBtn);
+    }
+    
+    
     const backBtn = document.createElement('button');
     backBtn.className = 'menu-btn secondary';
     backBtn.innerText = t('btn_back');
@@ -161,11 +175,17 @@ function updateLaboratoryUI() {
                 `;
             }
             
+            // Name mapping
+            let tName = 'tower_basic_blaster';
+            let tDesc = 'tower_basic_desc';
+            if (tower.id === 'HEAVY_CANNON') { tName = 'tower_heavy_cannon'; tDesc = 'tower_heavy_desc'; }
+            if (tower.id === 'PLASMA_NOVA') { tName = 'tower_plasma_nova'; tDesc = 'tower_plasma_desc'; }
+
             towContainer.innerHTML += `
                 <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 style="margin:0; color: ${tower.presentation.color};">${t(tower.id === 'BASIC_BLASTER' ? 'tower_basic_blaster' : 'tower_heavy_cannon')}</h3>
-                        <p style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">${t(tower.id === 'BASIC_BLASTER' ? 'tower_basic_desc' : 'tower_heavy_desc')}</p>
+                        <h3 style="margin:0; color: ${tower.presentation.color};">${t(tName) || tower.id}</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">${t(tDesc) || ''}</p>
                     </div>
                     <div style="text-align: right; min-width: 120px;">
                         ${btnHtml}
@@ -197,6 +217,32 @@ function updateLaboratoryUI() {
                 </div>
             `;
         });
+        
+        // Render Infinite Mode Unlock
+        if (!Progression.isInfiniteUnlocked()) {
+            const unlockCost = 100;
+            const canAfford = cores >= unlockCost;
+            skillContainer.innerHTML += `
+                <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; border: 1px dashed #ff00ff; display: flex; justify-content: space-between; align-items: center; margin-top:20px;">
+                    <div>
+                        <h3 style="margin:0; color: #ff00ff;">♾️ INFINITE STAGE</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; color: #ff88ff;">Unlock the endless challenge mode</p>
+                    </div>
+                    <div style="text-align: right; min-width: 120px;">
+                        <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="margin:0; padding:8px;" onclick="window.unlockInfiniteMeta()">${t('btn_unlock')} (🔮 ${unlockCost})</button>
+                    </div>
+                </div>
+            `;
+        } else {
+             skillContainer.innerHTML += `
+                <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; border: 1px dashed #ff00ff; display: flex; justify-content: space-between; align-items: center; margin-top:20px;">
+                    <div>
+                        <h3 style="margin:0; color: #ff00ff;">♾️ INFINITE STAGE</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; color: #ff88ff;">Unlocked! Select it from the stage menu.</p>
+                    </div>
+                </div>
+            `;
+        }
     }
 }
 
@@ -208,6 +254,9 @@ window.upgradeTowerMeta = (towerId) => {
 };
 window.upgradeSkillMeta = (skillId) => {
     if (Progression.upgradeSkill(skillId)) updateLaboratoryUI();
+};
+window.unlockInfiniteMeta = () => {
+    if (Progression.unlockInfinite()) updateLaboratoryUI();
 };
 
 // --- Initialization ---

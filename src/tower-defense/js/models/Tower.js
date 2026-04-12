@@ -32,6 +32,7 @@ export class Tower {
         this.isFiring = false;
         this.fireTarget = null;
         this.fireTimer = 0;
+        this.fireMaxTimer = 0; // For tracking animation progress
     }
 
     update(deltaTime, enemies) {
@@ -54,6 +55,30 @@ export class Tower {
     }
 
     acquireAndFire(enemies) {
+        if (this.stats.aoe) {
+            let hitCount = 0;
+            for (const enemy of enemies) {
+                if (enemy.isDead || enemy.reachedGoal) continue;
+                
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist <= this.rangePixels) {
+                    enemy.takeDamage(this.stats.damage);
+                    hitCount++;
+                }
+            }
+            if (hitCount > 0) {
+                this.cooldownTimer = this.stats.cooldownMs;
+                this.isFiring = true;
+                this.fireTimer = 300; // Duration of visual ring expansion
+                this.fireMaxTimer = 300;
+            }
+            return; // AOE does not track a single target
+        }
+
+        // Standard targeted logic
         // Evaluate if current target is still viable
         if (this.currentTarget) {
             if (this.currentTarget.isDead || this.currentTarget.reachedGoal) {
@@ -121,22 +146,46 @@ export class Tower {
         ctx.arc(this.x, this.y, radius * 0.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw Laser Effect
-        if (this.isFiring && this.fireTarget) {
-            ctx.beginPath();
-            ctx.moveTo(this.x, this.y);
-            // Draw slightly random line towards target for energy effect
-            ctx.lineTo(this.fireTarget.x, this.fireTarget.y);
-            ctx.strokeStyle = this.presentation.color;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Glow
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = this.presentation.color;
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-            ctx.lineWidth = 1;
+        // Draw Fire Effect
+        if (this.isFiring) {
+            // AoE ring
+            if (this.stats.aoe) {
+                const progress = 1 - (this.fireTimer / this.fireMaxTimer); // 0 to 1
+                const currentRadius = this.rangePixels * progress;
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = this.presentation.color;
+                
+                // Fade out as it expands
+                ctx.globalAlpha = 1 - progress;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.presentation.color;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1.0;
+                ctx.lineWidth = 1;
+            } 
+            // Targeted Laser
+            else if (this.fireTarget) {
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                // Draw slightly random line towards target for energy effect
+                ctx.lineTo(this.fireTarget.x, this.fireTarget.y);
+                ctx.strokeStyle = this.presentation.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Glow
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.presentation.color;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.lineWidth = 1;
+            }
         }
     }
 }

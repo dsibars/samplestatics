@@ -1,13 +1,18 @@
-# 15 Minute Workout Tracker
+# Static Web Apps Hub
 
-A simple MVP web application to count and register daily exercises.
+Welcome to my collection of simple, fast, and offline-first web applications! 
 
-## ⚠️ Architecture Constraints & Requirements
+This repository hosts a growing hub of handy everyday tools designed specifically to be useful on the go. These micro-apps are fully optimized for mobile devices and run entirely in your local browser—meaning they work perfectly even when you have no internet connection.
 
-**This project MUST remain a 100% static application.**
+Currently, the hub includes several lightweight utilities and games:
+- **Workout Tracker**: Log and review your 15-minute daily exercise routines.
+- **Money Track**: Keep tabs on debts, IOUs, and shared expenses effortlessly.
+- **Todo List**: Manage your daily tasks with a straightforward interface.
+- **Tower Defense**: A surprisingly deep strategy game built right into the browser.
 
-It is designed to be hosted directly on GitHub Pages and accessed seamlessly from a mobile browser. Any future technical decisions or iterations must respect the following rules:
+### Features
+- **100% Offline Capable**: Your tools are always available, whenever you need them.
+- **Privacy First**: There are no servers, trackers, or centralized databases. All your data stays right on your device.
+- **Portability**: Want to switch devices? Each app provides easy JSON import and export functionalities to move your data wherever you go.
 
-1. **No Backend or Database**: We will not connect to any server or external database. All user data is stored strictly on the device using `localStorage`.
-2. **Static Hosting Compatibility**: The project must run flawlessly when served via GitHub Pages. Opening the static HTML files (whether single-file or with separated assets) must not require server-side rendering or routing that breaks traditional static serving.
-3. **Data Persistence**: Because there is no backend, `localStorage` is our primary storage mechanism. Features like JSON Import/Export are critical for users to retain or move their data between devices.
+Check back later, as this collection will continue to grow over time with new and useful applications!

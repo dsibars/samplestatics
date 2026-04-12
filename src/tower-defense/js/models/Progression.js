@@ -11,7 +11,8 @@ export class ProgressionManager {
         const defaultLab = {
             towers: {
                 BASIC_BLASTER: { unlocked: true, level: 1 },
-                HEAVY_CANNON: { unlocked: false, level: 1 }
+                HEAVY_CANNON: { unlocked: false, level: 1 },
+                PLASMA_NOVA: { unlocked: false, level: 1 }
             },
             skills: {
                 STARTING_MONEY: { level: 0 },
@@ -19,6 +20,9 @@ export class ProgressionManager {
                 BASE_HEALTH: { level: 0 },
                 CHRONO_SLOW: { level: 0 },
                 WEAK_ENEMIES: { level: 0 }
+            },
+            specials: {
+                UNLOCK_INFINITE: false
             }
         };
 
@@ -28,7 +32,8 @@ export class ProgressionManager {
                 // Merge to allow for backwards compatibility if we add new skills later
                 this.lab = {
                     towers: { ...defaultLab.towers, ...saved.towers },
-                    skills: { ...defaultLab.skills, ...saved.skills }
+                    skills: { ...defaultLab.skills, ...saved.skills },
+                    specials: { ...defaultLab.specials, ...saved.specials }
                 };
             } else {
                 this.lab = defaultLab;
@@ -61,6 +66,7 @@ export class ProgressionManager {
 
     getTowerCostToUnlock(towerId) {
         if (towerId === 'HEAVY_CANNON') return 50;
+        if (towerId === 'PLASMA_NOVA') return 100;
         return 999; 
     }
 
@@ -99,7 +105,7 @@ export class ProgressionManager {
         const extraLevels = level - 1;
         
         return {
-            damageAdd: extraLevels * (towerId === 'HEAVY_CANNON' ? 2 : 1), // Heavy gets +2 dmg per level
+            damageAdd: extraLevels * (towerId === 'HEAVY_CANNON' || towerId === 'PLASMA_NOVA' ? 2 : 1), // Heavy/Plasma get +2 dmg per level
             cooldownMult: Math.max(0.2, 1 - (0.05 * extraLevels)) // 5% faster per level
         };
     }
@@ -130,6 +136,20 @@ export class ProgressionManager {
             enemySpeedMult: 1 - (this.lab.skills.CHRONO_SLOW.level * 0.05), // -5% per level,
             enemyHpMult: 1 - (this.lab.skills.WEAK_ENEMIES.level * 0.05) // -5% per level
         };
+    }
+    // --- SPECIALS ---
+    isInfiniteUnlocked() {
+        return this.lab.specials?.UNLOCK_INFINITE;
+    }
+    
+    unlockInfinite() {
+        if (!this.isInfiniteUnlocked() && this.spendCores(100)) {
+            if (!this.lab.specials) this.lab.specials = {};
+            this.lab.specials.UNLOCK_INFINITE = true;
+            this.saveState();
+            return true;
+        }
+        return false;
     }
 }
 

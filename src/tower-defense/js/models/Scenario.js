@@ -39,6 +39,16 @@ export class Scenario {
             this.matrix[8][0] = 2;
             this.matrix[2][39] = 3;
             this.paths.push(this._calculatePath(0, 8, 39, 2));
+        } else if (this.id === 'SCENARIO_4_INFINITE') {
+            // A heavily curved path to maximize tower coverage time
+            this._drawPath([
+                {x: 0, y: 1}, {x: 6, y: 1}, {x: 6, y: 8}, {x: 12, y: 8}, {x: 12, y: 1}, 
+                {x: 18, y: 1}, {x: 18, y: 8}, {x: 24, y: 8}, {x: 24, y: 1}, {x: 30, y: 1}, 
+                {x: 30, y: 8}, {x: 36, y: 8}, {x: 36, y: 5}, {x: 39, y: 5}
+            ]);
+            this.matrix[1][0] = 2; // spawn
+            this.matrix[5][39] = 3; // goal
+            this.paths.push(this._calculatePath(0, 1, 39, 5));
         } else {
             // Default fallback
             this._drawPath([{x: 0, y: 5}, {x: 39, y: 5}]);

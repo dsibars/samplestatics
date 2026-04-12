@@ -99,6 +99,26 @@ class Scenario {
       this.matrix[8][0] = 2;
       this.matrix[2][39] = 3;
       this.paths.push(this._calculatePath(0, 8, 39, 2));
+    } else if (this.id === "SCENARIO_4_INFINITE") {
+      this._drawPath([
+        { x: 0, y: 1 },
+        { x: 6, y: 1 },
+        { x: 6, y: 8 },
+        { x: 12, y: 8 },
+        { x: 12, y: 1 },
+        { x: 18, y: 1 },
+        { x: 18, y: 8 },
+        { x: 24, y: 8 },
+        { x: 24, y: 1 },
+        { x: 30, y: 1 },
+        { x: 30, y: 8 },
+        { x: 36, y: 8 },
+        { x: 36, y: 5 },
+        { x: 39, y: 5 }
+      ]);
+      this.matrix[1][0] = 2;
+      this.matrix[5][39] = 3;
+      this.paths.push(this._calculatePath(0, 1, 39, 5));
     } else {
       this._drawPath([{ x: 0, y: 5 }, { x: 39, y: 5 }]);
       this.matrix[5][0] = 2;
@@ -167,7 +187,8 @@ class ProgressionManager {
     const defaultLab = {
       towers: {
         BASIC_BLASTER: { unlocked: true, level: 1 },
-        HEAVY_CANNON: { unlocked: false, level: 1 }
+        HEAVY_CANNON: { unlocked: false, level: 1 },
+        PLASMA_NOVA: { unlocked: false, level: 1 }
       },
       skills: {
         STARTING_MONEY: { level: 0 },
@@ -175,6 +196,9 @@ class ProgressionManager {
         BASE_HEALTH: { level: 0 },
         CHRONO_SLOW: { level: 0 },
         WEAK_ENEMIES: { level: 0 }
+      },
+      specials: {
+        UNLOCK_INFINITE: false
       }
     };
     try {
@@ -182,7 +206,8 @@ class ProgressionManager {
       if (saved) {
         this.lab = {
           towers: { ...defaultLab.towers, ...saved.towers },
-          skills: { ...defaultLab.skills, ...saved.skills }
+          skills: { ...defaultLab.skills, ...saved.skills },
+          specials: { ...defaultLab.specials, ...saved.specials }
         };
       } else {
         this.lab = defaultLab;
@@ -210,6 +235,7 @@ class ProgressionManager {
   // --- TOWERS ---
   getTowerCostToUnlock(towerId) {
     if (towerId === "HEAVY_CANNON") return 50;
+    if (towerId === "PLASMA_NOVA") return 100;
     return 999;
   }
   getTowerCostToUpgrade(towerId) {
@@ -244,8 +270,8 @@ class ProgressionManager {
     const level = ((_a = this.lab.towers[towerId]) == null ? void 0 : _a.level) || 1;
     const extraLevels = level - 1;
     return {
-      damageAdd: extraLevels * (towerId === "HEAVY_CANNON" ? 2 : 1),
-      // Heavy gets +2 dmg per level
+      damageAdd: extraLevels * (towerId === "HEAVY_CANNON" || towerId === "PLASMA_NOVA" ? 2 : 1),
+      // Heavy/Plasma get +2 dmg per level
       cooldownMult: Math.max(0.2, 1 - 0.05 * extraLevels)
       // 5% faster per level
     };
@@ -276,6 +302,20 @@ class ProgressionManager {
       enemyHpMult: 1 - this.lab.skills.WEAK_ENEMIES.level * 0.05
       // -5% per level
     };
+  }
+  // --- SPECIALS ---
+  isInfiniteUnlocked() {
+    var _a;
+    return (_a = this.lab.specials) == null ? void 0 : _a.UNLOCK_INFINITE;
+  }
+  unlockInfinite() {
+    if (!this.isInfiniteUnlocked() && this.spendCores(100)) {
+      if (!this.lab.specials) this.lab.specials = {};
+      this.lab.specials.UNLOCK_INFINITE = true;
+      this.saveState();
+      return true;
+    }
+    return false;
   }
 }
 const Progression = new ProgressionManager();
@@ -311,6 +351,9 @@ class Enemy {
     this.isDead = false;
     this.reachedGoal = false;
     this.speedBoostTimer = 0;
+    this.healTimer = this.stats.healCooldownMs || 0;
+    this.isHealing = false;
+    this.healAnimTimer = 0;
     this.nextTarget();
   }
   nextTarget() {
@@ -333,8 +376,21 @@ class Enemy {
       this.speedBoostTimer = this.stats.burstDuration;
     }
   }
-  update(deltaTime = 16) {
+  update(deltaTime = 16, allEnemies = []) {
     if (this.isDead) return;
+    if (this.stats.healRange) {
+      this.healTimer -= deltaTime;
+      if (this.healTimer <= 0) {
+        this.healTimer = this.stats.healCooldownMs;
+        this.performHeal(allEnemies);
+      }
+    }
+    if (this.isHealing) {
+      this.healAnimTimer -= deltaTime;
+      if (this.healAnimTimer <= 0) {
+        this.isHealing = false;
+      }
+    }
     let currentSpeed = this.stats.speed;
     if (this.speedBoostTimer > 0) {
       this.speedBoostTimer -= deltaTime;
@@ -352,6 +408,25 @@ class Enemy {
       this.y += dy / distance * currentSpeed;
     }
   }
+  performHeal(allEnemies) {
+    let healedAnyone = false;
+    for (const ally of allEnemies) {
+      if (ally === this || ally.isDead || ally.reachedGoal) continue;
+      const dx = ally.x - this.x;
+      const dy = ally.y - this.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance <= this.stats.healRange) {
+        if (ally.stats.hp < ally.maxHp) {
+          ally.stats.hp = Math.min(ally.maxHp, ally.stats.hp + this.stats.healAmount);
+          healedAnyone = true;
+        }
+      }
+    }
+    if (healedAnyone) {
+      this.isHealing = true;
+      this.healAnimTimer = 500;
+    }
+  }
   draw(ctx) {
     if (this.isDead) return;
     const radius = this.cellSize * this.presentation.radiusMult;
@@ -363,6 +438,15 @@ class Enemy {
     ctx.shadowColor = this.presentation.color;
     ctx.stroke();
     ctx.shadowBlur = 0;
+    if (this.isHealing) {
+      const progress = this.healAnimTimer / 500;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.stats.healRange * (1 - progress), 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0, 255, 136, ${progress})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
     if (this.stats.hp < this.maxHp) {
       const hpPerc = Math.max(0, this.stats.hp / this.maxHp);
       const barLength = this.cellSize * 0.5;
@@ -390,68 +474,6 @@ class Enemy {
       ctx.fillStyle = "#00ff88";
       ctx.fillRect(bx, by, bFillW, bFillH);
     }
-  }
-}
-class EnemySpawner {
-  constructor(paths, cellSize, wavesData, adjustments = {}) {
-    this.paths = paths || [];
-    this.cellSize = cellSize;
-    this.wavesData = wavesData || {};
-    this.adjustments = adjustments;
-    this.activeWaveNumber = 0;
-    this.activeSequence = [];
-    this.currentRoundIndex = 0;
-    this.remainingInRound = 0;
-    this.timer = 0;
-    this.waveIsActive = false;
-  }
-  startWave(waveNum) {
-    if (!this.wavesData[waveNum]) return false;
-    this.activeWaveNumber = waveNum;
-    this.activeSequence = this.wavesData[waveNum];
-    this.currentRoundIndex = 0;
-    this.timer = 0;
-    this.waveIsActive = true;
-    this.remainingInRound = this.activeSequence.length > 0 ? this.activeSequence[0].amount : 0;
-    return true;
-  }
-  update(deltaTime) {
-    const spawnedEnemies = [];
-    if (!this.waveIsActive || this.currentRoundIndex >= this.activeSequence.length) {
-      this.waveIsActive = false;
-      return spawnedEnemies;
-    }
-    const currentRound = this.activeSequence[this.currentRoundIndex];
-    this.timer += deltaTime;
-    if (this.timer >= currentRound.delayMs) {
-      this.timer = 0;
-      const targetPath = this.paths[currentRound.pathIndex] || this.paths[0];
-      const enemy = new Enemy(
-        targetPath,
-        this.cellSize,
-        currentRound.type.stats,
-        currentRound.type.presentation,
-        this.adjustments
-      );
-      spawnedEnemies.push(enemy);
-      this.remainingInRound--;
-      if (this.remainingInRound <= 0) {
-        this.currentRoundIndex++;
-        if (this.currentRoundIndex < this.activeSequence.length) {
-          this.remainingInRound = this.activeSequence[this.currentRoundIndex].amount;
-          this.timer = 0;
-        } else {
-          this.waveIsActive = false;
-        }
-      }
-    }
-    return spawnedEnemies;
-  }
-  isWaveFinished() {
-    return !this.waveIsActive;
-  }
-  hasMoreWaves() {
-    return !!this.wavesData[this.activeWaveNumber + 1];
   }
 }
 const FAST_ENEMY = {
@@ -495,6 +517,124 @@ const ADAPTIVE_ENEMY = {
     radiusMult: 0.35
   }
 };
+const HEALER_ENEMY = {
+  stats: {
+    hp: 20,
+    speed: 1.2,
+    damage: 2,
+    reward: 20,
+    coreReward: 4,
+    healRange: 150,
+    // pixel range
+    healAmount: 5,
+    // hp restored per tick
+    healCooldownMs: 2e3
+    // how often it heals
+  },
+  presentation: {
+    color: "#00ff88",
+    radiusMult: 0.35
+  }
+};
+class EnemySpawner {
+  constructor(paths, cellSize, wavesData, adjustments = {}) {
+    this.paths = paths || [];
+    this.cellSize = cellSize;
+    this.wavesData = wavesData || {};
+    this.adjustments = adjustments;
+    this.activeWaveNumber = 0;
+    this.activeSequence = [];
+    this.currentRoundIndex = 0;
+    this.remainingInRound = 0;
+    this.timer = 0;
+    this.waveIsActive = false;
+    this.isInfinite = false;
+  }
+  startWave(waveNum) {
+    if (!this.wavesData[waveNum] && !this.isInfinite) return false;
+    let waveSeq = this.wavesData[waveNum];
+    if (this.isInfinite && !waveSeq) {
+      waveSeq = this.generateInfiniteWave(waveNum);
+      this.wavesData[waveNum] = waveSeq;
+    }
+    this.activeWaveNumber = waveNum;
+    this.activeSequence = waveSeq;
+    this.currentRoundIndex = 0;
+    this.timer = 0;
+    this.waveIsActive = true;
+    this.remainingInRound = this.activeSequence.length > 0 ? this.activeSequence[0].amount : 0;
+    if (this.isInfinite) {
+      this.adjustments.difficultyMult = 1 + waveNum * 0.05;
+      this.adjustments.speedMult = Math.min(2, 1 + waveNum * 0.02);
+    }
+    return true;
+  }
+  generateInfiniteWave(waveNum) {
+    const seq = [];
+    const numBatches = 1 + Math.floor(waveNum / 3);
+    for (let i = 0; i < numBatches; i++) {
+      const rand = Math.random();
+      let type = FAST_ENEMY;
+      let delay = 800 - waveNum * 10;
+      delay = Math.max(200, delay);
+      let amount = 10 + Math.floor(waveNum * 1.5);
+      if (waveNum > 2 && rand > 0.4) {
+        type = ADAPTIVE_ENEMY;
+        amount = Math.floor(amount * 0.7);
+        delay += 300;
+      }
+      if (waveNum > 5 && rand > 0.7) {
+        type = STRONG_ENEMY;
+        amount = Math.floor(amount * 0.3);
+        delay += 800;
+      }
+      if (waveNum >= 15 && i === numBatches - 1) {
+        seq.push({ type: HEALER_ENEMY, amount: 1 + Math.floor(waveNum / 10), delayMs: 1500, pathIndex: 0 });
+      }
+      seq.unshift({ type, amount, delayMs: delay, pathIndex: 0 });
+    }
+    return seq;
+  }
+  update(deltaTime) {
+    const spawnedEnemies = [];
+    if (!this.waveIsActive || this.currentRoundIndex >= this.activeSequence.length) {
+      this.waveIsActive = false;
+      return spawnedEnemies;
+    }
+    const currentRound = this.activeSequence[this.currentRoundIndex];
+    this.timer += deltaTime;
+    if (this.timer >= currentRound.delayMs) {
+      this.timer = 0;
+      const targetPath = this.paths[currentRound.pathIndex] || this.paths[0];
+      const enemy = new Enemy(
+        targetPath,
+        this.cellSize,
+        currentRound.type.stats,
+        currentRound.type.presentation,
+        this.adjustments
+      );
+      spawnedEnemies.push(enemy);
+      this.remainingInRound--;
+      if (this.remainingInRound <= 0) {
+        this.currentRoundIndex++;
+        if (this.currentRoundIndex < this.activeSequence.length) {
+          this.remainingInRound = this.activeSequence[this.currentRoundIndex].amount;
+          this.timer = 0;
+        } else {
+          this.waveIsActive = false;
+        }
+      }
+    }
+    return spawnedEnemies;
+  }
+  isWaveFinished() {
+    return !this.waveIsActive;
+  }
+  hasMoreWaves() {
+    if (this.isInfinite) return true;
+    return !!this.wavesData[this.activeWaveNumber + 1];
+  }
+}
 const STAGES = {
   1: {
     scenarioId: "SCENARIO_1_STRAIGHT",
@@ -567,6 +707,15 @@ const STAGES = {
         { type: STRONG_ENEMY, amount: 10, delayMs: 500, pathIndex: 0 }
       ]
     }
+  },
+  "infinite": {
+    scenarioId: "SCENARIO_4_INFINITE",
+    startingMoney: 150,
+    isInfinite: true,
+    // Marker to tell spawner to auto-generate
+    waves: {
+      1: [{ type: FAST_ENEMY, amount: 15, delayMs: 1e3, pathIndex: 0 }]
+    }
   }
 };
 class Tower {
@@ -590,6 +739,7 @@ class Tower {
     this.isFiring = false;
     this.fireTarget = null;
     this.fireTimer = 0;
+    this.fireMaxTimer = 0;
   }
   update(deltaTime, enemies) {
     if (this.cooldownTimer > 0) {
@@ -607,6 +757,26 @@ class Tower {
     }
   }
   acquireAndFire(enemies) {
+    if (this.stats.aoe) {
+      let hitCount = 0;
+      for (const enemy of enemies) {
+        if (enemy.isDead || enemy.reachedGoal) continue;
+        const dx = enemy.x - this.x;
+        const dy = enemy.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= this.rangePixels) {
+          enemy.takeDamage(this.stats.damage);
+          hitCount++;
+        }
+      }
+      if (hitCount > 0) {
+        this.cooldownTimer = this.stats.cooldownMs;
+        this.isFiring = true;
+        this.fireTimer = 300;
+        this.fireMaxTimer = 300;
+      }
+      return;
+    }
     if (this.currentTarget) {
       if (this.currentTarget.isDead || this.currentTarget.reachedGoal) {
         this.currentTarget = null;
@@ -657,18 +827,35 @@ class Tower {
     ctx.beginPath();
     ctx.arc(this.x, this.y, radius * 0.4, 0, Math.PI * 2);
     ctx.fill();
-    if (this.isFiring && this.fireTarget) {
-      ctx.beginPath();
-      ctx.moveTo(this.x, this.y);
-      ctx.lineTo(this.fireTarget.x, this.fireTarget.y);
-      ctx.strokeStyle = this.presentation.color;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = this.presentation.color;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = 1;
+    if (this.isFiring) {
+      if (this.stats.aoe) {
+        const progress = 1 - this.fireTimer / this.fireMaxTimer;
+        const currentRadius = this.rangePixels * progress;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = this.presentation.color;
+        ctx.globalAlpha = 1 - progress;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = this.presentation.color;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 1;
+      } else if (this.fireTarget) {
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.fireTarget.x, this.fireTarget.y);
+        ctx.strokeStyle = this.presentation.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = this.presentation.color;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 1;
+      }
     }
   }
 }
@@ -966,7 +1153,28 @@ const HEAVY_CANNON = {
     radiusMult: 0.45
   }
 };
-const TOWER_TYPES = [BASIC_BLASTER, HEAVY_CANNON];
+const PLASMA_NOVA = {
+  id: "PLASMA_NOVA",
+  get name() {
+    return t("tower_plasma_nova") || "PLASMA NOVA";
+  },
+  get description() {
+    return t("tower_plasma_desc") || "Hits all enemies in range";
+  },
+  cost: 120,
+  // In-game cost
+  stats: {
+    damage: 1,
+    range: 4,
+    cooldownMs: 1500,
+    aoe: true
+  },
+  presentation: {
+    color: "#ff00ff",
+    radiusMult: 0.4
+  }
+};
+const TOWER_TYPES = [BASIC_BLASTER, HEAVY_CANNON, PLASMA_NOVA];
 class Particle {
   constructor(x, y, color) {
     this.x = x;
@@ -1017,6 +1225,7 @@ class TowerDefenseGame {
     this.popupOpenTime = 0;
     this.gameStartTime = 0;
     this.sessionCores = 0;
+    this.infiniteWaveCountdown = 0;
     this.resize();
     window.addEventListener("resize", () => this.resize());
     this.setupInputHandling();
@@ -1186,6 +1395,8 @@ class TowerDefenseGame {
       stageConfig.waves,
       { difficulty: 1 }
     );
+    this.spawner.isInfinite = !!stageConfig.isInfinite;
+    this.infiniteWaveCountdown = 0;
     this.lastTime = performance.now();
     this.loop(this.lastTime);
     this.updateStats();
@@ -1234,7 +1445,7 @@ class TowerDefenseGame {
     }
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
-      enemy.update(deltaTime);
+      enemy.update(deltaTime, this.enemies);
       if (enemy.reachedGoal) {
         this.lives -= enemy.stats.damage || 1;
         this.updateStats();
@@ -1257,13 +1468,34 @@ class TowerDefenseGame {
     }
     if (this.spawner && this.spawner.isWaveFinished() && this.enemies.length === 0) {
       const overlay = document.getElementById("next-wave-overlay");
-      if (overlay && overlay.style.display === "none") {
-        if (this.spawner.hasMoreWaves()) {
-          this.wave++;
-          this.updateStats();
-          overlay.style.display = "flex";
-        } else {
-          this.gameWin();
+      if (this.spawner.isInfinite) {
+        if (this.infiniteWaveCountdown <= 0 && (!overlay || overlay.style.display === "none")) {
+          this.infiniteWaveCountdown = 3e3;
+          if (overlay) {
+            overlay.style.display = "flex";
+            overlay.innerHTML = `<h3>${t("stat_wave")} ${this.wave + 1}... 3</h3>`;
+          }
+        } else if (this.infiniteWaveCountdown > 0) {
+          this.infiniteWaveCountdown -= deltaTime;
+          if (overlay) {
+            overlay.innerHTML = `<h3>${t("stat_wave")} ${this.wave + 1}... ${Math.ceil(this.infiniteWaveCountdown / 1e3)}</h3>`;
+          }
+          if (this.infiniteWaveCountdown <= 0) {
+            this.wave++;
+            this.updateStats();
+            this.startNextWave();
+          }
+        }
+      } else {
+        if (overlay && overlay.style.display === "none") {
+          if (this.spawner.hasMoreWaves()) {
+            this.wave++;
+            this.updateStats();
+            overlay.innerHTML = `<button class="menu-btn primary" onclick="startNextWave()"><span class="icon">▶</span> START NEXT WAVE</button>`;
+            overlay.style.display = "flex";
+          } else {
+            this.gameWin();
+          }
         }
       }
     }
@@ -1322,9 +1554,25 @@ class TowerDefenseGame {
     this.stop();
     Progression.addCores(this.sessionCores);
     const loseOverlay = document.getElementById("lose-overlay");
+    let extraMsg = "";
+    if (this.spawner && this.spawner.isInfinite) {
+      const maxInfiniteStr = localStorage.getItem("td_max_infinite_wave") || "1";
+      let maxInfinite = parseInt(maxInfiniteStr, 10);
+      if (this.wave > maxInfinite) {
+        maxInfinite = this.wave;
+        localStorage.setItem("td_max_infinite_wave", maxInfinite.toString());
+        extraMsg = `<div style="margin-top:10px; color:#ffea00; font-weight:bold;">NEW BEST ROUND: ${this.wave}!</div>`;
+      } else {
+        extraMsg = `<div style="margin-top:10px; color:#aaa;">Best Round: ${maxInfinite}</div>`;
+      }
+    }
     if (loseOverlay) {
       loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/(.*: \+\d+)/g, "");
-      loseOverlay.innerHTML += `<div style="margin-top:10px; color:#00ff88; font-weight:bold;">${t("cores_recovered")}: +${this.sessionCores}</div>`;
+      loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/NEW BEST ROUND.*|Best Round.*/g, "");
+      loseOverlay.innerHTML += `
+                <div style="margin-top:10px; color:#00ff88; font-weight:bold;">${t("cores_recovered")}: +${this.sessionCores}</div>
+                ${extraMsg}
+            `;
       loseOverlay.style.display = "flex";
     }
   }
@@ -1412,6 +1660,17 @@ window.showStageSelect = () => {
     }
     stageMenu.appendChild(btn);
   }
+  if (Progression.isInfiniteUnlocked()) {
+    const infBtn = document.createElement("button");
+    infBtn.className = "menu-btn primary";
+    infBtn.style.borderStyle = "dashed";
+    infBtn.style.borderColor = "#ff00ff";
+    infBtn.style.color = "#ff00ff";
+    const maxInf = localStorage.getItem("td_max_infinite_wave") || "1";
+    infBtn.innerHTML = `<span class="icon">♾️</span> ${t("stage")} INFINITE <span style="font-size:0.8em; opacity:0.8;">(Best: ${maxInf})</span>`;
+    infBtn.onclick = () => window.startGame("infinite");
+    stageMenu.appendChild(infBtn);
+  }
   const backBtn = document.createElement("button");
   backBtn.className = "menu-btn secondary";
   backBtn.innerText = t("btn_back");
@@ -1482,11 +1741,21 @@ function updateLaboratoryUI() {
                     <button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.upgradeTowerMeta('${tower.id}')">${t("btn_upgrade")} (🔮 ${cost})</button>
                 `;
       }
+      let tName = "tower_basic_blaster";
+      let tDesc = "tower_basic_desc";
+      if (tower.id === "HEAVY_CANNON") {
+        tName = "tower_heavy_cannon";
+        tDesc = "tower_heavy_desc";
+      }
+      if (tower.id === "PLASMA_NOVA") {
+        tName = "tower_plasma_nova";
+        tDesc = "tower_plasma_desc";
+      }
       towContainer.innerHTML += `
                 <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 style="margin:0; color: ${tower.presentation.color};">${t(tower.id === "BASIC_BLASTER" ? "tower_basic_blaster" : "tower_heavy_cannon")}</h3>
-                        <p style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">${t(tower.id === "BASIC_BLASTER" ? "tower_basic_desc" : "tower_heavy_desc")}</p>
+                        <h3 style="margin:0; color: ${tower.presentation.color};">${t(tName) || tower.id}</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">${t(tDesc) || ""}</p>
                     </div>
                     <div style="text-align: right; min-width: 120px;">
                         ${btnHtml}
@@ -1516,6 +1785,30 @@ function updateLaboratoryUI() {
                 </div>
             `;
     });
+    if (!Progression.isInfiniteUnlocked()) {
+      const unlockCost = 100;
+      const canAfford = cores >= unlockCost;
+      skillContainer.innerHTML += `
+                <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; border: 1px dashed #ff00ff; display: flex; justify-content: space-between; align-items: center; margin-top:20px;">
+                    <div>
+                        <h3 style="margin:0; color: #ff00ff;">♾️ INFINITE STAGE</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; color: #ff88ff;">Unlock the endless challenge mode</p>
+                    </div>
+                    <div style="text-align: right; min-width: 120px;">
+                        <button class="menu-btn ${canAfford ? "primary" : "secondary"}" style="margin:0; padding:8px;" onclick="window.unlockInfiniteMeta()">${t("btn_unlock")} (🔮 ${unlockCost})</button>
+                    </div>
+                </div>
+            `;
+    } else {
+      skillContainer.innerHTML += `
+                <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; border: 1px dashed #ff00ff; display: flex; justify-content: space-between; align-items: center; margin-top:20px;">
+                    <div>
+                        <h3 style="margin:0; color: #ff00ff;">♾️ INFINITE STAGE</h3>
+                        <p style="margin:5px 0 0 0; font-size: 0.9rem; color: #ff88ff;">Unlocked! Select it from the stage menu.</p>
+                    </div>
+                </div>
+            `;
+    }
   }
 }
 window.unlockTowerMeta = (towerId) => {
@@ -1526,6 +1819,9 @@ window.upgradeTowerMeta = (towerId) => {
 };
 window.upgradeSkillMeta = (skillId) => {
   if (Progression.upgradeSkill(skillId)) updateLaboratoryUI();
+};
+window.unlockInfiniteMeta = () => {
+  if (Progression.unlockInfinite()) updateLaboratoryUI();
 };
 window.onload = () => {
   updateCoresUI();

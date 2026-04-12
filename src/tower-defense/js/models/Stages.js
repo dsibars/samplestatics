@@ -71,5 +71,13 @@ export const STAGES = {
                 { type: STRONG_ENEMY, amount: 10, delayMs: 500, pathIndex: 0 }
             ]
         }
+    },
+    'infinite': {
+        scenarioId: 'SCENARIO_4_INFINITE',
+        startingMoney: 150,
+        isInfinite: true, // Marker to tell spawner to auto-generate
+        waves: {
+            1: [ { type: FAST_ENEMY, amount: 15, delayMs: 1000, pathIndex: 0 } ]
+        }
     }
 };

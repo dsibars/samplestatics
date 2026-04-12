@@ -32,6 +32,8 @@ export class TowerDefenseGame {
         this.gameStartTime = 0;
         this.sessionCores = 0;
         
+        this.infiniteWaveCountdown = 0; // State for infinite back count
+        
         this.resize();
         window.addEventListener('resize', () => this.resize());
         this.setupInputHandling();
@@ -253,6 +255,8 @@ export class TowerDefenseGame {
             stageConfig.waves,
             { difficulty: 1.0 }
         );
+        this.spawner.isInfinite = !!stageConfig.isInfinite;
+        this.infiniteWaveCountdown = 0;
 
         this.lastTime = performance.now();
         this.loop(this.lastTime);
@@ -319,7 +323,7 @@ export class TowerDefenseGame {
         // Update enemies (reverse loop to allow splice)
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
-            enemy.update(deltaTime); // passing deltatime for speed boost
+            enemy.update(deltaTime, this.enemies); // passing deltatime for speed boost & enemies array for healing
             
             if (enemy.reachedGoal) {
                 this.lives -= (enemy.stats.damage || 1);
@@ -349,13 +353,36 @@ export class TowerDefenseGame {
         // Check win condition for segmented wave
         if (this.spawner && this.spawner.isWaveFinished() && this.enemies.length === 0) {
             const overlay = document.getElementById('next-wave-overlay');
-            if (overlay && overlay.style.display === 'none') {
-                if (this.spawner.hasMoreWaves()) {
-                    this.wave++;
-                    this.updateStats();
-                    overlay.style.display = 'flex';
-                } else {
-                    this.gameWin();
+            if (this.spawner.isInfinite) {
+                // Infinite Mode: Countdown and launch
+                if (this.infiniteWaveCountdown <= 0 && (!overlay || overlay.style.display === 'none')) {
+                    this.infiniteWaveCountdown = 3000; // 3 seconds
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                        overlay.innerHTML = `<h3>${t('stat_wave')} ${this.wave + 1}... 3</h3>`;
+                    }
+                } else if (this.infiniteWaveCountdown > 0) {
+                    this.infiniteWaveCountdown -= deltaTime;
+                    if (overlay) {
+                        overlay.innerHTML = `<h3>${t('stat_wave')} ${this.wave + 1}... ${Math.ceil(this.infiniteWaveCountdown / 1000)}</h3>`;
+                    }
+                    if (this.infiniteWaveCountdown <= 0) {
+                        this.wave++;
+                        this.updateStats();
+                        this.startNextWave(); 
+                    }
+                }
+            } else {
+                // Normal Mode
+                if (overlay && overlay.style.display === 'none') {
+                    if (this.spawner.hasMoreWaves()) {
+                        this.wave++;
+                        this.updateStats();
+                        overlay.innerHTML = `<button class="menu-btn primary" onclick="startNextWave()"><span class="icon">▶</span> START NEXT WAVE</button>`;
+                        overlay.style.display = 'flex';
+                    } else {
+                        this.gameWin();
+                    }
                 }
             }
         }
@@ -436,9 +463,28 @@ export class TowerDefenseGame {
         this.stop();
         Progression.addCores(this.sessionCores);
         const loseOverlay = document.getElementById('lose-overlay');
+        
+        let extraMsg = '';
+        if (this.spawner && this.spawner.isInfinite) {
+            // Check best rounds
+            const maxInfiniteStr = localStorage.getItem('td_max_infinite_wave') || '1';
+            let maxInfinite = parseInt(maxInfiniteStr, 10);
+            if (this.wave > maxInfinite) {
+                maxInfinite = this.wave;
+                localStorage.setItem('td_max_infinite_wave', maxInfinite.toString());
+                extraMsg = `<div style="margin-top:10px; color:#ffea00; font-weight:bold;">NEW BEST ROUND: ${this.wave}!</div>`;
+            } else {
+                extraMsg = `<div style="margin-top:10px; color:#aaa;">Best Round: ${maxInfinite}</div>`;
+            }
+        }
+        
         if (loseOverlay) {
             loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/(.*: \+\d+)/g, ''); // Clear old
-            loseOverlay.innerHTML += `<div style="margin-top:10px; color:#00ff88; font-weight:bold;">${t('cores_recovered')}: +${this.sessionCores}</div>`;
+            loseOverlay.innerHTML = loseOverlay.innerHTML.replace(/NEW BEST ROUND.*|Best Round.*/g, '');
+            loseOverlay.innerHTML += `
+                <div style="margin-top:10px; color:#00ff88; font-weight:bold;">${t('cores_recovered')}: +${this.sessionCores}</div>
+                ${extraMsg}
+            `;
             loseOverlay.style.display = 'flex';
         }
     }
