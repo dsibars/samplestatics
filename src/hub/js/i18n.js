@@ -9,6 +9,8 @@ export const TRANSLATIONS = {
     app_todo_desc: "Gestor sencillo de tareas diarias para un enfoque profesional.",
     app_td_title: "Defensa de la Torre",
     app_td_desc: "Juego épico de estrategia y oleadas para poner a prueba tus defensas.",
+    app_rpg_title: "RPG Idle",
+    app_rpg_desc: "Recluta héroes y embárcate en una aventura sin fin.",
     static_badge: "App Estática",
     lang: "Idioma"
   },
@@ -22,6 +24,8 @@ export const TRANSLATIONS = {
     app_todo_desc: "Simple daily task manager for professional focus.",
     app_td_title: "Tower Defense",
     app_td_desc: "Epic strategy and wave game to test your tactical defenses.",
+    app_rpg_title: "RPG Idle",
+    app_rpg_desc: "Recruit heroes and embark on an endless adventure.",
     static_badge: "Static App",
     lang: "Language"
   },

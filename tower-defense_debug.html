@@ -1335,15 +1335,23 @@ class TowerDefenseGame {
     info.className = "tower-status-info";
     info.innerHTML = `
             <div class="tower-opt-header">
-                <span>${type.name}</span>
+                <span style="font-size: 1.2rem; color: var(--primary);">${type.name}</span>
             </div>
-            <div class="tower-opt-desc">${type.description}</div>
-            <div class="tower-opt-stats" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
-                <div>${t("stats_damage")}: ${tower.stats.damage}</div>
-                <div>${t("stats_range")}: ${tower.stats.range}</div>
-                <div>${t("stats_cooldown")}: ${tower.stats.cooldownMs}ms</div>
-                <div style="color: #00f2ff; margin-top: 5px;">${t("tower_kills")}: ${tower.kills}</div>
-                <div style="color: #00f2ff;">${t("tower_damage_done")}: ${Math.floor(tower.damageDealt)}</div>
+            <div class="tower-opt-desc" style="margin-bottom: 12px;">${type.description}</div>
+            <div class="tower-opt-stats" style="display: flex; flex-direction: column; gap: 4px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>${t("stats_damage")} ${tower.stats.damage}</span>
+                    <span>${t("stats_range")} ${tower.stats.range}</span>
+                    <span>${t("stats_cooldown")} ${tower.stats.cooldownMs}ms</span>
+                </div>
+                <div style="color: var(--primary); margin-top: 8px; font-weight: 600; display: flex; justify-content: space-between;">
+                    <span>${t("tower_kills")}</span>
+                    <span id="status-kills">${tower.kills}</span>
+                </div>
+                <div style="color: var(--primary); font-weight: 600; display: flex; justify-content: space-between;">
+                    <span>${t("tower_damage_done")}</span>
+                    <span id="status-damage">${Math.floor(tower.damageDealt)}</span>
+                </div>
             </div>
         `;
     content.appendChild(info);
@@ -1506,10 +1514,10 @@ class TowerDefenseGame {
   }
   update(deltaTime) {
     if (this.statusTower) {
-      const killsEl = document.querySelector(".tower-opt-stats div:nth-child(4)");
-      const dmgEl = document.querySelector(".tower-opt-stats div:nth-child(5)");
-      if (killsEl) killsEl.innerText = `${t("tower_kills")}: ${this.statusTower.kills}`;
-      if (dmgEl) dmgEl.innerText = `${t("tower_damage_done")}: ${Math.floor(this.statusTower.damageDealt)}`;
+      const killsEl = document.getElementById("status-kills");
+      const dmgEl = document.getElementById("status-damage");
+      if (killsEl) killsEl.innerText = this.statusTower.kills;
+      if (dmgEl) dmgEl.innerText = Math.floor(this.statusTower.damageDealt);
     }
     if (this.spawner) {
       const newEnemies = this.spawner.update(deltaTime);

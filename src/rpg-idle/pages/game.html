@@ -1,0 +1,45 @@
+<div id="view-game" class="view">
+    <div class="game-header">
+        <button class="back-btn" onclick="window.showMenu()">← <span data-i18n="btn_quit">QUIT</span></button>
+        <div class="game-stats">
+            <span id="combat-milestone">Milestone: 0</span>
+        </div>
+    </div>
+
+    <div class="combat-container" style="flex: 1; display: flex; flex-direction: column; background: #111; position: relative; overflow: hidden;">
+        <canvas id="combatCanvas" style="width: 100%; flex: 1;"></canvas>
+
+        <!-- Combat Log -->
+        <div id="combat-log" style="height: 100px; background: rgba(0,0,0,0.5); font-size: 0.8rem; padding: 10px; overflow-y: auto; border-top: 1px solid #444;">
+        </div>
+
+        <!-- Action Panel -->
+        <div id="action-panel" style="height: 120px; background: #222; padding: 10px; display: none; flex-direction: column; gap: 10px;">
+            <div id="active-hero-name" style="color: var(--primary); font-weight: bold; font-size: 0.9rem;">Hero Name's Turn</div>
+            <div style="display: flex; gap: 10px;">
+                <div id="skill-buttons" style="flex: 1; display: flex; gap: 5px;">
+                    <!-- Skill buttons -->
+                </div>
+                <div id="item-buttons" style="flex: 1; display: flex; gap: 5px;">
+                    <!-- Item buttons -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlays -->
+    <div id="win-overlay" class="game-overlay" style="display: none; flex-direction: column; gap: 20px;">
+        <h2 style="color: var(--success); font-size: 2.5rem;">VICTORY!</h2>
+        <div id="victory-rewards" style="text-align: center; color: #fff;">
+        </div>
+        <button class="menu-btn primary" onclick="window.nextCombat()">CONTINUE</button>
+    </div>
+
+    <div id="lose-overlay" class="game-overlay" style="display: none; flex-direction: column; gap: 20px;">
+        <h2 style="color: var(--danger); font-size: 2.5rem;">DEFEAT</h2>
+        <p>Your heroes were defeated.</p>
+        <div id="defeat-rewards" style="text-align: center; color: #fff;">
+        </div>
+        <button class="menu-btn primary" onclick="window.showMenu()">RETURN TO MENU</button>
+    </div>
+</div>
