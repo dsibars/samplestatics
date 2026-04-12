@@ -7,8 +7,11 @@
                 <div class="setting-item">
                     <label data-i18n="lang">Language</label>
                     <select id="lang-selector" onchange="window.changeLanguage()">
-                        <option value="en">English</option>
                         <option value="es">Español</option>
+                        <option value="en">English</option>
+                        <option value="ca">Català</option>
+                        <option value="eu">Euskara</option>
+                        <option value="gl">Galego</option>
                     </select>
                 </div>
             </div>
@@ -16,6 +19,9 @@
             <div class="menu-actions">
                 <button class="menu-btn secondary" onclick="window.clearGameData()" style="color: var(--danger); border-color: var(--danger); margin-bottom: 20px;">
                     WIPE DATA
+                </button>
+                <button class="menu-btn secondary" onclick="window.location.href='../index.html'" style="margin-bottom: 20px;">
+                    <span data-i18n="btn_hub">MAIN HUB</span>
                 </button>
                 <button class="menu-btn primary" onclick="window.showMenu()">
                     <span data-i18n="btn_back">BACK</span>

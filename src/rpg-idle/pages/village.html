@@ -9,13 +9,13 @@
 
     <div class="village-container" style="flex: 1; padding: 20px; overflow-y: auto;">
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <button id="tab-tavern" class="menu-btn primary" onclick="window.switchVillageTab('tavern')">Tavern</button>
-            <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')">Shop</button>
-            <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')">Upgrades</button>
+            <button id="tab-tavern" class="menu-btn primary" onclick="window.switchVillageTab('tavern')" data-i18n="hero_roster">Hero Roster</button>
+            <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')" data-i18n="shop_title">Shop</button>
+            <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')" data-i18n="upgrades_title">Upgrades</button>
         </div>
 
         <div id="village-content-tavern" class="village-tab-content">
-            <h2 data-i18n="tavern_title">Recruit Heroes</h2>
+            <h2 data-i18n="roster_title">Hero Roster</h2>
             <div id="tavern-hero-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                 <!-- Hero cards will be injected here -->
             </div>

@@ -5,92 +5,113 @@ export class Hero {
         this.name = data.name;
         this.level = data.level || 1;
         this.exp = data.exp || 0;
+        this.statPoints = data.statPoints || 0;
+        this.skillPoints = data.skillPoints || 0;
 
         // Base stats + permanent boosts
         const boosts = Progression.prog.upgrades || {};
-        this.maxHp = data.maxHp + (boosts.hp_boost || 0) * 10;
+        
+        this.baseMaxHp = data.baseMaxHp || data.maxHp || 10;
+        this.maxHp = this.baseMaxHp + (boosts.hp_boost || 0) * 10;
         this.hp = data.hp ?? this.maxHp;
-        this.maxMp = data.maxMp;
-        this.mp = data.mp ?? data.maxMp;
-        this.strength = data.strength + (boosts.attack_boost || 0);
-        this.speed = data.speed;
-        this.defense = data.defense + (boosts.defense_boost || 0);
-        this.magicPower = data.magicPower;
+        
+        this.baseMaxMp = data.baseMaxMp || data.maxMp || 5;
+        this.maxMp = this.baseMaxMp;
+        this.mp = data.mp ?? this.maxMp;
+        
+        this.baseStrength = data.baseStrength || data.strength || 1;
+        this.strength = this.baseStrength + (boosts.attack_boost || 0);
+        
+        this.baseSpeed = data.baseSpeed || data.speed || 1;
+        this.speed = this.baseSpeed;
+        
+        this.baseDefense = data.baseDefense || data.defense || 1;
+        this.defense = this.baseDefense + (boosts.defense_boost || 0);
+        
+        this.baseMagicPower = data.baseMagicPower || data.magicPower || 1;
+        this.magicPower = this.baseMagicPower;
+        
+        // skills is now an object { skill_id: level }
+        this.skills = data.skills;
+        if (Array.isArray(this.skills)) {
+            // Migration if old data exists
+            const skillMap = {};
+            this.skills.forEach(id => skillMap[id] = 0);
+            this.skills = skillMap;
+        } else if (!this.skills || typeof this.skills !== 'object') {
+            this.skills = { basic_attack: 0 };
+        }
 
-        this.skills = data.skills || ['basic_attack'];
-        this.type = data.type || 'warrior'; // 'warrior' or 'mage'-like
+        this.origin = data.origin || 'origin_warrior_frustrated';
     }
 
     static generateRandom(level = 1) {
-        const types = ['warrior', 'mage'];
-        const type = types[Math.floor(Math.random() * types.length)];
-        const names = {
-            warrior: ['Alaric', 'Kaelen', 'Thorne', 'Valerius'],
-            mage: ['Elowen', 'Zephyr', 'Ione', 'Thalric']
-        };
-        const name = names[type][Math.floor(Math.random() * names[type].length)];
+        const names = ['Alaric', 'Kaelen', 'Thorne', 'Valerius', 'Elowen', 'Zephyr', 'Ione', 'Thalric'];
+        const name = names[Math.floor(Math.random() * names.length)];
+        
+        const origins = [
+            'origin_clown', 'origin_warrior_frustrated', 'origin_thief_bored', 
+            'origin_cook_angry', 'origin_farmer_lost', 'origin_guard_lazy', 
+            'origin_monk_silent', 'origin_poet_sad'
+        ];
+        const origin = origins[Math.floor(Math.random() * origins.length)];
 
         let stats = {
             name,
+            origin,
             level,
-            type,
-            exp: 0
+            exp: 0,
+            statPoints: (level - 1) * 2,
+            skillPoints: (level - 1) * 1,
+            baseMaxHp: 10 + (level - 1) * 5,
+            baseMaxMp: 5 + (level - 1) * 2,
+            baseStrength: 1,
+            baseSpeed: 1,
+            baseDefense: 1,
+            baseMagicPower: 1,
+            skills: { basic_attack: 0 }
         };
-
-        if (type === 'warrior') {
-            stats.maxHp = 100 + (level * 20);
-            stats.maxMp = 20 + (level * 5);
-            stats.strength = 15 + (level * 3);
-            stats.speed = 10 + (level * 1);
-            stats.defense = 10 + (level * 2);
-            stats.magicPower = 5 + (level * 1);
-            stats.skills = ['basic_attack', 'double_attack'];
-        } else {
-            stats.maxHp = 60 + (level * 10);
-            stats.maxMp = 60 + (level * 15);
-            stats.strength = 5 + (level * 1);
-            stats.speed = 12 + (level * 1.5);
-            stats.defense = 5 + (level * 1);
-            stats.magicPower = 15 + (level * 4);
-            stats.skills = ['basic_attack', 'basic_ice_ball'];
-        }
 
         return new Hero(stats);
     }
 
     gainExp(amount) {
         this.exp += amount;
-        const nextLevelExp = this.level * 100;
+        const nextLevelExp = this.level * 20;
         if (this.exp >= nextLevelExp) {
             this.levelUp();
+            return true;
         }
+        return false;
     }
 
     levelUp() {
         this.level++;
         this.exp = 0;
-        if (this.type === 'warrior') {
-            this.maxHp += 20;
-            this.maxMp += 5;
-            this.strength += 3;
-            this.speed += 1;
-            this.defense += 2;
-            this.magicPower += 1;
-        } else {
-            this.maxHp += 10;
-            this.maxMp += 15;
-            this.strength += 1;
-            this.speed += 1.5;
-            this.defense += 1;
-            this.magicPower += 4;
-        }
+        this.statPoints += 2;
+        this.skillPoints += 1;
         this.hp = this.maxHp;
         this.mp = this.maxMp;
     }
 
+    recalculateStats() {
+        const boosts = Progression.prog.upgrades || {};
+        // Stat point efficiency: HP +3, MP +2
+        this.maxHp = this.baseMaxHp + (boosts.hp_boost || 0) * 10;
+        this.maxMp = this.baseMaxMp;
+        this.strength = this.baseStrength + (boosts.attack_boost || 0);
+        this.speed = this.baseSpeed;
+        this.defense = this.baseDefense + (boosts.defense_boost || 0);
+        this.magicPower = this.baseMagicPower;
+        
+        // Ensure current HP/MP don't exceed max
+        this.hp = Math.min(this.hp, this.maxHp);
+        this.mp = Math.min(this.mp, this.maxMp);
+    }
+
     draw(ctx, x, y, isTurn) {
         // Draw Hero as a square
-        ctx.fillStyle = this.type === 'warrior' ? '#0af' : '#a0f';
+        ctx.fillStyle = '#0af';
         if (this.hp <= 0) ctx.fillStyle = '#444';
         ctx.fillRect(x - 20, y - 20, 40, 40);
 
@@ -124,16 +145,18 @@ export class Hero {
             name: this.name,
             level: this.level,
             exp: this.exp,
-            maxHp: this.maxHp,
+            statPoints: this.statPoints,
+            skillPoints: this.skillPoints,
+            baseMaxHp: this.baseMaxHp,
             hp: this.hp,
-            maxMp: this.maxMp,
+            baseMaxMp: this.baseMaxMp,
             mp: this.mp,
-            strength: this.strength,
-            speed: this.speed,
-            defense: this.defense,
-            magicPower: this.magicPower,
+            baseStrength: this.baseStrength,
+            baseSpeed: this.baseSpeed,
+            baseDefense: this.baseDefense,
+            baseMagicPower: this.baseMagicPower,
             skills: this.skills,
-            type: this.type
+            origin: this.origin
         };
     }
 }

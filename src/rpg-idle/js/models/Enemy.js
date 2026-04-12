@@ -5,12 +5,12 @@ export class Enemy {
         this.isBoss = isBoss;
 
         const mult = isBoss ? 3 : 1;
-        this.maxHp = (50 + (level * 15)) * mult;
+        this.maxHp = (4 + (level * 4)) * mult;
         this.hp = this.maxHp;
-        this.strength = (8 + (level * 2)) * mult;
-        this.speed = (8 + (level * 1)) * (isBoss ? 1.2 : 1);
-        this.defense = (5 + (level * 1.5)) * mult;
-        this.magicPower = (5 + (level * 1.5)) * mult;
+        this.strength = (1.5 + (level * 1.5)) * mult;
+        this.speed = (4 + (level * 1)) * (isBoss ? 1.2 : 1);
+        this.defense = (level * 0.5) * mult;
+        this.magicPower = (level * 0.5) * mult;
     }
 
     static generate(level, milestone) {

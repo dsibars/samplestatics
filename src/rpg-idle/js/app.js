@@ -2,6 +2,7 @@ import { RPGGame } from './game.js';
 import { applyTranslations, changeLanguage, t } from './i18n.js';
 import { Progression } from './models/Progression.js';
 import { Hero } from './models/Hero.js';
+import { SKILLS_DATA } from './constants.js';
 
 let game = null;
 
@@ -36,7 +37,12 @@ window.startAdventure = () => {
     game.startAdventure();
 };
 
+let lastNextCombatTime = 0;
 window.nextCombat = () => {
+    if (performance.now() - lastNextCombatTime < 500) return;
+    if (game && game.popupOpenTime && performance.now() - game.popupOpenTime < 300) return;
+    lastNextCombatTime = performance.now();
+    
     document.getElementById('win-overlay').style.display = 'none';
     document.getElementById('combat-log').innerHTML = '';
     if (game) game.nextCombat();
@@ -71,11 +77,12 @@ function updateVillageUI() {
     // Show current heroes
     Progression.prog.heroes.forEach((h, i) => {
         const card = document.createElement('div');
-        card.style = 'background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444;';
+        card.style = 'background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444; cursor: pointer;';
+        card.onclick = () => window.showHeroDetails(i);
         card.innerHTML = `
             <div style="font-weight:bold;">${h.name}</div>
-            <div style="font-size:0.8rem; color:#aaa;">Lvl ${h.level} ${h.type}</div>
-            <div style="font-size:0.7rem; color:#aaa;">HP: ${h.maxHp} ATK: ${h.strength}</div>
+            <div style="font-size:0.8rem; color:#aaa;">Lvl ${h.level} ${t(h.origin)}</div>
+            <div style="font-size:0.7rem; color:#aaa;">${t('stat_hp')}: ${h.baseMaxHp} ${t('stat_attack').toUpperCase()}: ${h.baseStrength} | SP: ${h.statPoints}</div>
         `;
         tavernList.appendChild(card);
     });
@@ -86,7 +93,7 @@ function updateVillageUI() {
         const cost = 50 + (Progression.prog.heroes.length * 50);
         recruitCard.style = 'background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center;';
         recruitCard.innerHTML = `
-            <div style="font-weight:bold; color:var(--primary);">Recruit New Hero</div>
+            <div style="font-weight:bold; color:var(--primary);">${t('recruit_new')}</div>
             <div style="margin: 5px 0;">💰 ${cost}</div>
             <button class="menu-btn primary" style="padding: 5px 15px; font-size:0.8rem;" onclick="window.recruitHero(${cost})">${t('btn_recruit')}</button>
         `;
@@ -107,7 +114,7 @@ function updateVillageUI() {
         itemRow.innerHTML = `
             <div>
                 <div style="font-weight:bold;">${t(item.id)}</div>
-                <div style="font-size:0.8rem; color:#aaa;">Owned: ${Progression.prog.inventory[item.id] || 0}</div>
+                <div style="font-size:0.8rem; color:#aaa;">${t('owned')}: ${Progression.prog.inventory[item.id] || 0}</div>
             </div>
             <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyItem('${item.id}', ${item.cost})">💰 ${item.cost}</button>
         `;
@@ -127,7 +134,7 @@ function updateVillageUI() {
         upgradeRow.innerHTML = `
             <div>
                 <div style="font-weight:bold;">${t(upId)}</div>
-                <div style="font-size:0.8rem; color:#aaa;">Level: ${level}</div>
+                <div style="font-size:0.8rem; color:#aaa;">${t('level_label')}: ${level}</div>
             </div>
             <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyUpgrade('${upId}')">🔮 ${cost}</button>
         `;
@@ -146,11 +153,173 @@ window.recruitHero = (cost) => {
     }
 };
 
+window.currentHeroIndex = -1;
+
+window.showHeroDetails = (index) => {
+    window.currentHeroIndex = index;
+    const heroData = Progression.prog.heroes[index];
+    if (!heroData) return;
+
+    document.getElementById('hero-details-name').innerText = heroData.name;
+    document.getElementById('hero-details-sp').innerText = heroData.statPoints;
+    
+    // Update EXP Bar
+    const nextLevelExp = heroData.level * 20;
+    const expPercent = Math.min(100, (heroData.exp / nextLevelExp) * 100);
+    document.getElementById('hero-details-exp-text').innerText = `${heroData.exp} / ${nextLevelExp} EXP`;
+    document.getElementById('hero-details-exp-bar').style.width = expPercent + '%';
+
+    // Translation labels
+    document.getElementById('label-sp').innerText = t('stat_points') + ':';
+
+    const statsContainer = document.getElementById('hero-stats-container');
+    statsContainer.innerHTML = '';
+    
+    const stats = [
+        { id: 'baseMaxHp', label: t('stat_hp'), val: heroData.baseMaxHp },
+        { id: 'baseMaxMp', label: t('stat_mp'), val: heroData.baseMaxMp },
+        { id: 'baseStrength', label: t('stat_attack'), val: heroData.baseStrength },
+        { id: 'baseSpeed', label: t('stat_speed'), val: heroData.baseSpeed },
+        { id: 'baseDefense', label: t('stat_defense'), val: heroData.baseDefense },
+        { id: 'baseMagicPower', label: t('stat_magic'), val: heroData.baseMagicPower }
+    ];
+
+    stats.forEach(st => {
+        const row = document.createElement('div');
+        row.style = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px;';
+        
+        const canUpgrade = heroData.statPoints > 0;
+        
+        row.innerHTML = `
+            <div><span style="font-weight:bold; color: #aaa;">${st.label}:</span> <span style="font-size:1.1rem; color:white;">${st.val}</span></div>
+            <button class="menu-btn ${canUpgrade ? 'primary' : 'secondary'}" style="padding: 5px 15px; width: 40px;" ${canUpgrade ? '' : 'disabled'} onclick="window.increaseStat(${index}, '${st.id}')">+</button>
+        `;
+        statsContainer.appendChild(row);
+    });
+
+    showView('view-hero-details');
+};
+
+window.increaseStat = (index, statId) => {
+    const heroData = Progression.prog.heroes[index];
+    if (heroData && heroData.statPoints > 0) {
+        heroData.statPoints--;
+        
+        // Efficiency: HP +3, MP +2, rest +1
+        const gain = statId === 'baseMaxHp' ? 3 : (statId === 'baseMaxMp' ? 2 : 1);
+        heroData[statId] = (heroData[statId] || 0) + gain;
+        
+        if (statId === 'baseMaxHp') heroData.hp += 3;
+        if (statId === 'baseMaxMp') heroData.mp += 2;
+
+        Progression.updateHero(index, heroData);
+        window.showHeroDetails(index);
+    }
+};
+
+window.currentSkillTab = 'physical';
+
+window.switchSkillTab = (tab) => {
+    window.currentSkillTab = tab;
+    const tabs = ['physical', 'magic', 'tricker', 'support'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`skill-tab-${t}`);
+        if (btn) btn.className = tab === t ? 'menu-btn primary' : 'menu-btn secondary';
+    });
+    window.showHeroSkills();
+};
+
+window.showHeroSkills = (index) => {
+    if (index === undefined) index = window.currentHeroIndex;
+    
+    const heroData = Progression.prog.heroes[index];
+    if (!heroData) return;
+
+    document.getElementById('hero-skills-sp').innerText = heroData.skillPoints;
+    document.getElementById('label-skills-sp').innerText = t('skill_points') + ':';
+
+    const skillsContainer = document.getElementById('hero-skills-container');
+    skillsContainer.innerHTML = '';
+    
+    const categorySkills = Object.values(SKILLS_DATA).filter(sk => sk.category === window.currentSkillTab);
+
+    categorySkills.forEach(sk => {
+        const currentLevel = heroData.skills[sk.id];
+        const isUnlocked = currentLevel !== undefined;
+        
+        // Visibility checklist
+        let isVisible = false;
+        if (sk.tier === 1) isVisible = true;
+        else if (sk.dependency && heroData.skills[sk.dependency] !== undefined) isVisible = true;
+
+        if (!isVisible) return;
+
+        const row = document.createElement('div');
+        row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px;';
+        
+        let actionHTML = '';
+        if (!isUnlocked) {
+            const canAfford = heroData.skillPoints >= sk.unlockCost;
+            actionHTML = `
+                <div style="display:flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.8rem; color: #aaa;">${t(sk.id + '_desc')}</div>
+                    <button class="menu-btn ${canAfford ? 'primary' : 'secondary'}" style="padding: 5px 15px;" ${canAfford ? '' : 'disabled'} onclick="window.learnSkill(${index}, '${sk.id}', true)">${t('learn_skill_btn')} (${sk.unlockCost} SP)</button>
+                </div>
+            `;
+        } else {
+            const multiplier = 1.0 + (0.005 * sk.tier * currentLevel);
+            const enhanceCost = Math.max(1, sk.tier * currentLevel);
+            const canEnhance = heroData.skillPoints >= enhanceCost;
+            actionHTML = `
+                <div style="display:flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <div style="font-size: 0.8rem; color: #aaa;">${t(sk.id + '_desc')}</div>
+                        <div style="font-size: 0.8rem; color: #0af;">${t('level_label')} ${currentLevel} (+${((multiplier - 1) * 100).toFixed(1)}%)</div>
+                    </div>
+                    <button class="menu-btn ${canEnhance ? 'primary' : 'secondary'}" style="padding: 5px 15px; margin-left: 10px;" ${canEnhance ? '' : 'disabled'} onclick="window.learnSkill(${index}, '${sk.id}', false)">${t('enhance')} (${enhanceCost} SP)</button>
+                </div>
+            `;
+        }
+
+        row.innerHTML = `
+            <div style="font-weight:bold; color: white; margin-bottom: 5px;">${t(sk.id)} <span style="font-size:0.7rem; color:#888;">Tier ${sk.tier}</span></div>
+            ${actionHTML}
+        `;
+        skillsContainer.appendChild(row);
+    });
+
+    showView('view-hero-skills');
+};
+
+window.learnSkill = (index, skillId, isUnlock) => {
+    const heroData = Progression.prog.heroes[index];
+    const skillData = SKILLS_DATA[skillId];
+    if (!heroData || !skillData) return;
+
+    if (isUnlock) {
+        if (heroData.skillPoints >= skillData.unlockCost) {
+            heroData.skillPoints -= skillData.unlockCost;
+            heroData.skills[skillId] = 0;
+            Progression.updateHero(index, heroData);
+            window.showHeroSkills(index);
+        }
+    } else {
+        const currentLevel = heroData.skills[skillId];
+        const enhanceCost = Math.max(1, skillData.tier * currentLevel);
+        if (heroData.skillPoints >= enhanceCost) {
+            heroData.skillPoints -= enhanceCost;
+            heroData.skills[skillId]++;
+            Progression.updateHero(index, heroData);
+            window.showHeroSkills(index);
+        }
+    }
+};
+
 window.buyUpgrade = (upgradeId) => {
     if (Progression.buyUpgrade(upgradeId)) {
         updateVillageUI();
     } else {
-        alert('Not enough Cores!');
+        alert(t('not_enough_cores'));
     }
 };
 
@@ -168,7 +337,7 @@ window.buyItem = (itemId, cost) => {
 
 window.showSettings = () => {
     showView('view-settings');
-    document.getElementById('lang-selector').value = localStorage.getItem('rpg_lang') || 'en';
+    document.getElementById('lang-selector').value = localStorage.getItem('static_apps_lang') || 'en';
 };
 
 window.changeLanguage = () => {
@@ -176,12 +345,37 @@ window.changeLanguage = () => {
 };
 
 window.clearGameData = () => {
-    if (confirm('Are you sure you want to completely wipe your progression?')) {
+    if (confirm(t('confirm_wipe'))) {
         localStorage.removeItem('rpg_cores');
         localStorage.removeItem('rpg_progression');
         Progression.loadState();
-        alert('Data wiped successfully!');
+        alert(t('wipe_success'));
         window.showMenu();
+    }
+};
+
+window.toggleAutoBattle = (checked) => {
+    localStorage.setItem('rpg_autobattle', checked ? 'true' : 'false');
+    if (game) {
+        game.autoBattle = checked;
+        if (checked && game.currentCombat && !game.currentCombat.isCombatOver) {
+            const participant = game.currentCombat.turnOrder[game.currentCombat.currentTurnIndex];
+            if (participant && game.heroes.includes(participant)) {
+                game.currentCombat.heroAutoTurn(participant);
+            }
+        }
+    }
+};
+
+window.toggleCombatLog = () => {
+    const logOverlay = document.getElementById('combat-log');
+    const toggleText = document.getElementById('log-toggle-text');
+    if (logOverlay.style.display === 'none' || logOverlay.style.display === '') {
+        logOverlay.style.display = 'block';
+        toggleText.innerText = t('hide_logs') || 'Hide Logs';
+    } else {
+        logOverlay.style.display = 'none';
+        toggleText.innerText = t('show_logs') || 'Show Logs';
     }
 };
 
@@ -202,3 +396,10 @@ window.switchVillageTab = switchVillageTab;
 window.recruitHero = recruitHero;
 window.buyItem = buyItem;
 window.clearGameData = clearGameData;
+window.toggleAutoBattle = toggleAutoBattle;
+window.toggleCombatLog = toggleCombatLog;
+window.showHeroDetails = showHeroDetails;
+window.increaseStat = increaseStat;
+window.showHeroSkills = showHeroSkills;
+window.learnSkill = learnSkill;
+window.switchSkillTab = switchSkillTab;

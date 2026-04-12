@@ -13,6 +13,7 @@ It is designed to be hosted directly on GitHub Pages and accessed seamlessly fro
 3. **PWA / Offline First**: Because there is no backend, the applications are built to function offline. 
 4. **Data Persistence**: `localStorage` is our primary storage mechanism. Features like JSON Import/Export are critical for users to retain or move their data between devices.
 5. **App Structure**: The repository contains a central `hub` application and several independent applications (Workout Tracker, Money Tracker, Todo List, Tower Defense) located within the `src/` directory.
+6. **Mobile Popup Handlers**: When creating overlay dialogs or popups that handle tap/click events, you must implement a debounce or time check (e.g., `if (performance.now() - this.popupOpenTime < 300) return;`) to prevent accidental double-tap selections when tapping the canvas or background on mobile.
 
 ## Build and Execution Process
 

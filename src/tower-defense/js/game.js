@@ -169,6 +169,7 @@ export class TowerDefenseGame {
         const refund = Math.floor(type.cost * 0.7);
         sellBtn.innerHTML = `${t('btn_remove_tower')} (+💰${refund})`;
         sellBtn.onclick = () => {
+            if (performance.now() - this.popupOpenTime < 300) return;
             this.sellTower(tower);
         };
         content.appendChild(sellBtn);
