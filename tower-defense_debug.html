@@ -367,14 +367,22 @@ class Enemy {
     }
   }
   takeDamage(amo) {
-    if (this.isDead) return;
+    if (this.isDead) return { damageTaken: 0, killed: false };
+    const initialHp = this.stats.hp;
     this.stats.hp -= amo;
+    let killed = false;
     if (this.stats.hp <= 0) {
+      Math.abs(this.stats.hp);
       this.stats.hp = 0;
       this.isDead = true;
+      killed = true;
     } else if (this.stats.burstDuration) {
       this.speedBoostTimer = this.stats.burstDuration;
     }
+    return {
+      damageTaken: initialHp - this.stats.hp,
+      killed
+    };
   }
   update(deltaTime = 16, allEnemies = []) {
     if (this.isDead) return;
@@ -564,32 +572,32 @@ class EnemySpawner {
     this.waveIsActive = true;
     this.remainingInRound = this.activeSequence.length > 0 ? this.activeSequence[0].amount : 0;
     if (this.isInfinite) {
-      this.adjustments.difficultyMult = 1 + waveNum * 0.05;
-      this.adjustments.speedMult = Math.min(2, 1 + waveNum * 0.02);
+      this.adjustments.difficultyMult = 1 + waveNum * 0.12;
+      this.adjustments.speedMult = Math.min(2.5, 1 + waveNum * 0.04);
     }
     return true;
   }
   generateInfiniteWave(waveNum) {
     const seq = [];
-    const numBatches = 1 + Math.floor(waveNum / 3);
+    const numBatches = 1 + Math.floor(waveNum / 2);
     for (let i = 0; i < numBatches; i++) {
       const rand = Math.random();
       let type = FAST_ENEMY;
-      let delay = 800 - waveNum * 10;
-      delay = Math.max(200, delay);
-      let amount = 10 + Math.floor(waveNum * 1.5);
-      if (waveNum > 2 && rand > 0.4) {
+      let delay = 700 - waveNum * 15;
+      delay = Math.max(100, delay);
+      let amount = 12 + Math.floor(waveNum * 2);
+      if (waveNum > 2 && rand > 0.3) {
         type = ADAPTIVE_ENEMY;
-        amount = Math.floor(amount * 0.7);
-        delay += 300;
+        amount = Math.floor(amount * 0.8);
+        delay += 200;
       }
-      if (waveNum > 5 && rand > 0.7) {
+      if (waveNum > 4 && rand > 0.6) {
         type = STRONG_ENEMY;
-        amount = Math.floor(amount * 0.3);
-        delay += 800;
+        amount = Math.floor(amount * 0.4);
+        delay += 500;
       }
-      if (waveNum >= 15 && i === numBatches - 1) {
-        seq.push({ type: HEALER_ENEMY, amount: 1 + Math.floor(waveNum / 10), delayMs: 1500, pathIndex: 0 });
+      if (waveNum >= 10 && (rand > 0.8 || i === numBatches - 1)) {
+        seq.push({ type: HEALER_ENEMY, amount: 1 + Math.floor(waveNum / 8), delayMs: 1200, pathIndex: 0 });
       }
       seq.unshift({ type, amount, delayMs: delay, pathIndex: 0 });
     }
@@ -740,6 +748,8 @@ class Tower {
     this.fireTarget = null;
     this.fireTimer = 0;
     this.fireMaxTimer = 0;
+    this.kills = 0;
+    this.damageDealt = 0;
   }
   update(deltaTime, enemies) {
     if (this.cooldownTimer > 0) {
@@ -765,7 +775,9 @@ class Tower {
         const dy = enemy.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist <= this.rangePixels) {
-          enemy.takeDamage(this.stats.damage);
+          const result = enemy.takeDamage(this.stats.damage);
+          this.damageDealt += result.damageTaken;
+          if (result.killed) this.kills++;
           hitCount++;
         }
       }
@@ -804,7 +816,9 @@ class Tower {
       this.currentTarget = bestTarget;
     }
     if (this.currentTarget) {
-      this.currentTarget.takeDamage(this.stats.damage);
+      const result = this.currentTarget.takeDamage(this.stats.damage);
+      this.damageDealt += result.damageTaken;
+      if (result.killed) this.kills++;
       this.cooldownTimer = this.stats.cooldownMs;
       this.isFiring = true;
       this.fireTarget = this.currentTarget;
@@ -904,7 +918,10 @@ const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "¿Quieres volver al menú principal? Se guardarán los núcleos obtenidos.",
     btn_return_menu: "VOLVER AL MENÚ",
-    btn_continue: "CONTINUAR"
+    btn_continue: "CONTINUAR",
+    tower_kills: "Enemigos Eliminados",
+    tower_damage_done: "Daño Total",
+    btn_remove_tower: "ELIMINAR TORRE"
   },
   en: {
     app_title: "Tower Defense",
@@ -950,7 +967,10 @@ const TRANSLATIONS = {
     quit_title: "PAUSED",
     quit_msg: "Do you want to return to menu? Progress will be saved.",
     btn_return_menu: "RETURN TO MENU",
-    btn_continue: "CONTINUE"
+    btn_continue: "CONTINUE",
+    tower_kills: "Enemies Killed",
+    tower_damage_done: "Total Damage",
+    btn_remove_tower: "REMOVE TOWER"
   },
   ca: {
     app_title: "Defensa de la Torre",
@@ -996,7 +1016,10 @@ const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "Vols tornar al menú principal? Es guardaran els nuclis obtinguts.",
     btn_return_menu: "TORNAR AL MENÚ",
-    btn_continue: "CONTINUAR"
+    btn_continue: "CONTINUAR",
+    tower_kills: "Enemics Eliminats",
+    tower_damage_done: "Dany Total",
+    btn_remove_tower: "ELIMINAR TORRA"
   },
   eu: {
     app_title: "Dorre Defentsa",
@@ -1042,7 +1065,10 @@ const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "Menura itzuli nahi duzu? Lortutako nukleoak gordeko dira.",
     btn_return_menu: "MENURA ITZULI",
-    btn_continue: "JARRAITU"
+    btn_continue: "JARRAITU",
+    tower_kills: "Etsai Hilak",
+    tower_damage_done: "Kalte Totala",
+    btn_remove_tower: "DORREA KENDU"
   },
   gl: {
     app_title: "Defensa da Torre",
@@ -1088,7 +1114,10 @@ const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "Queres volver ao menú principal? Gardaranse os núcleos obtidos.",
     btn_return_menu: "VOLVER AO MENÚ",
-    btn_continue: "CONTINUAR"
+    btn_continue: "CONTINUAR",
+    tower_kills: "Inimigos Eliminados",
+    tower_damage_done: "Dano Total",
+    btn_remove_tower: "ELIMINAR TORRE"
   }
 };
 const SHARED_KEY = "static_apps_lang";
@@ -1291,8 +1320,52 @@ class TowerDefenseGame {
   }
   closeTowerPopup() {
     this.pendingTowerCell = null;
+    this.statusTower = null;
     const popup = document.getElementById("tower-popup");
     if (popup) popup.style.display = "none";
+  }
+  showTowerStatusPopup(tower) {
+    this.pendingTowerCell = { x: tower.gridX, y: tower.gridY };
+    this.statusTower = tower;
+    const popup = document.getElementById("tower-popup");
+    const content = document.getElementById("tower-popup-content");
+    content.innerHTML = "";
+    const type = tower.definition;
+    const info = document.createElement("div");
+    info.className = "tower-status-info";
+    info.innerHTML = `
+            <div class="tower-opt-header">
+                <span>${type.name}</span>
+            </div>
+            <div class="tower-opt-desc">${type.description}</div>
+            <div class="tower-opt-stats" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                <div>${t("stats_damage")}: ${tower.stats.damage}</div>
+                <div>${t("stats_range")}: ${tower.stats.range}</div>
+                <div>${t("stats_cooldown")}: ${tower.stats.cooldownMs}ms</div>
+                <div style="color: #00f2ff; margin-top: 5px;">${t("tower_kills")}: ${tower.kills}</div>
+                <div style="color: #00f2ff;">${t("tower_damage_done")}: ${Math.floor(tower.damageDealt)}</div>
+            </div>
+        `;
+    content.appendChild(info);
+    const sellBtn = document.createElement("button");
+    sellBtn.className = "menu-btn danger";
+    sellBtn.style.marginTop = "15px";
+    sellBtn.style.width = "100%";
+    const refund = Math.floor(type.cost * 0.7);
+    sellBtn.innerHTML = `${t("btn_remove_tower")} (+💰${refund})`;
+    sellBtn.onclick = () => {
+      this.sellTower(tower);
+    };
+    content.appendChild(sellBtn);
+    popup.style.display = "flex";
+    this.popupOpenTime = performance.now();
+  }
+  sellTower(tower) {
+    const refund = Math.floor(tower.definition.cost * 0.7);
+    this.money += refund;
+    this.towers = this.towers.filter((t2) => t2 !== tower);
+    this.updateStats();
+    this.closeTowerPopup();
   }
   showTowerPopup(gridX, gridY) {
     this.pendingTowerCell = { x: gridX, y: gridY };
@@ -1359,7 +1432,7 @@ class TowerDefenseGame {
         if (!existing) {
           this.showTowerPopup(gridX, gridY);
         } else {
-          this.closeTowerPopup();
+          this.showTowerStatusPopup(existing);
         }
       } else {
         this.closeTowerPopup();
@@ -1432,6 +1505,12 @@ class TowerDefenseGame {
     requestAnimationFrame((t2) => this.loop(t2));
   }
   update(deltaTime) {
+    if (this.statusTower) {
+      const killsEl = document.querySelector(".tower-opt-stats div:nth-child(4)");
+      const dmgEl = document.querySelector(".tower-opt-stats div:nth-child(5)");
+      if (killsEl) killsEl.innerText = `${t("tower_kills")}: ${this.statusTower.kills}`;
+      if (dmgEl) dmgEl.innerText = `${t("tower_damage_done")}: ${Math.floor(this.statusTower.damageDealt)}`;
+    }
     if (this.spawner) {
       const newEnemies = this.spawner.update(deltaTime);
       this.enemies.push(...newEnemies);

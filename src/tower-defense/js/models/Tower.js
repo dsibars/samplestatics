@@ -33,6 +33,9 @@ export class Tower {
         this.fireTarget = null;
         this.fireTimer = 0;
         this.fireMaxTimer = 0; // For tracking animation progress
+
+        this.kills = 0;
+        this.damageDealt = 0;
     }
 
     update(deltaTime, enemies) {
@@ -65,7 +68,9 @@ export class Tower {
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist <= this.rangePixels) {
-                    enemy.takeDamage(this.stats.damage);
+                    const result = enemy.takeDamage(this.stats.damage);
+                    this.damageDealt += result.damageTaken;
+                    if (result.killed) this.kills++;
                     hitCount++;
                 }
             }
@@ -114,7 +119,10 @@ export class Tower {
 
         if (this.currentTarget) {
             // FIRE!
-            this.currentTarget.takeDamage(this.stats.damage);
+            const result = this.currentTarget.takeDamage(this.stats.damage);
+            this.damageDealt += result.damageTaken;
+            if (result.killed) this.kills++;
+
             this.cooldownTimer = this.stats.cooldownMs;
             
             // Setup visual effect

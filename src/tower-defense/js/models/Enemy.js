@@ -62,14 +62,25 @@ export class Enemy {
     }
 
     takeDamage(amo) {
-        if (this.isDead) return;
+        if (this.isDead) return { damageTaken: 0, killed: false };
+
+        const initialHp = this.stats.hp;
         this.stats.hp -= amo;
+
+        let killed = false;
         if (this.stats.hp <= 0) {
+            const overfill = Math.abs(this.stats.hp);
             this.stats.hp = 0;
             this.isDead = true;
+            killed = true;
         } else if (this.stats.burstDuration) {
             this.speedBoostTimer = this.stats.burstDuration;
         }
+
+        return {
+            damageTaken: initialHp - this.stats.hp,
+            killed
+        };
     }
 
     update(deltaTime = 16, allEnemies = []) {
