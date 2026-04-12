@@ -29,6 +29,12 @@ window.startAdventure = () => {
         window.showVillage();
         return;
     }
+    const allLvl1 = Progression.prog.heroes.every(h => h.level === 1);
+    if (Progression.prog.milestone > 1 && allLvl1) {
+        alert(t('greedy_reset_msg'));
+        Progression.resetMilestone();
+    }
+    
     showView('view-game');
     document.getElementById('combat-log').innerHTML = '';
     document.getElementById('win-overlay').style.display = 'none';
@@ -90,7 +96,8 @@ function updateVillageUI() {
     // Show recruitment option if < 4
     if (Progression.prog.heroes.length < 4) {
         const recruitCard = document.createElement('div');
-        const cost = 50 + (Progression.prog.heroes.length * 50);
+        const costs = [50, 500, 200000, 2000000];
+        const cost = costs[Progression.prog.heroes.length] || 2000000;
         recruitCard.style = 'background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center;';
         recruitCard.innerHTML = `
             <div style="font-weight:bold; color:var(--primary);">${t('recruit_new')}</div>
@@ -197,7 +204,36 @@ window.showHeroDetails = (index) => {
         statsContainer.appendChild(row);
     });
 
+    // Fire Hero Button
+    const fireContainer = document.createElement('div');
+    fireContainer.style = 'margin-top: 20px; text-align: center;';
+    const canFire = Progression.prog.heroes.length > 1;
+    fireContainer.innerHTML = `
+        <button class="menu-btn ${canFire ? 'secondary' : 'secondary'}" 
+                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${canFire ? '' : 'opacity: 0.3; cursor: default;'}" 
+                ${canFire ? `onclick="window.fireHero(${index})"` : ''}>
+            🗑️ ${t('btn_fire_hero')}
+        </button>
+    `;
+    statsContainer.appendChild(fireContainer);
+
     showView('view-hero-details');
+};
+
+window.fireHero = (index) => {
+    const heroData = Progression.prog.heroes[index];
+    if (!heroData) return;
+
+    if (Progression.prog.heroes.length <= 1) {
+        alert(t('fire_limit_msg'));
+        return;
+    }
+
+    if (confirm(t('confirm_fire').replace('{hero}', heroData.name))) {
+        if (Progression.removeHero(index)) {
+            window.showVillage();
+        }
+    }
 };
 
 window.increaseStat = (index, statId) => {

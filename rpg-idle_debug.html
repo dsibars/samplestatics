@@ -144,6 +144,18 @@ class ProgressionManager {
       this.saveState();
     }
   }
+  resetMilestone() {
+    this.prog.milestone = 0;
+    this.saveState();
+  }
+  removeHero(index) {
+    if (this.prog.heroes.length > 1) {
+      this.prog.heroes.splice(index, 1);
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
   addItem(itemId, count = 1) {
     this.prog.inventory[itemId] = (this.prog.inventory[itemId] || 0) + count;
     this.saveState();
@@ -741,6 +753,10 @@ const TRANSLATIONS = {
     tricker: "Tricker",
     support: "Support",
     multi_attack: "Combo",
+    btn_fire_hero: "FIRE HERO",
+    confirm_fire: "Are you sure you want to fire {hero}? This action cannot be undone.",
+    fire_limit_msg: "You cannot fire your only hero!",
+    greedy_reset_msg: "Oh... you were so greedy... the world has changed. Let's start over!",
     ball_fire: "Fire Magic",
     ball_ice: "Ice Magic",
     ball_wind: "Wind Magic",
@@ -887,6 +903,10 @@ const TRANSLATIONS = {
     tricker: "Astucia",
     support: "Soporte",
     multi_attack: "Combo",
+    btn_fire_hero: "DESPEDIR HÉROE",
+    confirm_fire: "¿Estás seguro de que quieres despedir a {hero}? Esta acción no se puede deshacer.",
+    fire_limit_msg: "¡No puedes despedir a tu único héroe!",
+    greedy_reset_msg: "Oh... eras tan codicioso... el mundo ha cambiado. ¡Empecemos de nuevo!",
     ball_fire: "Magia de Fuego",
     ball_ice: "Magia de Hielo",
     ball_wind: "Magia de Viento",
@@ -1031,6 +1051,10 @@ const TRANSLATIONS = {
     tricker: "Astúcia",
     support: "Suport",
     multi_attack: "Combo",
+    btn_fire_hero: "ACOMIADAR HEROI",
+    confirm_fire: "Estàs segur que vols acomiadar a {hero}? Aquesta acció no es pot desfer.",
+    fire_limit_msg: "No pots acomiadar el teu únic heroi!",
+    greedy_reset_msg: "Oh... eres tan codiciós... el món ha canviat. Tornem a començar!",
     ball_fire: "Màgia de Foc",
     ball_ice: "Màgia de Gel",
     ball_wind: "Màgia de Vent",
@@ -1175,6 +1199,10 @@ const TRANSLATIONS = {
     tricker: "Ziri",
     support: "Laguntza",
     multi_attack: "Konboa",
+    btn_fire_hero: "ABIAIDUTU HEROIA",
+    confirm_fire: "Ziur zaude {hero} abiaidutu nahi duzula? Ekintza hau ezin da desegin.",
+    fire_limit_msg: "Ezin duzu zure heroi bakarra abiaidutu!",
+    greedy_reset_msg: "Oh... hain gutizia zinen... mundua aldatu da. Has gaitezen berriro!",
     ball_fire: "Su Magia",
     ball_ice: "Izotz Magia",
     ball_wind: "Haize Magia",
@@ -1316,6 +1344,10 @@ const TRANSLATIONS = {
     tricker: "Astucia",
     support: "Soporte",
     multi_attack: "Combo",
+    btn_fire_hero: "ACOMIDAR HEROE",
+    confirm_fire: "Estás seguro de que queres acomidar a {hero}? Esta acción non se pode deshacer.",
+    fire_limit_msg: "Non podes acomidar ao teu único heroe!",
+    greedy_reset_msg: "Oh... eras tan codicioso... o mundo cambiou. Comecemos de novo!",
     ball_fire: "Maxia de Lume",
     ball_ice: "Maxia de Xeo",
     ball_wind: "Maxia de Vento",
@@ -2059,6 +2091,11 @@ window.startAdventure = () => {
     window.showVillage();
     return;
   }
+  const allLvl1 = Progression.prog.heroes.every((h) => h.level === 1);
+  if (Progression.prog.milestone > 1 && allLvl1) {
+    alert(t("greedy_reset_msg"));
+    Progression.resetMilestone();
+  }
   showView("view-game");
   document.getElementById("combat-log").innerHTML = "";
   document.getElementById("win-overlay").style.display = "none";
@@ -2106,7 +2143,8 @@ function updateVillageUI() {
   });
   if (Progression.prog.heroes.length < 4) {
     const recruitCard = document.createElement("div");
-    const cost = 50 + Progression.prog.heroes.length * 50;
+    const costs = [50, 500, 2e5, 2e6];
+    const cost = costs[Progression.prog.heroes.length] || 2e6;
     recruitCard.style = "background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center;";
     recruitCard.innerHTML = `
             <div style="font-weight:bold; color:var(--primary);">${t("recruit_new")}</div>
@@ -2193,7 +2231,31 @@ window.showHeroDetails = (index) => {
         `;
     statsContainer.appendChild(row);
   });
+  const fireContainer = document.createElement("div");
+  fireContainer.style = "margin-top: 20px; text-align: center;";
+  const canFire = Progression.prog.heroes.length > 1;
+  fireContainer.innerHTML = `
+        <button class="menu-btn ${canFire ? "secondary" : "secondary"}" 
+                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${canFire ? "" : "opacity: 0.3; cursor: default;"}" 
+                ${canFire ? `onclick="window.fireHero(${index})"` : ""}>
+            🗑️ ${t("btn_fire_hero")}
+        </button>
+    `;
+  statsContainer.appendChild(fireContainer);
   showView("view-hero-details");
+};
+window.fireHero = (index) => {
+  const heroData = Progression.prog.heroes[index];
+  if (!heroData) return;
+  if (Progression.prog.heroes.length <= 1) {
+    alert(t("fire_limit_msg"));
+    return;
+  }
+  if (confirm(t("confirm_fire").replace("{hero}", heroData.name))) {
+    if (Progression.removeHero(index)) {
+      window.showVillage();
+    }
+  }
 };
 window.increaseStat = (index, statId) => {
   const heroData = Progression.prog.heroes[index];

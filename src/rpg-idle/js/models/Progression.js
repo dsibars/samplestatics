@@ -110,6 +110,20 @@ export class ProgressionManager {
         }
     }
 
+    resetMilestone() {
+        this.prog.milestone = 0;
+        this.saveState();
+    }
+
+    removeHero(index) {
+        if (this.prog.heroes.length > 1) {
+            this.prog.heroes.splice(index, 1);
+            this.saveState();
+            return true;
+        }
+        return false;
+    }
+
     addItem(itemId, count = 1) {
         this.prog.inventory[itemId] = (this.prog.inventory[itemId] || 0) + count;
         this.saveState();
