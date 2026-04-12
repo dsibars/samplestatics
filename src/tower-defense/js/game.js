@@ -122,8 +122,67 @@ export class TowerDefenseGame {
 
     closeTowerPopup() {
         this.pendingTowerCell = null;
+        this.statusTower = null;
         const popup = document.getElementById('tower-popup');
         if (popup) popup.style.display = 'none';
+    }
+
+    showTowerStatusPopup(tower) {
+        this.pendingTowerCell = { x: tower.gridX, y: tower.gridY };
+        this.statusTower = tower;
+        const popup = document.getElementById('tower-popup');
+        const content = document.getElementById('tower-popup-content');
+
+        content.innerHTML = '';
+
+        const type = tower.definition;
+
+        const info = document.createElement('div');
+        info.className = 'tower-status-info';
+        info.innerHTML = `
+            <div class="tower-opt-header">
+                <span style="font-size: 1.2rem; color: var(--primary);">${type.name}</span>
+            </div>
+            <div class="tower-opt-desc" style="margin-bottom: 12px;">${type.description}</div>
+            <div class="tower-opt-stats" style="display: flex; flex-direction: column; gap: 4px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>${t('stats_damage')} ${tower.stats.damage}</span>
+                    <span>${t('stats_range')} ${tower.stats.range}</span>
+                    <span>${t('stats_cooldown')} ${tower.stats.cooldownMs}ms</span>
+                </div>
+                <div style="color: var(--primary); margin-top: 8px; font-weight: 600; display: flex; justify-content: space-between;">
+                    <span>${t('tower_kills')}</span>
+                    <span id="status-kills">${tower.kills}</span>
+                </div>
+                <div style="color: var(--primary); font-weight: 600; display: flex; justify-content: space-between;">
+                    <span>${t('tower_damage_done')}</span>
+                    <span id="status-damage">${Math.floor(tower.damageDealt)}</span>
+                </div>
+            </div>
+        `;
+        content.appendChild(info);
+
+        const sellBtn = document.createElement('button');
+        sellBtn.className = 'menu-btn danger';
+        sellBtn.style.marginTop = '15px';
+        sellBtn.style.width = '100%';
+        const refund = Math.floor(type.cost * 0.7);
+        sellBtn.innerHTML = `${t('btn_remove_tower')} (+💰${refund})`;
+        sellBtn.onclick = () => {
+            this.sellTower(tower);
+        };
+        content.appendChild(sellBtn);
+
+        popup.style.display = 'flex';
+        this.popupOpenTime = performance.now();
+    }
+
+    sellTower(tower) {
+        const refund = Math.floor(tower.definition.cost * 0.7);
+        this.money += refund;
+        this.towers = this.towers.filter(t => t !== tower);
+        this.updateStats();
+        this.closeTowerPopup();
     }
 
     showTowerPopup(gridX, gridY) {
@@ -210,7 +269,7 @@ export class TowerDefenseGame {
                 if (!existing) {
                     this.showTowerPopup(gridX, gridY);
                 } else {
-                    this.closeTowerPopup();
+                    this.showTowerStatusPopup(existing);
                 }
             } else {
                 this.closeTowerPopup();
@@ -303,6 +362,14 @@ export class TowerDefenseGame {
     }
 
     update(deltaTime) {
+        // Update status popup if open
+        if (this.statusTower) {
+            const killsEl = document.getElementById('status-kills');
+            const dmgEl = document.getElementById('status-damage');
+            if (killsEl) killsEl.innerText = this.statusTower.kills;
+            if (dmgEl) dmgEl.innerText = Math.floor(this.statusTower.damageDealt);
+        }
+
         // Spawn enemies
         if (this.spawner) {
             const newEnemies = this.spawner.update(deltaTime);

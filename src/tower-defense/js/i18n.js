@@ -43,7 +43,10 @@ export const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "¿Quieres volver al menú principal? Se guardarán los núcleos obtenidos.",
     btn_return_menu: "VOLVER AL MENÚ",
-    btn_continue: "CONTINUAR"
+    btn_continue: "CONTINUAR",
+    tower_kills: "Enemigos Eliminados",
+    tower_damage_done: "Daño Total",
+    btn_remove_tower: "ELIMINAR TORRE"
   },
   en: {
     app_title: "Tower Defense",
@@ -89,7 +92,10 @@ export const TRANSLATIONS = {
     quit_title: "PAUSED",
     quit_msg: "Do you want to return to menu? Progress will be saved.",
     btn_return_menu: "RETURN TO MENU",
-    btn_continue: "CONTINUE"
+    btn_continue: "CONTINUE",
+    tower_kills: "Enemies Killed",
+    tower_damage_done: "Total Damage",
+    btn_remove_tower: "REMOVE TOWER"
   },
   ca: {
     app_title: "Defensa de la Torre",
@@ -135,7 +141,10 @@ export const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "Vols tornar al menú principal? Es guardaran els nuclis obtinguts.",
     btn_return_menu: "TORNAR AL MENÚ",
-    btn_continue: "CONTINUAR"
+    btn_continue: "CONTINUAR",
+    tower_kills: "Enemics Eliminats",
+    tower_damage_done: "Dany Total",
+    btn_remove_tower: "ELIMINAR TORRA"
   },
   eu: {
     app_title: "Dorre Defentsa",
@@ -181,7 +190,10 @@ export const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "Menura itzuli nahi duzu? Lortutako nukleoak gordeko dira.",
     btn_return_menu: "MENURA ITZULI",
-    btn_continue: "JARRAITU"
+    btn_continue: "JARRAITU",
+    tower_kills: "Etsai Hilak",
+    tower_damage_done: "Kalte Totala",
+    btn_remove_tower: "DORREA KENDU"
   },
   gl: {
     app_title: "Defensa da Torre",
@@ -227,7 +239,10 @@ export const TRANSLATIONS = {
     quit_title: "PAUSA",
     quit_msg: "Queres volver ao menú principal? Gardaranse os núcleos obtidos.",
     btn_return_menu: "VOLVER AO MENÚ",
-    btn_continue: "CONTINUAR"
+    btn_continue: "CONTINUAR",
+    tower_kills: "Inimigos Eliminados",
+    tower_damage_done: "Dano Total",
+    btn_remove_tower: "ELIMINAR TORRE"
   }
 };
 

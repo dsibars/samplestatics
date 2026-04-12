@@ -37,8 +37,8 @@ export class EnemySpawner {
         
         // Update difficulty scalar for generated instances
         if (this.isInfinite) {
-            this.adjustments.difficultyMult = 1 + (waveNum * 0.05); // 5% stats per wave
-            this.adjustments.speedMult = Math.min(2.0, 1 + (waveNum * 0.02));
+            this.adjustments.difficultyMult = 1 + (waveNum * 0.12); // 12% stats per wave (up from 5%)
+            this.adjustments.speedMult = Math.min(2.5, 1 + (waveNum * 0.04)); // faster speed scaling
         }
 
         return true;
@@ -46,31 +46,32 @@ export class EnemySpawner {
 
     generateInfiniteWave(waveNum) {
         const seq = [];
-        const numBatches = 1 + Math.floor(waveNum / 3);
+        // More batches as waves progress
+        const numBatches = 1 + Math.floor(waveNum / 2);
         
         for (let i = 0; i < numBatches; i++) {
             // Determine enemy type based on progression
             const rand = Math.random();
             let type = FAST_ENEMY;
-            let delay = 800 - (waveNum * 10);
-            delay = Math.max(200, delay);
-            let amount = 10 + Math.floor(waveNum * 1.5);
+            let delay = 700 - (waveNum * 15);
+            delay = Math.max(100, delay);
+            let amount = 12 + Math.floor(waveNum * 2.0);
             
-            if (waveNum > 2 && rand > 0.4) {
+            if (waveNum > 2 && rand > 0.3) {
                 type = ADAPTIVE_ENEMY;
-                amount = Math.floor(amount * 0.7);
-                delay += 300;
+                amount = Math.floor(amount * 0.8);
+                delay += 200;
             }
-            if (waveNum > 5 && rand > 0.7) {
+            if (waveNum > 4 && rand > 0.6) {
                 type = STRONG_ENEMY;
-                amount = Math.floor(amount * 0.3);
-                delay += 800;
+                amount = Math.floor(amount * 0.4);
+                delay += 500;
             }
-            if (waveNum >= 15 && i === numBatches - 1) { // Add healers at the end of waves 15+
-                seq.push({ type: HEALER_ENEMY, amount: 1 + Math.floor(waveNum / 10), delayMs: 1500, pathIndex: 0 });
+            if (waveNum >= 10 && (rand > 0.8 || i === numBatches - 1)) { // Add healers earlier and more frequently
+                seq.push({ type: HEALER_ENEMY, amount: 1 + Math.floor(waveNum / 8), delayMs: 1200, pathIndex: 0 });
             }
             
-            seq.unshift({ type, amount, delayMs: delay, pathIndex: 0 }); // Put normal batch before healers
+            seq.unshift({ type, amount, delayMs: delay, pathIndex: 0 });
         }
         return seq;
     }
