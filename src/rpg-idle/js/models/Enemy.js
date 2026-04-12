@@ -1,23 +1,82 @@
 export class Enemy {
-    constructor(name, level, isBoss = false) {
+    constructor(name, level, stats, isBoss = false) {
         this.name = name;
         this.level = level;
         this.isBoss = isBoss;
 
-        const mult = isBoss ? 3 : 1;
-        this.maxHp = (4 + (level * 4)) * mult;
+        this.maxHp = stats.hp;
         this.hp = this.maxHp;
-        this.strength = (1.5 + (level * 1.5)) * mult;
-        this.speed = (4 + (level * 1)) * (isBoss ? 1.2 : 1);
-        this.defense = (level * 0.5) * mult;
-        this.magicPower = (level * 0.5) * mult;
+        this.strength = stats.strength;
+        this.speed = stats.speed;
+        this.defense = stats.defense;
+        this.magicPower = stats.magicPower || 1;
     }
 
     static generate(level, milestone) {
         const names = ['Slime', 'Goblin', 'Wolf', 'Skeleton', 'Orc', 'Dark Knight'];
-        const name = names[Math.min(names.length - 1, Math.floor(milestone / 10))];
-        const isBoss = (milestone + 1) % 5 === 0;
-        return new Enemy(isBoss ? `Giant ${name}` : name, level, isBoss);
+        const nameIdx = Math.min(names.length - 1, Math.floor(milestone / 10));
+        const name = names[nameIdx];
+        const isBoss = milestone % 5 === 0;
+        
+        let stats = {
+            hp: 8 + (level * 4),
+            strength: 2 + (level * 1.5),
+            speed: 1 + (level * 0.5),
+            defense: level * 0.5,
+            magicPower: level * 0.5
+        };
+
+        if (milestone <= 10) {
+            // "Hidden Tutorial" Overrides
+            if (milestone <= 3) {
+                stats.speed = 1;
+                stats.defense = 0;
+                stats.strength = 3;
+            } else if (milestone === 4) {
+                stats.speed = 2;
+                stats.defense = 0.5;
+                stats.strength = 5;
+            } else if (milestone === 5) {
+                stats.speed = 3.5;
+                stats.defense = 1;
+                stats.strength = 10;
+                stats.hp *= 1.5;
+            } else if (milestone <= 9) {
+                stats.speed = 4;
+                stats.defense = 2;
+                stats.strength = 12;
+            } else if (milestone === 10) {
+                stats.speed = 5;
+                stats.defense = 4;
+                stats.strength = 20;
+                stats.hp *= 1.5;
+            }
+        } else {
+            // Growth Phase (Milestone 11+)
+            // Multiplier jumps at every boss (5, 10, 15...) and post-boss (6, 11, 16...)
+            const bossesPassed = Math.floor(milestone / 5);
+            const postBossesPassed = Math.floor((milestone - 1) / 5);
+            const totalStacks = (bossesPassed - 2) + (postBossesPassed - 2); 
+            // -2 because we start counting stacks from Milestone 11. 
+            // At M=11, bossesPassed=2, postBossesPassed=2. totalStacks = 0.
+            // At M=15 (Boss), bossesPassed=3, postBossesPassed=2. totalStacks = 1.
+            // At M=16 (Post-Boss), bossesPassed=3, postBossesPassed=3. totalStacks = 2.
+            
+            const multiplier = Math.pow(1.3, Math.max(0, totalStacks));
+            
+            stats.hp *= multiplier;
+            stats.strength *= multiplier;
+            stats.speed *= multiplier;
+            stats.defense *= multiplier;
+            
+            if (isBoss) {
+                stats.hp *= 1.5;
+                stats.strength *= 1.2;
+                stats.speed *= 1.2;
+            }
+        }
+
+        return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss);
     }
 
     draw(ctx, x, y) {

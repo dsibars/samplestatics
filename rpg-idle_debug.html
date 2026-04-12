@@ -209,7 +209,7 @@ class Hero {
       origin,
       level,
       exp: 0,
-      statPoints: (level - 1) * 2,
+      statPoints: 10,
       skillPoints: (level - 1) * 1,
       baseMaxHp: 10 + (level - 1) * 5,
       baseMaxMp: 5 + (level - 1) * 2,
@@ -233,7 +233,7 @@ class Hero {
   levelUp() {
     this.level++;
     this.exp = 0;
-    this.statPoints += 2;
+    this.statPoints += this.level % 5 === 0 ? 3 : 2;
     this.skillPoints += 1;
     this.hp = this.maxHp;
     this.mp = this.maxMp;
@@ -292,23 +292,69 @@ class Hero {
   }
 }
 class Enemy {
-  constructor(name, level, isBoss = false) {
+  constructor(name, level, stats, isBoss = false) {
     this.name = name;
     this.level = level;
     this.isBoss = isBoss;
-    const mult = isBoss ? 3 : 1;
-    this.maxHp = (4 + level * 4) * mult;
+    this.maxHp = stats.hp;
     this.hp = this.maxHp;
-    this.strength = (1.5 + level * 1.5) * mult;
-    this.speed = (4 + level * 1) * (isBoss ? 1.2 : 1);
-    this.defense = level * 0.5 * mult;
-    this.magicPower = level * 0.5 * mult;
+    this.strength = stats.strength;
+    this.speed = stats.speed;
+    this.defense = stats.defense;
+    this.magicPower = stats.magicPower || 1;
   }
   static generate(level, milestone) {
     const names = ["Slime", "Goblin", "Wolf", "Skeleton", "Orc", "Dark Knight"];
-    const name = names[Math.min(names.length - 1, Math.floor(milestone / 10))];
-    const isBoss = (milestone + 1) % 5 === 0;
-    return new Enemy(isBoss ? `Giant ${name}` : name, level, isBoss);
+    const nameIdx = Math.min(names.length - 1, Math.floor(milestone / 10));
+    const name = names[nameIdx];
+    const isBoss = milestone % 5 === 0;
+    let stats = {
+      hp: 8 + level * 4,
+      strength: 2 + level * 1.5,
+      speed: 1 + level * 0.5,
+      defense: level * 0.5,
+      magicPower: level * 0.5
+    };
+    if (milestone <= 10) {
+      if (milestone <= 3) {
+        stats.speed = 1;
+        stats.defense = 0;
+        stats.strength = 3;
+      } else if (milestone === 4) {
+        stats.speed = 2;
+        stats.defense = 0.5;
+        stats.strength = 5;
+      } else if (milestone === 5) {
+        stats.speed = 3.5;
+        stats.defense = 1;
+        stats.strength = 10;
+        stats.hp *= 1.5;
+      } else if (milestone <= 9) {
+        stats.speed = 4;
+        stats.defense = 2;
+        stats.strength = 12;
+      } else if (milestone === 10) {
+        stats.speed = 5;
+        stats.defense = 4;
+        stats.strength = 20;
+        stats.hp *= 1.5;
+      }
+    } else {
+      const bossesPassed = Math.floor(milestone / 5);
+      const postBossesPassed = Math.floor((milestone - 1) / 5);
+      const totalStacks = bossesPassed - 2 + (postBossesPassed - 2);
+      const multiplier = Math.pow(1.3, Math.max(0, totalStacks));
+      stats.hp *= multiplier;
+      stats.strength *= multiplier;
+      stats.speed *= multiplier;
+      stats.defense *= multiplier;
+      if (isBoss) {
+        stats.hp *= 1.5;
+        stats.strength *= 1.2;
+        stats.speed *= 1.2;
+      }
+    }
+    return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss);
   }
   draw(ctx, x, y) {
     ctx.fillStyle = this.isBoss ? "#f0f" : "#f55";
@@ -736,6 +782,8 @@ const TRANSLATIONS = {
     log_heals_all: "{attacker} heals the entire group!",
     log_level_up: "🌟 {hero} reached Level {level}!",
     log_uses_item: "{attacker} uses {item}!",
+    log_miss: "{attacker} missed {target}!",
+    miss_label: "Miss!",
     basic_attack_desc: "Standard physical strike.",
     double_attack_desc: "Two quick strikes.",
     triple_attack_desc: "Three powerful strikes.",
@@ -878,6 +926,8 @@ const TRANSLATIONS = {
     log_heals_all: "¡{attacker} cura a todo el grupo!",
     log_level_up: "¡🌟 {hero} ha subido al Nivel {level}!",
     log_uses_item: "¡{attacker} usa {item}!",
+    log_miss: "¡{attacker} ha fallado contra {target}!",
+    miss_label: "¡Fallo!",
     basic_attack_desc: "Ataque físico estándar.",
     double_attack_desc: "Dos ataques rápidos.",
     triple_attack_desc: "Tres ataques poderosos.",
@@ -1020,6 +1070,8 @@ const TRANSLATIONS = {
     log_heals_all: "{attacker} cura a tot el grup!",
     log_level_up: "🌟 {hero} ha pujat al Nivell {level}!",
     log_uses_item: "{attacker} usa {item}!",
+    log_miss: "{attacker} ha fallat contra {target}!",
+    miss_label: "Fallada!",
     basic_attack_desc: "Atac físic estàndard.",
     double_attack_desc: "Dos atacs ràpids.",
     triple_attack_desc: "Tres atacs poderosos.",
@@ -1162,6 +1214,8 @@ const TRANSLATIONS = {
     log_heals_all: "{attacker}(e)k talde osoa sendatu du!",
     log_level_up: "🌟 {hero} {level} mailara igo da!",
     log_uses_item: "{attacker}(e)k {item} erabili du!",
+    log_miss: "{attacker}(e)k huts egin du {target}ren aurka!",
+    miss_label: "Huts!",
     basic_attack_desc: "Eraso fisiko estandarra.",
     double_attack_desc: "Bi eraso azkar.",
     triple_attack_desc: "Hiru eraso indartsu.",
@@ -1301,6 +1355,8 @@ const TRANSLATIONS = {
     log_heals_all: "{attacker} cura a todo o grupo!",
     log_level_up: "🌟 {hero} subiu ao Nivel {level}!",
     log_uses_item: "{attacker} usa {item}!",
+    log_miss: "{attacker} fallou contra {target}!",
+    miss_label: "Fallo!",
     basic_attack_desc: "Ataque físico estándar.",
     double_attack_desc: "Dous ataques rápidos.",
     triple_attack_desc: "Tres ataques poderosos.",
@@ -1359,6 +1415,7 @@ class CombatManager {
     this.isCombatOver = false;
     this.isActionInProgress = false;
     this.autoTurnTimeout = null;
+    this.itemUsedThisTurn = false;
     this.initTurnOrder();
   }
   stop() {
@@ -1398,11 +1455,20 @@ class CombatManager {
         return true;
       });
       const action = validSkills[Math.floor(Math.random() * validSkills.length)] || "basic_attack";
-      this.heroAction(hero, action, this.enemy);
+      const skill = SKILLS_DATA[action];
+      let target = null;
+      if (skill && skill.category === "support" && skill.targetType === "ally") {
+        const sortedAllies = [...this.heroes].filter((h) => h.hp > 0).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+        if (sortedAllies.length > 0) {
+          target = this.heroes.indexOf(sortedAllies[0]);
+        }
+      }
+      this.heroAction(hero, action, target);
     }, 500);
   }
   advanceTurn() {
     this.isActionInProgress = false;
+    this.itemUsedThisTurn = false;
     if (this.checkCombatEnd()) return;
     this.currentTurnIndex = (this.currentTurnIndex + 1) % this.turnOrder.length;
     this.nextTurn();
@@ -1426,6 +1492,30 @@ class CombatManager {
     if (this.game.onDamage) this.game.onDamage(target, amount);
     if (target.hp === 0) {
       if (this.game.onDeath) this.game.onDeath(target);
+    }
+  }
+  getFinalStat(entity, statName) {
+    let baseVal = entity[statName] || 0;
+    return Math.max(1, baseVal);
+  }
+  calculateDamageMultiplier(attackValue, defenseValue) {
+    if (defenseValue <= 0) defenseValue = 1;
+    const R = attackValue / defenseValue;
+    if (R >= 10) return R / 10;
+    if (R >= 5) return 1;
+    if (R >= 4) return 0.9 + (R - 4) * 0.1;
+    if (R >= 2) return 0.75 + (R - 2) * 0.075;
+    if (R >= 1) return 0.5 + (R - 1) * 0.25;
+    return R * 0.5;
+  }
+  calculateEvasionChance(attacker, defender) {
+    const sAttacker = this.getFinalStat(attacker, "speed");
+    const sDefender = this.getFinalStat(defender, "speed");
+    const R = sDefender / sAttacker;
+    if (R <= 1) {
+      return Math.max(0, (R - 0.5) * 20);
+    } else {
+      return 10 + R * 10;
     }
   }
   heroAction(hero, skillId, targetIndex = null) {
@@ -1453,6 +1543,7 @@ class CombatManager {
           if (h.hp > 0) {
             const amount = Math.floor(h.maxHp * finalPercentage);
             h.hp = Math.min(h.maxHp, h.hp + amount);
+            if (this.game.onHeal) this.game.onHeal(h, amount);
           }
         });
         logMsg = t("log_heals_all").replace("{attacker}", hero.name);
@@ -1461,28 +1552,37 @@ class CombatManager {
         const amount = Math.floor(targetHero.maxHp * finalPercentage);
         targetHero.hp = Math.min(targetHero.maxHp, targetHero.hp + amount);
         logMsg = t("log_heals").replace("{attacker}", hero.name).replace("{target}", targetHero.name).replace("{amount}", amount);
+        if (this.game.onHeal) this.game.onHeal(targetHero, amount);
       }
     } else {
       const damageMultiplier = skillData.baseMultiplier || 1;
       const rawDamage = baseStatValue * damageMultiplier * multiplier;
-      const finalDamage = Math.max(1, Math.floor(rawDamage - this.enemy.defense));
-      if (skillId === "double_attack") {
-        this.applyDamage(this.enemy, finalDamage);
-        setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-        logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
-        delay += 300;
-      } else if (skillId === "triple_attack") {
-        this.applyDamage(this.enemy, finalDamage);
-        setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-        setTimeout(() => this.applyDamage(this.enemy, finalDamage), 600);
-        logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
-        delay += 600;
+      const evasionChance = this.calculateEvasionChance(hero, this.enemy);
+      if (Math.random() * 100 < evasionChance) {
+        this.game.log(t("log_miss").replace("{attacker}", hero.name).replace("{target}", this.enemy.name));
+        if (this.game.onDamage) this.game.onDamage(this.enemy, t("miss_label") || "Miss!");
       } else {
-        this.applyDamage(this.enemy, finalDamage);
-        if (skillId === "basic_attack") {
-          logMsg = t("log_attack").replace("{attacker}", hero.name).replace("{target}", this.enemy.name).replace("{damage}", finalDamage);
-        } else {
+        const targetDefense = this.getFinalStat(this.enemy, "defense");
+        const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
+        const finalDamage = Math.max(1, Math.floor(rawDamage * defMult));
+        if (skillId === "double_attack") {
+          this.applyDamage(this.enemy, finalDamage);
+          setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
           logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
+          delay += 300;
+        } else if (skillId === "triple_attack") {
+          this.applyDamage(this.enemy, finalDamage);
+          setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
+          setTimeout(() => this.applyDamage(this.enemy, finalDamage), 600);
+          logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
+          delay += 600;
+        } else {
+          this.applyDamage(this.enemy, finalDamage);
+          if (skillId === "basic_attack") {
+            logMsg = t("log_attack").replace("{attacker}", hero.name).replace("{target}", this.enemy.name).replace("{damage}", finalDamage);
+          } else {
+            logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
+          }
         }
       }
     }
@@ -1497,13 +1597,16 @@ class CombatManager {
     if (itemId === "tiny_potion") {
       const heal = Math.floor(hero.maxHp * 0.3);
       hero.hp = Math.min(hero.maxHp, hero.hp + heal);
+      if (this.game.onHeal) this.game.onHeal(hero, heal);
       this.game.log(t("log_uses_item").replace("{attacker}", hero.name).replace("{item}", t(itemId)));
     } else if (itemId === "tiny_mana_potion") {
       const restore = Math.floor(hero.maxMp * 0.3);
       hero.mp = Math.min(hero.maxMp, hero.mp + restore);
       this.game.log(t("log_uses_item").replace("{attacker}", hero.name).replace("{item}", t(itemId)));
     }
-    setTimeout(() => this.advanceTurn(), 500);
+    this.itemUsedThisTurn = true;
+    this.isActionInProgress = false;
+    setTimeout(() => this.game.showActionPanel(hero), 500);
   }
   enemyTurn() {
     const aliveHeroes = this.heroes.filter((h) => h.hp > 0);
@@ -1512,11 +1615,21 @@ class CombatManager {
       return;
     }
     const target = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
-    const damage = Math.max(1, this.enemy.strength - target.defense);
-    this.applyDamage(target, damage);
-    this.game.log(t("log_attack").replace("{attacker}", this.enemy.name).replace("{target}", target.name).replace("{damage}", damage));
-    this.game.triggerFlash("rgba(255, 0, 0, 0.3)", 300);
-    const delay = target.hp === 0 ? 2e3 : 1500;
+    const evasionChance = this.calculateEvasionChance(this.enemy, target);
+    if (Math.random() * 100 < evasionChance) {
+      this.game.log(t("log_miss").replace("{attacker}", this.enemy.name).replace("{target}", target.name));
+      if (this.game.onDamage) this.game.onDamage(target, t("miss_label") || "Miss!");
+      this.game.triggerFlash("rgba(255, 255, 255, 0.1)", 200);
+    } else {
+      const attackValue = this.getFinalStat(this.enemy, "strength");
+      const targetDefense = this.getFinalStat(target, "defense");
+      const defMult = this.calculateDamageMultiplier(attackValue, targetDefense);
+      const finalDamage = Math.max(1, Math.floor(attackValue * defMult));
+      this.applyDamage(target, finalDamage);
+      this.game.log(t("log_attack").replace("{attacker}", this.enemy.name).replace("{target}", target.name).replace("{damage}", finalDamage));
+      this.game.triggerFlash("rgba(255, 0, 0, 0.3)", 300);
+    }
+    const delay = 1500;
     setTimeout(() => this.advanceTurn(), delay);
   }
 }
@@ -1653,10 +1766,9 @@ class RPGGame {
     if (this.currentCombat) {
       this.currentCombat.stop();
     }
-    this.currentCombat = new CombatManager(this, this.heroes, this.currentEnemy);
-    this.autoBattle = false;
     const toggle = document.getElementById("autobattle-toggle");
-    if (toggle) toggle.checked = false;
+    if (toggle) toggle.checked = this.autoBattle;
+    this.currentCombat = new CombatManager(this, this.heroes, this.currentEnemy);
     this.updateUI();
     setTimeout(() => this.currentCombat.nextTurn(), 1e3);
   }
@@ -1761,6 +1873,12 @@ class RPGGame {
     this.screenFlash = { color, life: duration };
   }
   onDamage(target, amount) {
+    this.addFloatingText(target, `-${amount}`, "#ff0000");
+  }
+  onHeal(target, amount) {
+    this.addFloatingText(target, `+${amount}`, "#00ff00");
+  }
+  addFloatingText(target, text, color) {
     let x, y;
     if (target === this.currentEnemy) {
       x = this.canvas.width / 2;
@@ -1773,7 +1891,7 @@ class RPGGame {
     }
     x += (Math.random() - 0.5) * 20;
     y += (Math.random() - 0.5) * 20;
-    this.floatingTexts.push(new FloatingText(x, y, `-${amount}`, "#ff0000"));
+    this.floatingTexts.push(new FloatingText(x, y, text, color));
   }
   onDeath(target) {
     let x, y, color;
@@ -1798,9 +1916,10 @@ class RPGGame {
     this.renderActionLevel1(hero, panel);
   }
   renderActionLevel1(hero, panel) {
+    const itemDisabled = this.currentCombat && this.currentCombat.itemUsedThisTurn;
     this.renderDynamicGrid(panel, [
       { id: "skills", icon: "🛡️", onclick: () => this.renderActionSkills(hero) },
-      { id: "items", icon: "🎒", onclick: () => this.renderActionItems(hero, panel) }
+      { id: "items", icon: "🎒", onclick: () => this.renderActionItems(hero, panel), disabled: itemDisabled }
     ]);
   }
   renderActionSkills(hero) {

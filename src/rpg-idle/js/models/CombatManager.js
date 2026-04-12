@@ -12,6 +12,7 @@ export class CombatManager {
         this.isCombatOver = false;
         this.isActionInProgress = false;
         this.autoTurnTimeout = null;
+        this.itemUsedThisTurn = false;
 
         this.initTurnOrder();
     }
@@ -65,12 +66,26 @@ export class CombatManager {
             });
             const action = validSkills[Math.floor(Math.random() * validSkills.length)] || 'basic_attack';
             
-            this.heroAction(hero, action, this.enemy);
+            const skill = SKILLS_DATA[action];
+            let target = null;
+            if (skill && skill.category === 'support' && skill.targetType === 'ally') {
+                // Find weakest ally who is still alive
+                const sortedAllies = [...this.heroes]
+                    .filter(h => h.hp > 0)
+                    .sort((a,b) => (a.hp/a.maxHp) - (b.hp/b.maxHp));
+                
+                if (sortedAllies.length > 0) {
+                    target = this.heroes.indexOf(sortedAllies[0]);
+                }
+            }
+            
+            this.heroAction(hero, action, target);
         }, 500);
     }
 
     advanceTurn() {
         this.isActionInProgress = false;
+        this.itemUsedThisTurn = false;
         if (this.checkCombatEnd()) return;
         this.currentTurnIndex = (this.currentTurnIndex + 1) % this.turnOrder.length;
         this.nextTurn();
@@ -98,6 +113,41 @@ export class CombatManager {
         if (this.game.onDamage) this.game.onDamage(target, amount);
         if (target.hp === 0) {
             if (this.game.onDeath) this.game.onDeath(target);
+        }
+    }
+
+    getFinalStat(entity, statName) {
+        // Placeholder for future status effects/modifiers
+        let baseVal = entity[statName] || 0;
+        return Math.max(1, baseVal);
+    }
+
+    calculateDamageMultiplier(attackValue, defenseValue) {
+        if (defenseValue <= 0) defenseValue = 1;
+        const R = attackValue / defenseValue;
+        
+        if (R >= 10) return R / 10;
+        if (R >= 5) return 1.0;
+        
+        // Piecewise linear model
+        if (R >= 4) return 0.9 + (R - 4) * 0.1;      // (4, 0.9) to (5, 1.0)
+        if (R >= 2) return 0.75 + (R - 2) * 0.075;   // (2, 0.75) to (4, 0.9)
+        if (R >= 1) return 0.5 + (R - 1) * 0.25;     // (1, 0.5) to (2, 0.75)
+        
+        return R * 0.5;                             // (0, 0) to (1, 0.5)
+    }
+
+    calculateEvasionChance(attacker, defender) {
+        const sAttacker = this.getFinalStat(attacker, 'speed');
+        const sDefender = this.getFinalStat(defender, 'speed');
+        const R = sDefender / sAttacker;
+
+        if (R <= 1) {
+            // Faster attacker reduces evasion. R=0.5 (double speed) -> 0%
+            return Math.max(0, (R - 0.5) * 20);
+        } else {
+            // Faster defender increases evasion.
+            return 10 + (R * 10);
         }
     }
 
@@ -135,6 +185,7 @@ export class CombatManager {
                     if (h.hp > 0) {
                         const amount = Math.floor(h.maxHp * finalPercentage);
                         h.hp = Math.min(h.maxHp, h.hp + amount);
+                        if (this.game.onHeal) this.game.onHeal(h, amount);
                     }
                 });
                 logMsg = t('log_heals_all').replace('{attacker}', hero.name);
@@ -143,30 +194,41 @@ export class CombatManager {
                 const amount = Math.floor(targetHero.maxHp * finalPercentage);
                 targetHero.hp = Math.min(targetHero.maxHp, targetHero.hp + amount);
                 logMsg = t('log_heals').replace('{attacker}', hero.name).replace('{target}', targetHero.name).replace('{amount}', amount);
+                if (this.game.onHeal) this.game.onHeal(targetHero, amount);
             }
         } else {
             // Offensive skills
             const damageMultiplier = skillData.baseMultiplier || 1.0;
             const rawDamage = baseStatValue * damageMultiplier * multiplier;
-            const finalDamage = Math.max(1, Math.floor(rawDamage - this.enemy.defense));
             
-            if (skillId === 'double_attack') {
-                this.applyDamage(this.enemy, finalDamage);
-                setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-                logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
-                delay += 300;
-            } else if (skillId === 'triple_attack') {
-                this.applyDamage(this.enemy, finalDamage);
-                setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-                setTimeout(() => this.applyDamage(this.enemy, finalDamage), 600);
-                logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
-                delay += 600;
+            // Check for Evasion
+            const evasionChance = this.calculateEvasionChance(hero, this.enemy);
+            if (Math.random() * 100 < evasionChance) {
+                this.game.log(t('log_miss').replace('{attacker}', hero.name).replace('{target}', this.enemy.name));
+                if (this.game.onDamage) this.game.onDamage(this.enemy, t('miss_label') || 'Miss!');
             } else {
-                this.applyDamage(this.enemy, finalDamage);
-                if (skillId === 'basic_attack') {
-                    logMsg = t('log_attack').replace('{attacker}', hero.name).replace('{target}', this.enemy.name).replace('{damage}', finalDamage);
-                } else {
+                const targetDefense = this.getFinalStat(this.enemy, 'defense');
+                const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
+                const finalDamage = Math.max(1, Math.floor(rawDamage * defMult));
+                
+                if (skillId === 'double_attack') {
+                    this.applyDamage(this.enemy, finalDamage);
+                    setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
                     logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
+                    delay += 300;
+                } else if (skillId === 'triple_attack') {
+                    this.applyDamage(this.enemy, finalDamage);
+                    setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
+                    setTimeout(() => this.applyDamage(this.enemy, finalDamage), 600);
+                    logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
+                    delay += 600;
+                } else {
+                    this.applyDamage(this.enemy, finalDamage);
+                    if (skillId === 'basic_attack') {
+                        logMsg = t('log_attack').replace('{attacker}', hero.name).replace('{target}', this.enemy.name).replace('{damage}', finalDamage);
+                    } else {
+                        logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
+                    }
                 }
             }
         }
@@ -189,6 +251,7 @@ export class CombatManager {
         if (itemId === 'tiny_potion') {
             const heal = Math.floor(hero.maxHp * 0.3);
             hero.hp = Math.min(hero.maxHp, hero.hp + heal);
+            if (this.game.onHeal) this.game.onHeal(hero, heal);
             this.game.log(t('log_uses_item').replace('{attacker}', hero.name).replace('{item}', t(itemId)));
         } else if (itemId === 'tiny_mana_potion') {
             const restore = Math.floor(hero.maxMp * 0.3);
@@ -196,7 +259,9 @@ export class CombatManager {
             this.game.log(t('log_uses_item').replace('{attacker}', hero.name).replace('{item}', t(itemId)));
         }
 
-        setTimeout(() => this.advanceTurn(), 500);
+        this.itemUsedThisTurn = true;
+        this.isActionInProgress = false;
+        setTimeout(() => this.game.showActionPanel(hero), 500);
     }
 
     enemyTurn() {
@@ -207,13 +272,25 @@ export class CombatManager {
         }
 
         const target = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
-        const damage = Math.max(1, this.enemy.strength - target.defense);
         
-        this.applyDamage(target, damage);
-        this.game.log(t('log_attack').replace('{attacker}', this.enemy.name).replace('{target}', target.name).replace('{damage}', damage));
-        this.game.triggerFlash('rgba(255, 0, 0, 0.3)', 300);
+        // Check for Evasion
+        const evasionChance = this.calculateEvasionChance(this.enemy, target);
+        if (Math.random() * 100 < evasionChance) {
+            this.game.log(t('log_miss').replace('{attacker}', this.enemy.name).replace('{target}', target.name));
+            if (this.game.onDamage) this.game.onDamage(target, t('miss_label') || 'Miss!');
+            this.game.triggerFlash('rgba(255, 255, 255, 0.1)', 200);
+        } else {
+            const attackValue = this.getFinalStat(this.enemy, 'strength');
+            const targetDefense = this.getFinalStat(target, 'defense');
+            const defMult = this.calculateDamageMultiplier(attackValue, targetDefense);
+            const finalDamage = Math.max(1, Math.floor(attackValue * defMult));
+            
+            this.applyDamage(target, finalDamage);
+            this.game.log(t('log_attack').replace('{attacker}', this.enemy.name).replace('{target}', target.name).replace('{damage}', finalDamage));
+            this.game.triggerFlash('rgba(255, 0, 0, 0.3)', 300);
+        }
 
-        const delay = target.hp === 0 ? 2000 : 1500;
+        const delay = 1500;
         setTimeout(() => this.advanceTurn(), delay);
     }
 }

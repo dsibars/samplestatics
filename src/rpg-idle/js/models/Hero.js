@@ -61,7 +61,7 @@ export class Hero {
             origin,
             level,
             exp: 0,
-            statPoints: (level - 1) * 2,
+            statPoints: 10,
             skillPoints: (level - 1) * 1,
             baseMaxHp: 10 + (level - 1) * 5,
             baseMaxMp: 5 + (level - 1) * 2,
@@ -88,7 +88,7 @@ export class Hero {
     levelUp() {
         this.level++;
         this.exp = 0;
-        this.statPoints += 2;
+        this.statPoints += (this.level % 5 === 0) ? 3 : 2;
         this.skillPoints += 1;
         this.hp = this.maxHp;
         this.mp = this.maxMp;

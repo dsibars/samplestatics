@@ -99,11 +99,12 @@ export class RPGGame {
         if (this.currentCombat) {
             this.currentCombat.stop();
         }
-        this.currentCombat = new CombatManager(this, this.heroes, this.currentEnemy);
 
-        this.autoBattle = false;
+        // Sync UI checkbox with current state
         const toggle = document.getElementById('autobattle-toggle');
-        if (toggle) toggle.checked = false;
+        if (toggle) toggle.checked = this.autoBattle;
+
+        this.currentCombat = new CombatManager(this, this.heroes, this.currentEnemy);
 
         this.updateUI();
         // Give the user a moment to see the setup before starting the first turn
@@ -235,6 +236,14 @@ export class RPGGame {
     }
 
     onDamage(target, amount) {
+        this.addFloatingText(target, `-${amount}`, '#ff0000');
+    }
+
+    onHeal(target, amount) {
+        this.addFloatingText(target, `+${amount}`, '#00ff00');
+    }
+
+    addFloatingText(target, text, color) {
         let x, y;
         if (target === this.currentEnemy) {
             x = this.canvas.width / 2;
@@ -247,7 +256,7 @@ export class RPGGame {
         }
         x += (Math.random() - 0.5) * 20;
         y += (Math.random() - 0.5) * 20;
-        this.floatingTexts.push(new FloatingText(x, y, `-${amount}`, '#ff0000'));
+        this.floatingTexts.push(new FloatingText(x, y, text, color));
     }
 
     onDeath(target) {
@@ -276,9 +285,10 @@ export class RPGGame {
     }
 
     renderActionLevel1(hero, panel) {
+        const itemDisabled = this.currentCombat && this.currentCombat.itemUsedThisTurn;
         this.renderDynamicGrid(panel, [
             { id: 'skills', icon: '🛡️', onclick: () => this.renderActionSkills(hero) },
-            { id: 'items', icon: '🎒', onclick: () => this.renderActionItems(hero, panel) }
+            { id: 'items', icon: '🎒', onclick: () => this.renderActionItems(hero, panel), disabled: itemDisabled }
         ]);
     }
 
