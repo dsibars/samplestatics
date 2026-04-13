@@ -55,27 +55,38 @@ class ProgressionManager {
     this.cores = parseInt(localStorage.getItem(this.coreKey)) || 0;
     const defaultProg = {
       heroes: [],
-      // Max 4
+      activeHeroIndices: [],
+      // Indices of active heroes in the roster
       village: {
-        tavernLevel: 1,
-        shopLevel: 1
+        rosterSizeLevel: 0,
+        // Max heroes = 4 + Level (Max 8)
+        partySizeLevel: 0,
+        // Max party = 1 + Level (Max 4)
+        gymLevel: 0
+        // % XP for passive heroes (Max 50)
       },
       milestone: 0,
-      gold: 100,
+      gold: 0,
+      // Player starts with 0 money
       inventory: {
         tiny_potion: 0,
         tiny_mana_potion: 0
-      },
-      upgrades: {
-        attack_boost: 0,
-        defense_boost: 0,
-        hp_boost: 0
       }
     };
     try {
       const saved = JSON.parse(localStorage.getItem(this.progKey));
       if (saved) {
         this.prog = { ...defaultProg, ...saved };
+        if (this.prog.village.tavernLevel !== void 0 || this.prog.village.shopLevel !== void 0) {
+          this.prog.village = {
+            rosterSizeLevel: 0,
+            partySizeLevel: 0,
+            gymLevel: 0
+          };
+        }
+        if (!Array.isArray(this.prog.activeHeroIndices)) {
+          this.prog.activeHeroIndices = this.prog.heroes.length > 0 ? [0] : [];
+        }
         if (this.prog.heroes) {
           this.prog.heroes.forEach((h) => {
             if (h.skills) {
@@ -123,10 +134,25 @@ class ProgressionManager {
     }
     return false;
   }
+  getMaxRosterSize() {
+    return 4 + (this.prog.village.rosterSizeLevel || 0);
+  }
+  getMaxPartySize() {
+    return 1 + (this.prog.village.partySizeLevel || 0);
+  }
   addHero(hero) {
-    if (this.prog.heroes.length < 4) {
+    if (this.prog.heroes.length < this.getMaxRosterSize()) {
       this.prog.heroes.push(hero);
+      if (this.prog.heroes.length === 1) {
+        this.prog.activeHeroIndices = [0];
+      }
       this.saveState();
+      return true;
+    }
+    return false;
+  }
+  checkFreeHero() {
+    if (this.prog.heroes.length === 0) {
       return true;
     }
     return false;
@@ -137,14 +163,48 @@ class ProgressionManager {
       this.saveState();
     }
   }
-  getUpgradeCost(upgradeId) {
-    const level = this.prog.upgrades[upgradeId] || 0;
-    return (level + 1) * 5;
+  toggleHeroActive(index) {
+    const activeIdx = this.prog.activeHeroIndices.indexOf(index);
+    if (activeIdx > -1) {
+      if (this.prog.activeHeroIndices.length > 1) {
+        this.prog.activeHeroIndices.splice(activeIdx, 1);
+        this.saveState();
+        return true;
+      }
+      return false;
+    } else {
+      if (this.prog.activeHeroIndices.length < this.getMaxPartySize()) {
+        this.prog.activeHeroIndices.push(index);
+        this.saveState();
+        return true;
+      }
+      return false;
+    }
   }
-  buyUpgrade(upgradeId) {
-    const cost = this.getUpgradeCost(upgradeId);
+  swapActiveHero(index) {
+    if (this.prog.heroes[index]) {
+      this.prog.activeHeroIndices = [index];
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+  getBuildingCost(type) {
+    const level = this.prog.village[type] || 0;
+    if (type === "gymLevel") {
+      return 5 + level;
+    } else {
+      return 5 * Math.pow(10, level);
+    }
+  }
+  buyBuilding(type) {
+    const cost = this.getBuildingCost(type);
+    const level = this.prog.village[type] || 0;
+    if (type === "rosterSizeLevel" && level >= 4) return false;
+    if (type === "partySizeLevel" && level >= 3) return false;
+    if (type === "gymLevel" && level >= 50) return false;
     if (this.spendCores(cost)) {
-      this.prog.upgrades[upgradeId] = (this.prog.upgrades[upgradeId] || 0) + 1;
+      this.prog.village[type] = level + 1;
       this.saveState();
       return true;
     }
@@ -161,12 +221,14 @@ class ProgressionManager {
     this.saveState();
   }
   removeHero(index) {
-    if (this.prog.heroes.length > 1) {
-      this.prog.heroes.splice(index, 1);
-      this.saveState();
-      return true;
-    }
-    return false;
+    const isActive = this.prog.activeHeroIndices.includes(index);
+    if (isActive) return false;
+    this.prog.heroes.splice(index, 1);
+    this.prog.activeHeroIndices = this.prog.activeHeroIndices.map((idx) => {
+      return idx > index ? idx - 1 : idx;
+    });
+    this.saveState();
+    return true;
   }
   addItem(itemId, count = 1) {
     this.prog.inventory[itemId] = (this.prog.inventory[itemId] || 0) + count;
@@ -930,7 +992,16 @@ const TRANSLATIONS = {
     high_heal_desc: "Miraculous sacred healing.",
     small_group_heal_desc: "Minor heal for everyone.",
     medium_group_heal_desc: "Advanced heal for everyone.",
-    high_group_heal_desc: "Sacred prayer for everyone."
+    high_group_heal_desc: "Sacred prayer for everyone.",
+    roster_size_title: "Hero Roster Size",
+    party_size_title: "Hero Roster Quality",
+    gym_title: "Hero Roster Gym",
+    btn_select: "Add to Party",
+    btn_unselect: "Unselect from Party",
+    need_min_hero: "You need at least one hero in the party!",
+    party_limit_reached: "Party size limit reached!",
+    free_hero_welcome: "Hello adventurer! I have a present for you!",
+    confirm_hero_switch: "This will change the only party member, sure?"
   },
   es: {
     subtitle: "Aventura y Recluta",
@@ -1082,7 +1153,16 @@ const TRANSLATIONS = {
     high_heal_desc: "Curación sagrada milagrosa.",
     small_group_heal_desc: "Cura menor para todos.",
     medium_group_heal_desc: "Cura avanzada para todos.",
-    high_group_heal_desc: "Rezo sagrado para todos."
+    high_group_heal_desc: "Rezo sagrado para todos.",
+    roster_size_title: "Espacio de Héroes",
+    party_size_title: "Calidad de Formación",
+    gym_title: "Gimnasio de Héroes",
+    btn_select: "Añadir al Equipo",
+    btn_unselect: "Quitar del Equipo",
+    need_min_hero: "¡Necesitas al menos un héroe en el equipo!",
+    party_limit_reached: "¡Límite de equipo alcanzado!",
+    free_hero_welcome: "¡Hola aventurero! ¡Tengo un regalo para ti!",
+    confirm_hero_switch: "Esto cambiará al único miembro del equipo, ¿estás seguro?"
   },
   ca: {
     subtitle: "Aventura i Recluta",
@@ -1871,7 +1951,8 @@ class RPGGame {
     this.currentCombat = null;
     this.currentEnemy = null;
     this.currentMilestone = Progression.prog.milestone;
-    this.heroes = Progression.prog.heroes.map((h) => new Hero(h));
+    this.activeIndices = Progression.prog.activeHeroIndices;
+    this.heroes = this.activeIndices.map((idx) => new Hero(Progression.prog.heroes[idx]));
     this.autoBattle = false;
     const toggle = document.getElementById("autobattle-toggle");
     if (toggle) toggle.checked = this.autoBattle;
@@ -1958,11 +2039,29 @@ class RPGGame {
       Progression.addGold(goldEarned);
       Progression.addCores(coresEarned);
       Progression.setMilestone(this.currentMilestone);
+      const numActive = this.heroes.length;
+      const splitMultipliers = { 1: 1, 2: 0.8, 3: 0.7, 4: 0.6 };
+      const multiplier = splitMultipliers[numActive] || 1;
+      const finalExp = Math.floor(expEarned * multiplier);
       this.heroes.forEach((h) => {
-        const leveled = h.gainExp(expEarned);
+        const leveled = h.gainExp(finalExp);
         if (leveled) levelUps.push({ name: h.name, level: h.level });
       });
-      Progression.prog.heroes = this.heroes.map((h) => h.toJSON());
+      const gymLevel = Progression.prog.village.gymLevel || 0;
+      const passiveExp = Math.floor(expEarned * (gymLevel / 100));
+      const fullRoster = Progression.prog.heroes;
+      fullRoster.forEach((hData, idx) => {
+        const isActive = this.activeIndices.includes(idx);
+        if (isActive) {
+          const heroObj = this.heroes[this.activeIndices.indexOf(idx)];
+          fullRoster[idx] = heroObj.toJSON();
+        } else if (passiveExp > 0) {
+          const hObj = new Hero(hData);
+          const leveled = hObj.gainExp(passiveExp);
+          fullRoster[idx] = hObj.toJSON();
+          if (leveled) levelUps.push({ name: hObj.name, level: hObj.level, passive: true });
+        }
+      });
       Progression.saveState();
       const levelUpMessages = levelUps.map(
         (lu) => `<p style="color: #0af; font-weight: bold;">${t("log_level_up").replace("{hero}", lu.name).replace("{level}", lu.level)}</p>`
@@ -1980,15 +2079,33 @@ class RPGGame {
       let expEarned = Math.floor(damageDealt / this.currentEnemy.maxHp * expPotential);
       if (damageDealt > 0) expEarned = Math.max(1, expEarned);
       if (expEarned > 0) {
+        const numActive = this.heroes.length;
+        const splitMultipliers = { 1: 1, 2: 0.8, 3: 0.7, 4: 0.6 };
+        const multiplier = splitMultipliers[numActive] || 1;
+        const finalExp = Math.floor(expEarned * multiplier);
         this.heroes.forEach((h) => {
-          const leveled = h.gainExp(expEarned);
+          const leveled = h.gainExp(finalExp);
           if (leveled) levelUps.push({ name: h.name, level: h.level });
         });
-        Progression.prog.heroes = this.heroes.map((h) => h.toJSON());
+        const gymLevel = Progression.prog.village.gymLevel || 0;
+        const passiveExp = Math.floor(expEarned * (gymLevel / 100));
+        const fullRoster = Progression.prog.heroes;
+        fullRoster.forEach((hData, idx) => {
+          const isActive = this.activeIndices.includes(idx);
+          if (isActive) {
+            const heroObj = this.heroes[this.activeIndices.indexOf(idx)];
+            fullRoster[idx] = heroObj.toJSON();
+          } else if (passiveExp > 0) {
+            const hObj = new Hero(hData);
+            const leveled = hObj.gainExp(passiveExp);
+            fullRoster[idx] = hObj.toJSON();
+            if (leveled) levelUps.push({ name: hObj.name, level: hObj.level, passive: true });
+          }
+        });
         Progression.saveState();
       }
       const levelUpMessages = levelUps.map(
-        (lu) => `<p style="color: #0af; font-weight: bold;">${t("log_level_up").replace("{hero}", lu.name).replace("{level}", lu.level)}</p>`
+        (lu) => `<p style="color: #0af; font-weight: bold;">${t("log_level_up").replace("{hero}", lu.name).replace("{level}", lu.level)} ${lu.passive ? "(Gym)" : ""}</p>`
       ).join("");
       document.getElementById("defeat-rewards").innerHTML = `
                 <p>${t("milestone")}: ${this.currentMilestone}</p>
@@ -2257,6 +2374,10 @@ window.nextCombat = () => {
   if (game) game.nextCombat();
 };
 window.showVillage = () => {
+  if (Progression.checkFreeHero()) {
+    alert(t("free_hero_welcome") || "Hello adventurer! I have a present for you!");
+    Progression.addHero(Hero.generateRandom(1).toJSON());
+  }
   updateVillageUI();
   showView("view-village");
   window.switchVillageTab("tavern");
@@ -2275,21 +2396,22 @@ function updateVillageUI() {
   const tavernList = document.getElementById("tavern-hero-list");
   tavernList.innerHTML = "";
   Progression.prog.heroes.forEach((h, i) => {
+    const isActive = Progression.prog.activeHeroIndices.includes(i);
     const card = document.createElement("div");
-    card.style = "background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444; cursor: pointer;";
+    card.style = `background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid ${isActive ? "var(--primary)" : "#444"}; cursor: pointer; position: relative;`;
     card.onclick = () => window.showHeroDetails(i);
     card.innerHTML = `
+            ${isActive ? '<div style="position:absolute; top:5px; right:5px; font-size:0.8rem; background:var(--primary); color:black; padding:2px 5px; border-radius:4px; font-weight:bold;">ACTIVE</div>' : ""}
             <div style="font-weight:bold;">${h.name}</div>
             <div style="font-size:0.8rem; color:#aaa;">Lvl ${h.level} ${t(h.origin)}</div>
             <div style="font-size:0.7rem; color:#aaa;">${t("stat_hp")}: ${h.baseMaxHp} ${t("stat_attack").toUpperCase()}: ${h.baseStrength} | SP: ${h.statPoints}</div>
         `;
     tavernList.appendChild(card);
   });
-  if (Progression.prog.heroes.length < 4) {
+  if (Progression.prog.heroes.length < Progression.getMaxRosterSize()) {
     const recruitCard = document.createElement("div");
-    const costs = [50, 500, 2e5, 2e6];
-    const cost = costs[Progression.prog.heroes.length] || 2e6;
-    recruitCard.style = "background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center;";
+    const cost = 500;
+    recruitCard.style = "background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px;";
     recruitCard.innerHTML = `
             <div style="font-weight:bold; color:var(--primary);">${t("recruit_new")}</div>
             <div style="margin: 5px 0;">💰 ${cost}</div>
@@ -2317,18 +2439,25 @@ function updateVillageUI() {
   });
   const upgradeList = document.getElementById("upgrades-list");
   upgradeList.innerHTML = "";
-  const upgrades = ["attack_boost", "defense_boost", "hp_boost"];
-  upgrades.forEach((upId) => {
-    const level = Progression.prog.upgrades[upId] || 0;
-    const cost = Progression.getUpgradeCost(upId);
+  const buildings = [
+    { id: "rosterSizeLevel", title: t("roster_size_title") || "Roster Size", max: 4 },
+    { id: "partySizeLevel", title: t("party_size_title") || "Party Quality", max: 3 },
+    { id: "gymLevel", title: t("gym_title") || "Hero Gym", max: 50 }
+  ];
+  buildings.forEach((b) => {
+    const level = Progression.prog.village[b.id] || 0;
+    const cost = Progression.getBuildingCost(b.id);
     const upgradeRow = document.createElement("div");
     upgradeRow.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
+    const isMax = level >= b.max;
+    const extra = b.id === "gymLevel" ? ` (${level}%)` : ` (${4 + level} max)`;
+    const label = b.id === "partySizeLevel" ? ` (${1 + level} heroes)` : extra;
     upgradeRow.innerHTML = `
             <div>
-                <div style="font-weight:bold;">${t(upId)}</div>
-                <div style="font-size:0.8rem; color:#aaa;">${t("level_label")}: ${level}</div>
+                <div style="font-weight:bold;">${b.title}</div>
+                <div style="font-size:0.8rem; color:#aaa;">${t("level_label")}: ${level}${isMax ? " [MAX]" : label}</div>
             </div>
-            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyUpgrade('${upId}')">🔮 ${cost}</button>
+            ${isMax ? '<span style="color:#888;">MAX</span>' : `<button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyBuilding('${b.id}')">🔮 ${cost}</button>`}
         `;
     upgradeList.appendChild(upgradeRow);
   });
@@ -2375,18 +2504,48 @@ window.showHeroDetails = (index) => {
         `;
     statsContainer.appendChild(row);
   });
-  const fireContainer = document.createElement("div");
-  fireContainer.style = "margin-top: 20px; text-align: center;";
-  const canFire = Progression.prog.heroes.length > 1;
-  fireContainer.innerHTML = `
-        <button class="menu-btn ${canFire ? "secondary" : "secondary"}" 
-                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${canFire ? "" : "opacity: 0.3; cursor: default;"}" 
-                ${canFire ? `onclick="window.fireHero(${index})"` : ""}>
+  const actionContainer = document.createElement("div");
+  actionContainer.style = "margin-top: 20px; display: flex; flex-direction: column; gap: 10px;";
+  const isActive = Progression.prog.activeHeroIndices.includes(index);
+  const numActive = Progression.prog.activeHeroIndices.length;
+  const maxSize = Progression.getMaxPartySize();
+  const canUnselect = numActive > 1;
+  const canSelect = numActive < maxSize || maxSize === 1 && numActive === 1;
+  let toggleBtn = "";
+  if (isActive) {
+    toggleBtn = `<button class="menu-btn ${canUnselect ? "secondary" : "secondary"}" style="width: 100%; opacity: ${canUnselect ? 1 : 0.5};" ${canUnselect ? `onclick="window.toggleHeroActive(${index})"` : ""}>❌ ${t("btn_unselect") || "Unselect from Party"}</button>`;
+  } else {
+    toggleBtn = `<button class="menu-btn ${canSelect ? "primary" : "secondary"}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ""}>⚔️ ${t("btn_select") || "Add to Party"}</button>`;
+  }
+  const fireBtn = `<button class="menu-btn secondary" 
+                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? "opacity: 0.3; cursor: default;" : ""}" 
+                ${!isActive ? `onclick="window.fireHero(${index})"` : ""}>
             🗑️ ${t("btn_fire_hero")}
-        </button>
-    `;
-  statsContainer.appendChild(fireContainer);
+        </button>`;
+  actionContainer.innerHTML = toggleBtn + fireBtn;
+  statsContainer.appendChild(actionContainer);
   showView("view-hero-details");
+};
+window.toggleHeroActive = (index) => {
+  const isActive = Progression.prog.activeHeroIndices.includes(index);
+  const numActive = Progression.prog.activeHeroIndices.length;
+  const maxSize = Progression.getMaxPartySize();
+  if (!isActive && maxSize === 1 && numActive === 1) {
+    if (confirm(t("confirm_hero_switch") || "This will change the only party member, sure?")) {
+      Progression.swapActiveHero(index);
+      window.showHeroDetails(index);
+    }
+    return;
+  }
+  if (Progression.toggleHeroActive(index)) {
+    window.showHeroDetails(index);
+  } else {
+    if (Progression.prog.activeHeroIndices.includes(index)) {
+      alert(t("need_min_hero") || "You need at least one hero in the party!");
+    } else {
+      alert(t("party_limit_reached") || "Party size limit reached!");
+    }
+  }
 };
 window.fireHero = (index) => {
   const heroData = Progression.prog.heroes[index];
@@ -2494,8 +2653,8 @@ window.learnSkill = (index, skillId, isUnlock) => {
     }
   }
 };
-window.buyUpgrade = (upgradeId) => {
-  if (Progression.buyUpgrade(upgradeId)) {
+window.buyBuilding = (type) => {
+  if (Progression.buyBuilding(type)) {
     updateVillageUI();
   } else {
     alert(t("not_enough_cores"));
@@ -2593,6 +2752,8 @@ window.startAdventure = startAdventure;
 window.nextCombat = nextCombat;
 window.switchVillageTab = switchVillageTab;
 window.recruitHero = recruitHero;
+window.buyBuilding = buyBuilding;
+window.toggleHeroActive = toggleHeroActive;
 window.buyItem = buyItem;
 window.clearGameData = clearGameData;
 window.toggleAutoBattle = toggleAutoBattle;

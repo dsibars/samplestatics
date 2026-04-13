@@ -12,7 +12,10 @@ export class RPGGame {
         this.currentCombat = null;
         this.currentEnemy = null;
         this.currentMilestone = Progression.prog.milestone;
-        this.heroes = Progression.prog.heroes.map(h => new Hero(h));
+        
+        // Initialize heroes only from active indices
+        this.activeIndices = Progression.prog.activeHeroIndices;
+        this.heroes = this.activeIndices.map(idx => new Hero(Progression.prog.heroes[idx]));
         
         this.autoBattle = false;
         const toggle = document.getElementById('autobattle-toggle');
@@ -124,13 +127,37 @@ export class RPGGame {
             Progression.addCores(coresEarned);
             Progression.setMilestone(this.currentMilestone);
 
+            // Group XP split logic
+            const numActive = this.heroes.length;
+            const splitMultipliers = { 1: 1.0, 2: 0.8, 3: 0.7, 4: 0.6 };
+            const multiplier = splitMultipliers[numActive] || 1.0;
+            const finalExp = Math.floor(expEarned * multiplier);
+
             this.heroes.forEach(h => {
-                const leveled = h.gainExp(expEarned);
+                const leveled = h.gainExp(finalExp);
                 if (leveled) levelUps.push({ name: h.name, level: h.level });
             });
 
-            // Save hero states back to progression
-            Progression.prog.heroes = this.heroes.map(h => h.toJSON());
+            // Gym passive XP for others
+            const gymLevel = Progression.prog.village.gymLevel || 0;
+            const passiveExp = Math.floor(expEarned * (gymLevel / 100));
+
+            const fullRoster = Progression.prog.heroes;
+            fullRoster.forEach((hData, idx) => {
+                const isActive = this.activeIndices.includes(idx);
+                if (isActive) {
+                    // Update active hero data
+                    const heroObj = this.heroes[this.activeIndices.indexOf(idx)];
+                    fullRoster[idx] = heroObj.toJSON();
+                } else if (passiveExp > 0) {
+                    // Apply gym XP
+                    const hObj = new Hero(hData);
+                    const leveled = hObj.gainExp(passiveExp);
+                    fullRoster[idx] = hObj.toJSON();
+                    if (leveled) levelUps.push({ name: hObj.name, level: hObj.level, passive: true });
+                }
+            });
+
             Progression.saveState();
 
             const levelUpMessages = levelUps.map(lu => 
@@ -151,17 +178,39 @@ export class RPGGame {
             if (damageDealt > 0) expEarned = Math.max(1, expEarned);
 
             if (expEarned > 0) {
+                const numActive = this.heroes.length;
+                const splitMultipliers = { 1: 1.0, 2: 0.8, 3: 0.7, 4: 0.6 };
+                const multiplier = splitMultipliers[numActive] || 1.0;
+                const finalExp = Math.floor(expEarned * multiplier);
+
                 this.heroes.forEach(h => {
-                    const leveled = h.gainExp(expEarned);
+                    const leveled = h.gainExp(finalExp);
                     if (leveled) levelUps.push({ name: h.name, level: h.level });
                 });
-                // Save hero states back to progression
-                Progression.prog.heroes = this.heroes.map(h => h.toJSON());
+
+                // Gym passive XP for others
+                const gymLevel = Progression.prog.village.gymLevel || 0;
+                const passiveExp = Math.floor(expEarned * (gymLevel / 100));
+
+                const fullRoster = Progression.prog.heroes;
+                fullRoster.forEach((hData, idx) => {
+                    const isActive = this.activeIndices.includes(idx);
+                    if (isActive) {
+                        const heroObj = this.heroes[this.activeIndices.indexOf(idx)];
+                        fullRoster[idx] = heroObj.toJSON();
+                    } else if (passiveExp > 0) {
+                        const hObj = new Hero(hData);
+                        const leveled = hObj.gainExp(passiveExp);
+                        fullRoster[idx] = hObj.toJSON();
+                        if (leveled) levelUps.push({ name: hObj.name, level: hObj.level, passive: true });
+                    }
+                });
+
                 Progression.saveState();
             }
 
             const levelUpMessages = levelUps.map(lu => 
-                `<p style="color: #0af; font-weight: bold;">${t('log_level_up').replace('{hero}', lu.name).replace('{level}', lu.level)}</p>`
+                `<p style="color: #0af; font-weight: bold;">${t('log_level_up').replace('{hero}', lu.name).replace('{level}', lu.level)} ${lu.passive ? '(Gym)' : ''}</p>`
             ).join('');
 
             document.getElementById('defeat-rewards').innerHTML = `

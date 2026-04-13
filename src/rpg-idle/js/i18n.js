@@ -151,7 +151,16 @@ const TRANSLATIONS = {
         high_heal_desc: "Miraculous sacred healing.",
         small_group_heal_desc: "Minor heal for everyone.",
         medium_group_heal_desc: "Advanced heal for everyone.",
-        high_group_heal_desc: "Sacred prayer for everyone."
+        high_group_heal_desc: "Sacred prayer for everyone.",
+        roster_size_title: "Hero Roster Size",
+        party_size_title: "Hero Roster Quality",
+        gym_title: "Hero Roster Gym",
+        btn_select: "Add to Party",
+        btn_unselect: "Unselect from Party",
+        need_min_hero: "You need at least one hero in the party!",
+        party_limit_reached: "Party size limit reached!",
+        free_hero_welcome: "Hello adventurer! I have a present for you!",
+        confirm_hero_switch: "This will change the only party member, sure?"
     },
     es: {
         subtitle: "Aventura y Recluta",
@@ -303,7 +312,16 @@ const TRANSLATIONS = {
         high_heal_desc: "Curación sagrada milagrosa.",
         small_group_heal_desc: "Cura menor para todos.",
         medium_group_heal_desc: "Cura avanzada para todos.",
-        high_group_heal_desc: "Rezo sagrado para todos."
+        high_group_heal_desc: "Rezo sagrado para todos.",
+        roster_size_title: "Espacio de Héroes",
+        party_size_title: "Calidad de Formación",
+        gym_title: "Gimnasio de Héroes",
+        btn_select: "Añadir al Equipo",
+        btn_unselect: "Quitar del Equipo",
+        need_min_hero: "¡Necesitas al menos un héroe en el equipo!",
+        party_limit_reached: "¡Límite de equipo alcanzado!",
+        free_hero_welcome: "¡Hola aventurero! ¡Tengo un regalo para ti!",
+        confirm_hero_switch: "Esto cambiará al único miembro del equipo, ¿estás seguro?"
     },
     ca: {
         subtitle: "Aventura i Recluta",

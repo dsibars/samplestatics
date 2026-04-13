@@ -57,6 +57,10 @@ window.nextCombat = () => {
 // --- Village ---
 
 window.showVillage = () => {
+    if (Progression.checkFreeHero()) {
+        alert(t('free_hero_welcome') || "Hello adventurer! I have a present for you!");
+        Progression.addHero(Hero.generateRandom(1).toJSON());
+    }
     updateVillageUI();
     showView('view-village');
     window.switchVillageTab('tavern');
@@ -82,10 +86,12 @@ function updateVillageUI() {
 
     // Show current heroes
     Progression.prog.heroes.forEach((h, i) => {
+        const isActive = Progression.prog.activeHeroIndices.includes(i);
         const card = document.createElement('div');
-        card.style = 'background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444; cursor: pointer;';
+        card.style = `background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid ${isActive ? 'var(--primary)' : '#444'}; cursor: pointer; position: relative;`;
         card.onclick = () => window.showHeroDetails(i);
         card.innerHTML = `
+            ${isActive ? '<div style="position:absolute; top:5px; right:5px; font-size:0.8rem; background:var(--primary); color:black; padding:2px 5px; border-radius:4px; font-weight:bold;">ACTIVE</div>' : ''}
             <div style="font-weight:bold;">${h.name}</div>
             <div style="font-size:0.8rem; color:#aaa;">Lvl ${h.level} ${t(h.origin)}</div>
             <div style="font-size:0.7rem; color:#aaa;">${t('stat_hp')}: ${h.baseMaxHp} ${t('stat_attack').toUpperCase()}: ${h.baseStrength} | SP: ${h.statPoints}</div>
@@ -93,12 +99,11 @@ function updateVillageUI() {
         tavernList.appendChild(card);
     });
 
-    // Show recruitment option if < 4
-    if (Progression.prog.heroes.length < 4) {
+    // Show recruitment option if roster not full
+    if (Progression.prog.heroes.length < Progression.getMaxRosterSize()) {
         const recruitCard = document.createElement('div');
-        const costs = [50, 500, 200000, 2000000];
-        const cost = costs[Progression.prog.heroes.length] || 2000000;
-        recruitCard.style = 'background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center;';
+        const cost = 500;
+        recruitCard.style = 'background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px;';
         recruitCard.innerHTML = `
             <div style="font-weight:bold; color:var(--primary);">${t('recruit_new')}</div>
             <div style="margin: 5px 0;">💰 ${cost}</div>
@@ -131,19 +136,28 @@ function updateVillageUI() {
     // Upgrades
     const upgradeList = document.getElementById('upgrades-list');
     upgradeList.innerHTML = '';
-    const upgrades = ['attack_boost', 'defense_boost', 'hp_boost'];
+    const buildings = [
+        { id: 'rosterSizeLevel', title: t('roster_size_title') || 'Roster Size', max: 4 },
+        { id: 'partySizeLevel', title: t('party_size_title') || 'Party Quality', max: 3 },
+        { id: 'gymLevel', title: t('gym_title') || 'Hero Gym', max: 50 }
+    ];
 
-    upgrades.forEach(upId => {
-        const level = Progression.prog.upgrades[upId] || 0;
-        const cost = Progression.getUpgradeCost(upId);
+    buildings.forEach(b => {
+        const level = Progression.prog.village[b.id] || 0;
+        const cost = Progression.getBuildingCost(b.id);
         const upgradeRow = document.createElement('div');
         upgradeRow.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;';
+        
+        const isMax = level >= b.max;
+        const extra = b.id === 'gymLevel' ? ` (${level}%)` : ` (${4 + level} max)`;
+        const label = b.id === 'partySizeLevel' ? ` (${1 + level} heroes)` : extra;
+
         upgradeRow.innerHTML = `
             <div>
-                <div style="font-weight:bold;">${t(upId)}</div>
-                <div style="font-size:0.8rem; color:#aaa;">${t('level_label')}: ${level}</div>
+                <div style="font-weight:bold;">${b.title}</div>
+                <div style="font-size:0.8rem; color:#aaa;">${t('level_label')}: ${level}${isMax ? ' [MAX]' : label}</div>
             </div>
-            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyUpgrade('${upId}')">🔮 ${cost}</button>
+            ${isMax ? '<span style="color:#888;">MAX</span>' : `<button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyBuilding('${b.id}')">🔮 ${cost}</button>`}
         `;
         upgradeList.appendChild(upgradeRow);
     });
@@ -194,9 +208,7 @@ window.showHeroDetails = (index) => {
     stats.forEach(st => {
         const row = document.createElement('div');
         row.style = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px;';
-        
         const canUpgrade = heroData.statPoints > 0;
-        
         row.innerHTML = `
             <div><span style="font-weight:bold; color: #aaa;">${st.label}:</span> <span style="font-size:1.1rem; color:white;">${st.val}</span></div>
             <button class="menu-btn ${canUpgrade ? 'primary' : 'secondary'}" style="padding: 5px 15px; width: 40px;" ${canUpgrade ? '' : 'disabled'} onclick="window.increaseStat(${index}, '${st.id}')">+</button>
@@ -204,20 +216,60 @@ window.showHeroDetails = (index) => {
         statsContainer.appendChild(row);
     });
 
-    // Fire Hero Button
-    const fireContainer = document.createElement('div');
-    fireContainer.style = 'margin-top: 20px; text-align: center;';
-    const canFire = Progression.prog.heroes.length > 1;
-    fireContainer.innerHTML = `
-        <button class="menu-btn ${canFire ? 'secondary' : 'secondary'}" 
-                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${canFire ? '' : 'opacity: 0.3; cursor: default;'}" 
-                ${canFire ? `onclick="window.fireHero(${index})"` : ''}>
+    // Active Toggle & Fire
+    const actionContainer = document.createElement('div');
+    actionContainer.style = 'margin-top: 20px; display: flex; flex-direction: column; gap: 10px;';
+    
+    const isActive = Progression.prog.activeHeroIndices.includes(index);
+    const numActive = Progression.prog.activeHeroIndices.length;
+    const maxSize = Progression.getMaxPartySize();
+    
+    const canUnselect = numActive > 1;
+    // Special case: if maxSize is 1 and numActive is 1, we let the user select a new hero (it will swap)
+    const canSelect = numActive < maxSize || (maxSize === 1 && numActive === 1);
+
+    let toggleBtn = '';
+    if (isActive) {
+        toggleBtn = `<button class="menu-btn ${canUnselect ? 'secondary' : 'secondary'}" style="width: 100%; opacity: ${canUnselect ? 1 : 0.5};" ${canUnselect ? `onclick="window.toggleHeroActive(${index})"` : ''}>❌ ${t('btn_unselect') || 'Unselect from Party'}</button>`;
+    } else {
+        toggleBtn = `<button class="menu-btn ${canSelect ? 'primary' : 'secondary'}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ''}>⚔️ ${t('btn_select') || 'Add to Party'}</button>`;
+    }
+
+    const fireBtn = `<button class="menu-btn secondary" 
+                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? 'opacity: 0.3; cursor: default;' : ''}" 
+                ${!isActive ? `onclick="window.fireHero(${index})"` : ''}>
             🗑️ ${t('btn_fire_hero')}
-        </button>
-    `;
-    statsContainer.appendChild(fireContainer);
+        </button>`;
+
+    actionContainer.innerHTML = toggleBtn + fireBtn;
+    statsContainer.appendChild(actionContainer);
 
     showView('view-hero-details');
+};
+
+window.toggleHeroActive = (index) => {
+    const isActive = Progression.prog.activeHeroIndices.includes(index);
+    const numActive = Progression.prog.activeHeroIndices.length;
+    const maxSize = Progression.getMaxPartySize();
+
+    // Special case: swap if limit is 1
+    if (!isActive && maxSize === 1 && numActive === 1) {
+        if (confirm(t('confirm_hero_switch') || "This will change the only party member, sure?")) {
+            Progression.swapActiveHero(index);
+            window.showHeroDetails(index);
+        }
+        return;
+    }
+
+    if (Progression.toggleHeroActive(index)) {
+        window.showHeroDetails(index);
+    } else {
+        if (Progression.prog.activeHeroIndices.includes(index)) {
+            alert(t('need_min_hero') || "You need at least one hero in the party!");
+        } else {
+            alert(t('party_limit_reached') || "Party size limit reached!");
+        }
+    }
 };
 
 window.fireHero = (index) => {
@@ -351,8 +403,8 @@ window.learnSkill = (index, skillId, isUnlock) => {
     }
 };
 
-window.buyUpgrade = (upgradeId) => {
-    if (Progression.buyUpgrade(upgradeId)) {
+window.buyBuilding = (type) => {
+    if (Progression.buyBuilding(type)) {
         updateVillageUI();
     } else {
         alert(t('not_enough_cores'));
@@ -464,6 +516,8 @@ window.startAdventure = startAdventure;
 window.nextCombat = nextCombat;
 window.switchVillageTab = switchVillageTab;
 window.recruitHero = recruitHero;
+window.buyBuilding = buyBuilding;
+window.toggleHeroActive = toggleHeroActive;
 window.buyItem = buyItem;
 window.clearGameData = clearGameData;
 window.toggleAutoBattle = toggleAutoBattle;
