@@ -137,6 +137,23 @@ export class CombatManager {
         return R * 0.5;                             // (0, 0) to (1, 0.5)
     }
 
+    getElementMultiplier(skillElement, targetElement) {
+        if (!skillElement || !targetElement || targetElement === 'neutral') return 1.0;
+        if (skillElement === targetElement) return 1.0;
+
+        const relationships = {
+            fire: 'wind',
+            wind: 'storm',
+            storm: 'water',
+            water: 'fire'
+        };
+
+        if (relationships[skillElement] === targetElement) return 1.5;
+        if (relationships[targetElement] === skillElement) return 0.5;
+        
+        return 1.0;
+    }
+
     calculateEvasionChance(attacker, defender) {
         const sAttacker = this.getFinalStat(attacker, 'speed');
         const sDefender = this.getFinalStat(defender, 'speed');
@@ -209,25 +226,34 @@ export class CombatManager {
             } else {
                 const targetDefense = this.getFinalStat(this.enemy, 'defense');
                 const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
-                const finalDamage = Math.max(1, Math.floor(rawDamage * defMult));
+                
+                const elementMult = this.getElementMultiplier(skillData.element, this.enemy.element);
+                const finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
+                
+                let elementFeedback = '';
+                if (elementMult > 1) {
+                   elementFeedback = `[${t('effective') || 'Effective!'}] `;
+                } else if (elementMult < 1) {
+                   elementFeedback = `[${t('resisted') || 'Resisted'}] `;
+                }
                 
                 if (skillId === 'double_attack') {
                     this.applyDamage(this.enemy, finalDamage);
                     setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-                    logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
+                    logMsg = elementFeedback + t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
                     delay += 300;
                 } else if (skillId === 'triple_attack') {
                     this.applyDamage(this.enemy, finalDamage);
                     setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
                     setTimeout(() => this.applyDamage(this.enemy, finalDamage), 600);
-                    logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
+                    logMsg = elementFeedback + t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
                     delay += 600;
                 } else {
                     this.applyDamage(this.enemy, finalDamage);
                     if (skillId === 'basic_attack') {
-                        logMsg = t('log_attack').replace('{attacker}', hero.name).replace('{target}', this.enemy.name).replace('{damage}', finalDamage);
+                        logMsg = elementFeedback + t('log_attack').replace('{attacker}', hero.name).replace('{target}', this.enemy.name).replace('{damage}', finalDamage);
                     } else {
-                        logMsg = t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
+                        logMsg = elementFeedback + t('log_uses_skill').replace('{attacker}', hero.name).replace('{skill}', t(skillId));
                     }
                 }
             }

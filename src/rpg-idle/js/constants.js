@@ -46,7 +46,8 @@ export const SKILLS_DATA = {
         enhanceCostBase: 1,
         baseMultiplier: 0.8,
         mpCost: 10,
-        stat: 'magicPower'
+        stat: 'magicPower',
+        element: 'fire'
     },
     medium_fire_ball: {
         id: 'medium_fire_ball',
@@ -58,7 +59,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 1.2,
         mpCost: 20,
         stat: 'magicPower',
-        dependency: 'small_fire_ball'
+        dependency: 'small_fire_ball',
+        element: 'fire'
     },
     big_fire_ball: {
         id: 'big_fire_ball',
@@ -70,44 +72,48 @@ export const SKILLS_DATA = {
         baseMultiplier: 1.8,
         mpCost: 35,
         stat: 'magicPower',
-        dependency: 'medium_fire_ball'
+        dependency: 'medium_fire_ball',
+        element: 'fire'
     },
 
-    // Magic - Ice
-    small_ice_ball: {
-        id: 'small_ice_ball',
+    // Magic - Water
+    small_water_ball: {
+        id: 'small_water_ball',
         category: 'magic',
-        group: 'ball_ice',
+        group: 'ball_water',
         tier: 1,
         unlockCost: 1,
         enhanceCostBase: 1,
         baseMultiplier: 0.8,
         mpCost: 10,
-        stat: 'magicPower'
+        stat: 'magicPower',
+        element: 'water'
     },
-    medium_ice_ball: {
-        id: 'medium_ice_ball',
+    medium_water_ball: {
+        id: 'medium_water_ball',
         category: 'magic',
-        group: 'ball_ice',
+        group: 'ball_water',
         tier: 2,
         unlockCost: 20,
         enhanceCostBase: 2,
         baseMultiplier: 1.2,
         mpCost: 20,
         stat: 'magicPower',
-        dependency: 'small_ice_ball'
+        dependency: 'small_water_ball',
+        element: 'water'
     },
-    big_ice_ball: {
-        id: 'big_ice_ball',
+    big_water_ball: {
+        id: 'big_water_ball',
         category: 'magic',
-        group: 'ball_ice',
+        group: 'ball_water',
         tier: 3,
         unlockCost: 50,
         enhanceCostBase: 4,
         baseMultiplier: 1.8,
         mpCost: 35,
         stat: 'magicPower',
-        dependency: 'medium_ice_ball'
+        dependency: 'medium_water_ball',
+        element: 'water'
     },
 
     // Magic - Wind
@@ -120,7 +126,8 @@ export const SKILLS_DATA = {
         enhanceCostBase: 1,
         baseMultiplier: 0.8,
         mpCost: 10,
-        stat: 'magicPower'
+        stat: 'magicPower',
+        element: 'wind'
     },
     medium_wind_ball: {
         id: 'medium_wind_ball',
@@ -132,7 +139,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 1.2,
         mpCost: 20,
         stat: 'magicPower',
-        dependency: 'small_wind_ball'
+        dependency: 'small_wind_ball',
+        element: 'wind'
     },
     big_wind_ball: {
         id: 'big_wind_ball',
@@ -144,7 +152,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 1.8,
         mpCost: 35,
         stat: 'magicPower',
-        dependency: 'medium_wind_ball'
+        dependency: 'medium_wind_ball',
+        element: 'wind'
     },
 
     // Magic - Storm
@@ -157,7 +166,8 @@ export const SKILLS_DATA = {
         enhanceCostBase: 1,
         baseMultiplier: 0.8,
         mpCost: 10,
-        stat: 'magicPower'
+        stat: 'magicPower',
+        element: 'storm'
     },
     medium_storm_ball: {
         id: 'medium_storm_ball',
@@ -169,7 +179,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 1.2,
         mpCost: 20,
         stat: 'magicPower',
-        dependency: 'small_storm_ball'
+        dependency: 'small_storm_ball',
+        element: 'storm'
     },
     big_storm_ball: {
         id: 'big_storm_ball',
@@ -181,7 +192,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 1.8,
         mpCost: 35,
         stat: 'magicPower',
-        dependency: 'medium_storm_ball'
+        dependency: 'medium_storm_ball',
+        element: 'storm'
     },
 
     // Tricker (Placeholders)

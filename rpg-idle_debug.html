@@ -76,6 +76,18 @@ class ProgressionManager {
       const saved = JSON.parse(localStorage.getItem(this.progKey));
       if (saved) {
         this.prog = { ...defaultProg, ...saved };
+        if (this.prog.heroes) {
+          this.prog.heroes.forEach((h) => {
+            if (h.skills) {
+              ["small", "medium", "big"].forEach((tier) => {
+                if (h.skills[`${tier}_ice_ball`] !== void 0) {
+                  h.skills[`${tier}_water_ball`] = h.skills[`${tier}_ice_ball`];
+                  delete h.skills[`${tier}_ice_ball`];
+                }
+              });
+            }
+          });
+        }
       } else {
         this.prog = defaultProg;
       }
@@ -304,10 +316,11 @@ class Hero {
   }
 }
 class Enemy {
-  constructor(name, level, stats, isBoss = false) {
+  constructor(name, level, stats, isBoss = false, element = "neutral") {
     this.name = name;
     this.level = level;
     this.isBoss = isBoss;
+    this.element = element;
     this.maxHp = stats.hp;
     this.hp = this.maxHp;
     this.strength = stats.strength;
@@ -320,14 +333,20 @@ class Enemy {
     const nameIdx = Math.min(names.length - 1, Math.floor(milestone / 10));
     const name = names[nameIdx];
     const isBoss = milestone % 5 === 0;
+    const bossesPassed = Math.floor(milestone / 5);
+    const postBossesPassed = Math.floor((milestone - 1) / 5);
+    const totalStacks = Math.max(0, bossesPassed - 2 + (postBossesPassed - 2));
+    const multiplier = Math.pow(1.3, totalStacks);
     let stats = {
-      hp: 8 + level * 4,
-      strength: 2 + level * 1.5,
-      speed: 1 + level * 0.5,
-      defense: level * 0.5,
-      magicPower: level * 0.5
+      hp: (8 + level * 4) * multiplier,
+      strength: (2 + level * 1.5) * multiplier,
+      speed: (1 + level * 0.5) * multiplier,
+      defense: level * 0.5 * multiplier,
+      magicPower: level * 0.5 * multiplier
     };
+    let element = "neutral";
     if (milestone <= 10) {
+      element = "neutral";
       if (milestone <= 3) {
         stats.speed = 1;
         stats.defense = 0;
@@ -351,22 +370,43 @@ class Enemy {
         stats.strength = 20;
         stats.hp *= 1.5;
       }
+    } else if (milestone <= 15) {
+      stats.defense *= 1.5;
+      if (isBoss) {
+        stats.defense *= 1.7;
+        stats.hp *= 1.5;
+      }
+    } else if (milestone <= 20) {
+      stats.strength *= 1.7;
+      stats.speed *= 0.7;
+      if (isBoss) {
+        stats.strength *= 1.3;
+        stats.speed *= 0.8;
+        stats.hp *= 1.5;
+      }
+    } else if (milestone <= 40) {
+      if (milestone <= 25) element = "fire";
+      else if (milestone <= 30) element = "water";
+      else if (milestone <= 35) element = "wind";
+      else if (milestone <= 40) element = "storm";
+      if (isBoss) {
+        stats.hp *= 1.5;
+        stats.strength *= 1.2;
+        stats.speed *= 1.2;
+      }
     } else {
-      const bossesPassed = Math.floor(milestone / 5);
-      const postBossesPassed = Math.floor((milestone - 1) / 5);
-      const totalStacks = bossesPassed - 2 + (postBossesPassed - 2);
-      const multiplier = Math.pow(1.3, Math.max(0, totalStacks));
-      stats.hp *= multiplier;
-      stats.strength *= multiplier;
-      stats.speed *= multiplier;
-      stats.defense *= multiplier;
+      const elementRand = Math.random();
+      if (elementRand > 0.33) {
+        const elements = ["fire", "water", "wind", "storm"];
+        element = elements[Math.floor(Math.random() * elements.length)];
+      }
       if (isBoss) {
         stats.hp *= 1.5;
         stats.strength *= 1.2;
         stats.speed *= 1.2;
       }
     }
-    return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss);
+    return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element);
   }
   draw(ctx, x, y) {
     ctx.fillStyle = this.isBoss ? "#f0f" : "#f55";
@@ -386,6 +426,58 @@ class Enemy {
     ctx.fillStyle = "#fff";
     ctx.font = "10px Outfit";
     ctx.fillText(`${Math.ceil(this.hp)} / ${this.maxHp}`, x, y + 60);
+    this.drawElementDiagram(ctx, x - 100, y);
+  }
+  drawElementDiagram(ctx, x, y) {
+    const positions = {
+      fire: { x: 0, y: -25, color: "#ff4444" },
+      wind: { x: 25, y: 0, color: "#44ff44" },
+      storm: { x: 0, y: 25, color: "#ffff44" },
+      water: { x: -25, y: 0, color: "#4444ff" }
+    };
+    const elements = ["fire", "wind", "storm", "water"];
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 2;
+    elements.forEach((el, i) => {
+      const start = positions[el];
+      const next = positions[elements[(i + 1) % 4]];
+      this.drawArrow(ctx, start.x, start.y, next.x, next.y);
+    });
+    elements.forEach((el) => {
+      const pos = positions[el];
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+      ctx.strokeStyle = pos.color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      if (this.element === el) {
+        ctx.fillStyle = pos.color;
+        ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
+  drawArrow(ctx, x1, y1, x2, y2) {
+    const headlen = 5;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const ox = Math.cos(angle) * 10;
+    const oy = Math.sin(angle) * 10;
+    const sx = x1 + ox;
+    const sy = y1 + oy;
+    const ex = x2 - ox;
+    const ey = y2 - oy;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - headlen * Math.cos(angle - Math.PI / 6), ey - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - headlen * Math.cos(angle + Math.PI / 6), ey - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.stroke();
   }
 }
 const SKILLS_DATA = {
@@ -438,7 +530,8 @@ const SKILLS_DATA = {
     enhanceCostBase: 1,
     baseMultiplier: 0.8,
     mpCost: 10,
-    stat: "magicPower"
+    stat: "magicPower",
+    element: "fire"
   },
   medium_fire_ball: {
     id: "medium_fire_ball",
@@ -450,7 +543,8 @@ const SKILLS_DATA = {
     baseMultiplier: 1.2,
     mpCost: 20,
     stat: "magicPower",
-    dependency: "small_fire_ball"
+    dependency: "small_fire_ball",
+    element: "fire"
   },
   big_fire_ball: {
     id: "big_fire_ball",
@@ -462,43 +556,47 @@ const SKILLS_DATA = {
     baseMultiplier: 1.8,
     mpCost: 35,
     stat: "magicPower",
-    dependency: "medium_fire_ball"
+    dependency: "medium_fire_ball",
+    element: "fire"
   },
-  // Magic - Ice
-  small_ice_ball: {
-    id: "small_ice_ball",
+  // Magic - Water
+  small_water_ball: {
+    id: "small_water_ball",
     category: "magic",
-    group: "ball_ice",
+    group: "ball_water",
     tier: 1,
     unlockCost: 1,
     enhanceCostBase: 1,
     baseMultiplier: 0.8,
     mpCost: 10,
-    stat: "magicPower"
+    stat: "magicPower",
+    element: "water"
   },
-  medium_ice_ball: {
-    id: "medium_ice_ball",
+  medium_water_ball: {
+    id: "medium_water_ball",
     category: "magic",
-    group: "ball_ice",
+    group: "ball_water",
     tier: 2,
     unlockCost: 20,
     enhanceCostBase: 2,
     baseMultiplier: 1.2,
     mpCost: 20,
     stat: "magicPower",
-    dependency: "small_ice_ball"
+    dependency: "small_water_ball",
+    element: "water"
   },
-  big_ice_ball: {
-    id: "big_ice_ball",
+  big_water_ball: {
+    id: "big_water_ball",
     category: "magic",
-    group: "ball_ice",
+    group: "ball_water",
     tier: 3,
     unlockCost: 50,
     enhanceCostBase: 4,
     baseMultiplier: 1.8,
     mpCost: 35,
     stat: "magicPower",
-    dependency: "medium_ice_ball"
+    dependency: "medium_water_ball",
+    element: "water"
   },
   // Magic - Wind
   small_wind_ball: {
@@ -510,7 +608,8 @@ const SKILLS_DATA = {
     enhanceCostBase: 1,
     baseMultiplier: 0.8,
     mpCost: 10,
-    stat: "magicPower"
+    stat: "magicPower",
+    element: "wind"
   },
   medium_wind_ball: {
     id: "medium_wind_ball",
@@ -522,7 +621,8 @@ const SKILLS_DATA = {
     baseMultiplier: 1.2,
     mpCost: 20,
     stat: "magicPower",
-    dependency: "small_wind_ball"
+    dependency: "small_wind_ball",
+    element: "wind"
   },
   big_wind_ball: {
     id: "big_wind_ball",
@@ -534,7 +634,8 @@ const SKILLS_DATA = {
     baseMultiplier: 1.8,
     mpCost: 35,
     stat: "magicPower",
-    dependency: "medium_wind_ball"
+    dependency: "medium_wind_ball",
+    element: "wind"
   },
   // Magic - Storm
   small_storm_ball: {
@@ -546,7 +647,8 @@ const SKILLS_DATA = {
     enhanceCostBase: 1,
     baseMultiplier: 0.8,
     mpCost: 10,
-    stat: "magicPower"
+    stat: "magicPower",
+    element: "storm"
   },
   medium_storm_ball: {
     id: "medium_storm_ball",
@@ -558,7 +660,8 @@ const SKILLS_DATA = {
     baseMultiplier: 1.2,
     mpCost: 20,
     stat: "magicPower",
-    dependency: "small_storm_ball"
+    dependency: "small_storm_ball",
+    element: "storm"
   },
   big_storm_ball: {
     id: "big_storm_ball",
@@ -570,7 +673,8 @@ const SKILLS_DATA = {
     baseMultiplier: 1.8,
     mpCost: 35,
     stat: "magicPower",
-    dependency: "medium_storm_ball"
+    dependency: "medium_storm_ball",
+    element: "storm"
   },
   // Tricker (Placeholders)
   poison_dart: {
@@ -676,7 +780,7 @@ const SKILLS_DATA = {
 const TRANSLATIONS = {
   en: {
     subtitle: "Adventure & Recruit",
-    btn_adventure: "ADVENTURE",
+    btn_adventure: "INFINITE ADVENTURE",
     btn_village: "VILLAGE",
     btn_settings: "SETTINGS",
     btn_back: "BACK",
@@ -686,6 +790,8 @@ const TRANSLATIONS = {
     lang: "Language",
     btn_export: "EXPORT JSON",
     btn_import: "IMPORT JSON",
+    effective: "Effective!",
+    resisted: "Resisted",
     tavern_title: "Recruit Heroes",
     shop_title: "Item Shop",
     current_gold: "Current Gold",
@@ -693,7 +799,7 @@ const TRANSLATIONS = {
     btn_buy: "BUY",
     basic_attack: "Attack",
     double_attack: "Double Attack (10 MP)",
-    basic_ice_ball: "Ice Ball (15 MP)",
+    basic_water_ball: "Ice Ball (15 MP)",
     tiny_potion: "Tiny Potion",
     tiny_mana_potion: "Tiny Mana Potion",
     hero_limit: "Hero limit reached!",
@@ -760,7 +866,7 @@ const TRANSLATIONS = {
     fire_limit_msg: "You cannot fire your only hero!",
     greedy_reset_msg: "Oh... you were so greedy... the world has changed. Let's start over!",
     ball_fire: "Fire Magic",
-    ball_ice: "Ice Magic",
+    ball_water: "Water Magic",
     ball_wind: "Wind Magic",
     ball_storm: "Storm Magic",
     healing: "Healing",
@@ -772,9 +878,9 @@ const TRANSLATIONS = {
     small_fire_ball: "Small Fire Ball",
     medium_fire_ball: "Medium Fire Ball",
     big_fire_ball: "Big Fire Ball",
-    small_ice_ball: "Small Ice Ball",
-    medium_ice_ball: "Medium Ice Ball",
-    big_ice_ball: "Big Ice Ball",
+    small_water_ball: "Small Water Ball",
+    medium_water_ball: "Medium Water Ball",
+    big_water_ball: "Big Water Ball",
     small_wind_ball: "Small Wind Ball",
     medium_wind_ball: "Medium Wind Ball",
     big_wind_ball: "Big Wind Ball",
@@ -808,9 +914,9 @@ const TRANSLATIONS = {
     small_fire_ball_desc: "Small burst of fire magic.",
     medium_fire_ball_desc: "Moderate fire magic blast.",
     big_fire_ball_desc: "Massive fire explosion.",
-    small_ice_ball_desc: "Chilling ice magic shard.",
-    medium_ice_ball_desc: "Barrage of ice magic.",
-    big_ice_ball_desc: "Absolute zero ice magic.",
+    small_water_ball_desc: "Chilling water magic shard.",
+    medium_water_ball_desc: "Barrage of water magic.",
+    big_water_ball_desc: "Absolute zero water magic.",
     small_wind_ball_desc: "Sharp wind magic gust.",
     medium_wind_ball_desc: "Tornado of wind magic.",
     big_wind_ball_desc: "Cyclone of wind magic.",
@@ -828,7 +934,7 @@ const TRANSLATIONS = {
   },
   es: {
     subtitle: "Aventura y Recluta",
-    btn_adventure: "AVENTURA",
+    btn_adventure: "AVENTURA INFINITA",
     btn_village: "ALDEA",
     btn_settings: "AJUSTES",
     btn_back: "VOLVER",
@@ -838,6 +944,8 @@ const TRANSLATIONS = {
     lang: "Idioma",
     btn_export: "EXPORTAR JSON",
     btn_import: "IMPORTAR JSON",
+    effective: "¡Eficaz!",
+    resisted: "Resistido",
     tavern_title: "Reclutar Héroes",
     shop_title: "Tienda de Objetos",
     current_gold: "Oro Actual",
@@ -845,7 +953,7 @@ const TRANSLATIONS = {
     btn_buy: "COMPRAR",
     basic_attack: "Ataque",
     double_attack: "Ataque Doble (10 MP)",
-    basic_ice_ball: "Bola de Hielo (15 MP)",
+    basic_water_ball: "Bola de Hielo (15 MP)",
     tiny_potion: "Poción Pequeña",
     tiny_mana_potion: "Poción de Maná Pequeña",
     hero_limit: "¡Límite de héroes alcanzado!",
@@ -912,7 +1020,7 @@ const TRANSLATIONS = {
     fire_limit_msg: "¡No puedes despedir a tu único héroe!",
     greedy_reset_msg: "Oh... eras tan codicioso... el mundo ha cambiado. ¡Empecemos de nuevo!",
     ball_fire: "Magia de Fuego",
-    ball_ice: "Magia de Hielo",
+    ball_water: "Magia de Agua",
     ball_wind: "Magia de Viento",
     ball_storm: "Magia de Tormenta",
     healing: "Curación",
@@ -924,9 +1032,9 @@ const TRANSLATIONS = {
     small_fire_ball: "Bola de Fuego Pequeña",
     medium_fire_ball: "Bola de Fuego Mediana",
     big_fire_ball: "Bola de Fuego Grande",
-    small_ice_ball: "Bola de Hielo Pequeña",
-    medium_ice_ball: "Bola de Hielo Mediana",
-    big_ice_ball: "Bola de Hielo Grande",
+    small_water_ball: "Bola de Agua Pequeña",
+    medium_water_ball: "Bola de Agua Mediana",
+    big_water_ball: "Bola de Agua Grande",
     small_wind_ball: "Bola de Viento Pequeña",
     medium_wind_ball: "Bola de Viento Mediana",
     big_wind_ball: "Bola de Viento Grande",
@@ -958,9 +1066,9 @@ const TRANSLATIONS = {
     small_fire_ball_desc: "Pequeña ráfaga de fuego.",
     medium_fire_ball_desc: "Explosión moderada de fuego.",
     big_fire_ball_desc: "Nova de fuego masiva.",
-    small_ice_ball_desc: "Fragmento de hielo cortante.",
-    medium_ice_ball_desc: "Ráfaga de magia helada.",
-    big_ice_ball_desc: "Magia de cero absoluto.",
+    small_water_ball_desc: "Fragmento de agua cortante.",
+    medium_water_ball_desc: "Ráfaga de magia acuática.",
+    big_water_ball_desc: "Magia de presión absoluta.",
     small_wind_ball_desc: "Ráfaga de viento afilada.",
     medium_wind_ball_desc: "Tornado de magia de viento.",
     big_wind_ball_desc: "Ciclón devastador de viento.",
@@ -978,7 +1086,7 @@ const TRANSLATIONS = {
   },
   ca: {
     subtitle: "Aventura i Recluta",
-    btn_adventure: "AVENTURA",
+    btn_adventure: "AVENTURA INFINITA",
     btn_village: "POBLE",
     btn_settings: "AJUSTOS",
     btn_back: "TORNAR",
@@ -988,6 +1096,8 @@ const TRANSLATIONS = {
     lang: "Idioma",
     btn_export: "EXPORTAR JSON",
     btn_import: "IMPORTAR JSON",
+    effective: "Eficaç!",
+    resisted: "Resistit",
     tavern_title: "Reclutar Herois",
     shop_title: "Botiga d'Objectes",
     current_gold: "Or Actual",
@@ -995,7 +1105,7 @@ const TRANSLATIONS = {
     btn_buy: "COMPRAR",
     basic_attack: "Atac",
     double_attack: "Atac Doble (10 MP)",
-    basic_ice_ball: "Bola de Gel (15 MP)",
+    basic_water_ball: "Bola de Aigua (15 MP)",
     tiny_potion: "Poció Petita",
     tiny_mana_potion: "Poció de Manà Petita",
     hero_limit: "Límit d'herois assolit!",
@@ -1062,7 +1172,7 @@ const TRANSLATIONS = {
     fire_limit_msg: "No pots acomiadar el teu únic heroi!",
     greedy_reset_msg: "Oh... eres tan codiciós... el món ha canviat. Tornem a començar!",
     ball_fire: "Màgia de Foc",
-    ball_ice: "Màgia de Gel",
+    ball_water: "Màgia de Aigua",
     ball_wind: "Màgia de Vent",
     ball_storm: "Màgia de Tempesta",
     healing: "Curació",
@@ -1074,9 +1184,9 @@ const TRANSLATIONS = {
     small_fire_ball: "Bola de Foc Petita",
     medium_fire_ball: "Bola de Foc Mitjana",
     big_fire_ball: "Bola de Foc Gran",
-    small_ice_ball: "Bola de Gel Petita",
-    medium_ice_ball: "Bola de Gel Mitjana",
-    big_ice_ball: "Bola de Gel Gran",
+    small_water_ball: "Bola de Aigua Petita",
+    medium_water_ball: "Bola de Aigua Mitjana",
+    big_water_ball: "Bola de Aigua Gran",
     small_wind_ball: "Bola de Vent Petita",
     medium_wind_ball: "Bola de Vent Mitjana",
     big_wind_ball: "Bola de Vent Gran",
@@ -1108,9 +1218,9 @@ const TRANSLATIONS = {
     small_fire_ball_desc: "Petita ràfega de foc.",
     medium_fire_ball_desc: "Explosió moderada de foc.",
     big_fire_ball_desc: "Nova de foc massiva.",
-    small_ice_ball_desc: "Fragment de gel tallant.",
-    medium_ice_ball_desc: "Ràfega de màgia gelada.",
-    big_ice_ball_desc: "Màgia de zero absolut.",
+    small_water_ball_desc: "Fragment de gel tallant.",
+    medium_water_ball_desc: "Ràfega de màgia gelada.",
+    big_water_ball_desc: "Màgia de zero absolut.",
     small_wind_ball_desc: "Ràfega de vent afilada.",
     medium_wind_ball_desc: "Tornado de màgia de vent.",
     big_wind_ball_desc: "Cicló devastador de vent.",
@@ -1128,7 +1238,7 @@ const TRANSLATIONS = {
   },
   eu: {
     subtitle: "Abentura eta Errekluta",
-    btn_adventure: "ABENTURA",
+    btn_adventure: "ABENTURA INFINITUA",
     btn_village: "HERRIA",
     btn_settings: "EZARPENAK",
     btn_back: "ITZULI",
@@ -1138,6 +1248,8 @@ const TRANSLATIONS = {
     lang: "Hizkuntza",
     btn_export: "EXPORTATU JSON",
     btn_import: "IMPORTATU JSON",
+    effective: "Eraginkorra!",
+    resisted: "Erresistitua",
     tavern_title: "Heroiak Erreklutatu",
     shop_title: "Objektuen Denda",
     current_gold: "Egungo Urrea",
@@ -1145,7 +1257,7 @@ const TRANSLATIONS = {
     btn_buy: "EROSI",
     basic_attack: "Erasoa",
     double_attack: "Eraso Bikoitza (10 MP)",
-    basic_ice_ball: "Izotz Bola (15 MP)",
+    basic_water_ball: "Ur Bola (15 MP)",
     tiny_potion: "Edabe Txikia",
     tiny_mana_potion: "Mana Edabe Txikia",
     hero_limit: "Heroi muga lortuta!",
@@ -1212,7 +1324,7 @@ const TRANSLATIONS = {
     fire_limit_msg: "Ezin duzu zure heroi bakarra abiaidutu!",
     greedy_reset_msg: "Oh... hain gutizia zinen... mundua aldatu da. Has gaitezen berriro!",
     ball_fire: "Su Magia",
-    ball_ice: "Izotz Magia",
+    ball_water: "Ur Magia",
     ball_wind: "Haize Magia",
     ball_storm: "Ekaitz Magia",
     healing: "Sendaketa",
@@ -1224,9 +1336,9 @@ const TRANSLATIONS = {
     small_fire_ball: "Su Bola Txikia",
     medium_fire_ball: "Su Bola Ertaina",
     big_fire_ball: "Su Bola Handia",
-    small_ice_ball: "Izotz Bola Txikia",
-    medium_ice_ball: "Izotz Bola Ertaina",
-    big_ice_ball: "Izotz Bola Handia",
+    small_water_ball: "Ur Bola Txikia",
+    medium_water_ball: "Ur Bola Ertaina",
+    big_water_ball: "Ur Bola Handia",
     small_wind_ball: "Haize Bola Txikia",
     medium_wind_ball: "Haize Bola Ertaina",
     big_wind_ball: "Haize Bola Handia",
@@ -1258,9 +1370,9 @@ const TRANSLATIONS = {
     small_fire_ball_desc: "Su eztanda txikia.",
     medium_fire_ball_desc: "Su eztanda ertaina.",
     big_fire_ball_desc: "Su eztanda handia.",
-    small_ice_ball_desc: "Izotz zati zorrotza.",
-    medium_ice_ball_desc: "Izotz magia andana.",
-    big_ice_ball_desc: "Zero absolutuko magia.",
+    small_water_ball_desc: "Ur zati zorrotza.",
+    medium_water_ball_desc: "Ur magia andana.",
+    big_water_ball_desc: "Zero absolutuko magia.",
     small_wind_ball_desc: "Haize ufada zorrotza.",
     medium_wind_ball_desc: "Haize magia tornadoa.",
     big_wind_ball_desc: "Haize magia zikloia.",
@@ -1275,7 +1387,7 @@ const TRANSLATIONS = {
   },
   gl: {
     subtitle: "Aventura e Recluta",
-    btn_adventure: "AVENTURA",
+    btn_adventure: "AVENTURA INFINITA",
     btn_village: "ALDEA",
     btn_settings: "AXUSTES",
     btn_back: "VOLVER",
@@ -1285,6 +1397,8 @@ const TRANSLATIONS = {
     lang: "Idioma",
     btn_export: "EXPORTAR JSON",
     btn_import: "IMPORTAR JSON",
+    effective: "Eficaz!",
+    resisted: "Resistido",
     tavern_title: "Reclutar Heroes",
     shop_title: "Tenda de Obxectos",
     current_gold: "Ouro Actual",
@@ -1292,7 +1406,7 @@ const TRANSLATIONS = {
     btn_buy: "COMPRAR",
     basic_attack: "Ataque",
     double_attack: "Ataque Dobre (10 MP)",
-    basic_ice_ball: "Bóla de Xeo (15 MP)",
+    basic_water_ball: "Bóla de Auga (15 MP)",
     tiny_potion: "Poción Pequena",
     tiny_mana_potion: "Poción de Maná Pequena",
     hero_limit: "Límite de heroes alcanzado!",
@@ -1359,7 +1473,7 @@ const TRANSLATIONS = {
     fire_limit_msg: "Non podes acomidar ao teu único heroe!",
     greedy_reset_msg: "Oh... eras tan codicioso... o mundo cambiou. Comecemos de novo!",
     ball_fire: "Maxia de Lume",
-    ball_ice: "Maxia de Xeo",
+    ball_water: "Maxia de Auga",
     ball_wind: "Maxia de Vento",
     ball_storm: "Maxia de Tormenta",
     healing: "Curación",
@@ -1371,9 +1485,9 @@ const TRANSLATIONS = {
     small_fire_ball: "Bóla de Lume Pequena",
     medium_fire_ball: "Bóla de Lume Mediana",
     big_fire_ball: "Bóla de Lume Grande",
-    small_ice_ball: "Bóla de Xeo Pequena",
-    medium_ice_ball: "Bóla de Xeo Mediana",
-    big_ice_ball: "Bóla de Xeo Grande",
+    small_water_ball: "Bóla de Auga Pequena",
+    medium_water_ball: "Bóla de Auga Mediana",
+    big_water_ball: "Bóla de Auga Grande",
     small_wind_ball: "Bóla de Vento Pequena",
     medium_wind_ball: "Bóla de Vento Mediana",
     big_wind_ball: "Bóla de Vento Grande",
@@ -1405,9 +1519,9 @@ const TRANSLATIONS = {
     small_fire_ball_desc: "Pequena ráfaga de lume.",
     medium_fire_ball_desc: "Explosión moderada de lume.",
     big_fire_ball_desc: "Nova de lume masiva.",
-    small_ice_ball_desc: "Fragmento de xeo cortante.",
-    medium_ice_ball_desc: "Ráfaga de maxia xeada.",
-    big_ice_ball_desc: "Maxia de cero absoluto.",
+    small_water_ball_desc: "Fragmento de xeo cortante.",
+    medium_water_ball_desc: "Ráfaga de maxia xeada.",
+    big_water_ball_desc: "Maxia de cero absoluto.",
     small_wind_ball_desc: "Ráfaga de vento afiada.",
     medium_wind_ball_desc: "Tornado de maxia de vento.",
     big_wind_ball_desc: "Ciclón devastador de vento.",
@@ -1550,6 +1664,19 @@ class CombatManager {
     if (R >= 1) return 0.5 + (R - 1) * 0.25;
     return R * 0.5;
   }
+  getElementMultiplier(skillElement, targetElement) {
+    if (!skillElement || !targetElement || targetElement === "neutral") return 1;
+    if (skillElement === targetElement) return 1;
+    const relationships = {
+      fire: "wind",
+      wind: "storm",
+      storm: "water",
+      water: "fire"
+    };
+    if (relationships[skillElement] === targetElement) return 1.5;
+    if (relationships[targetElement] === skillElement) return 0.5;
+    return 1;
+  }
   calculateEvasionChance(attacker, defender) {
     const sAttacker = this.getFinalStat(attacker, "speed");
     const sDefender = this.getFinalStat(defender, "speed");
@@ -1606,24 +1733,31 @@ class CombatManager {
       } else {
         const targetDefense = this.getFinalStat(this.enemy, "defense");
         const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
-        const finalDamage = Math.max(1, Math.floor(rawDamage * defMult));
+        const elementMult = this.getElementMultiplier(skillData.element, this.enemy.element);
+        const finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
+        let elementFeedback = "";
+        if (elementMult > 1) {
+          elementFeedback = `[${t("effective") || "Effective!"}] `;
+        } else if (elementMult < 1) {
+          elementFeedback = `[${t("resisted") || "Resisted"}] `;
+        }
         if (skillId === "double_attack") {
           this.applyDamage(this.enemy, finalDamage);
           setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-          logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
+          logMsg = elementFeedback + t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
           delay += 300;
         } else if (skillId === "triple_attack") {
           this.applyDamage(this.enemy, finalDamage);
           setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
           setTimeout(() => this.applyDamage(this.enemy, finalDamage), 600);
-          logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
+          logMsg = elementFeedback + t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
           delay += 600;
         } else {
           this.applyDamage(this.enemy, finalDamage);
           if (skillId === "basic_attack") {
-            logMsg = t("log_attack").replace("{attacker}", hero.name).replace("{target}", this.enemy.name).replace("{damage}", finalDamage);
+            logMsg = elementFeedback + t("log_attack").replace("{attacker}", hero.name).replace("{target}", this.enemy.name).replace("{damage}", finalDamage);
           } else {
-            logMsg = t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
+            logMsg = elementFeedback + t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
           }
         }
       }

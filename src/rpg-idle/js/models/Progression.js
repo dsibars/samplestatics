@@ -31,6 +31,19 @@ export class ProgressionManager {
             const saved = JSON.parse(localStorage.getItem(this.progKey));
             if (saved) {
                 this.prog = { ...defaultProg, ...saved };
+                // Migration: Rename ice skills to water
+                if (this.prog.heroes) {
+                    this.prog.heroes.forEach(h => {
+                        if (h.skills) {
+                            ['small', 'medium', 'big'].forEach(tier => {
+                                if (h.skills[`${tier}_ice_ball`] !== undefined) {
+                                    h.skills[`${tier}_water_ball`] = h.skills[`${tier}_ice_ball`];
+                                    delete h.skills[`${tier}_ice_ball`];
+                                }
+                            });
+                        }
+                    });
+                }
             } else {
                 this.prog = defaultProg;
             }
