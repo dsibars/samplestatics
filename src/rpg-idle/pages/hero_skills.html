@@ -1,6 +1,7 @@
 <div id="view-hero-skills" class="view">
     <div class="game-header">
-        <h2 style="margin: 0;" data-i18n="hero_skills">Skills List</h2>
+        <button class="back-btn" onclick="window.showHeroDetails(window.currentHeroIndex)" style="padding: 8px 12px;">← <span data-i18n="btn_back">BACK</span></button>
+        <h2 style="margin: 0; flex: 1; text-align: center;" data-i18n="hero_skills">Skills List</h2>
         <div style="font-size: 0.9rem; color: #ccc;"><span id="label-skills-sp" data-i18n="skill_points">Skill Points</span> <span id="hero-skills-sp">0</span></div>
     </div>
     
@@ -15,7 +16,6 @@
             <!-- Skills injected here -->
         </div>
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;">
-            <button class="menu-btn secondary" onclick="window.showHeroDetails(window.currentHeroIndex)" data-i18n="btn_back">Back</button>
         </div>
     </div>
 </div>

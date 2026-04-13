@@ -684,6 +684,8 @@ const TRANSLATIONS = {
     btn_hub: "MAIN HUB",
     settings_title: "SETTINGS",
     lang: "Language",
+    btn_export: "EXPORT JSON",
+    btn_import: "IMPORT JSON",
     tavern_title: "Recruit Heroes",
     shop_title: "Item Shop",
     current_gold: "Current Gold",
@@ -834,6 +836,8 @@ const TRANSLATIONS = {
     btn_hub: "MENÚ PRINCIPAL",
     settings_title: "AJUSTES",
     lang: "Idioma",
+    btn_export: "EXPORTAR JSON",
+    btn_import: "IMPORTAR JSON",
     tavern_title: "Reclutar Héroes",
     shop_title: "Tienda de Objetos",
     current_gold: "Oro Actual",
@@ -982,6 +986,8 @@ const TRANSLATIONS = {
     btn_hub: "MENÚ PRINCIPAL",
     settings_title: "AJUSTOS",
     lang: "Idioma",
+    btn_export: "EXPORTAR JSON",
+    btn_import: "IMPORTAR JSON",
     tavern_title: "Reclutar Herois",
     shop_title: "Botiga d'Objectes",
     current_gold: "Or Actual",
@@ -1130,6 +1136,8 @@ const TRANSLATIONS = {
     btn_hub: "MENU NAGUSIA",
     settings_title: "EZARPENAK",
     lang: "Hizkuntza",
+    btn_export: "EXPORTATU JSON",
+    btn_import: "IMPORTATU JSON",
     tavern_title: "Heroiak Erreklutatu",
     shop_title: "Objektuen Denda",
     current_gold: "Egungo Urrea",
@@ -1275,6 +1283,8 @@ const TRANSLATIONS = {
     btn_hub: "MENU PRINCIPAL",
     settings_title: "AXUSTES",
     lang: "Idioma",
+    btn_export: "EXPORTAR JSON",
+    btn_import: "IMPORTAR JSON",
     tavern_title: "Reclutar Heroes",
     shop_title: "Tenda de Obxectos",
     current_gold: "Ouro Actual",
@@ -2204,7 +2214,7 @@ window.showHeroDetails = (index) => {
   window.currentHeroIndex = index;
   const heroData = Progression.prog.heroes[index];
   if (!heroData) return;
-  document.getElementById("hero-details-name").innerText = heroData.name;
+  document.getElementById("hero-details-name").innerText = `${heroData.name} (${heroData.level})`;
   document.getElementById("hero-details-sp").innerText = heroData.statPoints;
   const nextLevelExp = heroData.level * 20;
   const expPercent = Math.min(100, heroData.exp / nextLevelExp * 100);
@@ -2404,6 +2414,38 @@ window.toggleCombatLog = () => {
     logOverlay.style.display = "none";
     toggleText.innerText = t("show_logs") || "Show Logs";
   }
+};
+window.exportData = () => {
+  const data = {
+    cores: localStorage.getItem("rpg_cores"),
+    progression: localStorage.getItem("rpg_progression"),
+    autobattle: localStorage.getItem("rpg_autobattle")
+  };
+  const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = "rpg_idle_backup.json";
+  a.click();
+};
+window.importData = (event) => {
+  const r = new FileReader();
+  r.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.progression) {
+        if (data.cores) localStorage.setItem("rpg_cores", data.cores);
+        localStorage.setItem("rpg_progression", data.progression);
+        if (data.autobattle) localStorage.setItem("rpg_autobattle", data.autobattle);
+        alert(t("wipe_success") || "Data imported successfully!");
+        location.reload();
+      } else {
+        alert("Invalid save file structure.");
+      }
+    } catch (err) {
+      alert("Error parsing file.");
+    }
+  };
+  r.readAsText(event.target.files[0]);
 };
 window.onload = () => {
   updateCoresUI();
@@ -2652,6 +2694,9 @@ body {
                 <button class="menu-btn secondary" onclick="window.showSettings()">
                     <span class="icon">⚙️</span> <span data-i18n="btn_settings">SETTINGS</span>
                 </button>
+                <button class="menu-btn secondary" onclick="window.location.href='../index.html'" style="margin-top: 10px;">
+                    <span class="icon">🏠</span> <span data-i18n="btn_hub">MAIN HUB</span>
+                </button>
             </div>
         </div>
     </div>
@@ -2723,7 +2768,7 @@ body {
         </div>
 
         <!-- Action Panel (~30%) -->
-        <div id="action-panel" style="flex: 1; min-height: 0; background: #1a1a1a; padding: 10px; display: none; flex-direction: column; gap: 5px; overflow-y: auto;">
+        <div id="action-panel" style="flex: 1; min-height: 0; background: #1a1a1a; padding: 10px; padding-bottom: 60px; display: none; flex-direction: column; gap: 5px; overflow-y: auto;">
         </div>
     </div>
 
@@ -2746,7 +2791,8 @@ body {
 
     <div id="view-hero-details" class="view">
     <div class="game-header">
-        <h2 id="hero-details-name" style="margin: 0;">Hero Name</h2>
+        <button class="back-btn" onclick="window.showVillage()" style="padding: 8px 12px;">← <span data-i18n="btn_back">BACK</span></button>
+        <h2 id="hero-details-name" style="margin: 0; flex: 1; text-align: center;">Hero Name</h2>
         <div style="font-size: 0.9rem; color: #ccc;"><span id="label-sp" data-i18n="stat_points">Stat Points</span> <span id="hero-details-sp">0</span></div>
     </div>
     <div style="flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto;">
@@ -2770,14 +2816,14 @@ body {
         <!-- Bottom 30% content -->
         <div style="flex: 3; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #444;">
             <button class="menu-btn primary" id="btn-hero-skills" onclick="window.showHeroSkills(window.currentHeroIndex)" data-i18n="hero_skills">Skills</button>
-            <button class="menu-btn secondary" onclick="window.showVillage()" data-i18n="btn_back">Back</button>
         </div>
     </div>
 </div>
 
     <div id="view-hero-skills" class="view">
     <div class="game-header">
-        <h2 style="margin: 0;" data-i18n="hero_skills">Skills List</h2>
+        <button class="back-btn" onclick="window.showHeroDetails(window.currentHeroIndex)" style="padding: 8px 12px;">← <span data-i18n="btn_back">BACK</span></button>
+        <h2 style="margin: 0; flex: 1; text-align: center;" data-i18n="hero_skills">Skills List</h2>
         <div style="font-size: 0.9rem; color: #ccc;"><span id="label-skills-sp" data-i18n="skill_points">Skill Points</span> <span id="hero-skills-sp">0</span></div>
     </div>
     
@@ -2792,7 +2838,6 @@ body {
             <!-- Skills injected here -->
         </div>
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;">
-            <button class="menu-btn secondary" onclick="window.showHeroDetails(window.currentHeroIndex)" data-i18n="btn_back">Back</button>
         </div>
     </div>
 </div>
@@ -2816,11 +2861,16 @@ body {
             </div>
 
             <div class="menu-actions">
+                <button class="menu-btn secondary" onclick="window.exportData()" style="margin-bottom: 10px;">
+                    <span data-i18n="btn_export">EXPORT JSON</span>
+                </button>
+                <button class="menu-btn secondary" onclick="document.getElementById('import-input').click()" style="margin-bottom: 20px;">
+                    <span data-i18n="btn_import">IMPORT JSON</span>
+                </button>
+                <input type="file" id="import-input" style="display:none" onchange="window.importData(event)">
+
                 <button class="menu-btn secondary" onclick="window.clearGameData()" style="color: var(--danger); border-color: var(--danger); margin-bottom: 20px;">
                     WIPE DATA
-                </button>
-                <button class="menu-btn secondary" onclick="window.location.href='../index.html'" style="margin-bottom: 20px;">
-                    <span data-i18n="btn_hub">MAIN HUB</span>
                 </button>
                 <button class="menu-btn primary" onclick="window.showMenu()">
                     <span data-i18n="btn_back">BACK</span>

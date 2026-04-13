@@ -17,11 +17,16 @@
             </div>
 
             <div class="menu-actions">
+                <button class="menu-btn secondary" onclick="window.exportData()" style="margin-bottom: 10px;">
+                    <span data-i18n="btn_export">EXPORT JSON</span>
+                </button>
+                <button class="menu-btn secondary" onclick="document.getElementById('import-input').click()" style="margin-bottom: 20px;">
+                    <span data-i18n="btn_import">IMPORT JSON</span>
+                </button>
+                <input type="file" id="import-input" style="display:none" onchange="window.importData(event)">
+
                 <button class="menu-btn secondary" onclick="window.clearGameData()" style="color: var(--danger); border-color: var(--danger); margin-bottom: 20px;">
                     WIPE DATA
-                </button>
-                <button class="menu-btn secondary" onclick="window.location.href='../index.html'" style="margin-bottom: 20px;">
-                    <span data-i18n="btn_hub">MAIN HUB</span>
                 </button>
                 <button class="menu-btn primary" onclick="window.showMenu()">
                     <span data-i18n="btn_back">BACK</span>

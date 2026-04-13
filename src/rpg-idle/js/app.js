@@ -167,7 +167,7 @@ window.showHeroDetails = (index) => {
     const heroData = Progression.prog.heroes[index];
     if (!heroData) return;
 
-    document.getElementById('hero-details-name').innerText = heroData.name;
+    document.getElementById('hero-details-name').innerText = `${heroData.name} (${heroData.level})`;
     document.getElementById('hero-details-sp').innerText = heroData.statPoints;
     
     // Update EXP Bar
@@ -413,6 +413,40 @@ window.toggleCombatLog = () => {
         logOverlay.style.display = 'none';
         toggleText.innerText = t('show_logs') || 'Show Logs';
     }
+};
+
+window.exportData = () => {
+    const data = {
+        cores: localStorage.getItem('rpg_cores'),
+        progression: localStorage.getItem('rpg_progression'),
+        autobattle: localStorage.getItem('rpg_autobattle')
+    };
+    const b = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = "rpg_idle_backup.json";
+    a.click();
+};
+
+window.importData = (event) => {
+    const r = new FileReader();
+    r.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.progression) {
+                if (data.cores) localStorage.setItem('rpg_cores', data.cores);
+                localStorage.setItem('rpg_progression', data.progression);
+                if (data.autobattle) localStorage.setItem('rpg_autobattle', data.autobattle);
+                alert(t('wipe_success') || 'Data imported successfully!');
+                location.reload();
+            } else {
+                alert("Invalid save file structure.");
+            }
+        } catch (err) {
+            alert("Error parsing file.");
+        }
+    };
+    r.readAsText(event.target.files[0]);
 };
 
 // --- Initialization ---

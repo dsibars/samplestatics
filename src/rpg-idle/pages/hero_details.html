@@ -1,6 +1,7 @@
 <div id="view-hero-details" class="view">
     <div class="game-header">
-        <h2 id="hero-details-name" style="margin: 0;">Hero Name</h2>
+        <button class="back-btn" onclick="window.showVillage()" style="padding: 8px 12px;">← <span data-i18n="btn_back">BACK</span></button>
+        <h2 id="hero-details-name" style="margin: 0; flex: 1; text-align: center;">Hero Name</h2>
         <div style="font-size: 0.9rem; color: #ccc;"><span id="label-sp" data-i18n="stat_points">Stat Points</span> <span id="hero-details-sp">0</span></div>
     </div>
     <div style="flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto;">
@@ -24,7 +25,6 @@
         <!-- Bottom 30% content -->
         <div style="flex: 3; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #444;">
             <button class="menu-btn primary" id="btn-hero-skills" onclick="window.showHeroSkills(window.currentHeroIndex)" data-i18n="hero_skills">Skills</button>
-            <button class="menu-btn secondary" onclick="window.showVillage()" data-i18n="btn_back">Back</button>
         </div>
     </div>
 </div>
