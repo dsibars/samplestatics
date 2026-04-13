@@ -67,13 +67,14 @@ window.showVillage = () => {
 };
 
 window.switchVillageTab = (tab) => {
-    document.getElementById('village-content-tavern').style.display = tab === 'tavern' ? 'block' : 'none';
-    document.getElementById('village-content-shop').style.display = tab === 'shop' ? 'block' : 'none';
-    document.getElementById('village-content-upgrades').style.display = tab === 'upgrades' ? 'block' : 'none';
-
-    document.getElementById('tab-tavern').className = tab === 'tavern' ? 'menu-btn primary' : 'menu-btn secondary';
-    document.getElementById('tab-shop').className = tab === 'shop' ? 'menu-btn primary' : 'menu-btn secondary';
-    document.getElementById('tab-upgrades').className = tab === 'upgrades' ? 'menu-btn primary' : 'menu-btn secondary';
+    const tabs = ['tavern', 'shop', 'upgrades', 'weapon-shop', 'armor-shop'];
+    tabs.forEach(t => {
+        const content = document.getElementById(`village-content-${t}`);
+        if (content) content.style.display = (tab === t) ? 'block' : 'none';
+        
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) btn.className = (tab === t) ? 'menu-btn primary' : 'menu-btn secondary';
+    });
 };
 
 function updateVillageUI() {
@@ -139,7 +140,10 @@ function updateVillageUI() {
     const buildings = [
         { id: 'rosterSizeLevel', title: t('roster_size_title') || 'Roster Size', max: 4 },
         { id: 'partySizeLevel', title: t('party_size_title') || 'Party Quality', max: 3 },
-        { id: 'gymLevel', title: t('gym_title') || 'Hero Gym', max: 50 }
+        { id: 'gymLevel', title: t('gym_title') || 'Hero Gym', max: 50 },
+        { id: 'weaponShopLevel', title: t('weapon_shop_upgrade') || 'Weapon Shop', max: 5 },
+        { id: 'armorShopLevel', title: t('armor_shop_upgrade') || 'Armor Shop', max: 5 },
+        { id: 'debugLevel', title: t('debug_title') || 'DEBUG ME', max: 999 }
     ];
 
     buildings.forEach(b => {
@@ -149,8 +153,12 @@ function updateVillageUI() {
         upgradeRow.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;';
         
         const isMax = level >= b.max;
-        const extra = b.id === 'gymLevel' ? ` (${level}%)` : ` (${4 + level} max)`;
-        const label = b.id === 'partySizeLevel' ? ` (${1 + level} heroes)` : extra;
+        let extra = '';
+        if (b.id === 'gymLevel') extra = ` (${level}%)`;
+        else if (b.id === 'rosterSizeLevel') extra = ` (${4 + level} max)`;
+        else if (b.id === 'partySizeLevel') extra = ` (${1 + level} heroes)`;
+        
+        const label = extra;
 
         upgradeRow.innerHTML = `
             <div>
@@ -161,6 +169,12 @@ function updateVillageUI() {
         `;
         upgradeList.appendChild(upgradeRow);
     });
+
+    // Toggle Tab visibility based on unlocks
+    const wShopBtn = document.getElementById('tab-weapon-shop');
+    if (wShopBtn) wShopBtn.style.display = (Progression.prog.village.weaponShopLevel > 0) ? 'block' : 'none';
+    const aShopBtn = document.getElementById('tab-armor-shop');
+    if (aShopBtn) aShopBtn.style.display = (Progression.prog.village.armorShopLevel > 0) ? 'block' : 'none';
 }
 
 window.recruitHero = (cost) => {
@@ -244,7 +258,51 @@ window.showHeroDetails = (index) => {
     actionContainer.innerHTML = toggleBtn + fireBtn;
     statsContainer.appendChild(actionContainer);
 
+    // Update the fixed action buttons
+    document.getElementById('btn-hero-skills').onclick = () => window.showHeroSkills(index);
+    document.getElementById('btn-hero-equip').onclick = () => window.showHeroEquip(index);
+
     showView('view-hero-details');
+};
+
+window.showHeroEquip = (index) => {
+    window.currentHeroIndex = index;
+    const heroData = Progression.prog.heroes[index];
+    if (!heroData) return;
+
+    document.getElementById('hero-equip-name').innerText = heroData.name;
+    
+    // Create equipment slots UI
+    const container = document.getElementById('hero-equip-container');
+    container.innerHTML = '';
+
+    const slots = [
+        { id: 'head', name: t('slot_head') || 'Head' },
+        { id: 'body', name: t('slot_body') || 'Body' },
+        { id: 'legs', name: t('slot_legs') || 'Legs' },
+        { id: 'leftHand', name: t('slot_leftHand') || 'Left Hand' },
+        { id: 'rightHand', name: t('slot_rightHand') || 'Right Hand' },
+        { id: 'accessory', name: t('slot_accessory') || 'Accessory' }
+    ];
+
+    slots.forEach(slot => {
+        const item = heroData.equipment ? heroData.equipment[slot.id] : null;
+        const row = document.createElement('div');
+        row.style = `background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; ${!item ? 'opacity: 0.5;' : ''}`;
+        
+        row.innerHTML = `
+            <div style="display: flex; flex-direction: column;">
+                <div style="font-weight: bold; color: #aaa; font-size: 0.8rem;">${slot.name}</div>
+                <div style="color: white; font-size: 1.1rem;">${item ? item.name : '---'}</div>
+            </div>
+            <div style="color: #666; font-size: 0.8rem; font-style: italic;">${t('tap_to_manage')}</div>
+        `;
+        // In the future: row.onclick = () => window.manageSlot(index, slot.id);
+        
+        container.appendChild(row);
+    });
+
+    showView('view-hero-equip');
 };
 
 window.toggleHeroActive = (index) => {
@@ -404,6 +462,22 @@ window.learnSkill = (index, skillId, isUnlock) => {
 };
 
 window.buyBuilding = (type) => {
+    if (type === 'debugLevel') {
+        if (confirm(t('debug_confirm'))) {
+            Progression.addCores(100000);
+            Progression.addGold(100000);
+            Progression.prog.heroes.forEach((h, idx) => {
+                const heroObj = new Hero(h);
+                heroObj.gainExp(100000);
+                Progression.prog.heroes[idx] = heroObj.toJSON();
+            });
+            Progression.saveState();
+            updateVillageUI();
+            updateCoresUI();
+            alert("Debug bonuses applied! Cores, Gold, and Hero XP updated.");
+        }
+        return;
+    }
     if (Progression.buyBuilding(type)) {
         updateVillageUI();
     } else {

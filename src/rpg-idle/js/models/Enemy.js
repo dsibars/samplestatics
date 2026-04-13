@@ -26,11 +26,11 @@ export class Enemy {
         const multiplier = Math.pow(1.3, totalStacks);
 
         let stats = {
-            hp: (8 + (level * 4)) * multiplier,
-            strength: (2 + (level * 1.5)) * multiplier,
-            speed: (1 + (level * 0.5)) * multiplier,
-            defense: (level * 0.5) * multiplier,
-            magicPower: (level * 0.5) * multiplier
+            hp: Math.floor((8 + (level * 4)) * multiplier),
+            strength: Number(((2 + (level * 1.5)) * multiplier).toFixed(1)),
+            speed: Number(((1 + (level * 0.5)) * multiplier).toFixed(1)),
+            defense: Number(((level * 0.5) * multiplier).toFixed(1)),
+            magicPower: Number(((level * 0.5) * multiplier).toFixed(1))
         };
 
         let element = 'neutral';
@@ -90,6 +90,13 @@ export class Enemy {
                 stats.speed *= 1.2;
             }
         }
+
+        // Final rounding to ensure integers for HP and clean decimals for others
+        stats.hp = Math.floor(stats.hp);
+        stats.strength = Number(stats.strength.toFixed(1));
+        stats.speed = Number(stats.speed.toFixed(1));
+        stats.defense = Number(stats.defense.toFixed(1));
+        stats.magicPower = Number(stats.magicPower.toFixed(1));
 
         return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element);
     }

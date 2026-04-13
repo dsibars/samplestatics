@@ -14,7 +14,10 @@ export class ProgressionManager {
             village: {
                 rosterSizeLevel: 0, // Max heroes = 4 + Level (Max 8)
                 partySizeLevel: 0,  // Max party = 1 + Level (Max 4)
-                gymLevel: 0         // % XP for passive heroes (Max 50)
+                gymLevel: 0,         // % XP for passive heroes (Max 50)
+                weaponShopLevel: 0,
+                armorShopLevel: 0,
+                debugLevel: 0
             },
             milestone: 0,
             gold: 0, // Player starts with 0 money
@@ -166,6 +169,7 @@ export class ProgressionManager {
     }
 
     getBuildingCost(type) {
+        if (type === 'debugLevel') return 0;
         const level = this.prog.village[type] || 0;
         if (type === 'gymLevel') {
             return 5 + level;
@@ -182,6 +186,8 @@ export class ProgressionManager {
         if (type === 'rosterSizeLevel' && level >= 4) return false;
         if (type === 'partySizeLevel' && level >= 3) return false;
         if (type === 'gymLevel' && level >= 50) return false;
+        if (type === 'weaponShopLevel' && level >= 5) return false;
+        if (type === 'armorShopLevel' && level >= 5) return false;
 
         if (this.spendCores(cost)) {
             this.prog.village[type] = level + 1;

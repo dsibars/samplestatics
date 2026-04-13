@@ -16,15 +16,17 @@
             </div>
         </div>
         
-        <!-- Top 70% content -->
-        <div style="flex: 7; display: flex; flex-direction: column; gap: 10px;">
+        <!-- Content container -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
             <div id="hero-stats-container" style="display: flex; flex-direction: column; gap: 10px;">
                 <!-- Stats injected here -->
             </div>
-        </div>
-        <!-- Bottom 30% content -->
-        <div style="flex: 3; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #444;">
-            <button class="menu-btn primary" id="btn-hero-skills" onclick="window.showHeroSkills(window.currentHeroIndex)" data-i18n="hero_skills">Skills</button>
+            
+            <div id="hero-actions-container" style="display: flex; flex-direction: column; gap: 10px; padding-top: 20px; border-top: 1px solid #444; margin-top: 10px;">
+                <!-- Skills, Equip, etc. injected here -->
+                <button class="menu-btn primary" id="btn-hero-skills" onclick="window.showHeroSkills(window.currentHeroIndex)" data-i18n="hero_skills">Skills</button>
+                <button class="menu-btn primary" id="btn-hero-equip" onclick="window.showHeroEquip(window.currentHeroIndex)" data-i18n="hero_equip">Equip</button>
+            </div>
         </div>
     </div>
 </div>

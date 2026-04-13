@@ -43,6 +43,16 @@ export class Hero {
         }
 
         this.origin = data.origin || 'origin_warrior_frustrated';
+
+        // Equipment slots
+        this.equipment = data.equipment || {
+            head: null,
+            body: null,
+            legs: null,
+            leftHand: null,
+            rightHand: null,
+            accessory: null
+        };
     }
 
     static generateRandom(level = 1) {
@@ -69,7 +79,15 @@ export class Hero {
             baseSpeed: 1,
             baseDefense: 1,
             baseMagicPower: 1,
-            skills: { basic_attack: 0 }
+            skills: { basic_attack: 0 },
+            equipment: {
+                head: null,
+                body: null,
+                legs: null,
+                leftHand: null,
+                rightHand: null,
+                accessory: null
+            }
         };
 
         return new Hero(stats);
@@ -77,17 +95,22 @@ export class Hero {
 
     gainExp(amount) {
         this.exp += amount;
-        const nextLevelExp = this.level * 20;
-        if (this.exp >= nextLevelExp) {
-            this.levelUp();
-            return true;
+        let leveled = false;
+        while (true) {
+            const nextLevelExp = this.level * 20;
+            if (this.exp >= nextLevelExp) {
+                this.exp -= nextLevelExp;
+                this.levelUp();
+                leveled = true;
+            } else {
+                break;
+            }
         }
-        return false;
+        return leveled;
     }
 
     levelUp() {
         this.level++;
-        this.exp = 0;
         this.statPoints += (this.level % 5 === 0) ? 3 : 2;
         this.skillPoints += 1;
         this.hp = this.maxHp;
@@ -156,7 +179,8 @@ export class Hero {
             baseDefense: this.baseDefense,
             baseMagicPower: this.baseMagicPower,
             skills: this.skills,
-            origin: this.origin
+            origin: this.origin,
+            equipment: this.equipment
         };
     }
 }

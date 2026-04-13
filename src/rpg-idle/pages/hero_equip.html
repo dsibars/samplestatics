@@ -1,0 +1,20 @@
+<div id="view-hero-equip" class="view">
+    <div class="game-header">
+        <button class="back-btn" onclick="window.showHeroDetails(window.currentHeroIndex)">← <span data-i18n="btn_back">BACK</span></button>
+        <h2 id="hero-equip-name" style="margin: 0; flex: 1; text-align: center;">Hero Name</h2>
+    </div>
+    
+    <div style="flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto;">
+        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <span class="icon">🛡️</span> <span data-i18n="hero_equip">EQUIPMENT</span>
+        </h3>
+        
+        <div id="hero-equip-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+            <!-- Equipment slots injected here -->
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: rgba(0, 242, 255, 0.05); border-radius: 8px; border: 1px dashed var(--primary); font-size: 0.9rem; color: #aaa; text-align: center;">
+            <p data-i18n="equip_coming_soon">The equipment system is being expanded! New items from the Weapon and Armor shops will be available soon.</p>
+        </div>
+    </div>
+</div>

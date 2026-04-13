@@ -109,8 +109,14 @@ export class CombatManager {
     }
 
     applyDamage(target, amount) {
-        target.hp = Math.max(0, target.hp - amount);
-        if (this.game.onDamage) this.game.onDamage(target, amount);
+        // Detect one-shot for level skip: boss hit for 300%+ max HP on the first hit
+        if (target === this.enemy && target.isBoss && target.hp === target.maxHp && typeof amount === 'number' && amount >= target.maxHp * 3) {
+            this.oneShotJumpPossible = true;
+        }
+
+        const roundedAmount = typeof amount === 'number' ? Math.round(amount) : 0;
+        target.hp = Math.max(0, target.hp - roundedAmount);
+        if (this.game.onDamage) this.game.onDamage(target, roundedAmount);
         if (target.hp === 0) {
             if (this.game.onDeath) this.game.onDeath(target);
         }
@@ -119,6 +125,10 @@ export class CombatManager {
     getFinalStat(entity, statName) {
         // Placeholder for future status effects/modifiers
         let baseVal = entity[statName] || 0;
+        
+        // TODO: manage equip - apply equipment stat modifiers here
+        // If entity is a Hero and has equipment, add or multiply baseVal by equip stats.
+        
         return Math.max(1, baseVal);
     }
 

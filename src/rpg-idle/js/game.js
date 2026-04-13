@@ -171,6 +171,17 @@ export class RPGGame {
                 ${levelUpMessages}
             `;
             document.getElementById('win-overlay').style.display = 'flex';
+
+            // Check for One-Shot Jump
+            if (this.currentCombat && this.currentCombat.oneShotJumpPossible) {
+                setTimeout(() => {
+                    if (confirm(t('oneshot_jump_confirm'))) {
+                        this.currentMilestone += 10;
+                        Progression.setMilestone(this.currentMilestone);
+                        this.log(`>>> ${t('oneshot_jump_confirm')} YES! Skipping 10 levels...`);
+                    }
+                }, 500);
+            }
         } else {
             const damageDealt = this.currentEnemy.maxHp - this.currentEnemy.hp;
             const expPotential = 20 * this.currentMilestone;

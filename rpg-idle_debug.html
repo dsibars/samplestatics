@@ -62,8 +62,11 @@ class ProgressionManager {
         // Max heroes = 4 + Level (Max 8)
         partySizeLevel: 0,
         // Max party = 1 + Level (Max 4)
-        gymLevel: 0
+        gymLevel: 0,
         // % XP for passive heroes (Max 50)
+        weaponShopLevel: 0,
+        armorShopLevel: 0,
+        debugLevel: 0
       },
       milestone: 0,
       gold: 0,
@@ -190,6 +193,7 @@ class ProgressionManager {
     return false;
   }
   getBuildingCost(type) {
+    if (type === "debugLevel") return 0;
     const level = this.prog.village[type] || 0;
     if (type === "gymLevel") {
       return 5 + level;
@@ -203,6 +207,8 @@ class ProgressionManager {
     if (type === "rosterSizeLevel" && level >= 4) return false;
     if (type === "partySizeLevel" && level >= 3) return false;
     if (type === "gymLevel" && level >= 50) return false;
+    if (type === "weaponShopLevel" && level >= 5) return false;
+    if (type === "armorShopLevel" && level >= 5) return false;
     if (this.spendCores(cost)) {
       this.prog.village[type] = level + 1;
       this.saveState();
@@ -275,6 +281,14 @@ class Hero {
       this.skills = { basic_attack: 0 };
     }
     this.origin = data.origin || "origin_warrior_frustrated";
+    this.equipment = data.equipment || {
+      head: null,
+      body: null,
+      legs: null,
+      leftHand: null,
+      rightHand: null,
+      accessory: null
+    };
   }
   static generateRandom(level = 1) {
     const names = ["Alaric", "Kaelen", "Thorne", "Valerius", "Elowen", "Zephyr", "Ione", "Thalric"];
@@ -303,22 +317,35 @@ class Hero {
       baseSpeed: 1,
       baseDefense: 1,
       baseMagicPower: 1,
-      skills: { basic_attack: 0 }
+      skills: { basic_attack: 0 },
+      equipment: {
+        head: null,
+        body: null,
+        legs: null,
+        leftHand: null,
+        rightHand: null,
+        accessory: null
+      }
     };
     return new Hero(stats);
   }
   gainExp(amount) {
     this.exp += amount;
-    const nextLevelExp = this.level * 20;
-    if (this.exp >= nextLevelExp) {
-      this.levelUp();
-      return true;
+    let leveled = false;
+    while (true) {
+      const nextLevelExp = this.level * 20;
+      if (this.exp >= nextLevelExp) {
+        this.exp -= nextLevelExp;
+        this.levelUp();
+        leveled = true;
+      } else {
+        break;
+      }
     }
-    return false;
+    return leveled;
   }
   levelUp() {
     this.level++;
-    this.exp = 0;
     this.statPoints += this.level % 5 === 0 ? 3 : 2;
     this.skillPoints += 1;
     this.hp = this.maxHp;
@@ -373,7 +400,8 @@ class Hero {
       baseDefense: this.baseDefense,
       baseMagicPower: this.baseMagicPower,
       skills: this.skills,
-      origin: this.origin
+      origin: this.origin,
+      equipment: this.equipment
     };
   }
 }
@@ -400,11 +428,11 @@ class Enemy {
     const totalStacks = Math.max(0, bossesPassed - 2 + (postBossesPassed - 2));
     const multiplier = Math.pow(1.3, totalStacks);
     let stats = {
-      hp: (8 + level * 4) * multiplier,
-      strength: (2 + level * 1.5) * multiplier,
-      speed: (1 + level * 0.5) * multiplier,
-      defense: level * 0.5 * multiplier,
-      magicPower: level * 0.5 * multiplier
+      hp: Math.floor((8 + level * 4) * multiplier),
+      strength: Number(((2 + level * 1.5) * multiplier).toFixed(1)),
+      speed: Number(((1 + level * 0.5) * multiplier).toFixed(1)),
+      defense: Number((level * 0.5 * multiplier).toFixed(1)),
+      magicPower: Number((level * 0.5 * multiplier).toFixed(1))
     };
     let element = "neutral";
     if (milestone <= 10) {
@@ -468,6 +496,11 @@ class Enemy {
         stats.speed *= 1.2;
       }
     }
+    stats.hp = Math.floor(stats.hp);
+    stats.strength = Number(stats.strength.toFixed(1));
+    stats.speed = Number(stats.speed.toFixed(1));
+    stats.defense = Number(stats.defense.toFixed(1));
+    stats.magicPower = Number(stats.magicPower.toFixed(1));
     return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element);
   }
   draw(ctx, x, y) {
@@ -1001,7 +1034,24 @@ const TRANSLATIONS = {
     need_min_hero: "You need at least one hero in the party!",
     party_limit_reached: "Party size limit reached!",
     free_hero_welcome: "Hello adventurer! I have a present for you!",
-    confirm_hero_switch: "This will change the only party member, sure?"
+    confirm_hero_switch: "This will change the only party member, sure?",
+    weapon_shop_title: "Weapon Shop",
+    armor_shop_title: "Armor Shop",
+    weapon_shop_upgrade: "Weapon Shop (Building)",
+    armor_shop_upgrade: "Armor Shop (Building)",
+    hero_equip: "Equip",
+    slot_head: "Head",
+    slot_body: "Body",
+    slot_legs: "Legs",
+    slot_leftHand: "Left Hand",
+    slot_rightHand: "Right Hand",
+    slot_accessory: "Accessory",
+    tap_to_manage: "Tap to manage",
+    shop_empty: "No items available yet.",
+    equip_coming_soon: "The equipment system is being expanded! New items from the Weapon and Armor shops will be available soon.",
+    debug_title: "DEBUG ME",
+    debug_confirm: "You are gonna break the game. Sure?",
+    oneshot_jump_confirm: "You one-shotted the boss with massive damage! Jump 10 levels?"
   },
   es: {
     subtitle: "Aventura y Recluta",
@@ -1162,7 +1212,24 @@ const TRANSLATIONS = {
     need_min_hero: "¡Necesitas al menos un héroe en el equipo!",
     party_limit_reached: "¡Límite de equipo alcanzado!",
     free_hero_welcome: "¡Hola aventurero! ¡Tengo un regalo para ti!",
-    confirm_hero_switch: "Esto cambiará al único miembro del equipo, ¿estás seguro?"
+    confirm_hero_switch: "Esto cambiará al único miembro del equipo, ¿estás seguro?",
+    weapon_shop_title: "Tienda de Armas",
+    armor_shop_title: "Tienda de Armaduras",
+    weapon_shop_upgrade: "Tienda de Armas (Edificio)",
+    armor_shop_upgrade: "Tienda de Armaduras (Edificio)",
+    hero_equip: "Equipar",
+    slot_head: "Cabeza",
+    slot_body: "Cuerpo",
+    slot_legs: "Piernas",
+    slot_leftHand: "Mano Izquierda",
+    slot_rightHand: "Mano Derecha",
+    slot_accessory: "Accesorio",
+    tap_to_manage: "Toca para gestionar",
+    shop_empty: "No hay objetos disponibles todavía.",
+    equip_coming_soon: "¡El sistema de equipo se está ampliando! Nuevos objetos de las tiendas de armas y armaduras estarán disponibles pronto.",
+    debug_title: "DEBUG ME",
+    debug_confirm: "Vas a romper el juego. ¿Estás seguro?",
+    oneshot_jump_confirm: "¡Has derrotado al jefe de un solo golpe con un daño masivo! ¿Quieres saltar 10 niveles?"
   },
   ca: {
     subtitle: "Aventura i Recluta",
@@ -1724,8 +1791,12 @@ class CombatManager {
     return false;
   }
   applyDamage(target, amount) {
-    target.hp = Math.max(0, target.hp - amount);
-    if (this.game.onDamage) this.game.onDamage(target, amount);
+    if (target === this.enemy && target.isBoss && target.hp === target.maxHp && typeof amount === "number" && amount >= target.maxHp * 3) {
+      this.oneShotJumpPossible = true;
+    }
+    const roundedAmount = typeof amount === "number" ? Math.round(amount) : 0;
+    target.hp = Math.max(0, target.hp - roundedAmount);
+    if (this.game.onDamage) this.game.onDamage(target, roundedAmount);
     if (target.hp === 0) {
       if (this.game.onDeath) this.game.onDeath(target);
     }
@@ -2073,6 +2144,15 @@ class RPGGame {
                 ${levelUpMessages}
             `;
       document.getElementById("win-overlay").style.display = "flex";
+      if (this.currentCombat && this.currentCombat.oneShotJumpPossible) {
+        setTimeout(() => {
+          if (confirm(t("oneshot_jump_confirm"))) {
+            this.currentMilestone += 10;
+            Progression.setMilestone(this.currentMilestone);
+            this.log(`>>> ${t("oneshot_jump_confirm")} YES! Skipping 10 levels...`);
+          }
+        }, 500);
+      }
     } else {
       const damageDealt = this.currentEnemy.maxHp - this.currentEnemy.hp;
       const expPotential = 20 * this.currentMilestone;
@@ -2383,12 +2463,13 @@ window.showVillage = () => {
   window.switchVillageTab("tavern");
 };
 window.switchVillageTab = (tab) => {
-  document.getElementById("village-content-tavern").style.display = tab === "tavern" ? "block" : "none";
-  document.getElementById("village-content-shop").style.display = tab === "shop" ? "block" : "none";
-  document.getElementById("village-content-upgrades").style.display = tab === "upgrades" ? "block" : "none";
-  document.getElementById("tab-tavern").className = tab === "tavern" ? "menu-btn primary" : "menu-btn secondary";
-  document.getElementById("tab-shop").className = tab === "shop" ? "menu-btn primary" : "menu-btn secondary";
-  document.getElementById("tab-upgrades").className = tab === "upgrades" ? "menu-btn primary" : "menu-btn secondary";
+  const tabs = ["tavern", "shop", "upgrades", "weapon-shop", "armor-shop"];
+  tabs.forEach((t2) => {
+    const content = document.getElementById(`village-content-${t2}`);
+    if (content) content.style.display = tab === t2 ? "block" : "none";
+    const btn = document.getElementById(`tab-${t2}`);
+    if (btn) btn.className = tab === t2 ? "menu-btn primary" : "menu-btn secondary";
+  });
 };
 function updateVillageUI() {
   document.getElementById("village-gold-val").innerText = Progression.prog.gold;
@@ -2442,7 +2523,10 @@ function updateVillageUI() {
   const buildings = [
     { id: "rosterSizeLevel", title: t("roster_size_title") || "Roster Size", max: 4 },
     { id: "partySizeLevel", title: t("party_size_title") || "Party Quality", max: 3 },
-    { id: "gymLevel", title: t("gym_title") || "Hero Gym", max: 50 }
+    { id: "gymLevel", title: t("gym_title") || "Hero Gym", max: 50 },
+    { id: "weaponShopLevel", title: t("weapon_shop_upgrade") || "Weapon Shop", max: 5 },
+    { id: "armorShopLevel", title: t("armor_shop_upgrade") || "Armor Shop", max: 5 },
+    { id: "debugLevel", title: t("debug_title") || "DEBUG ME", max: 999 }
   ];
   buildings.forEach((b) => {
     const level = Progression.prog.village[b.id] || 0;
@@ -2450,8 +2534,11 @@ function updateVillageUI() {
     const upgradeRow = document.createElement("div");
     upgradeRow.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
     const isMax = level >= b.max;
-    const extra = b.id === "gymLevel" ? ` (${level}%)` : ` (${4 + level} max)`;
-    const label = b.id === "partySizeLevel" ? ` (${1 + level} heroes)` : extra;
+    let extra = "";
+    if (b.id === "gymLevel") extra = ` (${level}%)`;
+    else if (b.id === "rosterSizeLevel") extra = ` (${4 + level} max)`;
+    else if (b.id === "partySizeLevel") extra = ` (${1 + level} heroes)`;
+    const label = extra;
     upgradeRow.innerHTML = `
             <div>
                 <div style="font-weight:bold;">${b.title}</div>
@@ -2461,6 +2548,10 @@ function updateVillageUI() {
         `;
     upgradeList.appendChild(upgradeRow);
   });
+  const wShopBtn = document.getElementById("tab-weapon-shop");
+  if (wShopBtn) wShopBtn.style.display = Progression.prog.village.weaponShopLevel > 0 ? "block" : "none";
+  const aShopBtn = document.getElementById("tab-armor-shop");
+  if (aShopBtn) aShopBtn.style.display = Progression.prog.village.armorShopLevel > 0 ? "block" : "none";
 }
 window.recruitHero = (cost) => {
   if (Progression.prog.gold >= cost) {
@@ -2524,7 +2615,39 @@ window.showHeroDetails = (index) => {
         </button>`;
   actionContainer.innerHTML = toggleBtn + fireBtn;
   statsContainer.appendChild(actionContainer);
+  document.getElementById("btn-hero-skills").onclick = () => window.showHeroSkills(index);
+  document.getElementById("btn-hero-equip").onclick = () => window.showHeroEquip(index);
   showView("view-hero-details");
+};
+window.showHeroEquip = (index) => {
+  window.currentHeroIndex = index;
+  const heroData = Progression.prog.heroes[index];
+  if (!heroData) return;
+  document.getElementById("hero-equip-name").innerText = heroData.name;
+  const container = document.getElementById("hero-equip-container");
+  container.innerHTML = "";
+  const slots = [
+    { id: "head", name: t("slot_head") || "Head" },
+    { id: "body", name: t("slot_body") || "Body" },
+    { id: "legs", name: t("slot_legs") || "Legs" },
+    { id: "leftHand", name: t("slot_leftHand") || "Left Hand" },
+    { id: "rightHand", name: t("slot_rightHand") || "Right Hand" },
+    { id: "accessory", name: t("slot_accessory") || "Accessory" }
+  ];
+  slots.forEach((slot) => {
+    const item = heroData.equipment ? heroData.equipment[slot.id] : null;
+    const row = document.createElement("div");
+    row.style = `background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; ${!item ? "opacity: 0.5;" : ""}`;
+    row.innerHTML = `
+            <div style="display: flex; flex-direction: column;">
+                <div style="font-weight: bold; color: #aaa; font-size: 0.8rem;">${slot.name}</div>
+                <div style="color: white; font-size: 1.1rem;">${item ? item.name : "---"}</div>
+            </div>
+            <div style="color: #666; font-size: 0.8rem; font-style: italic;">${t("tap_to_manage")}</div>
+        `;
+    container.appendChild(row);
+  });
+  showView("view-hero-equip");
 };
 window.toggleHeroActive = (index) => {
   const isActive = Progression.prog.activeHeroIndices.includes(index);
@@ -2654,6 +2777,22 @@ window.learnSkill = (index, skillId, isUnlock) => {
   }
 };
 window.buyBuilding = (type) => {
+  if (type === "debugLevel") {
+    if (confirm(t("debug_confirm"))) {
+      Progression.addCores(1e5);
+      Progression.addGold(1e5);
+      Progression.prog.heroes.forEach((h, idx) => {
+        const heroObj = new Hero(h);
+        heroObj.gainExp(1e5);
+        Progression.prog.heroes[idx] = heroObj.toJSON();
+      });
+      Progression.saveState();
+      updateVillageUI();
+      updateCoresUI();
+      alert("Debug bonuses applied! Cores, Gold, and Hero XP updated.");
+    }
+    return;
+  }
   if (Progression.buyBuilding(type)) {
     updateVillageUI();
   } else {
@@ -2989,7 +3128,7 @@ body {
                 <button class="menu-btn secondary" onclick="window.showSettings()">
                     <span class="icon">⚙️</span> <span data-i18n="btn_settings">SETTINGS</span>
                 </button>
-                <button class="menu-btn secondary" onclick="window.location.href='../index.html'" style="margin-top: 10px;">
+                <button class="menu-btn secondary" onclick="window.location.href='index.html'" style="margin-top: 10px;">
                     <span class="icon">🏠</span> <span data-i18n="btn_hub">MAIN HUB</span>
                 </button>
             </div>
@@ -3007,9 +3146,11 @@ body {
     </div>
 
     <div class="village-container" style="flex: 1; padding: 20px; overflow-y: auto;">
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
             <button id="tab-tavern" class="menu-btn primary" onclick="window.switchVillageTab('tavern')" data-i18n="hero_roster">Hero Roster</button>
             <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')" data-i18n="shop_title">Shop</button>
+            <button id="tab-weapon-shop" class="menu-btn secondary" onclick="window.switchVillageTab('weapon-shop')" data-i18n="weapon_shop_title" style="display: none;">Weapon Shop</button>
+            <button id="tab-armor-shop" class="menu-btn secondary" onclick="window.switchVillageTab('armor-shop')" data-i18n="armor_shop_title" style="display: none;">Armor Shop</button>
             <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')" data-i18n="upgrades_title">Upgrades</button>
         </div>
 
@@ -3024,6 +3165,20 @@ body {
             <h2 data-i18n="shop_title">Item Shop</h2>
             <div id="shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
                 <!-- Shop items will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-weapon-shop" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="weapon_shop_title">Weapon Shop</h2>
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
+                <p data-i18n="shop_empty">No items available yet.</p>
+            </div>
+        </div>
+
+        <div id="village-content-armor-shop" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="armor_shop_title">Armor Shop</h2>
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
+                <p data-i18n="shop_empty">No items available yet.</p>
             </div>
         </div>
 
@@ -3102,15 +3257,17 @@ body {
             </div>
         </div>
         
-        <!-- Top 70% content -->
-        <div style="flex: 7; display: flex; flex-direction: column; gap: 10px;">
+        <!-- Content container -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
             <div id="hero-stats-container" style="display: flex; flex-direction: column; gap: 10px;">
                 <!-- Stats injected here -->
             </div>
-        </div>
-        <!-- Bottom 30% content -->
-        <div style="flex: 3; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #444;">
-            <button class="menu-btn primary" id="btn-hero-skills" onclick="window.showHeroSkills(window.currentHeroIndex)" data-i18n="hero_skills">Skills</button>
+            
+            <div id="hero-actions-container" style="display: flex; flex-direction: column; gap: 10px; padding-top: 20px; border-top: 1px solid #444; margin-top: 10px;">
+                <!-- Skills, Equip, etc. injected here -->
+                <button class="menu-btn primary" id="btn-hero-skills" onclick="window.showHeroSkills(window.currentHeroIndex)" data-i18n="hero_skills">Skills</button>
+                <button class="menu-btn primary" id="btn-hero-equip" onclick="window.showHeroEquip(window.currentHeroIndex)" data-i18n="hero_equip">Equip</button>
+            </div>
         </div>
     </div>
 </div>
@@ -3133,6 +3290,27 @@ body {
             <!-- Skills injected here -->
         </div>
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;">
+        </div>
+    </div>
+</div>
+
+    <div id="view-hero-equip" class="view">
+    <div class="game-header">
+        <button class="back-btn" onclick="window.showHeroDetails(window.currentHeroIndex)">← <span data-i18n="btn_back">BACK</span></button>
+        <h2 id="hero-equip-name" style="margin: 0; flex: 1; text-align: center;">Hero Name</h2>
+    </div>
+    
+    <div style="flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto;">
+        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <span class="icon">🛡️</span> <span data-i18n="hero_equip">EQUIPMENT</span>
+        </h3>
+        
+        <div id="hero-equip-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+            <!-- Equipment slots injected here -->
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: rgba(0, 242, 255, 0.05); border-radius: 8px; border: 1px dashed var(--primary); font-size: 0.9rem; color: #aaa; text-align: center;">
+            <p data-i18n="equip_coming_soon">The equipment system is being expanded! New items from the Weapon and Armor shops will be available soon.</p>
         </div>
     </div>
 </div>

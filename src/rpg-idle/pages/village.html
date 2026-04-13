@@ -8,9 +8,11 @@
     </div>
 
     <div class="village-container" style="flex: 1; padding: 20px; overflow-y: auto;">
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
             <button id="tab-tavern" class="menu-btn primary" onclick="window.switchVillageTab('tavern')" data-i18n="hero_roster">Hero Roster</button>
             <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')" data-i18n="shop_title">Shop</button>
+            <button id="tab-weapon-shop" class="menu-btn secondary" onclick="window.switchVillageTab('weapon-shop')" data-i18n="weapon_shop_title" style="display: none;">Weapon Shop</button>
+            <button id="tab-armor-shop" class="menu-btn secondary" onclick="window.switchVillageTab('armor-shop')" data-i18n="armor_shop_title" style="display: none;">Armor Shop</button>
             <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')" data-i18n="upgrades_title">Upgrades</button>
         </div>
 
@@ -25,6 +27,20 @@
             <h2 data-i18n="shop_title">Item Shop</h2>
             <div id="shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
                 <!-- Shop items will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-weapon-shop" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="weapon_shop_title">Weapon Shop</h2>
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
+                <p data-i18n="shop_empty">No items available yet.</p>
+            </div>
+        </div>
+
+        <div id="village-content-armor-shop" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="armor_shop_title">Armor Shop</h2>
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
+                <p data-i18n="shop_empty">No items available yet.</p>
             </div>
         </div>
 
