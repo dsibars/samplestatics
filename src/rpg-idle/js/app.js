@@ -78,12 +78,14 @@ window.switchVillageTab = (tab) => {
     });
 };
 
-function updateVillageUI() {
+function updateVillageResourcesUI() {
     document.getElementById('village-gold-val').innerText = Progression.prog.gold;
     document.getElementById('village-cores-val').innerText = Progression.cores;
+}
 
-    // Tavern
+function updateTavernUI() {
     const tavernList = document.getElementById('tavern-hero-list');
+    if (!tavernList) return;
     tavernList.innerHTML = '';
 
     // Show current heroes
@@ -113,9 +115,11 @@ function updateVillageUI() {
         `;
         tavernList.appendChild(recruitCard);
     }
+}
 
-    // Shop
+function updateShopUI() {
     const shopList = document.getElementById('shop-item-list');
+    if (!shopList) return;
     shopList.innerHTML = '';
     const items = [
         { id: 'tiny_potion', cost: 20 },
@@ -134,9 +138,11 @@ function updateVillageUI() {
         `;
         shopList.appendChild(itemRow);
     });
+}
 
-    // Upgrades
+function updateUpgradesUI() {
     const upgradeList = document.getElementById('upgrades-list');
+    if (!upgradeList) return;
     upgradeList.innerHTML = '';
     const buildings = [
         { id: 'rosterSizeLevel', title: t('roster_size_title') || 'Roster Size', max: 4 },
@@ -170,12 +176,21 @@ function updateVillageUI() {
         `;
         upgradeList.appendChild(upgradeRow);
     });
+}
 
-    // Toggle Tab visibility based on unlocks
+function updateVillageTabsVisibilityUI() {
     const wShopBtn = document.getElementById('tab-weapon-shop');
     if (wShopBtn) wShopBtn.style.display = (Progression.prog.village.weaponShopLevel > 0) ? 'block' : 'none';
     const aShopBtn = document.getElementById('tab-armor-shop');
     if (aShopBtn) aShopBtn.style.display = (Progression.prog.village.armorShopLevel > 0) ? 'block' : 'none';
+}
+
+function updateVillageUI() {
+    updateVillageResourcesUI();
+    updateTavernUI();
+    updateShopUI();
+    updateUpgradesUI();
+    updateVillageTabsVisibilityUI();
 }
 
 window.recruitHero = (cost) => {
