@@ -19,9 +19,20 @@ export const DEFAULT_ROUTINE = [
   { ex: 'FLEX', start: 6, tag: 'Al Fallo' }
 ];
 
+export function generateId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+const loadedRoutine = JSON.parse(localStorage.getItem('workout_routine') || JSON.stringify(DEFAULT_ROUTINE));
+// Ensure every step has a unique ID for stable deletion indices
+const normalizedRoutine = loadedRoutine.map(step => ({
+  ...step,
+  id: step.id || generateId()
+}));
+
 export const state = {
   history: JSON.parse(localStorage.getItem('workout_history_v2') || '{}'),
-  routine: JSON.parse(localStorage.getItem('workout_routine') || JSON.stringify(DEFAULT_ROUTINE)),
+  routine: normalizedRoutine,
   results: [],
   startTime: null,
   stepStartTime: null,
