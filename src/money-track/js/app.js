@@ -61,7 +61,7 @@ function calculateTotals(transactions = state.transactions) {
 // --- Transaction Logic ---
 function renderTransactionForm() {
   const select = document.getElementById('tx-person');
-  select.innerHTML = state.people.map(p => `<option value="${p}">${p}</option>`).join('');
+  select.innerHTML = state.people.map(p => `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join('');
 
   // Toggle Logic
   document.querySelectorAll('#tx-type-toggle .toggle-btn').forEach(btn => {
@@ -132,7 +132,7 @@ window.renderHistory = (reset = false) => {
     <div class="tx-item ${tx.paid ? 'paid' : ''}">
       <div class="tx-info">
         <h3>
-          ${tx.person} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - ' + tx.desc + '</span>' : ''}
+          ${escapeHTML(tx.person)} ${tx.desc ? '<span style="font-weight:normal;opacity:0.7"> - ' + escapeHTML(tx.desc) + '</span>' : ''}
           ${tx.paid ? `<span class="paid-badge">${t('paid')}</span>` : ''}
         </h3>
         <span>${new Date(tx.date).toLocaleDateString(currentLang)}</span>
@@ -223,11 +223,17 @@ function renderPeople() {
 
     card.innerHTML = `
       <div style="display:flex; flex-direction:column;">
-        <span style="font-weight:bold; font-size:1.1rem;">${p}</span>
+        <span style="font-weight:bold; font-size:1.1rem;">${escapeHTML(p)}</span>
         <span class="${balanceClass}" style="font-size:0.9rem;">${balanceText}</span>
       </div>
-      <button onclick="event.stopPropagation(); removePerson('${p}')" style="background:none; border:none; color:#f87171; font-size:1.5rem;">×</button>
+      <button class="remove-person-btn" style="background:none; border:none; color:#f87171; font-size:1.5rem;">×</button>
     `;
+
+    card.querySelector('.remove-person-btn').onclick = (e) => {
+      e.stopPropagation();
+      removePerson(p);
+    };
+
     list.appendChild(card);
   });
   applyTranslations();
@@ -332,20 +338,27 @@ window.renderGeneralStats = () => {
   });
 
   const list = document.getElementById('stats-person-breakdown');
-  list.innerHTML = Object.entries(statsMap)
+  list.innerHTML = '';
+  Object.entries(statsMap)
     .filter(([_, stats]) => stats.count > 0)
     .sort((a, b) => b[1].balance - a[1].balance)
-    .map(([name, stats]) => `
-      <div class="tx-item" onclick="showPersonStats('${name}')" style="cursor:pointer; display: flex; flex-direction: column; align-items: stretch; gap: 4px;">
+    .forEach(([name, stats]) => {
+      const item = document.createElement('div');
+      item.className = 'tx-item';
+      item.style = 'cursor:pointer; display: flex; flex-direction: column; align-items: stretch; gap: 4px;';
+      item.onclick = () => showPersonStats(name);
+
+      item.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: bold;">${name}</span>
+          <span style="font-weight: bold;">${escapeHTML(name)}</span>
           <span class="${stats.balance >= 0 ? 'positive' : 'negative'}">${stats.balance >= 0 ? '+' : '-'}${formatCurrency(stats.balance)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim);">
           <span>${stats.count} tx</span>
         </div>
-      </div>
-    `).join('');
+      `;
+      list.appendChild(item);
+    });
 };
 
 // --- Settings Logic ---
@@ -448,3 +461,16 @@ window.onload = () => {
   applyTranslations();
   renderDashboard();
 };
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, function(m) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[m];
+  });
+}
