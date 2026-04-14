@@ -2,9 +2,42 @@ import { RPGGame } from './game.js';
 import { applyTranslations, changeLanguage, t } from './i18n.js';
 import { Progression } from './models/Progression.js';
 import { Hero } from './models/Hero.js';
-import { SKILLS_DATA } from './constants.js';
+import { SKILLS_DATA, WEAPON_FAMILIES, ARMOR_ARCHETYPES, MATERIAL_TIERS } from './constants.js';
 
 let game = null;
+
+const TRAINING_REGIMES = {
+    light_sparring: { id: 'light_sparring', duration: 3600000, exp: 50 },
+    endurance_run: { id: 'endurance_run', duration: 10800000, exp: 200, goldChance: 0.3 },
+    master_class: { id: 'master_class', duration: 28800000, exp: 600, itemChance: 0.2 },
+    heroic_pilgrimage: { id: 'heroic_pilgrimage', duration: 86400000, exp: 2000, coreReward: 1 }
+};
+
+const QUESTS = {
+    volcano_cleanup: {
+        id: 'volcano_cleanup',
+        duration: 14400000, // 4h
+        exp: 300,
+        req: { type: 'magicPower', value: 5, label: 'High Magic' },
+        reward: { type: 'fire_resist', label: 'Fire Resist' }
+    },
+    mountain_guard: {
+        id: 'mountain_guard',
+        duration: 14400000, // 4h
+        exp: 300,
+        req: { type: 'strength', value: 5, label: 'High Strength' },
+        reward: { type: 'str_growth', label: 'Str Growth' }
+    },
+    storm_tracker: {
+        id: 'storm_tracker',
+        duration: 14400000, // 4h
+        exp: 300,
+        req: { type: 'speed', value: 5, label: 'High Speed' },
+        reward: { type: 'storm_eff', label: 'Storm Eff.' }
+    }
+};
+
+const AFFIXES = ['vampire', 'sage', 'titan', 'assassin', 'phoenix'];
 
 function showView(viewId) {
     document.querySelectorAll('.view').forEach(view => {
@@ -20,7 +53,8 @@ window.showMenu = () => {
 };
 
 function updateCoresUI() {
-    document.getElementById('menu-cores-val').innerText = Progression.cores;
+    const el = document.getElementById('menu-cores-val');
+    if (el) el.innerText = Progression.cores;
 }
 
 window.startAdventure = () => {
@@ -68,7 +102,7 @@ window.showVillage = () => {
 };
 
 window.switchVillageTab = (tab) => {
-    const tabs = ['tavern', 'shop', 'upgrades', 'weapon-shop', 'armor-shop'];
+    const tabs = ['tavern', 'shop', 'upgrades', 'weapon-shop', 'armor-shop', 'gym', 'forge'];
     tabs.forEach(t => {
         const content = document.getElementById(`village-content-${t}`);
         if (content) content.style.display = (tab === t) ? 'block' : 'none';
@@ -76,17 +110,19 @@ window.switchVillageTab = (tab) => {
         const btn = document.getElementById(`tab-${t}`);
         if (btn) btn.className = (tab === t) ? 'menu-btn primary' : 'menu-btn secondary';
     });
+    if (tab === 'weapon-shop') updateWeaponShopUI();
+    if (tab === 'armor-shop') updateArmorShopUI();
+    if (tab === 'gym') updateGymUI();
+    if (tab === 'forge') updateForgeUI();
 };
 
 function updateVillageUI() {
     document.getElementById('village-gold-val').innerText = Progression.prog.gold;
     document.getElementById('village-cores-val').innerText = Progression.cores;
 
-    // Tavern
     const tavernList = document.getElementById('tavern-hero-list');
     tavernList.innerHTML = '';
 
-    // Show current heroes
     Progression.prog.heroes.forEach((h, i) => {
         const isActive = Progression.prog.activeHeroIndices.includes(i);
         const card = document.createElement('div');
@@ -101,7 +137,6 @@ function updateVillageUI() {
         tavernList.appendChild(card);
     });
 
-    // Show recruitment option if roster not full
     if (Progression.prog.heroes.length < Progression.getMaxRosterSize()) {
         const recruitCard = document.createElement('div');
         const cost = 500;
@@ -114,7 +149,6 @@ function updateVillageUI() {
         tavernList.appendChild(recruitCard);
     }
 
-    // Shop
     const shopList = document.getElementById('shop-item-list');
     shopList.innerHTML = '';
     const items = [
@@ -135,7 +169,6 @@ function updateVillageUI() {
         shopList.appendChild(itemRow);
     });
 
-    // Upgrades
     const upgradeList = document.getElementById('upgrades-list');
     upgradeList.innerHTML = '';
     const buildings = [
@@ -144,6 +177,7 @@ function updateVillageUI() {
         { id: 'gymLevel', title: t('gym_title') || 'Hero Gym', max: 50 },
         { id: 'weaponShopLevel', title: t('weapon_shop_upgrade') || 'Weapon Shop', max: 5 },
         { id: 'armorShopLevel', title: t('armor_shop_upgrade') || 'Armor Shop', max: 5 },
+        { id: 'forgeLevel', title: t('forge_title') || 'Mystic Forge', max: 1 },
         { id: 'debugLevel', title: t('debug_title') || 'DEBUG ME', max: 999 }
     ];
 
@@ -171,12 +205,256 @@ function updateVillageUI() {
         upgradeList.appendChild(upgradeRow);
     });
 
-    // Toggle Tab visibility based on unlocks
     const wShopBtn = document.getElementById('tab-weapon-shop');
     if (wShopBtn) wShopBtn.style.display = (Progression.prog.village.weaponShopLevel > 0) ? 'block' : 'none';
     const aShopBtn = document.getElementById('tab-armor-shop');
     if (aShopBtn) aShopBtn.style.display = (Progression.prog.village.armorShopLevel > 0) ? 'block' : 'none';
+    const forgeBtn = document.getElementById('tab-forge');
+    if (forgeBtn) forgeBtn.style.display = (Progression.prog.village.forgeLevel > 0) ? 'block' : 'none';
 }
+
+function updateWeaponShopUI() {
+    const container = document.getElementById('weapon-shop-item-list');
+    container.innerHTML = '';
+    const shopLvl = Progression.prog.village.weaponShopLevel;
+
+    Object.keys(WEAPON_FAMILIES).forEach(familyId => {
+        Object.keys(MATERIAL_TIERS).forEach(tierId => {
+            const tier = MATERIAL_TIERS[tierId];
+            if (tier.levelReq <= shopLvl) {
+                const cost = 100 * tier.mult;
+                const row = document.createElement('div');
+                row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;';
+                row.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold;">${t(tierId)} ${t(familyId)}</div>
+                        <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
+                    </div>
+                    <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${familyId}', '${tierId}', 'weapon', ${cost})">💰 ${cost}</button>
+                `;
+                container.appendChild(row);
+            }
+        });
+    });
+}
+
+function updateArmorShopUI() {
+    const container = document.getElementById('armor-shop-item-list');
+    container.innerHTML = '';
+    const shopLvl = Progression.prog.village.armorShopLevel;
+
+    Object.keys(ARMOR_ARCHETYPES).forEach(archId => {
+        Object.keys(MATERIAL_TIERS).forEach(tierId => {
+            const tier = MATERIAL_TIERS[tierId];
+            if (tier.levelReq <= shopLvl) {
+                const slots = ['head', 'body', 'legs'];
+                slots.forEach(slot => {
+                    const cost = 80 * tier.mult;
+                    const row = document.createElement('div');
+                    row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;';
+                    row.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold;">${t(tierId)} ${t(archId)} ${t('slot_' + slot)}</div>
+                            <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
+                        </div>
+                        <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${archId}', '${tierId}', 'armor', ${cost}, '${slot}')">💰 ${cost}</button>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+        });
+    });
+}
+
+function updateGymUI() {
+    const container = document.getElementById('gym-hero-list');
+    container.innerHTML = '';
+
+    Progression.prog.heroes.forEach((h, i) => {
+        const isActive = Progression.prog.activeHeroIndices.includes(i);
+        const session = Progression.prog.trainingSessions[i];
+
+        const card = document.createElement('div');
+        card.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px;';
+
+        let actionHTML = '';
+        if (isActive) {
+            actionHTML = `<span style="color: #666; font-style: italic;">In Active Party</span>`;
+        } else if (session) {
+            const regime = TRAINING_REGIMES[session.regimeId] || QUESTS[session.regimeId];
+            const elapsed = Date.now() - session.startTime;
+            const remaining = regime.duration - elapsed;
+
+            if (remaining <= 0) {
+                actionHTML = `
+                    <div style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">COMPLETE!</div>
+                    <button class="menu-btn primary" onclick="window.claimTraining(${i})">CLAIM REWARDS</button>
+                `;
+            } else {
+                const remMin = Math.ceil(remaining / 60000);
+                actionHTML = `
+                    <div style="color: #aaa; margin-bottom: 10px;">Status: ${t(session.regimeId)} (${remMin}m left)</div>
+                    <button class="menu-btn secondary" onclick="window.cancelTraining(${i})">CANCEL</button>
+                `;
+            }
+        } else {
+            actionHTML = `
+                <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">Training:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom:15px;">
+                    ${Object.keys(TRAINING_REGIMES).map(rId => `
+                        <button class="menu-btn primary" style="font-size: 0.7rem; padding: 5px;" onclick="window.startTraining(${i}, '${rId}')">
+                            ${t(rId)}<br>(${TRAINING_REGIMES[rId].duration / 3600000}h)
+                        </button>
+                    `).join('')}
+                </div>
+                <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">Quests:</div>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+                    ${Object.keys(QUESTS).map(qId => {
+                        const q = QUESTS[qId];
+                        const heroObj = new Hero(h);
+                        const canDo = heroObj[q.req.type] >= q.req.value;
+                        return `
+                            <button class="menu-btn ${canDo ? 'primary' : 'secondary'}" style="font-size: 0.7rem; padding: 10px; display:flex; justify-content:space-between; align-items:center;" ${canDo ? '' : 'disabled'} onclick="window.startTraining(${i}, '${qId}')">
+                                <div style="text-align:left;">
+                                    <div style="font-weight:bold;">${t(qId)}</div>
+                                    <div style="font-size:0.6rem; color:#aaa;">Req: ${q.req.label} ${q.req.value}+</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div>${q.duration / 3600000}h</div>
+                                    <div style="font-size:0.6rem; color:var(--primary);">${q.reward.label}</div>
+                                </div>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="font-weight: bold;">${h.name} (Lvl ${h.level})</div>
+            </div>
+            ${actionHTML}
+        `;
+        container.appendChild(card);
+    });
+}
+
+function updateForgeUI() {
+    const container = document.getElementById('forge-inventory-list');
+    container.innerHTML = '';
+
+    Progression.prog.equipmentInventory.forEach((item, i) => {
+        const cost = 50;
+        const canAwaken = (item.level >= 10 || item.material === 'gold' || item.material === 'mythril');
+
+        const row = document.createElement('div');
+        row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;';
+        row.innerHTML = `
+            <div>
+                <div style="font-weight:bold;">${item.name} (Lvl ${item.level || 0})</div>
+                <div style="font-size:0.8rem; color:#aaa;">${item.affixes ? 'Affixes: ' + item.affixes.join(', ') : 'No Affixes'}</div>
+            </div>
+            <button class="menu-btn ${canAwaken ? 'primary' : 'secondary'}" style="padding: 8px 15px;" ${canAwaken ? '' : 'disabled'} onclick="window.awakenItem(${i}, ${cost})">🔮 ${cost}</button>
+        `;
+        container.appendChild(row);
+    });
+}
+
+window.awakenItem = (idx, cost) => {
+    if (Progression.cores >= cost) {
+        if (confirm(`Awaken this item for ${cost} Cores?`)) {
+            Progression.spendCores(cost);
+            const item = Progression.prog.equipmentInventory[idx];
+            if (!item.affixes) item.affixes = [];
+            const affix = AFFIXES[Math.floor(Math.random() * AFFIXES.length)];
+            item.affixes.push(affix);
+            item.name += ` of the ${affix.charAt(0).toUpperCase() + affix.slice(1)}`;
+            Progression.saveState();
+            alert(`AWAKENED! Item is now: ${item.name}`);
+            updateForgeUI();
+            updateVillageUI();
+        }
+    } else {
+        alert(t('not_enough_cores'));
+    }
+};
+
+window.startTraining = (heroIndex, regimeId) => {
+    if (Progression.startTraining(heroIndex, regimeId)) {
+        updateGymUI();
+    }
+};
+
+window.cancelTraining = (heroIndex) => {
+    if (confirm("Cancel session? No rewards will be given.")) {
+        Progression.cancelTraining(heroIndex);
+        updateGymUI();
+    }
+};
+
+window.claimTraining = (heroIndex) => {
+    const session = Progression.prog.trainingSessions[heroIndex];
+    if (!session) return;
+    const regime = TRAINING_REGIMES[session.regimeId] || QUESTS[session.regimeId];
+
+    let success = true;
+    if (QUESTS[session.regimeId]) {
+        const heroData = Progression.prog.heroes[heroIndex];
+        const heroObj = new Hero(heroData);
+        const req = QUESTS[session.regimeId].req;
+        const diff = heroObj[req.type] - req.value;
+        const successChance = 0.7 + (diff * 0.05);
+        success = Math.random() < Math.min(0.95, successChance);
+    }
+
+    const rewards = Progression.completeTraining(heroIndex, regime);
+
+    if (rewards) {
+        if (!success) {
+            rewards.exp = Math.floor(rewards.exp * 0.5);
+            rewards.gold = Math.floor(rewards.gold * 0.5);
+            rewards.cores = 0;
+            rewards.item = null;
+        }
+
+        const heroData = Progression.prog.heroes[heroIndex];
+        const heroObj = new Hero(heroData);
+        const leveled = heroObj.gainExp(rewards.exp);
+        Progression.prog.heroes[heroIndex] = heroObj.toJSON();
+
+        if (rewards.gold) Progression.addGold(rewards.gold);
+        if (rewards.cores) Progression.addCores(rewards.cores);
+        if (rewards.item) Progression.addItem(rewards.item);
+
+        let msg = (success ? "" : "QUEST PARTIALLY FAILED (50% rewards)\n") + `Rewards for ${heroObj.name}:\n✨ +${rewards.exp} EXP`;
+        if (rewards.gold) msg += `\n💰 +${rewards.gold} Gold`;
+        if (rewards.cores) msg += `\n🔮 +${rewards.cores} Core`;
+        if (rewards.item) msg += `\n🎒 +1 ${t(rewards.item)}`;
+        if (leveled) msg += `\n🌟 LEVEL UP! Now Level ${heroObj.level}`;
+
+        alert(msg);
+        updateGymUI();
+        updateVillageUI();
+    }
+};
+
+window.buyEquipment = (id, tier, type, cost, slot = null) => {
+    if (Progression.prog.gold >= cost) {
+        Progression.spendGold(cost);
+        const item = { type, material: tier, level: 0, name: `${t(tier)} ${t(id)}` + (slot ? ` ${t('slot_' + slot)}` : '') };
+        if (type === 'weapon') item.family = id;
+        else {
+            item.archetype = id;
+            item.slot = slot;
+        }
+        Progression.addEquipment(item);
+        alert(t('learned') + "!");
+        updateVillageUI();
+    } else {
+        alert(t('not_enough_gold'));
+    }
+};
 
 window.recruitHero = (cost) => {
     if (Progression.prog.gold >= cost) {
@@ -197,28 +475,30 @@ window.showHeroDetails = (index) => {
     const heroData = Progression.prog.heroes[index];
     if (!heroData) return;
 
-    document.getElementById('hero-details-name').innerText = `${heroData.name} (${heroData.level})`;
+    document.getElementById('hero-details-name').innerHTML = `
+        ${heroData.name} (${heroData.level})
+        <span onclick="window.showTraitInfo('${heroData.origin}')" style="cursor:pointer; font-size:1.2rem; margin-left:10px; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border:1px solid var(--primary); border-radius:50%; color:var(--primary);">?</span>
+    `;
     document.getElementById('hero-details-sp').innerText = heroData.statPoints;
     
-    // Update EXP Bar
     const nextLevelExp = heroData.level * 20;
     const expPercent = Math.min(100, (heroData.exp / nextLevelExp) * 100);
     document.getElementById('hero-details-exp-text').innerText = `${heroData.exp} / ${nextLevelExp} EXP`;
     document.getElementById('hero-details-exp-bar').style.width = expPercent + '%';
 
-    // Translation labels
     document.getElementById('label-sp').innerText = t('stat_points') + ':';
 
     const statsContainer = document.getElementById('hero-stats-container');
     statsContainer.innerHTML = '';
     
+    const heroObj = new Hero(heroData);
     const stats = [
-        { id: 'baseMaxHp', label: t('stat_hp'), val: heroData.baseMaxHp },
-        { id: 'baseMaxMp', label: t('stat_mp'), val: heroData.baseMaxMp },
-        { id: 'baseStrength', label: t('stat_attack'), val: heroData.baseStrength },
-        { id: 'baseSpeed', label: t('stat_speed'), val: heroData.baseSpeed },
-        { id: 'baseDefense', label: t('stat_defense'), val: heroData.baseDefense },
-        { id: 'baseMagicPower', label: t('stat_magic'), val: heroData.baseMagicPower }
+        { id: 'baseMaxHp', label: t('stat_hp'), val: heroObj.maxHp },
+        { id: 'baseMaxMp', label: t('stat_mp'), val: heroObj.maxMp },
+        { id: 'baseStrength', label: t('stat_attack'), val: heroObj.strength },
+        { id: 'baseSpeed', label: t('stat_speed'), val: heroObj.speed },
+        { id: 'baseDefense', label: t('stat_defense'), val: heroObj.defense },
+        { id: 'baseMagicPower', label: t('stat_magic'), val: heroObj.magicPower }
     ];
 
     stats.forEach(st => {
@@ -232,39 +512,39 @@ window.showHeroDetails = (index) => {
         statsContainer.appendChild(row);
     });
 
-    // Active Toggle & Fire
     const actionContainer = document.createElement('div');
     actionContainer.style = 'margin-top: 20px; display: flex; flex-direction: column; gap: 10px;';
     
     const isActive = Progression.prog.activeHeroIndices.includes(index);
+    const isTraining = !!Progression.prog.trainingSessions[index];
     const numActive = Progression.prog.activeHeroIndices.length;
     const maxSize = Progression.getMaxPartySize();
     
     const canUnselect = numActive > 1;
-    // Special case: if maxSize is 1 and numActive is 1, we let the user select a new hero (it will swap)
-    const canSelect = numActive < maxSize || (maxSize === 1 && numActive === 1);
+    const canSelect = !isTraining && (numActive < maxSize || (maxSize === 1 && numActive === 1));
 
     let toggleBtn = '';
     if (isActive) {
         toggleBtn = `<button class="menu-btn ${canUnselect ? 'secondary' : 'secondary'}" style="width: 100%; opacity: ${canUnselect ? 1 : 0.5};" ${canUnselect ? `onclick="window.toggleHeroActive(${index})"` : ''}>❌ ${t('btn_unselect') || 'Unselect from Party'}</button>`;
     } else {
-        toggleBtn = `<button class="menu-btn ${canSelect ? 'primary' : 'secondary'}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ''}>⚔️ ${t('btn_select') || 'Add to Party'}</button>`;
+        const busyLabel = isTraining ? ' (Busy)' : '';
+        toggleBtn = `<button class="menu-btn ${canSelect ? 'primary' : 'secondary'}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ''}>⚔️ ${t('btn_select') || 'Add to Party'}${busyLabel}</button>`;
     }
 
     let fireBtn = '';
     const totalHeroes = Progression.prog.heroes.length;
 
     if (totalHeroes === 1) {
-        // Special case: Switch Hero instead of Fire Hero
         fireBtn = `<button class="menu-btn primary" 
                     style="padding: 10px 20px; font-size: 0.9rem; border-color: var(--primary); color: var(--primary);" 
                     onclick="window.switchHero(${index})">
                 ${t('btn_switch_hero')}
             </button>`;
     } else {
+        const canFire = !isActive && !isTraining;
         fireBtn = `<button class="menu-btn secondary" 
-                    style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? 'opacity: 0.3; cursor: default;' : ''}" 
-                    ${!isActive ? `onclick="window.fireHero(${index})"` : ''}>
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${!canFire ? 'opacity: 0.3; cursor: default;' : ''}"
+                    ${canFire ? `onclick="window.fireHero(${index})"` : ''}>
                 🗑️ ${t('btn_fire_hero')}
             </button>`;
     }
@@ -272,11 +552,37 @@ window.showHeroDetails = (index) => {
     actionContainer.innerHTML = toggleBtn + fireBtn;
     statsContainer.appendChild(actionContainer);
 
-    // Update the fixed action buttons
     document.getElementById('btn-hero-skills').onclick = () => window.showHeroSkills(index);
     document.getElementById('btn-hero-equip').onclick = () => window.showHeroEquip(index);
 
     showView('view-hero-details');
+};
+
+window.showTraitInfo = (origin) => {
+    const modal = document.createElement('div');
+    modal.id = 'trait-info-modal';
+    modal.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center;
+        z-index: 1000; padding: 20px; box-sizing: border-box;
+    `;
+    modal.onclick = () => modal.remove();
+
+    const content = document.createElement('div');
+    content.style = `
+        background: #111; border: 2px solid var(--primary); border-radius: 12px;
+        padding: 20px; max-width: 400px; width: 100%; text-align: center;
+    `;
+    content.onclick = (e) => e.stopPropagation();
+
+    content.innerHTML = `
+        <h2 style="color: var(--primary); margin-top: 0;">${t(origin)}</h2>
+        <p style="color: white; line-height: 1.6; font-size: 1.1rem; margin: 20px 0;">${t(origin + '_desc')}</p>
+        <button class="menu-btn primary" style="padding: 10px 30px;" onclick="document.getElementById('trait-info-modal').remove()">OK</button>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
 };
 
 window.showHeroEquip = (index) => {
@@ -286,7 +592,6 @@ window.showHeroEquip = (index) => {
 
     document.getElementById('hero-equip-name').innerText = heroData.name;
     
-    // Create equipment slots UI
     const container = document.getElementById('hero-equip-container');
     container.innerHTML = '';
 
@@ -302,7 +607,8 @@ window.showHeroEquip = (index) => {
     slots.forEach(slot => {
         const item = heroData.equipment ? heroData.equipment[slot.id] : null;
         const row = document.createElement('div');
-        row.style = `background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; ${!item ? 'opacity: 0.5;' : ''}`;
+        row.style = `background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;`;
+        row.onclick = () => window.manageSlot(index, slot.id);
         
         row.innerHTML = `
             <div style="display: flex; flex-direction: column;">
@@ -311,7 +617,6 @@ window.showHeroEquip = (index) => {
             </div>
             <div style="color: #666; font-size: 0.8rem; font-style: italic;">${t('tap_to_manage')}</div>
         `;
-        // In the future: row.onclick = () => window.manageSlot(index, slot.id);
         
         container.appendChild(row);
     });
@@ -319,12 +624,79 @@ window.showHeroEquip = (index) => {
     showView('view-hero-equip');
 };
 
+window.manageSlot = (heroIndex, slotId) => {
+    const modal = document.createElement('div');
+    modal.id = 'manage-slot-modal';
+    modal.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+        z-index: 1001; padding: 20px; box-sizing: border-box;
+    `;
+    modal.onclick = () => modal.remove();
+
+    const content = document.createElement('div');
+    content.style = `
+        background: #111; border: 2px solid var(--primary); border-radius: 12px;
+        padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto;
+    `;
+    content.onclick = (e) => e.stopPropagation();
+
+    let itemsHTML = '';
+    const isWeaponSlot = slotId === 'leftHand' || slotId === 'rightHand';
+    const isArmorSlot = ['head', 'body', 'legs'].includes(slotId);
+
+    Progression.prog.equipmentInventory.forEach((item, idx) => {
+        let canEquip = false;
+        if (isWeaponSlot && item.type === 'weapon') canEquip = true;
+        if (isArmorSlot && item.type === 'armor' && item.slot === slotId) canEquip = true;
+
+        if (canEquip) {
+            itemsHTML += `
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>${item.name} (Lvl ${item.level || 0})</div>
+                    <button class="menu-btn primary" style="padding: 5px 15px;" onclick="window.doEquip(${heroIndex}, '${slotId}', ${idx})">EQUIP</button>
+                </div>
+            `;
+        }
+    });
+
+    const hero = Progression.prog.heroes[heroIndex];
+    const currentItem = hero.equipment[slotId];
+
+    content.innerHTML = `
+        <h3 style="color: var(--primary); margin-top: 0;">Manage ${t('slot_' + slotId)}</h3>
+        ${currentItem ? `
+            <div style="background: rgba(0,242,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div>Equipped: ${currentItem.name}</div>
+                <button class="menu-btn secondary" style="padding: 5px 15px;" onclick="window.doUnequip(${heroIndex}, '${slotId}')">UNEQUIP</button>
+            </div>
+        ` : ''}
+        <div style="font-weight: bold; margin-bottom: 10px; color: #888;">Available:</div>
+        ${itemsHTML || '<div style="color: #666; font-style: italic;">No items available for this slot.</div>'}
+        <button class="menu-btn secondary" style="width: 100%; margin-top: 20px;" onclick="document.getElementById('manage-slot-modal').remove()">CANCEL</button>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+};
+
+window.doEquip = (heroIndex, slot, itemIdx) => {
+    Progression.equipItem(heroIndex, slot, itemIdx);
+    document.getElementById('manage-slot-modal').remove();
+    window.showHeroEquip(heroIndex);
+};
+
+window.doUnequip = (heroIndex, slot) => {
+    Progression.unequipItem(heroIndex, slot);
+    document.getElementById('manage-slot-modal').remove();
+    window.showHeroEquip(heroIndex);
+};
+
 window.toggleHeroActive = (index) => {
     const isActive = Progression.prog.activeHeroIndices.includes(index);
     const numActive = Progression.prog.activeHeroIndices.length;
     const maxSize = Progression.getMaxPartySize();
 
-    // Special case: swap if limit is 1
     if (!isActive && maxSize === 1 && numActive === 1) {
         if (confirm(t('confirm_hero_switch') || "This will change the only party member, sure?")) {
             Progression.swapActiveHero(index);
@@ -339,7 +711,8 @@ window.toggleHeroActive = (index) => {
         if (Progression.prog.activeHeroIndices.includes(index)) {
             alert(t('need_min_hero') || "You need at least one hero in the party!");
         } else {
-            alert(t('party_limit_reached') || "Party size limit reached!");
+            const isBusy = !!Progression.prog.trainingSessions[index];
+            alert(isBusy ? "Hero is busy training!" : (t('party_limit_reached') || "Party size limit reached!"));
         }
     }
 };
@@ -365,21 +738,13 @@ window.switchHero = (index) => {
     if (!heroData) return;
 
     if (confirm(t('confirm_switch_unique'))) {
-        // 1. Get current names to ensure uniqueness (though it will be empty after removal)
-        // Actually we want a new name, so we can just pass an empty list or the current name if we want to allow re-selection
         const currentNames = []; 
         const newHero = Hero.generateRandom(1, currentNames);
-        
-        // 2. Remove current hero (index should be 0)
         Progression.prog.heroes = [];
         Progression.prog.activeHeroIndices = [];
-        
-        // 3. Add new hero
         Progression.addHero(newHero.toJSON());
-        
-        // 4. Update UI
         window.showVillage();
-        alert(t('learned') + "!"); // Generic success or just let showVillage do its thing
+        alert(t('learned') + "!");
     }
 };
 
@@ -387,14 +752,10 @@ window.increaseStat = (index, statId) => {
     const heroData = Progression.prog.heroes[index];
     if (heroData && heroData.statPoints > 0) {
         heroData.statPoints--;
-        
-        // Efficiency: HP +3, MP +2, rest +1
         const gain = statId === 'baseMaxHp' ? 3 : (statId === 'baseMaxMp' ? 2 : 1);
         heroData[statId] = (heroData[statId] || 0) + gain;
-        
         if (statId === 'baseMaxHp') heroData.hp += 3;
         if (statId === 'baseMaxMp') heroData.mp += 2;
-
         Progression.updateHero(index, heroData);
         window.showHeroDetails(index);
     }
@@ -430,7 +791,6 @@ window.showHeroSkills = (index) => {
         const currentLevel = heroData.skills[sk.id];
         const isUnlocked = currentLevel !== undefined;
         
-        // Visibility checklist
         let isVisible = false;
         if (sk.tier === 1) isVisible = true;
         else if (sk.dependency && heroData.skills[sk.dependency] !== undefined) isVisible = true;
@@ -638,3 +998,16 @@ window.increaseStat = increaseStat;
 window.showHeroSkills = showHeroSkills;
 window.learnSkill = learnSkill;
 window.switchSkillTab = switchSkillTab;
+window.showTraitInfo = showTraitInfo;
+window.manageSlot = manageSlot;
+window.doEquip = doEquip;
+window.doUnequip = doUnequip;
+window.buyEquipment = buyEquipment;
+window.updateWeaponShopUI = updateWeaponShopUI;
+window.updateArmorShopUI = updateArmorShopUI;
+window.updateGymUI = updateGymUI;
+window.updateForgeUI = updateForgeUI;
+window.awakenItem = awakenItem;
+window.startTraining = startTraining;
+window.cancelTraining = cancelTraining;
+window.claimTraining = claimTraining;

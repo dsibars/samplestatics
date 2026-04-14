@@ -10,21 +10,23 @@ export class ProgressionManager {
 
         const defaultProg = {
             heroes: [], 
-            activeHeroIndices: [], // Indices of active heroes in the roster
+            activeHeroIndices: [],
             village: {
-                rosterSizeLevel: 0, // Max heroes = 4 + Level (Max 8)
-                partySizeLevel: 0,  // Max party = 1 + Level (Max 4)
-                gymLevel: 0,         // % XP for passive heroes (Max 50)
+                rosterSizeLevel: 0,
+                partySizeLevel: 0,
+                gymLevel: 0,
                 weaponShopLevel: 0,
                 armorShopLevel: 0,
                 debugLevel: 0
             },
             milestone: 0,
-            gold: 0, // Player starts with 0 money
+            gold: 0,
             inventory: {
                 tiny_potion: 0,
                 tiny_mana_potion: 0
-            }
+            },
+            equipmentInventory: [],
+            trainingSessions: {} // { heroIndex: { startTime, regimeId } }
         };
 
         try {
@@ -32,21 +34,23 @@ export class ProgressionManager {
             if (saved) {
                 this.prog = { ...defaultProg, ...saved };
                 
-                // Cleanup old village structure if it exists
                 if (this.prog.village.tavernLevel !== undefined || this.prog.village.shopLevel !== undefined) {
                     this.prog.village = {
                         rosterSizeLevel: 0,
                         partySizeLevel: 0,
-                        gymLevel: 0
+                        gymLevel: 0,
+                        weaponShopLevel: 0,
+                        armorShopLevel: 0
                     };
                 }
 
-                // Ensure activeHeroIndices list exists
                 if (!Array.isArray(this.prog.activeHeroIndices)) {
                     this.prog.activeHeroIndices = this.prog.heroes.length > 0 ? [0] : [];
                 }
 
-                // Migration: Rename ice skills to water
+                if (!this.prog.equipmentInventory) this.prog.equipmentInventory = [];
+                if (!this.prog.trainingSessions) this.prog.trainingSessions = {};
+
                 if (this.prog.heroes) {
                     this.prog.heroes.forEach(h => {
                         if (h.skills) {
@@ -111,7 +115,6 @@ export class ProgressionManager {
     addHero(hero) {
         if (this.prog.heroes.length < this.getMaxRosterSize()) {
             this.prog.heroes.push(hero);
-            // If it's the first hero, auto-select
             if (this.prog.heroes.length === 1) {
                 this.prog.activeHeroIndices = [0];
             }
@@ -123,9 +126,6 @@ export class ProgressionManager {
 
     checkFreeHero() {
         if (this.prog.heroes.length === 0) {
-            // Generate a random hero (assuming Hero.js is imported or handled elsewhere)
-            // But actually this is called from app.js where Hero is available.
-            // We'll return true to signal app.js to create the hero.
             return true;
         }
         return false;
@@ -139,17 +139,17 @@ export class ProgressionManager {
     }
 
     toggleHeroActive(index) {
+        if (this.prog.trainingSessions[index]) return false; // Busy training
+
         const activeIdx = this.prog.activeHeroIndices.indexOf(index);
         if (activeIdx > -1) {
-            // Trying to unselect
             if (this.prog.activeHeroIndices.length > 1) {
                 this.prog.activeHeroIndices.splice(activeIdx, 1);
                 this.saveState();
                 return true;
             }
-            return false; // Must have at least 1 hero
+            return false;
         } else {
-            // Trying to select
             if (this.prog.activeHeroIndices.length < this.getMaxPartySize()) {
                 this.prog.activeHeroIndices.push(index);
                 this.saveState();
@@ -160,6 +160,7 @@ export class ProgressionManager {
     }
 
     swapActiveHero(index) {
+        if (this.prog.trainingSessions[index]) return false;
         if (this.prog.heroes[index]) {
             this.prog.activeHeroIndices = [index];
             this.saveState();
@@ -182,7 +183,6 @@ export class ProgressionManager {
         const cost = this.getBuildingCost(type);
         const level = this.prog.village[type] || 0;
         
-        // Limits
         if (type === 'rosterSizeLevel' && level >= 4) return false;
         if (type === 'partySizeLevel' && level >= 3) return false;
         if (type === 'gymLevel' && level >= 50) return false;
@@ -211,14 +211,31 @@ export class ProgressionManager {
 
     removeHero(index) {
         const isActive = this.prog.activeHeroIndices.includes(index);
-        if (isActive) return false; // Cannot fire active hero
+        if (isActive) return false;
+        if (this.prog.trainingSessions[index]) return false;
+
+        const hero = this.prog.heroes[index];
+        if (hero.equipment) {
+            Object.values(hero.equipment).forEach(item => {
+                if (item) this.prog.equipmentInventory.push(item);
+            });
+        }
 
         this.prog.heroes.splice(index, 1);
         
-        // Adjust active indices because indices changed
         this.prog.activeHeroIndices = this.prog.activeHeroIndices.map(idx => {
             return idx > index ? idx - 1 : idx;
         });
+
+        // Adjust training sessions
+        const newSessions = {};
+        Object.keys(this.prog.trainingSessions).forEach(key => {
+            const k = parseInt(key);
+            if (k === index) return;
+            const newKey = k > index ? k - 1 : k;
+            newSessions[newKey] = this.prog.trainingSessions[key];
+        });
+        this.prog.trainingSessions = newSessions;
         
         this.saveState();
         return true;
@@ -236,6 +253,85 @@ export class ProgressionManager {
             return true;
         }
         return false;
+    }
+
+    addEquipment(item) {
+        item.id = Date.now() + Math.random().toString(36).substr(2, 9);
+        this.prog.equipmentInventory.push(item);
+        this.saveState();
+    }
+
+    equipItem(heroIndex, slot, itemIndex) {
+        const hero = this.prog.heroes[heroIndex];
+        const item = this.prog.equipmentInventory[itemIndex];
+        if (!hero || !item) return false;
+
+        if (hero.equipment[slot]) {
+            this.prog.equipmentInventory.push(hero.equipment[slot]);
+        }
+
+        hero.equipment[slot] = item;
+        this.prog.equipmentInventory.splice(itemIndex, 1);
+        this.saveState();
+        return true;
+    }
+
+    unequipItem(heroIndex, slot) {
+        const hero = this.prog.heroes[heroIndex];
+        if (!hero || !hero.equipment[slot]) return false;
+
+        this.prog.equipmentInventory.push(hero.equipment[slot]);
+        hero.equipment[slot] = null;
+        this.saveState();
+        return true;
+    }
+
+    startTraining(heroIndex, regimeId) {
+        if (this.prog.activeHeroIndices.includes(heroIndex)) return false;
+        if (this.prog.trainingSessions[heroIndex]) return false;
+
+        this.prog.trainingSessions[heroIndex] = {
+            startTime: Date.now(),
+            regimeId: regimeId
+        };
+        this.saveState();
+        return true;
+    }
+
+    cancelTraining(heroIndex) {
+        if (this.prog.trainingSessions[heroIndex]) {
+            delete this.prog.trainingSessions[heroIndex];
+            this.saveState();
+            return true;
+        }
+        return false;
+    }
+
+    completeTraining(heroIndex, regimeData) {
+        const session = this.prog.trainingSessions[heroIndex];
+        if (!session) return null;
+
+        const gymMult = 1 + (this.prog.village.gymLevel / 100);
+        const rewards = {
+            exp: Math.floor(regimeData.exp * gymMult),
+            gold: 0,
+            cores: 0,
+            item: null
+        };
+
+        if (regimeData.goldChance && Math.random() < regimeData.goldChance) {
+            rewards.gold = Math.floor(50 * gymMult);
+        }
+        if (regimeData.coreReward) {
+            rewards.cores = regimeData.coreReward;
+        }
+        if (regimeData.itemChance && Math.random() < regimeData.itemChance) {
+            rewards.item = 'tiny_potion'; // Simple for now
+        }
+
+        delete this.prog.trainingSessions[heroIndex];
+        this.saveState();
+        return rewards;
     }
 }
 

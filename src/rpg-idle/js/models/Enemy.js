@@ -1,234 +1,138 @@
-import { SKILLS_DATA } from '../constants.js';
+import { t } from '../i18n.js';
 
 export class Enemy {
-    constructor(name, level, stats, isBoss = false, element = 'neutral', skills = { basic_attack: 0 }) {
-        this.name = name;
-        this.level = level;
-        this.isBoss = isBoss;
-        this.element = element;
-
-        this.maxHp = stats.hp;
-        this.hp = this.maxHp;
+    constructor(data) {
+        this.id = data.id || 'enemy_' + Math.random().toString(36).substr(2, 9);
+        this.name = data.name;
+        this.type = data.type || 'slime';
+        this.level = data.level || 1;
         
-        this.maxMp = stats.mp || 0;
-        this.mp = this.maxMp;
+        this.maxHp = data.maxHp || 10;
+        this.hp = data.hp ?? this.maxHp;
 
-        this.strength = stats.strength;
-        this.speed = stats.speed;
-        this.defense = stats.defense;
-        this.magicPower = stats.magicPower || 1;
+        this.maxMp = data.maxMp || 5;
+        this.mp = data.mp ?? this.maxMp;
         
-        this.skills = skills;
+        this.strength = data.strength || 1;
+        this.speed = data.speed || 1;
+        this.defense = data.defense || 1;
+        this.magicPower = data.magicPower || 1;
+        this.element = data.element || 'neutral';
+
+        this.skills = data.skills || { basic_attack: 0 };
+        this.isBoss = data.isBoss || false;
+
+        this.statusEffects = [];
     }
 
-    static generate(level, milestone) {
-        const names = ['Slime', 'Goblin', 'Wolf', 'Skeleton', 'Orc', 'Dark Knight'];
-        const nameIdx = Math.min(names.length - 1, Math.floor(milestone / 10));
-        const name = names[nameIdx];
-        const isBoss = milestone % 5 === 0;
+    static generate(level = 1, milestone = 1, index = 0) {
+        const types = [
+            { id: 'slime', name: 'Slime', hp: 8, str: 1, spd: 1, def: 1, mag: 1, el: 'water' },
+            { id: 'goblin', name: 'Goblin', hp: 12, str: 2, spd: 3, def: 1, mag: 0, el: 'wind' },
+            { id: 'wolf', name: 'Wolf', hp: 10, str: 3, spd: 4, def: 1, mag: 0, el: 'neutral' },
+            { id: 'wisp', name: 'Wisp', hp: 6, str: 1, spd: 5, def: 0, mag: 3, el: 'storm' },
+            { id: 'golem', name: 'Golem', hp: 25, str: 4, spd: 1, def: 5, mag: 1, el: 'fire' }
+        ];
+
+        const isBoss = milestone % 10 === 0 && milestone > 0 && index === 0;
+        const type = types[Math.floor(Math.random() * types.length)];
         
-        // Multiplier stacks from Milestone 11 onwards (except for themed overrides)
-        const bossesPassed = Math.floor(milestone / 5);
-        const postBossesPassed = Math.floor((milestone - 1) / 5);
-        const totalStacks = Math.max(0, (bossesPassed - 2) + (postBossesPassed - 2)); 
-        const multiplier = Math.pow(1.3, totalStacks);
+        const mult = 1 + (level - 1) * 0.2;
+        const bossMult = isBoss ? 4.0 : 1.0;
 
-        let stats = {
-            hp: Math.floor((8 + (level * 4)) * multiplier),
-            strength: Number(((2 + (level * 1.5)) * multiplier).toFixed(1)),
-            speed: Number(((1 + (level * 0.5)) * multiplier).toFixed(1)),
-            defense: Number(((level * 0.5) * multiplier).toFixed(1)),
-            magicPower: Number(((level * 0.5) * multiplier).toFixed(1))
-        };
+        const nameSuffix = index > 0 ? ` ${String.fromCharCode(65 + index)}` : '';
 
-        let element = 'neutral';
-
-        // --- THEMED PROGRESSION BLOCKS ---
-        if (milestone <= 10) {
-            element = 'neutral';
-            if (milestone <= 3) {
-                stats.speed = 1; stats.defense = 0; stats.strength = 3;
-            } else if (milestone === 4) {
-                stats.speed = 2; stats.defense = 0.5; stats.strength = 5;
-            } else if (milestone === 5) {
-                stats.speed = 3.5; stats.defense = 1; stats.strength = 10; stats.hp *= 1.5;
-            } else if (milestone <= 9) {
-                stats.speed = 4; stats.defense = 2; stats.strength = 12;
-            } else if (milestone === 10) {
-                stats.speed = 5; stats.defense = 4; stats.strength = 20; stats.hp *= 1.5;
-            }
-        } else if (milestone <= 15) {
-            // BLOCK 11-15: "THE WALL" (Defense Focus)
-            stats.defense *= 1.5;
-            if (isBoss) { // Milestone 15
-                stats.defense *= 1.7; // Even harder defense test
-                stats.hp *= 1.5; 
-            }
-        } else if (milestone <= 20) {
-            // BLOCK 16-20: "THE BRUTE" (Strength Focus, Slow)
-            stats.strength *= 1.7;
-            stats.speed *= 0.7;
-            if (isBoss) { // Milestone 20
-                stats.strength *= 1.3;
-                stats.speed *= 0.8; // Actually 0.7 * 0.8 = 0.56 total
-                stats.hp *= 1.5;
-            }
-        } else if (milestone <= 40) {
-            // ELEMENTAL BLOCKS
-            if (milestone <= 25) element = 'fire';
-            else if (milestone <= 30) element = 'water';
-            else if (milestone <= 35) element = 'wind';
-            else if (milestone <= 40) element = 'storm';
-            
-            if (isBoss) {
-                stats.hp *= 1.5;
-                stats.strength *= 1.2;
-                stats.speed *= 1.2;
-            }
-        } else {
-            // POST-THEMED (41+): Random elements
-            const elementRand = Math.random();
-            if (elementRand > 0.33) {
-                const elements = ['fire', 'water', 'wind', 'storm'];
-                element = elements[Math.floor(Math.random() * elements.length)];
-            }
-            if (isBoss) {
-                stats.hp *= 1.5;
-                stats.strength *= 1.2;
-                stats.speed *= 1.2;
-            }
-        }
-
-        // --- SKILL ASSIGNMENT ---
-        const skills = { basic_attack: 0 };
-        
-        // Elemental small ball magic
-        if (element !== 'neutral') {
-            const skillId = `small_${element}_ball`;
-            skills[skillId] = 0; // Enemy skill level 0 is base
-        }
-
-        // Milestone 21+ Boss bonuses
-        if (milestone >= 21 && isBoss) {
-            skills['double_attack'] = 0;
-            if (element !== 'neutral') {
-                const skillId = `medium_${element}_ball`;
-                skills[skillId] = 0;
-            }
-        }
-
-        // MP Calculation: 2 uses per skill with cost
-        let totalMpNeeded = 0;
-        // SKILLS_DATA is imported at the top
-        Object.keys(skills).forEach(sId => {
-            const sData = SKILLS_DATA[sId];
-            if (sData && sData.mpCost > 0) {
-                totalMpNeeded += sData.mpCost * 2;
-            }
+        return new Enemy({
+            name: (isBoss ? 'BOSS: ' : '') + type.name + nameSuffix,
+            type: type.id,
+            level,
+            maxHp: Math.floor(type.hp * mult * bossMult),
+            strength: Math.floor(type.str * mult * bossMult),
+            speed: Math.floor(type.spd * mult * (isBoss ? 1.5 : 1.0)),
+            defense: Math.floor(type.def * mult * bossMult),
+            magicPower: Math.floor(type.mag * mult * bossMult),
+            element: type.el,
+            isBoss,
+            skills: { basic_attack: 0 }
         });
-        stats.mp = totalMpNeeded;
-
-        // Final rounding to ensure integers for HP and clean decimals for others
-        stats.hp = Math.floor(stats.hp);
-        stats.strength = Number(stats.strength.toFixed(1));
-        stats.speed = Number(stats.speed.toFixed(1));
-        stats.defense = Number(stats.defense.toFixed(1));
-        stats.magicPower = Number(stats.magicPower.toFixed(1));
-
-        return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element, skills);
     }
 
-    draw(ctx, x, y) {
-        // Draw Enemy as a circle
-        ctx.fillStyle = this.isBoss ? '#f0f' : '#f55';
+    static generateGroup(milestone) {
+        const level = Math.max(1, Math.floor(milestone / 2));
+        const isBossMilestone = milestone % 10 === 0 && milestone > 0;
+
+        let count = 1;
+        if (isBossMilestone) {
+            count = milestone >= 50 ? 3 : 1;
+        } else {
+            const roll = Math.random();
+            if (milestone < 5) count = 1;
+            else if (milestone < 15) count = roll < 0.7 ? 1 : 2;
+            else if (milestone < 30) count = roll < 0.4 ? 1 : (roll < 0.8 ? 2 : 3);
+            else count = roll < 0.3 ? 2 : (roll < 0.7 ? 3 : 4);
+        }
+
+        const group = [];
+        for (let i = 0; i < count; i++) {
+            group.push(this.generate(level, milestone, i));
+        }
+
+        if (count > 1) {
+            const hpReduction = 1.2 / count;
+            group.forEach(e => {
+                e.maxHp = Math.floor(e.maxHp * hpReduction);
+                e.hp = e.maxHp;
+                e.strength = Math.floor(e.strength * (1.1 / count) + 1);
+                e.magicPower = Math.floor(e.magicPower * (1.1 / count) + 1);
+            });
+        }
+
+        return group;
+    }
+
+    draw(ctx, x, y, isTurn) {
+        ctx.fillStyle = this.isBoss ? '#f0f' : '#f00';
         if (this.hp <= 0) ctx.fillStyle = '#444';
+
+        const size = this.isBoss ? 30 : 20;
+
         ctx.beginPath();
-        ctx.arc(x, y, this.isBoss ? 40 : 30, 0, Math.PI * 2);
+        ctx.arc(x, y, size, 0, Math.PI * 2);
         ctx.fill();
 
-        // Name
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px Outfit';
-        ctx.textAlign = 'center';
-        ctx.fillText(`Lvl ${this.level} ${this.name}`, x, y - 50);
-
-        // HP Bar
-        const barWidth = 120;
-        ctx.fillStyle = '#000';
-        ctx.fillRect(x - barWidth/2, y + 50, barWidth, 10);
-        ctx.fillStyle = '#f55';
-        ctx.fillRect(x - barWidth/2, y + 50, barWidth * (this.hp / this.maxHp), 10);
-
-        ctx.fillStyle = '#fff';
-        ctx.font = '10px Outfit';
-        ctx.fillText(`${Math.ceil(this.hp)} / ${this.maxHp}`, x, y + 60);
-
-        this.drawElementDiagram(ctx, x - 100, y);
-    }
-
-    drawElementDiagram(ctx, x, y) {
-        const positions = {
-            fire: { x: 0, y: -25, color: '#ff4444' },
-            wind: { x: 25, y: 0, color: '#44ff44' },
-            storm: { x: 0, y: 25, color: '#ffff44' },
-            water: { x: -25, y: 0, color: '#4444ff' }
-        };
-
-        const elements = ['fire', 'wind', 'storm', 'water'];
-        
-        ctx.save();
-        ctx.translate(x, y);
-
-        // Draw Arrows
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2;
-        elements.forEach((el, i) => {
-            const start = positions[el];
-            const next = positions[elements[(i + 1) % 4]];
-            this.drawArrow(ctx, start.x, start.y, next.x, next.y);
-        });
-
-        // Draw Circles
-        elements.forEach(el => {
-            const pos = positions[el];
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
-            ctx.strokeStyle = pos.color;
-            ctx.lineWidth = 1;
+        if (isTurn) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
             ctx.stroke();
+        }
 
-            if (this.element === el) {
-                ctx.fillStyle = pos.color;
-                ctx.fill();
-            }
+        // Status indicators
+        this.statusEffects.forEach((eff, i) => {
+            ctx.fillStyle = this.getStatusColor(eff.type);
+            ctx.beginPath();
+            ctx.arc(x - 15 + (i * 10), y - size - 20, 4, 0, Math.PI * 2);
+            ctx.fill();
         });
 
-        ctx.restore();
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px Outfit';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, x, y - size - 30);
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x - size, y + size + 5, size * 2, 5);
+        ctx.fillStyle = '#f00';
+        ctx.fillRect(x - size, y + size + 5, (size * 2) * (this.hp / this.maxHp), 5);
     }
 
-    drawArrow(ctx, x1, y1, x2, y2) {
-        const headlen = 5;
-        const angle = Math.atan2(y2 - y1, x2 - x1);
-        
-        // Offset from center of circles (radius 8)
-        const ox = Math.cos(angle) * 10;
-        const oy = Math.sin(angle) * 10;
-        
-        const sx = x1 + ox;
-        const sy = y1 + oy;
-        const ex = x2 - ox;
-        const ey = y2 - oy;
-
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(ex, ey);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(ex, ey);
-        ctx.lineTo(ex - headlen * Math.cos(angle - Math.PI / 6), ey - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(ex, ey);
-        ctx.lineTo(ex - headlen * Math.cos(angle + Math.PI / 6), ey - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.stroke();
+    getStatusColor(type) {
+        switch (type) {
+            case 'poison': return '#0f0';
+            case 'sleep': return '#88f';
+            case 'stun': return '#ff0';
+            case 'burn': return '#f80';
+            case 'haste': return '#0ff';
+            default: return '#fff';
+        }
     }
 }

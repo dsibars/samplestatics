@@ -13,6 +13,8 @@
             <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')" data-i18n="shop_title">Shop</button>
             <button id="tab-weapon-shop" class="menu-btn secondary" onclick="window.switchVillageTab('weapon-shop')" data-i18n="weapon_shop_title" style="display: none;">Weapon Shop</button>
             <button id="tab-armor-shop" class="menu-btn secondary" onclick="window.switchVillageTab('armor-shop')" data-i18n="armor_shop_title" style="display: none;">Armor Shop</button>
+            <button id="tab-gym" class="menu-btn secondary" onclick="window.switchVillageTab('gym')" data-i18n="gym_title">Gym</button>
+            <button id="tab-forge" class="menu-btn secondary" onclick="window.switchVillageTab('forge')" data-i18n="forge_title" style="display: none;">Forge</button>
             <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')" data-i18n="upgrades_title">Upgrades</button>
         </div>
 
@@ -32,15 +34,29 @@
 
         <div id="village-content-weapon-shop" class="village-tab-content" style="display: none;">
             <h2 data-i18n="weapon_shop_title">Weapon Shop</h2>
-            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
-                <p data-i18n="shop_empty">No items available yet.</p>
+            <div id="weapon-shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Weapon items will be injected here -->
             </div>
         </div>
 
         <div id="village-content-armor-shop" class="village-tab-content" style="display: none;">
             <h2 data-i18n="armor_shop_title">Armor Shop</h2>
-            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
-                <p data-i18n="shop_empty">No items available yet.</p>
+            <div id="armor-shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Armor items will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-gym" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="gym_title">Hero Gym</h2>
+            <div id="gym-hero-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Gym hero list here -->
+            </div>
+        </div>
+
+        <div id="village-content-forge" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="forge_title">Mystic Forge</h2>
+            <div id="forge-inventory-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Forge inventory here -->
             </div>
         </div>
 

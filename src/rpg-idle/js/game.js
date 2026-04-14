@@ -10,10 +10,9 @@ import { SKILLS_DATA } from './constants.js';
 export class RPGGame {
     constructor() {
         this.currentCombat = null;
-        this.currentEnemy = null;
+        this.enemies = [];
         this.currentMilestone = Progression.prog.milestone;
         
-        // Initialize heroes only from active indices
         this.activeIndices = Progression.prog.activeHeroIndices;
         this.heroes = this.activeIndices.map(idx => new Hero(Progression.prog.heroes[idx]));
         
@@ -32,21 +31,23 @@ export class RPGGame {
         this.isRunning = false;
         this.screenFlash = { color: '#ff0000', life: 0 };
         this.lastActionTime = 0;
+
+        this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
     }
 
     resizeCanvas() {
         const container = this.canvas.parentElement;
         this.canvas.width = container.clientWidth;
         this.canvas.height = container.clientHeight;
-        if (this.currentEnemy) {
+        if (this.enemies.length > 0 || this.currentEvent) {
             this.updateUI();
         }
     }
 
     startAdventure() {
         this.currentMilestone = Math.floor(Progression.prog.milestone / 5) * 5;
-        // Restore all heroes to full health/mana when starting a fresh run from the village
         this.heroes.forEach(h => {
+            h.recalculateStats();
             h.hp = h.maxHp;
             h.mp = h.maxMp;
         });
@@ -89,8 +90,17 @@ export class RPGGame {
 
     nextCombat() {
         this.currentMilestone++;
-        const level = Math.max(1, Math.floor(this.currentMilestone / 2));
-        this.currentEnemy = Enemy.generate(level, this.currentMilestone);
+
+        // Randomly encounter an event every 5 milestones, but not on boss milestones
+        const isBossMilestone = this.currentMilestone % 10 === 0;
+        const isEventMilestone = this.currentMilestone % 5 === 0 && !isBossMilestone;
+
+        if (isEventMilestone) {
+            this.triggerEvent();
+            return;
+        }
+
+        this.enemies = Enemy.generateGroup(this.currentMilestone);
 
         this.heroes.forEach(h => {
             if (h.hp > 0) {
@@ -103,31 +113,139 @@ export class RPGGame {
             this.currentCombat.stop();
         }
 
-        // Sync UI checkbox with current state
         const toggle = document.getElementById('autobattle-toggle');
         if (toggle) toggle.checked = this.autoBattle;
 
-        this.currentCombat = new CombatManager(this, this.heroes, this.currentEnemy);
+        this.currentCombat = new CombatManager(this, this.heroes, this.enemies);
 
         this.updateUI();
-        // Give the user a moment to see the setup before starting the first turn
         setTimeout(() => this.currentCombat.nextTurn(), 1000);
     }
 
-    endCombat(result) {
+    triggerEvent() {
+        const events = [
+            {
+                id: 'forsaken_shrine',
+                title: 'The Forsaken Shrine',
+                desc: 'A crumbling statue of a forgotten deity. You feel a faint pulse of energy.',
+                options: [
+                    { id: 'pray', label: 'Pray', desc: 'Restore full HP to the party.' },
+                    { id: 'desecrate', label: 'Desecrate', desc: 'Take 20% damage, gain 5 Cores.' }
+                ]
+            },
+            {
+                id: 'hidden_cache',
+                title: 'The Hidden Cache',
+                desc: 'A dusty chest hidden behind some rocks.',
+                options: [
+                    { id: 'careful', label: 'Open Carefully', desc: 'Find 100 Gold.' },
+                    { id: 'smash', label: 'Smash Open', desc: 'Find 300 Gold, but risk a trap.' }
+                ]
+            },
+            {
+                id: 'mystic_fountain',
+                title: 'Mystic Fountain',
+                desc: 'A pool of shimmering blue water.',
+                options: [
+                    { id: 'drink', label: 'Drink', desc: 'A random hero gains +1 Stat Point.' },
+                    { id: 'ignore', label: 'Ignore', desc: 'Move on cautiously.' }
+                ]
+            }
+        ];
+
+        const event = events[Math.floor(Math.random() * events.length)];
+        this.currentEvent = event;
+        this.showEventUI(event);
+    }
+
+    showEventUI(event) {
+        const overlay = document.createElement('div');
+        overlay.id = 'event-overlay';
+        overlay.style = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+            z-index: 2000; padding: 20px; box-sizing: border-box;
+        `;
+
+        const content = document.createElement('div');
+        content.style = `
+            background: #111; border: 2px solid var(--primary); border-radius: 12px;
+            padding: 30px; max-width: 500px; width: 100%; text-align: center;
+        `;
+
+        content.innerHTML = `
+            <h2 style="color: var(--primary); margin-top: 0;">${t(event.id) || event.title}</h2>
+            <p style="color: white; font-size: 1.1rem; line-height: 1.6; margin: 20px 0;">${t(event.id + '_desc') || event.desc}</p>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                ${event.options.map(opt => `
+                    <button class="menu-btn primary" style="padding: 15px;" onclick="window.game.handleEventChoice('${opt.id}')">
+                        <div style="font-weight: bold;">${t('opt_' + opt.id) || opt.label}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">${t('opt_' + opt.id + '_desc') || opt.desc}</div>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+        window.game = this; // Expose for click handler
+    }
+
+    handleEventChoice(choiceId) {
+        const event = this.currentEvent;
+        let msg = "";
+
+        if (choiceId === 'pray') {
+            this.heroes.forEach(h => h.hp = h.maxHp);
+            msg = "The deity smiles upon you. Party fully healed!";
+        } else if (choiceId === 'desecrate') {
+            this.heroes.forEach(h => {
+                const dmg = Math.floor(h.maxHp * 0.2);
+                h.hp = Math.max(1, h.hp - dmg);
+            });
+            Progression.addCores(5);
+            msg = "You find 5 Cores in the rubble, but feel a dark curse. Party damaged!";
+        } else if (choiceId === 'careful') {
+            Progression.addGold(100);
+            msg = "You found 100 Gold!";
+        } else if (choiceId === 'smash') {
+            if (Math.random() < 0.3) {
+                this.heroes.forEach(h => {
+                    const dmg = Math.floor(h.maxHp * 0.15);
+                    h.hp = Math.max(1, h.hp - dmg);
+                });
+                msg = "A trap was triggered! Party took damage, but you found 300 Gold!";
+            } else {
+                msg = "Successful! You found 300 Gold!";
+            }
+            Progression.addGold(300);
+        } else if (choiceId === 'drink') {
+            const h = this.heroes[Math.floor(Math.random() * this.heroes.length)];
+            h.statPoints += 1;
+            msg = `${h.name} feels stronger! (+1 Stat Point)`;
+        } else if (choiceId === 'ignore') {
+            msg = "You move on without taking any risks.";
+        }
+
+        document.getElementById('event-overlay').remove();
+        alert(msg);
+        this.currentEvent = null;
+        this.nextCombat();
+    }
+
+    endCombat(result, goldBonus = 1.0) {
         this.popupOpenTime = performance.now();
         let levelUps = [];
 
         if (result === 'win') {
-            const goldEarned = 10 * this.currentMilestone;
+            const goldEarned = Math.floor(10 * this.currentMilestone * goldBonus);
             const expEarned = 20 * this.currentMilestone;
-            const coresEarned = this.currentEnemy.isBoss ? 5 : 0;
+            const coresEarned = this.enemies.some(e => e.isBoss) ? 5 : 0;
 
             Progression.addGold(goldEarned);
             Progression.addCores(coresEarned);
             Progression.setMilestone(this.currentMilestone);
 
-            // Group XP split logic
             const numActive = this.heroes.length;
             const splitMultipliers = { 1: 1.0, 2: 0.8, 3: 0.7, 4: 0.6 };
             const multiplier = splitMultipliers[numActive] || 1.0;
@@ -138,7 +256,6 @@ export class RPGGame {
                 if (leveled) levelUps.push({ name: h.name, level: h.level });
             });
 
-            // Gym passive XP for others
             const gymLevel = Progression.prog.village.gymLevel || 0;
             const passiveExp = Math.floor(expEarned * (gymLevel / 100));
 
@@ -146,11 +263,9 @@ export class RPGGame {
             fullRoster.forEach((hData, idx) => {
                 const isActive = this.activeIndices.includes(idx);
                 if (isActive) {
-                    // Update active hero data
                     const heroObj = this.heroes[this.activeIndices.indexOf(idx)];
                     fullRoster[idx] = heroObj.toJSON();
                 } else if (passiveExp > 0) {
-                    // Apply gym XP
                     const hObj = new Hero(hData);
                     const leveled = hObj.gainExp(passiveExp);
                     fullRoster[idx] = hObj.toJSON();
@@ -172,7 +287,6 @@ export class RPGGame {
             `;
             document.getElementById('win-overlay').style.display = 'flex';
 
-            // Check for One-Shot Jump
             if (this.currentCombat && this.currentCombat.oneShotJumpPossible) {
                 setTimeout(() => {
                     if (confirm(t('oneshot_jump_confirm'))) {
@@ -183,9 +297,12 @@ export class RPGGame {
                 }, 500);
             }
         } else {
-            const damageDealt = this.currentEnemy.maxHp - this.currentEnemy.hp;
+            const totalMaxHp = this.enemies.reduce((sum, e) => sum + e.maxHp, 0);
+            const totalCurrentHp = this.enemies.reduce((sum, e) => sum + Math.max(0, e.hp), 0);
+            const damageDealt = totalMaxHp - totalCurrentHp;
+
             const expPotential = 20 * this.currentMilestone;
-            let expEarned = Math.floor((damageDealt / this.currentEnemy.maxHp) * expPotential);
+            let expEarned = Math.floor((damageDealt / totalMaxHp) * expPotential);
             if (damageDealt > 0) expEarned = Math.max(1, expEarned);
 
             if (expEarned > 0) {
@@ -199,7 +316,6 @@ export class RPGGame {
                     if (leveled) levelUps.push({ name: h.name, level: h.level });
                 });
 
-                // Gym passive XP for others
                 const gymLevel = Progression.prog.village.gymLevel || 0;
                 const passiveExp = Math.floor(expEarned * (gymLevel / 100));
 
@@ -253,8 +369,8 @@ export class RPGGame {
         logEl.appendChild(p);
         logEl.scrollTop = logEl.scrollHeight;
 
-        const participant = this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex];
-        if (!(participant instanceof Hero) || participant.hp <= 0 || this.currentCombat.isCombatOver) {
+        const participant = this.currentCombat?.turnOrder[this.currentCombat.currentTurnIndex];
+        if (!(participant instanceof Hero) || participant.hp <= 0 || this.currentCombat?.isCombatOver) {
             document.getElementById('action-panel').style.display = 'none';
         }
 
@@ -266,13 +382,47 @@ export class RPGGame {
         if (!this.isRunning) this.draw();
     }
 
+    getEnemyPositions() {
+        const count = this.enemies.length;
+        const positions = [];
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height * 0.3;
+        const spacing = 60;
+
+        if (count === 1) {
+            positions.push({ x: centerX, y: centerY });
+        } else if (count === 2) {
+            positions.push({ x: centerX - spacing, y: centerY });
+            positions.push({ x: centerX + spacing, y: centerY });
+        } else if (count === 3) {
+            positions.push({ x: centerX, y: centerY - spacing / 2 });
+            positions.push({ x: centerX - spacing, y: centerY + spacing / 2 });
+            positions.push({ x: centerX + spacing, y: centerY + spacing / 2 });
+        } else if (count === 4) {
+            positions.push({ x: centerX - spacing, y: centerY - spacing / 2 });
+            positions.push({ x: centerX + spacing, y: centerY - spacing / 2 });
+            positions.push({ x: centerX - spacing, y: centerY + spacing / 2 });
+            positions.push({ x: centerX + spacing, y: centerY + spacing / 2 });
+        }
+        return positions;
+    }
+
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        if (this.currentEnemy) {
-            const isTurn = this.currentCombat && this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex] === this.currentEnemy;
-            this.currentEnemy.draw(this.ctx, this.canvas.width / 2, this.canvas.height * 0.3, isTurn);
+        if (this.currentEvent) {
+             this.ctx.fillStyle = '#fff';
+             this.ctx.font = '24px Outfit';
+             this.ctx.textAlign = 'center';
+             this.ctx.fillText("EVENT ENCOUNTER", this.canvas.width/2, this.canvas.height/2);
+             return;
         }
+
+        const enemyPos = this.getEnemyPositions();
+        this.enemies.forEach((e, i) => {
+            const isTurn = this.currentCombat && this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex] === e;
+            e.draw(this.ctx, enemyPos[i].x, enemyPos[i].y, isTurn);
+        });
 
         const heroSpacing = this.canvas.width / (this.heroes.length + 1);
         this.heroes.forEach((h, i) => {
@@ -305,9 +455,11 @@ export class RPGGame {
 
     addFloatingText(target, text, color) {
         let x, y;
-        if (target === this.currentEnemy) {
-            x = this.canvas.width / 2;
-            y = this.canvas.height * 0.3;
+        const enemyIndex = this.enemies.indexOf(target);
+        if (enemyIndex > -1) {
+            const pos = this.getEnemyPositions()[enemyIndex];
+            x = pos.x;
+            y = pos.y;
         } else {
             const index = this.heroes.indexOf(target);
             const heroSpacing = this.canvas.width / (this.heroes.length + 1);
@@ -321,9 +473,11 @@ export class RPGGame {
 
     onDeath(target) {
         let x, y, color;
-        if (target === this.currentEnemy) {
-            x = this.canvas.width / 2;
-            y = this.canvas.height * 0.3;
+        const enemyIndex = this.enemies.indexOf(target);
+        if (enemyIndex > -1) {
+            const pos = this.getEnemyPositions()[enemyIndex];
+            x = pos.x;
+            y = pos.y;
             color = target.isBoss ? '#f0f' : '#f00';
         } else {
             const index = this.heroes.indexOf(target);
@@ -336,6 +490,25 @@ export class RPGGame {
         for (let i = 0; i < 20; i++) {
             this.particles.push(new Particle(x, y, color));
         }
+    }
+
+    handleCanvasClick(e) {
+        if (!this.currentCombat || this.currentCombat.isCombatOver) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const enemyPos = this.getEnemyPositions();
+        this.enemies.forEach((enemy, i) => {
+            if (enemy.hp <= 0) return;
+            const pos = enemyPos[i];
+            const dx = mouseX - pos.x;
+            const dy = mouseY - pos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 30) {
+                this.currentCombat.setTargetIndex(i);
+            }
+        });
     }
 
     showActionPanel(hero) {
@@ -361,8 +534,10 @@ export class RPGGame {
                 extra: `${skill.mpCost} MP`,
                 disabled: hero.mp < skill.mpCost,
                 onclick: () => {
-                    if (skill.targetType === 'ally') {
-                        this.renderTargetSelection(hero, skillId);
+                    if (skill.targetType === 'single_enemy') {
+                        this.renderTargetSelection(hero, skillId, 'enemies');
+                    } else if (skill.targetType === 'single_ally') {
+                        this.renderTargetSelection(hero, skillId, 'allies');
                     } else {
                         panel.style.display = 'none';
                         this.currentCombat.heroAction(hero, skillId);
@@ -374,13 +549,15 @@ export class RPGGame {
         this.renderDynamicGrid(panel, options, '🛡️ ' + t('skills'), () => this.showActionPanel(hero));
     }
 
-    renderTargetSelection(hero, skillId) {
+    renderTargetSelection(hero, skillId, type) {
         const panel = document.getElementById('action-panel');
-        const options = this.heroes.map((h, index) => ({
-            label: h.name,
-            extra: `${Math.ceil(h.hp)}/${h.maxHp} HP`,
-            disabled: h.hp <= 0,
-            color: '#0f0',
+        let targets = type === 'allies' ? this.heroes : this.enemies;
+
+        const options = targets.map((t, index) => ({
+            label: t.name,
+            extra: `${Math.ceil(t.hp)}/${t.maxHp} HP`,
+            disabled: t.hp <= 0,
+            color: type === 'allies' ? '#0f0' : '#f00',
             onclick: () => {
                 panel.style.display = 'none';
                 this.currentCombat.heroAction(hero, skillId, index);

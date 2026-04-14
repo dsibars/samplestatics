@@ -4,10 +4,6 @@ export class CombatAttackCalculator {
      */
     static getFinalStat(entity, statName) {
         let baseVal = entity[statName] || 0;
-        
-        // If entity is a Hero and has equipment, this would be where we add those.
-        // For now, it's just the base stat.
-        
         return Math.max(1, baseVal);
     }
 
@@ -21,12 +17,11 @@ export class CombatAttackCalculator {
         if (R >= 10) return R / 10;
         if (R >= 5) return 1.0;
         
-        // Piecewise linear model
-        if (R >= 4) return 0.9 + (R - 4) * 0.1;      // (4, 0.9) to (5, 1.0)
-        if (R >= 2) return 0.75 + (R - 2) * 0.075;   // (2, 0.75) to (4, 0.9)
-        if (R >= 1) return 0.5 + (R - 1) * 0.25;     // (1, 0.5) to (2, 0.75)
+        if (R >= 4) return 0.9 + (R - 4) * 0.1;
+        if (R >= 2) return 0.75 + (R - 2) * 0.075;
+        if (R >= 1) return 0.5 + (R - 1) * 0.25;
         
-        return R * 0.5;                             // (0, 0) to (1, 0.5)
+        return R * 0.5;
     }
 
     /**
@@ -53,15 +48,24 @@ export class CombatAttackCalculator {
      * Calculates evasion chance (0-100)
      */
     static calculateEvasionChance(attacker, defender) {
-        const sAttacker = this.getFinalStat(attacker, 'speed');
-        const sDefender = this.getFinalStat(defender, 'speed');
+        let sAttacker = this.getFinalStat(attacker, 'speed');
+        let sDefender = this.getFinalStat(defender, 'speed');
+
+        if (attacker.getTraitMultipliers) {
+            const mults = attacker.getTraitMultipliers();
+            sAttacker *= mults.accuracy;
+        }
+
+        // Apply Assassin affix accuracy bonus
+        if (attacker.accuracyBonus) {
+            sAttacker *= (1 + (attacker.accuracyBonus / 100));
+        }
+
         const R = sDefender / sAttacker;
 
         if (R <= 1) {
-            // Faster attacker reduces evasion. R=0.5 (double speed) -> 0%
             return Math.max(0, (R - 0.5) * 20);
         } else {
-            // Faster defender increases evasion.
             return 10 + (R * 10);
         }
     }
@@ -70,34 +74,51 @@ export class CombatAttackCalculator {
      * Main calculation entry point
      * @returns {Object} { amount, evasionChance, isMiss, elementMult }
      */
-    static calculate(attacker, defender, skillData, skillLevel = 0) {
+    static calculate(attacker, defender, skillData, skillLevel = 0, partyTraits = {}) {
         const evasionChance = this.calculateEvasionChance(attacker, defender);
+
+        let critChance = 0;
+        if (attacker.getTraitMultipliers) {
+            critChance += attacker.getTraitMultipliers().critChance;
+        }
+        if (attacker.critChanceBonus) {
+            critChance += attacker.critChanceBonus;
+        }
+
         const isMiss = Math.random() * 100 < evasionChance;
+        const isCrit = !isMiss && (Math.random() * 100 < critChance);
 
         if (isMiss) {
-            return { amount: 0, evasionChance, isMiss: true, elementMult: 1 };
+            return { amount: 0, evasionChance, isMiss: true, elementMult: 1, isCrit: false };
         }
 
         const multiplier = 1.0 + (0.005 * (skillData.tier || 1) * skillLevel);
-        const baseStatValue = this.getFinalStat(attacker, skillData.stat);
+        let baseStatValue = this.getFinalStat(attacker, skillData.stat);
         
+        if (skillData.stat === 'magicPower' && partyTraits.magicPowerBoost) {
+            baseStatValue *= (1 + partyTraits.magicPowerBoost);
+        }
+
         if (skillData.category === 'support') {
             const power = skillData.power || 0.1;
             const finalPercentage = power * multiplier;
-            // For healing, amount is a percentage of target max HP usually, 
-            // but we'll return the raw percentage multiplier here and let CombatManager apply it to target.maxHp
-            return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1 };
+            return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1, isCrit: false };
         } else {
             const damageMultiplier = skillData.baseMultiplier || 1.0;
-            const rawDamage = baseStatValue * damageMultiplier * multiplier;
+            let rawDamage = baseStatValue * damageMultiplier * multiplier;
+            if (isCrit) rawDamage *= 1.5;
             
             const targetDefense = this.getFinalStat(defender, 'defense');
             const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
             const elementMult = this.getElementMultiplier(skillData.element, defender.element);
             
-            const finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
+            let finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
             
-            return { amount: finalDamage, evasionChance, isMiss: false, elementMult };
+            if (skillData.category === 'physical' && partyTraits.physicalDamageReduction) {
+                finalDamage = Math.floor(finalDamage * (1 - partyTraits.physicalDamageReduction));
+            }
+
+            return { amount: finalDamage, evasionChance, isMiss: false, elementMult, isCrit };
         }
     }
 }
