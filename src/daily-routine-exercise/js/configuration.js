@@ -1,4 +1,4 @@
-import { state, EXERCISES, DEFAULT_ROUTINE } from './state.js';
+import { state, EXERCISES, DEFAULT_ROUTINE, generateId } from './state.js';
 import Sortable from 'sortablejs';
 import { currentLang, t, applyTranslations } from './i18n.js';
 
@@ -59,12 +59,12 @@ export function showRoutine() {
 
 export function renderRoutineList() {
   const list = document.getElementById('routine-list');
-  list.innerHTML = state.routine.map((step, idx) => {
+  list.innerHTML = state.routine.map((step) => {
     const ex = EXERCISES[step.ex];
     return `
       <div style="background:#222; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50; position: relative;">
         
-        <button onclick="removeRoutineStep(${idx})" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 2px solid #f44336; color: #f44336; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; z-index: 10;">X</button>
+        <button onclick="removeRoutineStep('${step.id}')" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 2px solid #f44336; color: #f44336; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; z-index: 10;">X</button>
         
         <div style="font-weight:bold; color:#4CAF50; font-size: 0.9rem;">${t(step.tag)} (${step.start})</div>
         <div style="font-size:1.2rem; margin: 8px 0; padding-right: 35px;">${t(ex.name)}</div>
@@ -83,17 +83,18 @@ export function renderRoutineList() {
       const draggedStep = state.routine.splice(evt.oldIndex, 1)[0];
       state.routine.splice(evt.newIndex, 0, draggedStep);
       localStorage.setItem('workout_routine', JSON.stringify(state.routine));
-      // Re-render specifically to fix indices matching the X deletion buttons
-      renderRoutineList();
     }
   });
 }
 
-export function removeRoutineStep(idx) {
+export function removeRoutineStep(id) {
   if (confirm("¿Borrar ejercicio?")) {
-    state.routine.splice(idx, 1);
-    localStorage.setItem('workout_routine', JSON.stringify(state.routine));
-    renderRoutineList();
+    const idx = state.routine.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      state.routine.splice(idx, 1);
+      localStorage.setItem('workout_routine', JSON.stringify(state.routine));
+      renderRoutineList();
+    }
   }
 }
 
@@ -130,7 +131,7 @@ export function appendNewExercise() {
   const start = parseInt(document.getElementById('builder-start').value) || 0;
   const tag = document.getElementById('builder-tag').value.trim() || t(EXERCISES[ex].name);
   
-  state.routine.unshift({ ex, start, tag });
+  state.routine.unshift({ id: generateId(), ex, start, tag });
   localStorage.setItem('workout_routine', JSON.stringify(state.routine));
   
   closeAddExercise();
@@ -158,7 +159,10 @@ export function importJSON(event) {
     // Backwards compatibility for raw historic JSON
     if (data.version && data.version >= 3) {
       state.history = data.history || {};
-      state.routine = data.routine || DEFAULT_ROUTINE;
+      state.routine = (data.routine || DEFAULT_ROUTINE).map(step => ({
+        ...step,
+        id: step.id || generateId()
+      }));
       localStorage.setItem('workout_routine', JSON.stringify(state.routine));
     } else {
       state.history = data;
