@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "vite",
     "build:prod": "vite build",
-    "build:debug": "vite build -m debug"
+    "build:debug": "vite build -m debug",
+    "test": "node --test src/**/*.test.js"
   },
   "devDependencies": {
     "vite": "^5.2.0",
