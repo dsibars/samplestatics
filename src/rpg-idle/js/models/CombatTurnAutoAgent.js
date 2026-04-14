@@ -15,7 +15,6 @@ export class CombatTurnAutoAgent {
 
         // 1. Check for Healing needs
         const injuredAllies = allies.filter(a => a.hp > 0 && a.hp / a.maxHp <= 0.7); // < 70% HP
-        const criticalAllies = allies.filter(a => a.hp > 0 && a.hp / a.maxHp <= 0.4); // < 40% HP
 
         if (injuredAllies.length > 0) {
             // Find best heal skill
@@ -51,15 +50,20 @@ export class CombatTurnAutoAgent {
         // Default to basic_attack if nothing else
         let chosenSkill = attackSkills[0] || SKILLS_DATA['basic_attack'];
 
-        // If we have multiple enemies, favor AoE (if any exist in data)
-        const aoeSkill = attackSkills.find(s => s.targetType === 'all_enemies');
-        if (aoeSkill && enemies.filter(e => e.hp > 0).length > 1) {
-            chosenSkill = aoeSkill;
+        // 3. Targeting & AoE decision
+        let targetIndex = 0;
+        const aliveEnemies = [];
+        for (let i = 0; i < enemies.length; i++) {
+            if (enemies[i].hp > 0) {
+                aliveEnemies.push({ e: enemies[i], idx: i });
+            }
         }
 
-        // 3. Targeting
-        let targetIndex = 0;
-        const aliveEnemies = enemies.map((e, idx) => ({ e, idx })).filter(item => item.e.hp > 0);
+        // If we have multiple enemies, favor AoE (if any exist in data)
+        const aoeSkill = attackSkills.find(s => s.targetType === 'all_enemies');
+        if (aoeSkill && aliveEnemies.length > 1) {
+            chosenSkill = aoeSkill;
+        }
         
         if (aliveEnemies.length > 0) {
             if (type === 'smart') {
