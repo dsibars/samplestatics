@@ -59,7 +59,8 @@ window.nextCombat = () => {
 window.showVillage = () => {
     if (Progression.checkFreeHero()) {
         alert(t('free_hero_welcome') || "Hello adventurer! I have a present for you!");
-        Progression.addHero(Hero.generateRandom(1).toJSON());
+        const currentNames = Progression.prog.heroes.map(h => h.name);
+        Progression.addHero(Hero.generateRandom(1, currentNames).toJSON());
     }
     updateVillageUI();
     showView('view-village');
@@ -179,7 +180,8 @@ function updateVillageUI() {
 
 window.recruitHero = (cost) => {
     if (Progression.prog.gold >= cost) {
-        if (Progression.addHero(Hero.generateRandom(1).toJSON())) {
+        const currentNames = Progression.prog.heroes.map(h => h.name);
+        if (Progression.addHero(Hero.generateRandom(1, currentNames).toJSON())) {
             Progression.spendGold(cost);
             updateVillageUI();
         }
@@ -249,11 +251,23 @@ window.showHeroDetails = (index) => {
         toggleBtn = `<button class="menu-btn ${canSelect ? 'primary' : 'secondary'}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ''}>⚔️ ${t('btn_select') || 'Add to Party'}</button>`;
     }
 
-    const fireBtn = `<button class="menu-btn secondary" 
-                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? 'opacity: 0.3; cursor: default;' : ''}" 
-                ${!isActive ? `onclick="window.fireHero(${index})"` : ''}>
-            🗑️ ${t('btn_fire_hero')}
-        </button>`;
+    let fireBtn = '';
+    const totalHeroes = Progression.prog.heroes.length;
+
+    if (totalHeroes === 1) {
+        // Special case: Switch Hero instead of Fire Hero
+        fireBtn = `<button class="menu-btn primary" 
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: var(--primary); color: var(--primary);" 
+                    onclick="window.switchHero(${index})">
+                ${t('btn_switch_hero')}
+            </button>`;
+    } else {
+        fireBtn = `<button class="menu-btn secondary" 
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? 'opacity: 0.3; cursor: default;' : ''}" 
+                    ${!isActive ? `onclick="window.fireHero(${index})"` : ''}>
+                🗑️ ${t('btn_fire_hero')}
+            </button>`;
+    }
 
     actionContainer.innerHTML = toggleBtn + fireBtn;
     statsContainer.appendChild(actionContainer);
@@ -343,6 +357,29 @@ window.fireHero = (index) => {
         if (Progression.removeHero(index)) {
             window.showVillage();
         }
+    }
+};
+
+window.switchHero = (index) => {
+    const heroData = Progression.prog.heroes[index];
+    if (!heroData) return;
+
+    if (confirm(t('confirm_switch_unique'))) {
+        // 1. Get current names to ensure uniqueness (though it will be empty after removal)
+        // Actually we want a new name, so we can just pass an empty list or the current name if we want to allow re-selection
+        const currentNames = []; 
+        const newHero = Hero.generateRandom(1, currentNames);
+        
+        // 2. Remove current hero (index should be 0)
+        Progression.prog.heroes = [];
+        Progression.prog.activeHeroIndices = [];
+        
+        // 3. Add new hero
+        Progression.addHero(newHero.toJSON());
+        
+        // 4. Update UI
+        window.showVillage();
+        alert(t('learned') + "!"); // Generic success or just let showVillage do its thing
     }
 };
 

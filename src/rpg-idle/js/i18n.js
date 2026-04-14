@@ -177,7 +177,9 @@ const TRANSLATIONS = {
         equip_coming_soon: "The equipment system is being expanded! New items from the Weapon and Armor shops will be available soon.",
         debug_title: "DEBUG ME",
         debug_confirm: "You are gonna break the game. Sure?",
-        oneshot_jump_confirm: "You one-shotted the boss with massive damage! Jump 10 levels?"
+        oneshot_jump_confirm: "You one-shotted the boss with massive damage! Jump 10 levels?",
+        btn_switch_hero: "🔁 SWITCH HERO",
+        confirm_switch_unique: "This will replace your current hero with a new Level 1 hero. All progress on this hero will be lost. Continue?"
     },
     es: {
         subtitle: "Aventura y Recluta",
@@ -355,7 +357,9 @@ const TRANSLATIONS = {
         equip_coming_soon: "¡El sistema de equipo se está ampliando! Nuevos objetos de las tiendas de armas y armaduras estarán disponibles pronto.",
         debug_title: "DEBUG ME",
         debug_confirm: "Vas a romper el juego. ¿Estás seguro?",
-        oneshot_jump_confirm: "¡Has derrotado al jefe de un solo golpe con un daño masivo! ¿Quieres saltar 10 niveles?"
+        oneshot_jump_confirm: "¡Has derrotado al jefe de un solo golpe con un daño masivo! ¿Quieres saltar 10 niveles?",
+        btn_switch_hero: "🔁 CAMBIAR HÉROE",
+        confirm_switch_unique: "¿Deseas cambiar tu héroe actual por uno nuevo de Nivel 1? Perderás todo el progreso de este héroe."
     },
     ca: {
         subtitle: "Aventura i Recluta",
@@ -507,7 +511,9 @@ const TRANSLATIONS = {
         high_heal_desc: "Curació sagrada miraculosa.",
         small_group_heal_desc: "Cura menor per a tots.",
         medium_group_heal_desc: "Cura avançada per a tots.",
-        high_group_heal_desc: "Pregària sagrada per a tots."
+        high_group_heal_desc: "Pregària sagrada per a tots.",
+        btn_switch_hero: "🔁 CANVIAR HEROI",
+        confirm_switch_unique: "Vols canviar el teu heroi actual per un de nou de Nivell 1? Perdràs tot el progrés d'aquest heroi."
     },
     eu: {
         subtitle: "Abentura eta Errekluta",
@@ -656,7 +662,9 @@ const TRANSLATIONS = {
         steal_desc: "Etsaiari lapurtzen saiatu.",
         small_group_heal_desc: "Guztientzako sendaketa txikia.",
         medium_group_heal_desc: "Guztientzako sendaketa aurreratua.",
-        high_group_heal_desc: "Guztientzako otoitz sakratua."
+        high_group_heal_desc: "Guztientzako otoitz sakratua.",
+        btn_switch_hero: "🔁 HEROIA ALDATU",
+        confirm_switch_unique: "Zure uneko heroia 1. Mailako berri batekin aldatu nahi duzu? Heroi honen aurrerapen guztia galduko duzu."
     },
     gl: {
         subtitle: "Aventura e Recluta",
@@ -798,6 +806,8 @@ const TRANSLATIONS = {
         small_wind_ball_desc: "Ráfaga de vento afiada.",
         medium_wind_ball_desc: "Tornado de maxia de vento.",
         big_wind_ball_desc: "Ciclón devastador de vento.",
+        btn_switch_hero: "🔁 CAMBIAR HEROE",
+        confirm_switch_unique: "Queres cambiar o teu heroe actual por un novo de Nivel 1? Perderás todo o progreso deste heroe.",
         small_storm_ball_desc: "Chispa eléctrica crepitante.",
         medium_storm_ball_desc: "Oleada de maxia eléctrica.",
         big_storm_ball_desc: "Tormenta de raios fatal.",

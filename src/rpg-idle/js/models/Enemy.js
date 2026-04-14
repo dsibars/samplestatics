@@ -1,5 +1,7 @@
+import { SKILLS_DATA } from '../constants.js';
+
 export class Enemy {
-    constructor(name, level, stats, isBoss = false, element = 'neutral') {
+    constructor(name, level, stats, isBoss = false, element = 'neutral', skills = { basic_attack: 0 }) {
         this.name = name;
         this.level = level;
         this.isBoss = isBoss;
@@ -7,10 +9,16 @@ export class Enemy {
 
         this.maxHp = stats.hp;
         this.hp = this.maxHp;
+        
+        this.maxMp = stats.mp || 0;
+        this.mp = this.maxMp;
+
         this.strength = stats.strength;
         this.speed = stats.speed;
         this.defense = stats.defense;
         this.magicPower = stats.magicPower || 1;
+        
+        this.skills = skills;
     }
 
     static generate(level, milestone) {
@@ -91,6 +99,35 @@ export class Enemy {
             }
         }
 
+        // --- SKILL ASSIGNMENT ---
+        const skills = { basic_attack: 0 };
+        
+        // Elemental small ball magic
+        if (element !== 'neutral') {
+            const skillId = `small_${element}_ball`;
+            skills[skillId] = 0; // Enemy skill level 0 is base
+        }
+
+        // Milestone 21+ Boss bonuses
+        if (milestone >= 21 && isBoss) {
+            skills['double_attack'] = 0;
+            if (element !== 'neutral') {
+                const skillId = `medium_${element}_ball`;
+                skills[skillId] = 0;
+            }
+        }
+
+        // MP Calculation: 2 uses per skill with cost
+        let totalMpNeeded = 0;
+        // SKILLS_DATA is imported at the top
+        Object.keys(skills).forEach(sId => {
+            const sData = SKILLS_DATA[sId];
+            if (sData && sData.mpCost > 0) {
+                totalMpNeeded += sData.mpCost * 2;
+            }
+        });
+        stats.mp = totalMpNeeded;
+
         // Final rounding to ensure integers for HP and clean decimals for others
         stats.hp = Math.floor(stats.hp);
         stats.strength = Number(stats.strength.toFixed(1));
@@ -98,7 +135,7 @@ export class Enemy {
         stats.defense = Number(stats.defense.toFixed(1));
         stats.magicPower = Number(stats.magicPower.toFixed(1));
 
-        return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element);
+        return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element, skills);
     }
 
     draw(ctx, x, y) {

@@ -9,7 +9,8 @@ export const SKILLS_DATA = {
         enhanceCostBase: 1,
         baseMultiplier: 1.0,
         mpCost: 0,
-        stat: 'strength'
+        stat: 'strength',
+        targetType: 'single_enemy'
     },
     double_attack: {
         id: 'double_attack',
@@ -21,7 +22,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 0.6, // Per hit (60% x 2 = 120%)
         mpCost: 10,
         stat: 'strength',
-        dependency: 'basic_attack'
+        dependency: 'basic_attack',
+        targetType: 'single_enemy'
     },
     triple_attack: {
         id: 'triple_attack',
@@ -33,7 +35,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 0.45, // Per hit (45% x 3 = 135%)
         mpCost: 20,
         stat: 'strength',
-        dependency: 'double_attack'
+        dependency: 'double_attack',
+        targetType: 'single_enemy'
     },
 
     // Magic - Fire
@@ -47,7 +50,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 0.8,
         mpCost: 10,
         stat: 'magicPower',
-        element: 'fire'
+        element: 'fire',
+        targetType: 'single_enemy'
     },
     medium_fire_ball: {
         id: 'medium_fire_ball',
@@ -87,7 +91,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 0.8,
         mpCost: 10,
         stat: 'magicPower',
-        element: 'water'
+        element: 'water',
+        targetType: 'single_enemy'
     },
     medium_water_ball: {
         id: 'medium_water_ball',
@@ -127,7 +132,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 0.8,
         mpCost: 10,
         stat: 'magicPower',
-        element: 'wind'
+        element: 'wind',
+        targetType: 'single_enemy'
     },
     medium_wind_ball: {
         id: 'medium_wind_ball',
@@ -167,7 +173,8 @@ export const SKILLS_DATA = {
         baseMultiplier: 0.8,
         mpCost: 10,
         stat: 'magicPower',
-        element: 'storm'
+        element: 'storm',
+        targetType: 'single_enemy'
     },
     medium_storm_ball: {
         id: 'medium_storm_ball',
@@ -193,7 +200,8 @@ export const SKILLS_DATA = {
         mpCost: 35,
         stat: 'magicPower',
         dependency: 'medium_storm_ball',
-        element: 'storm'
+        element: 'storm',
+        targetType: 'single_enemy'
     },
 
     // Tricker (Placeholders)
@@ -206,7 +214,8 @@ export const SKILLS_DATA = {
         enhanceCostBase: 1,
         baseMultiplier: 0.5,
         mpCost: 12,
-        stat: 'strength'
+        stat: 'strength',
+        targetType: 'single_enemy'
     },
     steal: {
         id: 'steal',
@@ -217,7 +226,8 @@ export const SKILLS_DATA = {
         enhanceCostBase: 1,
         baseMultiplier: 0.1,
         mpCost: 5,
-        stat: 'speed'
+        stat: 'speed',
+        targetType: 'single_enemy'
     },
 
     // Support
@@ -231,7 +241,7 @@ export const SKILLS_DATA = {
         power: 0.20,
         mpCost: 10,
         stat: 'magicPower',
-        targetType: 'ally'
+        targetType: 'single_ally'
     },
     medium_heal: {
         id: 'medium_heal',
@@ -256,7 +266,7 @@ export const SKILLS_DATA = {
         power: 0.85,
         mpCost: 45,
         stat: 'magicPower',
-        targetType: 'ally',
+        targetType: 'single_ally',
         dependency: 'medium_heal'
     },
     small_group_heal: {
@@ -269,7 +279,7 @@ export const SKILLS_DATA = {
         power: 0.10,
         mpCost: 20,
         stat: 'magicPower',
-        targetType: 'all'
+        targetType: 'all_allies'
     },
     medium_group_heal: {
         id: 'medium_group_heal',
@@ -294,7 +304,7 @@ export const SKILLS_DATA = {
         power: 0.65,
         mpCost: 80,
         stat: 'magicPower',
-        targetType: 'all',
+        targetType: 'all_allies',
         dependency: 'medium_group_heal'
     }
 };

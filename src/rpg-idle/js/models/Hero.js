@@ -55,9 +55,20 @@ export class Hero {
         };
     }
 
-    static generateRandom(level = 1) {
-        const names = ['Alaric', 'Kaelen', 'Thorne', 'Valerius', 'Elowen', 'Zephyr', 'Ione', 'Thalric'];
-        const name = names[Math.floor(Math.random() * names.length)];
+    static generateRandom(level = 1, existingNames = []) {
+        const pool = [
+            'Alaric', 'Kaelen', 'Thorne', 'Valerius', 'Elowen', 'Zephyr', 'Ione', 'Thalric',
+            'Beryn', 'Caelum', 'Drayke', 'Eryn', 'Faolan', 'Gwyn', 'Hestia', 'Indra',
+            'Jareth', 'Kynan', 'Liora', 'Maelis', 'Nyx', 'Oren', 'Phaedra', 'Quill',
+            'Ronen', 'Sora', 'Tavian', 'Ulric', 'Vesper', 'Wren', 'Xara', 'Yuna', 'Zarek',
+            'Alistair', 'Beatrix', 'Caspian', 'Daphne', 'Evander', 'Felix', 'Gideon', 'Hazel',
+            'Isla', 'Jasper', 'Kira', 'Lucius', 'Mira', 'Nico', 'Olive', 'Silas', 'Thea',
+            'Vane', 'Wyatt', 'Xander', 'Yara', 'Zane', 'Aria', 'Bastian', 'Cora', 'Dante'
+        ];
+        
+        const availableNames = pool.filter(n => !existingNames.includes(n));
+        const finalPool = availableNames.length > 0 ? availableNames : pool;
+        const name = finalPool[Math.floor(Math.random() * finalPool.length)];
         
         const origins = [
             'origin_clown', 'origin_warrior_frustrated', 'origin_thief_bored', 

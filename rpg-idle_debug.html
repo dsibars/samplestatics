@@ -290,9 +290,71 @@ class Hero {
       accessory: null
     };
   }
-  static generateRandom(level = 1) {
-    const names = ["Alaric", "Kaelen", "Thorne", "Valerius", "Elowen", "Zephyr", "Ione", "Thalric"];
-    const name = names[Math.floor(Math.random() * names.length)];
+  static generateRandom(level = 1, existingNames = []) {
+    const pool = [
+      "Alaric",
+      "Kaelen",
+      "Thorne",
+      "Valerius",
+      "Elowen",
+      "Zephyr",
+      "Ione",
+      "Thalric",
+      "Beryn",
+      "Caelum",
+      "Drayke",
+      "Eryn",
+      "Faolan",
+      "Gwyn",
+      "Hestia",
+      "Indra",
+      "Jareth",
+      "Kynan",
+      "Liora",
+      "Maelis",
+      "Nyx",
+      "Oren",
+      "Phaedra",
+      "Quill",
+      "Ronen",
+      "Sora",
+      "Tavian",
+      "Ulric",
+      "Vesper",
+      "Wren",
+      "Xara",
+      "Yuna",
+      "Zarek",
+      "Alistair",
+      "Beatrix",
+      "Caspian",
+      "Daphne",
+      "Evander",
+      "Felix",
+      "Gideon",
+      "Hazel",
+      "Isla",
+      "Jasper",
+      "Kira",
+      "Lucius",
+      "Mira",
+      "Nico",
+      "Olive",
+      "Silas",
+      "Thea",
+      "Vane",
+      "Wyatt",
+      "Xander",
+      "Yara",
+      "Zane",
+      "Aria",
+      "Bastian",
+      "Cora",
+      "Dante"
+    ];
+    const availableNames = pool.filter((n) => !existingNames.includes(n));
+    const finalPool = availableNames.length > 0 ? availableNames : pool;
+    const name = finalPool[Math.floor(Math.random() * finalPool.length)];
     const origins = [
       "origin_clown",
       "origin_warrior_frustrated",
@@ -405,18 +467,328 @@ class Hero {
     };
   }
 }
+const SKILLS_DATA = {
+  // Physical
+  basic_attack: {
+    id: "basic_attack",
+    category: "physical",
+    group: "multi_attack",
+    tier: 1,
+    unlockCost: 0,
+    // Everyone starts with this
+    enhanceCostBase: 1,
+    baseMultiplier: 1,
+    mpCost: 0,
+    stat: "strength",
+    targetType: "single_enemy"
+  },
+  double_attack: {
+    id: "double_attack",
+    category: "physical",
+    group: "multi_attack",
+    tier: 2,
+    unlockCost: 20,
+    enhanceCostBase: 2,
+    baseMultiplier: 0.6,
+    // Per hit (60% x 2 = 120%)
+    mpCost: 10,
+    stat: "strength",
+    dependency: "basic_attack",
+    targetType: "single_enemy"
+  },
+  triple_attack: {
+    id: "triple_attack",
+    category: "physical",
+    group: "multi_attack",
+    tier: 3,
+    unlockCost: 50,
+    enhanceCostBase: 4,
+    baseMultiplier: 0.45,
+    // Per hit (45% x 3 = 135%)
+    mpCost: 20,
+    stat: "strength",
+    dependency: "double_attack",
+    targetType: "single_enemy"
+  },
+  // Magic - Fire
+  small_fire_ball: {
+    id: "small_fire_ball",
+    category: "magic",
+    group: "ball_fire",
+    tier: 1,
+    unlockCost: 1,
+    enhanceCostBase: 1,
+    baseMultiplier: 0.8,
+    mpCost: 10,
+    stat: "magicPower",
+    element: "fire",
+    targetType: "single_enemy"
+  },
+  medium_fire_ball: {
+    id: "medium_fire_ball",
+    category: "magic",
+    group: "ball_fire",
+    tier: 2,
+    unlockCost: 20,
+    enhanceCostBase: 2,
+    baseMultiplier: 1.2,
+    mpCost: 20,
+    stat: "magicPower",
+    dependency: "small_fire_ball",
+    element: "fire"
+  },
+  big_fire_ball: {
+    id: "big_fire_ball",
+    category: "magic",
+    group: "ball_fire",
+    tier: 3,
+    unlockCost: 50,
+    enhanceCostBase: 4,
+    baseMultiplier: 1.8,
+    mpCost: 35,
+    stat: "magicPower",
+    dependency: "medium_fire_ball",
+    element: "fire"
+  },
+  // Magic - Water
+  small_water_ball: {
+    id: "small_water_ball",
+    category: "magic",
+    group: "ball_water",
+    tier: 1,
+    unlockCost: 1,
+    enhanceCostBase: 1,
+    baseMultiplier: 0.8,
+    mpCost: 10,
+    stat: "magicPower",
+    element: "water",
+    targetType: "single_enemy"
+  },
+  medium_water_ball: {
+    id: "medium_water_ball",
+    category: "magic",
+    group: "ball_water",
+    tier: 2,
+    unlockCost: 20,
+    enhanceCostBase: 2,
+    baseMultiplier: 1.2,
+    mpCost: 20,
+    stat: "magicPower",
+    dependency: "small_water_ball",
+    element: "water"
+  },
+  big_water_ball: {
+    id: "big_water_ball",
+    category: "magic",
+    group: "ball_water",
+    tier: 3,
+    unlockCost: 50,
+    enhanceCostBase: 4,
+    baseMultiplier: 1.8,
+    mpCost: 35,
+    stat: "magicPower",
+    dependency: "medium_water_ball",
+    element: "water"
+  },
+  // Magic - Wind
+  small_wind_ball: {
+    id: "small_wind_ball",
+    category: "magic",
+    group: "ball_wind",
+    tier: 1,
+    unlockCost: 1,
+    enhanceCostBase: 1,
+    baseMultiplier: 0.8,
+    mpCost: 10,
+    stat: "magicPower",
+    element: "wind",
+    targetType: "single_enemy"
+  },
+  medium_wind_ball: {
+    id: "medium_wind_ball",
+    category: "magic",
+    group: "ball_wind",
+    tier: 2,
+    unlockCost: 20,
+    enhanceCostBase: 2,
+    baseMultiplier: 1.2,
+    mpCost: 20,
+    stat: "magicPower",
+    dependency: "small_wind_ball",
+    element: "wind"
+  },
+  big_wind_ball: {
+    id: "big_wind_ball",
+    category: "magic",
+    group: "ball_wind",
+    tier: 3,
+    unlockCost: 50,
+    enhanceCostBase: 4,
+    baseMultiplier: 1.8,
+    mpCost: 35,
+    stat: "magicPower",
+    dependency: "medium_wind_ball",
+    element: "wind"
+  },
+  // Magic - Storm
+  small_storm_ball: {
+    id: "small_storm_ball",
+    category: "magic",
+    group: "ball_storm",
+    tier: 1,
+    unlockCost: 1,
+    enhanceCostBase: 1,
+    baseMultiplier: 0.8,
+    mpCost: 10,
+    stat: "magicPower",
+    element: "storm",
+    targetType: "single_enemy"
+  },
+  medium_storm_ball: {
+    id: "medium_storm_ball",
+    category: "magic",
+    group: "ball_storm",
+    tier: 2,
+    unlockCost: 20,
+    enhanceCostBase: 2,
+    baseMultiplier: 1.2,
+    mpCost: 20,
+    stat: "magicPower",
+    dependency: "small_storm_ball",
+    element: "storm"
+  },
+  big_storm_ball: {
+    id: "big_storm_ball",
+    category: "magic",
+    group: "ball_storm",
+    tier: 3,
+    unlockCost: 50,
+    enhanceCostBase: 4,
+    baseMultiplier: 1.8,
+    mpCost: 35,
+    stat: "magicPower",
+    dependency: "medium_storm_ball",
+    element: "storm",
+    targetType: "single_enemy"
+  },
+  // Tricker (Placeholders)
+  poison_dart: {
+    id: "poison_dart",
+    category: "tricker",
+    group: "poison",
+    tier: 1,
+    unlockCost: 1,
+    enhanceCostBase: 1,
+    baseMultiplier: 0.5,
+    mpCost: 12,
+    stat: "strength",
+    targetType: "single_enemy"
+  },
+  steal: {
+    id: "steal",
+    category: "tricker",
+    group: "theft",
+    tier: 1,
+    unlockCost: 1,
+    enhanceCostBase: 1,
+    baseMultiplier: 0.1,
+    mpCost: 5,
+    stat: "speed",
+    targetType: "single_enemy"
+  },
+  // Support
+  small_heal: {
+    id: "small_heal",
+    category: "support",
+    group: "healing",
+    tier: 1,
+    unlockCost: 1,
+    enhanceCostBase: 1,
+    power: 0.2,
+    mpCost: 10,
+    stat: "magicPower",
+    targetType: "single_ally"
+  },
+  medium_heal: {
+    id: "medium_heal",
+    category: "support",
+    group: "healing",
+    tier: 2,
+    unlockCost: 20,
+    enhanceCostBase: 2,
+    power: 0.5,
+    mpCost: 25,
+    stat: "magicPower",
+    targetType: "ally",
+    dependency: "small_heal"
+  },
+  high_heal: {
+    id: "high_heal",
+    category: "support",
+    group: "healing",
+    tier: 3,
+    unlockCost: 50,
+    enhanceCostBase: 4,
+    power: 0.85,
+    mpCost: 45,
+    stat: "magicPower",
+    targetType: "single_ally",
+    dependency: "medium_heal"
+  },
+  small_group_heal: {
+    id: "small_group_heal",
+    category: "support",
+    group: "healing_group",
+    tier: 1,
+    unlockCost: 10,
+    enhanceCostBase: 2,
+    power: 0.1,
+    mpCost: 20,
+    stat: "magicPower",
+    targetType: "all_allies"
+  },
+  medium_group_heal: {
+    id: "medium_group_heal",
+    category: "support",
+    group: "healing_group",
+    tier: 2,
+    unlockCost: 35,
+    enhanceCostBase: 4,
+    power: 0.35,
+    mpCost: 45,
+    stat: "magicPower",
+    targetType: "all",
+    dependency: "small_group_heal"
+  },
+  high_group_heal: {
+    id: "high_group_heal",
+    category: "support",
+    group: "healing_group",
+    tier: 3,
+    unlockCost: 75,
+    enhanceCostBase: 8,
+    power: 0.65,
+    mpCost: 80,
+    stat: "magicPower",
+    targetType: "all_allies",
+    dependency: "medium_group_heal"
+  }
+};
 class Enemy {
-  constructor(name, level, stats, isBoss = false, element = "neutral") {
+  constructor(name, level, stats, isBoss = false, element = "neutral", skills = { basic_attack: 0 }) {
     this.name = name;
     this.level = level;
     this.isBoss = isBoss;
     this.element = element;
     this.maxHp = stats.hp;
     this.hp = this.maxHp;
+    this.maxMp = stats.mp || 0;
+    this.mp = this.maxMp;
     this.strength = stats.strength;
     this.speed = stats.speed;
     this.defense = stats.defense;
     this.magicPower = stats.magicPower || 1;
+    this.skills = skills;
   }
   static generate(level, milestone) {
     const names = ["Slime", "Goblin", "Wolf", "Skeleton", "Orc", "Dark Knight"];
@@ -496,12 +868,32 @@ class Enemy {
         stats.speed *= 1.2;
       }
     }
+    const skills = { basic_attack: 0 };
+    if (element !== "neutral") {
+      const skillId = `small_${element}_ball`;
+      skills[skillId] = 0;
+    }
+    if (milestone >= 21 && isBoss) {
+      skills["double_attack"] = 0;
+      if (element !== "neutral") {
+        const skillId = `medium_${element}_ball`;
+        skills[skillId] = 0;
+      }
+    }
+    let totalMpNeeded = 0;
+    Object.keys(skills).forEach((sId) => {
+      const sData = SKILLS_DATA[sId];
+      if (sData && sData.mpCost > 0) {
+        totalMpNeeded += sData.mpCost * 2;
+      }
+    });
+    stats.mp = totalMpNeeded;
     stats.hp = Math.floor(stats.hp);
     stats.strength = Number(stats.strength.toFixed(1));
     stats.speed = Number(stats.speed.toFixed(1));
     stats.defense = Number(stats.defense.toFixed(1));
     stats.magicPower = Number(stats.magicPower.toFixed(1));
-    return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element);
+    return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element, skills);
   }
   draw(ctx, x, y) {
     ctx.fillStyle = this.isBoss ? "#f0f" : "#f55";
@@ -575,303 +967,6 @@ class Enemy {
     ctx.stroke();
   }
 }
-const SKILLS_DATA = {
-  // Physical
-  basic_attack: {
-    id: "basic_attack",
-    category: "physical",
-    group: "multi_attack",
-    tier: 1,
-    unlockCost: 0,
-    // Everyone starts with this
-    enhanceCostBase: 1,
-    baseMultiplier: 1,
-    mpCost: 0,
-    stat: "strength"
-  },
-  double_attack: {
-    id: "double_attack",
-    category: "physical",
-    group: "multi_attack",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 0.6,
-    // Per hit (60% x 2 = 120%)
-    mpCost: 10,
-    stat: "strength",
-    dependency: "basic_attack"
-  },
-  triple_attack: {
-    id: "triple_attack",
-    category: "physical",
-    group: "multi_attack",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 0.45,
-    // Per hit (45% x 3 = 135%)
-    mpCost: 20,
-    stat: "strength",
-    dependency: "double_attack"
-  },
-  // Magic - Fire
-  small_fire_ball: {
-    id: "small_fire_ball",
-    category: "magic",
-    group: "ball_fire",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "fire"
-  },
-  medium_fire_ball: {
-    id: "medium_fire_ball",
-    category: "magic",
-    group: "ball_fire",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_fire_ball",
-    element: "fire"
-  },
-  big_fire_ball: {
-    id: "big_fire_ball",
-    category: "magic",
-    group: "ball_fire",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_fire_ball",
-    element: "fire"
-  },
-  // Magic - Water
-  small_water_ball: {
-    id: "small_water_ball",
-    category: "magic",
-    group: "ball_water",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "water"
-  },
-  medium_water_ball: {
-    id: "medium_water_ball",
-    category: "magic",
-    group: "ball_water",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_water_ball",
-    element: "water"
-  },
-  big_water_ball: {
-    id: "big_water_ball",
-    category: "magic",
-    group: "ball_water",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_water_ball",
-    element: "water"
-  },
-  // Magic - Wind
-  small_wind_ball: {
-    id: "small_wind_ball",
-    category: "magic",
-    group: "ball_wind",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "wind"
-  },
-  medium_wind_ball: {
-    id: "medium_wind_ball",
-    category: "magic",
-    group: "ball_wind",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_wind_ball",
-    element: "wind"
-  },
-  big_wind_ball: {
-    id: "big_wind_ball",
-    category: "magic",
-    group: "ball_wind",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_wind_ball",
-    element: "wind"
-  },
-  // Magic - Storm
-  small_storm_ball: {
-    id: "small_storm_ball",
-    category: "magic",
-    group: "ball_storm",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "storm"
-  },
-  medium_storm_ball: {
-    id: "medium_storm_ball",
-    category: "magic",
-    group: "ball_storm",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_storm_ball",
-    element: "storm"
-  },
-  big_storm_ball: {
-    id: "big_storm_ball",
-    category: "magic",
-    group: "ball_storm",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_storm_ball",
-    element: "storm"
-  },
-  // Tricker (Placeholders)
-  poison_dart: {
-    id: "poison_dart",
-    category: "tricker",
-    group: "poison",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.5,
-    mpCost: 12,
-    stat: "strength"
-  },
-  steal: {
-    id: "steal",
-    category: "tricker",
-    group: "theft",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.1,
-    mpCost: 5,
-    stat: "speed"
-  },
-  // Support
-  small_heal: {
-    id: "small_heal",
-    category: "support",
-    group: "healing",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    power: 0.2,
-    mpCost: 10,
-    stat: "magicPower",
-    targetType: "ally"
-  },
-  medium_heal: {
-    id: "medium_heal",
-    category: "support",
-    group: "healing",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    power: 0.5,
-    mpCost: 25,
-    stat: "magicPower",
-    targetType: "ally",
-    dependency: "small_heal"
-  },
-  high_heal: {
-    id: "high_heal",
-    category: "support",
-    group: "healing",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    power: 0.85,
-    mpCost: 45,
-    stat: "magicPower",
-    targetType: "ally",
-    dependency: "medium_heal"
-  },
-  small_group_heal: {
-    id: "small_group_heal",
-    category: "support",
-    group: "healing_group",
-    tier: 1,
-    unlockCost: 10,
-    enhanceCostBase: 2,
-    power: 0.1,
-    mpCost: 20,
-    stat: "magicPower",
-    targetType: "all"
-  },
-  medium_group_heal: {
-    id: "medium_group_heal",
-    category: "support",
-    group: "healing_group",
-    tier: 2,
-    unlockCost: 35,
-    enhanceCostBase: 4,
-    power: 0.35,
-    mpCost: 45,
-    stat: "magicPower",
-    targetType: "all",
-    dependency: "small_group_heal"
-  },
-  high_group_heal: {
-    id: "high_group_heal",
-    category: "support",
-    group: "healing_group",
-    tier: 3,
-    unlockCost: 75,
-    enhanceCostBase: 8,
-    power: 0.65,
-    mpCost: 80,
-    stat: "magicPower",
-    targetType: "all",
-    dependency: "medium_group_heal"
-  }
-};
 const TRANSLATIONS = {
   en: {
     subtitle: "Adventure & Recruit",
@@ -1051,7 +1146,9 @@ const TRANSLATIONS = {
     equip_coming_soon: "The equipment system is being expanded! New items from the Weapon and Armor shops will be available soon.",
     debug_title: "DEBUG ME",
     debug_confirm: "You are gonna break the game. Sure?",
-    oneshot_jump_confirm: "You one-shotted the boss with massive damage! Jump 10 levels?"
+    oneshot_jump_confirm: "You one-shotted the boss with massive damage! Jump 10 levels?",
+    btn_switch_hero: "🔁 SWITCH HERO",
+    confirm_switch_unique: "This will replace your current hero with a new Level 1 hero. All progress on this hero will be lost. Continue?"
   },
   es: {
     subtitle: "Aventura y Recluta",
@@ -1229,7 +1326,9 @@ const TRANSLATIONS = {
     equip_coming_soon: "¡El sistema de equipo se está ampliando! Nuevos objetos de las tiendas de armas y armaduras estarán disponibles pronto.",
     debug_title: "DEBUG ME",
     debug_confirm: "Vas a romper el juego. ¿Estás seguro?",
-    oneshot_jump_confirm: "¡Has derrotado al jefe de un solo golpe con un daño masivo! ¿Quieres saltar 10 niveles?"
+    oneshot_jump_confirm: "¡Has derrotado al jefe de un solo golpe con un daño masivo! ¿Quieres saltar 10 niveles?",
+    btn_switch_hero: "🔁 CAMBIAR HÉROE",
+    confirm_switch_unique: "¿Deseas cambiar tu héroe actual por uno nuevo de Nivel 1? Perderás todo el progreso de este héroe."
   },
   ca: {
     subtitle: "Aventura i Recluta",
@@ -1381,7 +1480,9 @@ const TRANSLATIONS = {
     high_heal_desc: "Curació sagrada miraculosa.",
     small_group_heal_desc: "Cura menor per a tots.",
     medium_group_heal_desc: "Cura avançada per a tots.",
-    high_group_heal_desc: "Pregària sagrada per a tots."
+    high_group_heal_desc: "Pregària sagrada per a tots.",
+    btn_switch_hero: "🔁 CANVIAR HEROI",
+    confirm_switch_unique: "Vols canviar el teu heroi actual per un de nou de Nivell 1? Perdràs tot el progrés d'aquest heroi."
   },
   eu: {
     subtitle: "Abentura eta Errekluta",
@@ -1530,7 +1631,9 @@ const TRANSLATIONS = {
     steal_desc: "Etsaiari lapurtzen saiatu.",
     small_group_heal_desc: "Guztientzako sendaketa txikia.",
     medium_group_heal_desc: "Guztientzako sendaketa aurreratua.",
-    high_group_heal_desc: "Guztientzako otoitz sakratua."
+    high_group_heal_desc: "Guztientzako otoitz sakratua.",
+    btn_switch_hero: "🔁 HEROIA ALDATU",
+    confirm_switch_unique: "Zure uneko heroia 1. Mailako berri batekin aldatu nahi duzu? Heroi honen aurrerapen guztia galduko duzu."
   },
   gl: {
     subtitle: "Aventura e Recluta",
@@ -1672,6 +1775,8 @@ const TRANSLATIONS = {
     small_wind_ball_desc: "Ráfaga de vento afiada.",
     medium_wind_ball_desc: "Tornado de maxia de vento.",
     big_wind_ball_desc: "Ciclón devastador de vento.",
+    btn_switch_hero: "🔁 CAMBIAR HEROE",
+    confirm_switch_unique: "Queres cambiar o teu heroe actual por un novo de Nivel 1? Perderás todo o progreso deste heroe.",
     small_storm_ball_desc: "Chispa eléctrica crepitante.",
     medium_storm_ball_desc: "Oleada de maxia eléctrica.",
     big_storm_ball_desc: "Tormenta de raios fatal.",
@@ -1706,6 +1811,135 @@ function changeLanguage() {
     currentLang = selector.value;
     localStorage.setItem(SHARED_KEY, currentLang);
     location.reload();
+  }
+}
+class CombatAttackCalculator {
+  /**
+   * Extracts the effective stat from an entity (Hero or Enemy)
+   */
+  static getFinalStat(entity, statName) {
+    let baseVal = entity[statName] || 0;
+    return Math.max(1, baseVal);
+  }
+  /**
+   * Calculates the damage multiplier based on Attack vs Defense ratio (R)
+   */
+  static calculateDamageMultiplier(attackValue, defenseValue) {
+    if (defenseValue <= 0) defenseValue = 1;
+    const R = attackValue / defenseValue;
+    if (R >= 10) return R / 10;
+    if (R >= 5) return 1;
+    if (R >= 4) return 0.9 + (R - 4) * 0.1;
+    if (R >= 2) return 0.75 + (R - 2) * 0.075;
+    if (R >= 1) return 0.5 + (R - 1) * 0.25;
+    return R * 0.5;
+  }
+  /**
+   * Calculates elemental efficiency
+   */
+  static getElementMultiplier(skillElement, targetElement) {
+    if (!skillElement || !targetElement || targetElement === "neutral") return 1;
+    if (skillElement === targetElement) return 1;
+    const relationships = {
+      fire: "wind",
+      wind: "storm",
+      storm: "water",
+      water: "fire"
+    };
+    if (relationships[skillElement] === targetElement) return 1.5;
+    if (relationships[targetElement] === skillElement) return 0.5;
+    return 1;
+  }
+  /**
+   * Calculates evasion chance (0-100)
+   */
+  static calculateEvasionChance(attacker, defender) {
+    const sAttacker = this.getFinalStat(attacker, "speed");
+    const sDefender = this.getFinalStat(defender, "speed");
+    const R = sDefender / sAttacker;
+    if (R <= 1) {
+      return Math.max(0, (R - 0.5) * 20);
+    } else {
+      return 10 + R * 10;
+    }
+  }
+  /**
+   * Main calculation entry point
+   * @returns {Object} { amount, evasionChance, isMiss, elementMult }
+   */
+  static calculate(attacker, defender, skillData, skillLevel = 0) {
+    const evasionChance = this.calculateEvasionChance(attacker, defender);
+    const isMiss = Math.random() * 100 < evasionChance;
+    if (isMiss) {
+      return { amount: 0, evasionChance, isMiss: true, elementMult: 1 };
+    }
+    const multiplier = 1 + 5e-3 * (skillData.tier || 1) * skillLevel;
+    const baseStatValue = this.getFinalStat(attacker, skillData.stat);
+    if (skillData.category === "support") {
+      const power = skillData.power || 0.1;
+      const finalPercentage = power * multiplier;
+      return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1 };
+    } else {
+      const damageMultiplier = skillData.baseMultiplier || 1;
+      const rawDamage = baseStatValue * damageMultiplier * multiplier;
+      const targetDefense = this.getFinalStat(defender, "defense");
+      const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
+      const elementMult = this.getElementMultiplier(skillData.element, defender.element);
+      const finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
+      return { amount: finalDamage, evasionChance, isMiss: false, elementMult };
+    }
+  }
+}
+class CombatTurnAutoAgent {
+  /**
+   * Decides the best action for the actor based on the combat context.
+   * @param {Object} context { target: actor, allies: [], enemies: [], type: "smart"|"random" }
+   * @returns {Object} { skillId, targetIndex, targetIndices }
+   */
+  static decideAction(context) {
+    const { target, allies, enemies, type } = context;
+    const availableSkills = Object.keys(target.skills).filter((sId) => {
+      const data = SKILLS_DATA[sId];
+      return data && target.mp >= data.mpCost;
+    });
+    const injuredAllies = allies.filter((a) => a.hp > 0 && a.hp / a.maxHp <= 0.7);
+    allies.filter((a) => a.hp > 0 && a.hp / a.maxHp <= 0.4);
+    if (injuredAllies.length > 0) {
+      const healSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category === "support" && (s.targetType === "single_ally" || s.targetType === "all_allies")).sort((a, b) => (b.power || 0) - (a.power || 0));
+      if (healSkills.length > 0) {
+        const groupHeal = healSkills.find((s) => s.targetType === "all_allies");
+        if (groupHeal && injuredAllies.length >= 2) {
+          return { skillId: groupHeal.id, targetIndex: null };
+        }
+        const singleHeal = healSkills.find((s) => s.targetType === "single_ally") || groupHeal;
+        if (singleHeal) {
+          const sortedInjured = [...injuredAllies].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+          const bestTarget = sortedInjured[0];
+          const targetIndex2 = allies.indexOf(bestTarget);
+          return { skillId: singleHeal.id, targetIndex: targetIndex2 };
+        }
+      }
+    }
+    const attackSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category !== "support").sort((a, b) => (b.baseMultiplier || 0) - (a.baseMultiplier || 0));
+    let chosenSkill = attackSkills[0] || SKILLS_DATA["basic_attack"];
+    const aoeSkill = attackSkills.find((s) => s.targetType === "all_enemies");
+    if (aoeSkill && enemies.filter((e) => e.hp > 0).length > 1) {
+      chosenSkill = aoeSkill;
+    }
+    let targetIndex = 0;
+    const aliveEnemies = enemies.map((e, idx) => ({ e, idx })).filter((item) => item.e.hp > 0);
+    if (aliveEnemies.length > 0) {
+      if (type === "smart") {
+        aliveEnemies.sort((a, b) => a.e.hp - b.e.hp);
+        targetIndex = aliveEnemies[0].idx;
+      } else {
+        targetIndex = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)].idx;
+      }
+    }
+    return {
+      skillId: chosenSkill.id,
+      targetIndex: chosenSkill.targetType === "single_enemy" ? targetIndex : null
+    };
   }
 }
 class CombatManager {
@@ -1751,22 +1985,15 @@ class CombatManager {
     clearTimeout(this.autoTurnTimeout);
     this.autoTurnTimeout = setTimeout(() => {
       if (this.isCombatOver || hero.hp <= 0 || !this.game.autoBattle) return;
-      const validSkills = Object.keys(hero.skills).filter((s) => {
-        const data = SKILLS_DATA[s];
-        if (!data) return false;
-        if (hero.mp < data.mpCost) return false;
-        return true;
-      });
-      const action = validSkills[Math.floor(Math.random() * validSkills.length)] || "basic_attack";
-      const skill = SKILLS_DATA[action];
-      let target = null;
-      if (skill && skill.category === "support" && skill.targetType === "ally") {
-        const sortedAllies = [...this.heroes].filter((h) => h.hp > 0).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
-        if (sortedAllies.length > 0) {
-          target = this.heroes.indexOf(sortedAllies[0]);
-        }
-      }
-      this.heroAction(hero, action, target);
+      const context = {
+        target: hero,
+        allies: this.heroes,
+        enemies: [this.enemy],
+        type: "smart"
+        // Heroes are always smart in auto battle
+      };
+      const decision = CombatTurnAutoAgent.decideAction(context);
+      this.handleSkillAction(hero, decision.skillId, decision.targetIndex);
     }, 500);
   }
   advanceTurn() {
@@ -1779,13 +2006,13 @@ class CombatManager {
   checkCombatEnd() {
     if (this.enemy.hp <= 0) {
       this.isCombatOver = true;
-      this.game.endCombat("win");
+      setTimeout(() => this.game.endCombat("win"), 1e3);
       return true;
     }
     const allHeroesDead = this.heroes.every((h) => h.hp <= 0);
     if (allHeroesDead) {
       this.isCombatOver = true;
-      this.game.endCombat("lose");
+      setTimeout(() => this.game.endCombat("lose"), 1e3);
       return true;
     }
     return false;
@@ -1801,119 +2028,86 @@ class CombatManager {
       if (this.game.onDeath) this.game.onDeath(target);
     }
   }
-  getFinalStat(entity, statName) {
-    let baseVal = entity[statName] || 0;
-    return Math.max(1, baseVal);
-  }
-  calculateDamageMultiplier(attackValue, defenseValue) {
-    if (defenseValue <= 0) defenseValue = 1;
-    const R = attackValue / defenseValue;
-    if (R >= 10) return R / 10;
-    if (R >= 5) return 1;
-    if (R >= 4) return 0.9 + (R - 4) * 0.1;
-    if (R >= 2) return 0.75 + (R - 2) * 0.075;
-    if (R >= 1) return 0.5 + (R - 1) * 0.25;
-    return R * 0.5;
-  }
-  getElementMultiplier(skillElement, targetElement) {
-    if (!skillElement || !targetElement || targetElement === "neutral") return 1;
-    if (skillElement === targetElement) return 1;
-    const relationships = {
-      fire: "wind",
-      wind: "storm",
-      storm: "water",
-      water: "fire"
-    };
-    if (relationships[skillElement] === targetElement) return 1.5;
-    if (relationships[targetElement] === skillElement) return 0.5;
-    return 1;
-  }
-  calculateEvasionChance(attacker, defender) {
-    const sAttacker = this.getFinalStat(attacker, "speed");
-    const sDefender = this.getFinalStat(defender, "speed");
-    const R = sDefender / sAttacker;
-    if (R <= 1) {
-      return Math.max(0, (R - 0.5) * 20);
-    } else {
-      return 10 + R * 10;
-    }
-  }
+  // Formulas moved to CombatAttackCalculator
   heroAction(hero, skillId, targetIndex = null) {
+    this.handleSkillAction(hero, skillId, targetIndex);
+  }
+  handleSkillAction(actor, skillId, targetIndex = null) {
     if (this.isActionInProgress || this.isCombatOver) return;
     const skillData = SKILLS_DATA[skillId];
     if (!skillData) return;
-    if (hero.mp < skillData.mpCost) {
-      this.game.log(t("not_enough_mp") || "Not enough MP!");
-      this.game.showActionPanel(hero);
+    if (actor.mp < skillData.mpCost) {
+      if (actor !== this.enemy) {
+        this.game.log(t("not_enough_mp") || "Not enough MP!");
+        this.game.showActionPanel(actor);
+      } else {
+        this.handleSkillAction(actor, "basic_attack", targetIndex);
+      }
       return;
     }
     this.isActionInProgress = true;
     clearTimeout(this.autoTurnTimeout);
-    hero.mp -= skillData.mpCost;
-    const level = hero.skills[skillId] || 0;
-    const multiplier = 1 + 5e-3 * (skillData.tier || 1) * level;
-    const baseStatValue = hero[skillData.stat] || 1;
-    let logMsg = "";
+    actor.mp -= skillData.mpCost;
+    const skillLevel = actor.skills[skillId] || 0;
     let delay = 500;
-    if (skillData.category === "support") {
-      const power = skillData.power || 0.1;
-      const finalPercentage = power * multiplier;
-      if (skillData.targetType === "all") {
-        this.heroes.forEach((h) => {
-          if (h.hp > 0) {
-            const amount = Math.floor(h.maxHp * finalPercentage);
-            h.hp = Math.min(h.maxHp, h.hp + amount);
-            if (this.game.onHeal) this.game.onHeal(h, amount);
-          }
-        });
-        logMsg = t("log_heals_all").replace("{attacker}", hero.name);
-      } else {
-        const targetHero = targetIndex !== null ? this.heroes[targetIndex] : hero;
-        const amount = Math.floor(targetHero.maxHp * finalPercentage);
-        targetHero.hp = Math.min(targetHero.maxHp, targetHero.hp + amount);
-        logMsg = t("log_heals").replace("{attacker}", hero.name).replace("{target}", targetHero.name).replace("{amount}", amount);
-        if (this.game.onHeal) this.game.onHeal(targetHero, amount);
-      }
-    } else {
-      const damageMultiplier = skillData.baseMultiplier || 1;
-      const rawDamage = baseStatValue * damageMultiplier * multiplier;
-      const evasionChance = this.calculateEvasionChance(hero, this.enemy);
-      if (Math.random() * 100 < evasionChance) {
-        this.game.log(t("log_miss").replace("{attacker}", hero.name).replace("{target}", this.enemy.name));
-        if (this.game.onDamage) this.game.onDamage(this.enemy, t("miss_label") || "Miss!");
-      } else {
-        const targetDefense = this.getFinalStat(this.enemy, "defense");
-        const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
-        const elementMult = this.getElementMultiplier(skillData.element, this.enemy.element);
-        const finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
-        let elementFeedback = "";
-        if (elementMult > 1) {
-          elementFeedback = `[${t("effective") || "Effective!"}] `;
-        } else if (elementMult < 1) {
-          elementFeedback = `[${t("resisted") || "Resisted"}] `;
-        }
-        if (skillId === "double_attack") {
-          this.applyDamage(this.enemy, finalDamage);
-          setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-          logMsg = elementFeedback + t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
-          delay += 300;
-        } else if (skillId === "triple_attack") {
-          this.applyDamage(this.enemy, finalDamage);
-          setTimeout(() => this.applyDamage(this.enemy, finalDamage), 300);
-          setTimeout(() => this.applyDamage(this.enemy, finalDamage), 600);
-          logMsg = elementFeedback + t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
-          delay += 600;
-        } else {
-          this.applyDamage(this.enemy, finalDamage);
-          if (skillId === "basic_attack") {
-            logMsg = elementFeedback + t("log_attack").replace("{attacker}", hero.name).replace("{target}", this.enemy.name).replace("{damage}", finalDamage);
-          } else {
-            logMsg = elementFeedback + t("log_uses_skill").replace("{attacker}", hero.name).replace("{skill}", t(skillId));
-          }
-        }
-      }
+    let targets = [];
+    const isActorHero = this.heroes.includes(actor);
+    const allies = isActorHero ? this.heroes : [this.enemy];
+    const enemies = isActorHero ? [this.enemy] : this.heroes;
+    if (skillData.targetType === "all_allies") {
+      targets = allies.filter((a) => a.hp > 0);
+    } else if (skillData.targetType === "single_ally") {
+      targets = [targetIndex !== null ? allies[targetIndex] : actor];
+    } else if (skillData.targetType === "all_enemies") {
+      targets = enemies.filter((e) => e.hp > 0);
+    } else if (skillData.targetType === "single_enemy") {
+      targets = [targetIndex !== null ? enemies[targetIndex] : enemies[0]];
+    } else if (skillData.targetType === "self") {
+      targets = [actor];
     }
-    this.game.log(logMsg);
+    targets.forEach((target) => {
+      const result = CombatAttackCalculator.calculate(actor, target, skillData, skillLevel);
+      if (result.isMiss) {
+        this.game.log(t("log_miss").replace("{attacker}", actor.name).replace("{target}", target.name));
+        if (this.game.onDamage) this.game.onDamage(target, t("miss_label") || "Miss!");
+        if (target === this.enemy) ;
+        else {
+          this.game.triggerFlash("rgba(255, 255, 255, 0.1)", 200);
+        }
+      } else {
+        if (skillData.category === "support") {
+          const healAmount = Math.floor(target.maxHp * result.amount);
+          target.hp = Math.min(target.maxHp, target.hp + healAmount);
+          if (this.game.onHeal) this.game.onHeal(target, healAmount);
+          this.game.log(t("log_heals").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{amount}", healAmount));
+        } else {
+          const finalDamage = result.amount;
+          let elementFeedback = "";
+          if (result.elementMult > 1) elementFeedback = `[${t("effective") || "Effective!"}] `;
+          else if (result.elementMult < 1) elementFeedback = `[${t("resisted") || "Resisted"}] `;
+          if (skillId === "double_attack") {
+            this.applyDamage(target, finalDamage);
+            setTimeout(() => this.applyDamage(target, finalDamage), 300);
+            delay = Math.max(delay, 800);
+          } else if (skillId === "triple_attack") {
+            this.applyDamage(target, finalDamage);
+            setTimeout(() => this.applyDamage(target, finalDamage), 300);
+            setTimeout(() => this.applyDamage(target, finalDamage), 600);
+            delay = Math.max(delay, 1100);
+          } else {
+            this.applyDamage(target, finalDamage);
+          }
+          if (skillId === "basic_attack" || skillId === "double_attack" || skillId === "triple_attack") {
+            this.game.log(elementFeedback + t("log_attack").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{damage}", finalDamage));
+          } else {
+            this.game.log(elementFeedback + t("log_uses_skill").replace("{attacker}", actor.name).replace("{skill}", t(skillId)));
+          }
+          if (!isActorHero) {
+            this.game.triggerFlash("rgba(255, 0, 0, 0.3)", 300);
+          }
+        }
+      }
+    });
     if (this.enemy.hp === 0) delay += 1e3;
     setTimeout(() => this.advanceTurn(), delay);
   }
@@ -1936,28 +2130,16 @@ class CombatManager {
     setTimeout(() => this.game.showActionPanel(hero), 500);
   }
   enemyTurn() {
-    const aliveHeroes = this.heroes.filter((h) => h.hp > 0);
-    if (aliveHeroes.length === 0) {
-      this.advanceTurn();
-      return;
-    }
-    const target = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
-    const evasionChance = this.calculateEvasionChance(this.enemy, target);
-    if (Math.random() * 100 < evasionChance) {
-      this.game.log(t("log_miss").replace("{attacker}", this.enemy.name).replace("{target}", target.name));
-      if (this.game.onDamage) this.game.onDamage(target, t("miss_label") || "Miss!");
-      this.game.triggerFlash("rgba(255, 255, 255, 0.1)", 200);
-    } else {
-      const attackValue = this.getFinalStat(this.enemy, "strength");
-      const targetDefense = this.getFinalStat(target, "defense");
-      const defMult = this.calculateDamageMultiplier(attackValue, targetDefense);
-      const finalDamage = Math.max(1, Math.floor(attackValue * defMult));
-      this.applyDamage(target, finalDamage);
-      this.game.log(t("log_attack").replace("{attacker}", this.enemy.name).replace("{target}", target.name).replace("{damage}", finalDamage));
-      this.game.triggerFlash("rgba(255, 0, 0, 0.3)", 300);
-    }
-    const delay = 1500;
-    setTimeout(() => this.advanceTurn(), delay);
+    if (this.isCombatOver) return;
+    const context = {
+      target: this.enemy,
+      allies: [this.enemy],
+      enemies: this.heroes,
+      type: "random"
+      // Enemies are random for now as requested
+    };
+    const decision = CombatTurnAutoAgent.decideAction(context);
+    this.handleSkillAction(this.enemy, decision.skillId, decision.targetIndex);
   }
 }
 class Particle {
@@ -2456,7 +2638,8 @@ window.nextCombat = () => {
 window.showVillage = () => {
   if (Progression.checkFreeHero()) {
     alert(t("free_hero_welcome") || "Hello adventurer! I have a present for you!");
-    Progression.addHero(Hero.generateRandom(1).toJSON());
+    const currentNames = Progression.prog.heroes.map((h) => h.name);
+    Progression.addHero(Hero.generateRandom(1, currentNames).toJSON());
   }
   updateVillageUI();
   showView("view-village");
@@ -2555,7 +2738,8 @@ function updateVillageUI() {
 }
 window.recruitHero = (cost) => {
   if (Progression.prog.gold >= cost) {
-    if (Progression.addHero(Hero.generateRandom(1).toJSON())) {
+    const currentNames = Progression.prog.heroes.map((h) => h.name);
+    if (Progression.addHero(Hero.generateRandom(1, currentNames).toJSON())) {
       Progression.spendGold(cost);
       updateVillageUI();
     }
@@ -2608,11 +2792,21 @@ window.showHeroDetails = (index) => {
   } else {
     toggleBtn = `<button class="menu-btn ${canSelect ? "primary" : "secondary"}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ""}>⚔️ ${t("btn_select") || "Add to Party"}</button>`;
   }
-  const fireBtn = `<button class="menu-btn secondary" 
-                style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? "opacity: 0.3; cursor: default;" : ""}" 
-                ${!isActive ? `onclick="window.fireHero(${index})"` : ""}>
-            🗑️ ${t("btn_fire_hero")}
-        </button>`;
+  let fireBtn = "";
+  const totalHeroes = Progression.prog.heroes.length;
+  if (totalHeroes === 1) {
+    fireBtn = `<button class="menu-btn primary" 
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: var(--primary); color: var(--primary);" 
+                    onclick="window.switchHero(${index})">
+                ${t("btn_switch_hero")}
+            </button>`;
+  } else {
+    fireBtn = `<button class="menu-btn secondary" 
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? "opacity: 0.3; cursor: default;" : ""}" 
+                    ${!isActive ? `onclick="window.fireHero(${index})"` : ""}>
+                🗑️ ${t("btn_fire_hero")}
+            </button>`;
+  }
   actionContainer.innerHTML = toggleBtn + fireBtn;
   statsContainer.appendChild(actionContainer);
   document.getElementById("btn-hero-skills").onclick = () => window.showHeroSkills(index);
@@ -2681,6 +2875,19 @@ window.fireHero = (index) => {
     if (Progression.removeHero(index)) {
       window.showVillage();
     }
+  }
+};
+window.switchHero = (index) => {
+  const heroData = Progression.prog.heroes[index];
+  if (!heroData) return;
+  if (confirm(t("confirm_switch_unique"))) {
+    const currentNames = [];
+    const newHero = Hero.generateRandom(1, currentNames);
+    Progression.prog.heroes = [];
+    Progression.prog.activeHeroIndices = [];
+    Progression.addHero(newHero.toJSON());
+    window.showVillage();
+    alert(t("learned") + "!");
   }
 };
 window.increaseStat = (index, statId) => {
