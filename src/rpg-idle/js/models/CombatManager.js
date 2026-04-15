@@ -4,10 +4,10 @@ import { CombatAttackCalculator } from './CombatAttackCalculator.js';
 import { CombatTurnAutoAgent } from './CombatTurnAutoAgent.js';
 
 export class CombatManager {
-    constructor(game, heroes, enemy) {
+    constructor(game, heroes, enemies) {
         this.game = game;
-        this.heroes = heroes;   // Array of Hero objects
-        this.enemy = enemy;     // Enemy object
+        this.heroes = heroes;
+        this.enemies = enemies;
 
         this.turnOrder = [];
         this.currentTurnIndex = 0;
@@ -16,7 +16,40 @@ export class CombatManager {
         this.autoTurnTimeout = null;
         this.itemUsedThisTurn = false;
 
+        this.targetIndex = null;
+
+        this.partyTraits = this.calculatePartyTraits();
         this.initTurnOrder();
+    }
+
+    calculatePartyTraits() {
+        const traits = {
+            hpRegen: 0,
+            physicalDamageReduction: 0,
+            magicPowerBoost: 0,
+            goldBonus: 1.0
+        };
+
+        this.heroes.forEach(hero => {
+            if (hero.hp > 0) {
+                switch (hero.origin) {
+                    case 'origin_cook':
+                        traits.hpRegen += 0.05;
+                        break;
+                    case 'origin_guard':
+                        traits.physicalDamageReduction += 0.10;
+                        break;
+                    case 'origin_poet':
+                        traits.magicPowerBoost += 0.10;
+                        break;
+                    case 'origin_thief':
+                        traits.goldBonus += 0.10;
+                        break;
+                }
+            }
+        });
+
+        return traits;
     }
 
     stop() {
@@ -25,7 +58,7 @@ export class CombatManager {
     }
 
     initTurnOrder() {
-        this.turnOrder = [...this.heroes, this.enemy].sort((a, b) => b.speed - a.speed);
+        this.turnOrder = [...this.heroes, ...this.enemies].sort((a, b) => b.speed - a.speed);
     }
 
     nextTurn() {
@@ -38,14 +71,59 @@ export class CombatManager {
             return;
         }
 
-        if (participant === this.enemy) {
-            this.enemyTurn();
+        let skipTurn = false;
+        if (participant.statusEffects.length > 0) {
+            for (let i = participant.statusEffects.length - 1; i >= 0; i--) {
+                const eff = participant.statusEffects[i];
+
+                if (eff.type === 'poison') {
+                    const dmg = Math.floor(participant.maxHp * eff.power);
+                    this.applyDamage(participant, dmg);
+                    this.game.log(`${participant.name} is poisoned! (-${dmg} HP)`);
+                } else if (eff.type === 'burn') {
+                    const dmg = Math.floor(participant.maxHp * eff.power);
+                    this.applyDamage(participant, dmg);
+                    this.game.log(`${participant.name} is burning! (-${dmg} HP)`);
+                } else if (eff.type === 'sleep') {
+                    this.game.log(`${participant.name} is asleep...`);
+                    skipTurn = true;
+                } else if (eff.type === 'stun') {
+                    this.game.log(`${participant.name} is stunned!`);
+                    skipTurn = true;
+                }
+
+                eff.duration--;
+                if (eff.duration <= 0) {
+                    participant.statusEffects.splice(i, 1);
+                    if (participant.recalculateStats) participant.recalculateStats();
+                }
+            }
+        }
+
+        if (participant.hp <= 0) {
+            this.advanceTurn();
+            return;
+        }
+
+        if (skipTurn) {
+            setTimeout(() => this.advanceTurn(), 1000);
+            return;
+        }
+
+        if (this.heroes.includes(participant) && this.partyTraits.hpRegen > 0) {
+            const regenAmount = Math.floor(participant.maxHp * this.partyTraits.hpRegen);
+            if (regenAmount > 0) {
+                participant.hp = Math.min(participant.maxHp, participant.hp + regenAmount);
+                if (this.game.onHeal) this.game.onHeal(participant, regenAmount);
+                this.game.log(t('log_heals').replace('{attacker}', t('origin_cook')).replace('{target}', participant.name).replace('{amount}', regenAmount));
+            }
+        }
+
+        if (this.enemies.includes(participant)) {
+            this.enemyTurn(participant);
         } else {
             const turnMsg = t('s_turn').replace('{hero}', participant.name);
-            this.game.log(participant.name + turnMsg); // Legacy fallback but should use template if possible
-            // Re-evaluating: s_turn in i18n is "'s Turn" in English and " - Turno" in Spanish.
-            // Let's stick to the user's template style if we had one.
-            // Actually, I didn't add log_turn to i18n. I'll use s_turn as is.
+            this.game.log(participant.name + turnMsg);
             
             if (this.game.autoBattle) {
                 this.heroAutoTurn(participant);
@@ -63,8 +141,8 @@ export class CombatManager {
             const context = {
                 target: hero,
                 allies: this.heroes,
-                enemies: [this.enemy],
-                type: 'smart' // Heroes are always smart in auto battle
+                enemies: this.enemies.filter(e => e.hp > 0),
+                type: 'smart'
             };
 
             const decision = CombatTurnAutoAgent.decideAction(context);
@@ -81,9 +159,9 @@ export class CombatManager {
     }
 
     checkCombatEnd() {
-        if (this.enemy.hp <= 0) {
+        if (this.enemies.every(e => e.hp <= 0)) {
             this.isCombatOver = true;
-            setTimeout(() => this.game.endCombat('win'), 1000);
+            setTimeout(() => this.game.endCombat('win', this.partyTraits.goldBonus), 1000);
             return true;
         }
 
@@ -98,20 +176,48 @@ export class CombatManager {
     }
 
     applyDamage(target, amount) {
-        // Detect one-shot for level skip: boss hit for 300%+ max HP on the first hit
-        if (target === this.enemy && target.isBoss && target.hp === target.maxHp && typeof amount === 'number' && amount >= target.maxHp * 3) {
+        if (this.enemies.includes(target) && target.isBoss && target.hp === target.maxHp && typeof amount === 'number' && amount >= target.maxHp * 3) {
             this.oneShotJumpPossible = true;
         }
 
         const roundedAmount = typeof amount === 'number' ? Math.round(amount) : 0;
+
+        // Handle Phoenix
+        if (roundedAmount >= target.hp && target.hasPhoenix && !target.phoenixUsed) {
+            target.hp = 1;
+            target.phoenixUsed = true;
+            this.game.log(`✨ ${target.name} survives with 1 HP! (Phoenix)`);
+            if (this.game.onHeal) this.game.onHeal(target, "REVIVE");
+            return;
+        }
+
         target.hp = Math.max(0, target.hp - roundedAmount);
         if (this.game.onDamage) this.game.onDamage(target, roundedAmount);
+
+        if (roundedAmount > 0) {
+            const sleepIdx = target.statusEffects.findIndex(e => e.type === 'sleep');
+            if (sleepIdx > -1) {
+                target.statusEffects.splice(sleepIdx, 1);
+                this.game.log(`${target.name} woke up!`);
+                if (target.recalculateStats) target.recalculateStats();
+            }
+        }
+
         if (target.hp === 0) {
             if (this.game.onDeath) this.game.onDeath(target);
+            if (this.heroes.includes(target)) {
+                this.partyTraits = this.calculatePartyTraits();
+            }
         }
     }
 
-    // Formulas moved to CombatAttackCalculator
+    setTargetIndex(idx) {
+        this.targetIndex = idx;
+        const target = this.enemies[idx];
+        if (target) {
+            this.game.log(`Target set to ${target.name}`);
+        }
+    }
 
     heroAction(hero, skillId, targetIndex = null) {
         this.handleSkillAction(hero, skillId, targetIndex);
@@ -124,11 +230,10 @@ export class CombatManager {
         if (!skillData) return;
 
         if (actor.mp < skillData.mpCost) {
-            if (actor !== this.enemy) {
+            if (this.heroes.includes(actor)) {
                 this.game.log(t('not_enough_mp') || 'Not enough MP!');
                 this.game.showActionPanel(actor);
             } else {
-                // Enemy fallback to basic attack if AI fails (shouldn't happen with AutoAgent)
                 this.handleSkillAction(actor, 'basic_attack', targetIndex);
             }
             return;
@@ -142,47 +247,70 @@ export class CombatManager {
         const skillLevel = actor.skills[skillId] || 0;
         let delay = 500;
         
-        // Define targets
-        let targets = [];
         const isActorHero = this.heroes.includes(actor);
-        const allies = isActorHero ? this.heroes : [this.enemy];
-        const enemies = isActorHero ? [this.enemy] : this.heroes;
+        const allies = isActorHero ? this.heroes : this.enemies;
+        const enemies = isActorHero ? this.enemies : this.heroes;
 
+        let baseTargets = [];
         if (skillData.targetType === 'all_allies') {
-            targets = allies.filter(a => a.hp > 0);
+            baseTargets = allies.filter(a => a.hp > 0);
         } else if (skillData.targetType === 'single_ally') {
-            targets = [targetIndex !== null ? allies[targetIndex] : actor];
+            baseTargets = [targetIndex !== null ? allies[targetIndex] : actor];
         } else if (skillData.targetType === 'all_enemies') {
-            targets = enemies.filter(e => e.hp > 0);
+            baseTargets = enemies.filter(e => e.hp > 0);
         } else if (skillData.targetType === 'single_enemy') {
-            targets = [targetIndex !== null ? enemies[targetIndex] : enemies[0]];
+            if (targetIndex !== null) {
+                baseTargets = [enemies[targetIndex]];
+            } else if (this.targetIndex !== null && !enemies.includes(actor) && enemies[this.targetIndex]?.hp > 0) {
+                baseTargets = [enemies[this.targetIndex]];
+            } else {
+                const alive = enemies.filter(e => e.hp > 0);
+                baseTargets = alive.length > 0 ? [alive[0]] : [];
+            }
         } else if (skillData.targetType === 'self') {
-            targets = [actor];
+            baseTargets = [actor];
         }
 
-        targets.forEach(target => {
-            const result = CombatAttackCalculator.calculate(actor, target, skillData, skillLevel);
+        const mainTarget = baseTargets[0];
+        let targetsWithMultipliers = baseTargets.map(t => ({ target: t, mult: 1.0 }));
+
+        if (skillData.splash && mainTarget) {
+            const others = enemies.filter(e => e.hp > 0 && e !== mainTarget);
+            others.forEach(o => targetsWithMultipliers.push({ target: o, mult: skillData.splash }));
+        }
+
+        if (skillData.jump && mainTarget) {
+            const others = enemies.filter(e => e.hp > 0 && e !== mainTarget);
+            let currentMult = skillData.jump;
+            others.forEach(o => {
+                targetsWithMultipliers.push({ target: o, mult: currentMult });
+                currentMult *= skillData.jump;
+            });
+        }
+
+        targetsWithMultipliers.forEach(({ target, mult }) => {
+            const result = CombatAttackCalculator.calculate(actor, target, skillData, skillLevel, this.partyTraits);
 
             if (result.isMiss) {
                 this.game.log(t('log_miss').replace('{attacker}', actor.name).replace('{target}', target.name));
                 if (this.game.onDamage) this.game.onDamage(target, t('miss_label') || 'Miss!');
-                if (target === this.enemy) {
-                    // Visual feedback for missing enemy
-                } else {
-                    this.game.triggerFlash('rgba(255, 255, 255, 0.1)', 200);
-                }
             } else {
                 if (skillData.category === 'support') {
-                    const healAmount = Math.floor(target.maxHp * result.amount);
-                    target.hp = Math.min(target.maxHp, target.hp + healAmount);
-                    if (this.game.onHeal) this.game.onHeal(target, healAmount);
-                    this.game.log(t('log_heals').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{amount}', healAmount));
+                    if (skillId === 'haste') {
+                        this.applyStatusEffect(target, { type: 'haste', duration: 3 });
+                        this.game.log(`${actor.name} uses Haste on ${target.name}!`);
+                    } else {
+                        const healAmount = Math.floor(target.maxHp * result.amount * mult);
+                        target.hp = Math.min(target.maxHp, target.hp + healAmount);
+                        if (this.game.onHeal) this.game.onHeal(target, healAmount);
+                        this.game.log(t('log_heals').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{amount}', healAmount));
+                    }
                 } else {
-                    // Offensive
-                    const finalDamage = result.amount;
-                    let elementFeedback = '';
-                    if (result.elementMult > 1) elementFeedback = `[${t('effective') || 'Effective!'}] `;
-                    else if (result.elementMult < 1) elementFeedback = `[${t('resisted') || 'Resisted'}] `;
+                    const finalDamage = Math.max(1, Math.floor(result.amount * mult));
+                    let feedback = '';
+                    if (result.isCrit) feedback += `[${t('critical_label') || 'CRITICAL!'}] `;
+                    if (result.elementMult > 1) feedback += `[${t('effective') || 'Effective!'}] `;
+                    else if (result.elementMult < 1) feedback += `[${t('resisted') || 'Resisted'}] `;
 
                     if (skillId === 'double_attack') {
                         this.applyDamage(target, finalDamage);
@@ -197,10 +325,27 @@ export class CombatManager {
                         this.applyDamage(target, finalDamage);
                     }
 
+                    // Handle Vampirism
+                    if (actor.vampirism && finalDamage > 0) {
+                        const heal = Math.floor(finalDamage * actor.vampirism);
+                        if (heal > 0) {
+                            actor.hp = Math.min(actor.maxHp, actor.hp + heal);
+                            if (this.game.onHeal) this.game.onHeal(actor, heal);
+                        }
+                    }
+
+                    if (skillId === 'poison_dart' && Math.random() < 0.5) {
+                        this.applyStatusEffect(target, { type: 'poison', duration: 3, power: 0.05 });
+                    } else if (skillId === 'meteor' && Math.random() < 0.3) {
+                        this.applyStatusEffect(target, { type: 'burn', duration: 3, power: 0.02 });
+                    } else if (skillId === 'blizzard' && Math.random() < 0.2) {
+                        this.applyStatusEffect(target, { type: 'sleep', duration: 2 });
+                    }
+
                     if (skillId === 'basic_attack' || skillId === 'double_attack' || skillId === 'triple_attack') {
-                        this.game.log(elementFeedback + t('log_attack').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{damage}', finalDamage));
+                        this.game.log(feedback + t('log_attack').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{damage}', finalDamage));
                     } else {
-                        this.game.log(elementFeedback + t('log_uses_skill').replace('{attacker}', actor.name).replace('{skill}', t(skillId)));
+                        this.game.log(feedback + t('log_uses_skill').replace('{attacker}', actor.name).replace('{skill}', t(skillId)) + ` (Target: ${target.name})`);
                     }
 
                     if (!isActorHero) {
@@ -210,8 +355,19 @@ export class CombatManager {
             }
         });
 
-        if (this.enemy.hp === 0) delay += 1000;
+        if (this.enemies.every(e => e.hp <= 0)) delay += 1000;
         setTimeout(() => this.advanceTurn(), delay);
+    }
+
+    applyStatusEffect(target, effect) {
+        const existing = target.statusEffects.find(e => e.type === effect.type);
+        if (existing) {
+            existing.duration = Math.max(existing.duration, effect.duration);
+        } else {
+            target.statusEffects.push(effect);
+        }
+        if (target.recalculateStats) target.recalculateStats();
+        this.game.log(`${target.name} is affected by ${effect.type}!`);
     }
 
     useItem(hero, itemId) {
@@ -236,17 +392,17 @@ export class CombatManager {
         setTimeout(() => this.game.showActionPanel(hero), 500);
     }
 
-    enemyTurn() {
+    enemyTurn(enemy) {
         if (this.isCombatOver) return;
 
         const context = {
-            target: this.enemy,
-            allies: [this.enemy],
-            enemies: this.heroes,
-            type: 'random' // Enemies are random for now as requested
+            target: enemy,
+            allies: this.enemies.filter(e => e.hp > 0),
+            enemies: this.heroes.filter(h => h.hp > 0),
+            type: 'random'
         };
 
         const decision = CombatTurnAutoAgent.decideAction(context);
-        this.handleSkillAction(this.enemy, decision.skillId, decision.targetIndex);
+        this.handleSkillAction(enemy, decision.skillId, decision.targetIndex);
     }
 }
