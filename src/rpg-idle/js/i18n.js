@@ -11,6 +11,13 @@ const TRANSLATIONS = {
         lang: "Language",
         btn_export: "EXPORT JSON",
         btn_import: "IMPORT JSON",
+        btn_level_up: "Level Up",
+        name_affix_template: "{name} of the {affix}",
+        vampire: "Vampire",
+        sage: "Sage",
+        titan: "Titan",
+        assassin: "Assassin",
+        phoenix: "Phoenix",
         effective: "Effective!",
         resisted: "Resisted",
         tavern_title: "Recruit Heroes",
@@ -120,7 +127,6 @@ const TRANSLATIONS = {
         poison_dart: "Poison Dart",
         steal: "Steal",
         haste: "Haste",
-        basic_heal: "Heal",
         small_heal: "Small Heal (20%)",
         medium_heal: "Medium Heal (50%)",
         high_heal: "High Heal (85%)",
@@ -257,9 +263,31 @@ const TRANSLATIONS = {
         btn_unequip: "UNEQUIP",
         confirm_awaken: "Awaken this item for {cost} Cores?",
         awakened_msg: "AWAKENED! Item is now: {name}",
+        label_no_affixes: "No Affixes",
+        label_affixes: "Affixes",
+        label_lvl_req: "Lvl {lvl} Req",
         opt_drink_desc: "A random hero gains +1 Stat Point.",
         opt_ignore: "Ignore",
-        opt_ignore_desc: "Move on cautiously."
+        opt_ignore_desc: "Move on cautiously.",
+        event_shrine_pray_res: "The deity smiles upon you. Party fully healed!",
+        event_shrine_desecrate_res: "You find 5 Cores in the rubble, but feel a dark curse. Party damaged!",
+        event_cache_careful_res: "You found 100 Gold!",
+        event_cache_smash_trap_res: "A trap was triggered! Party took damage, but you found 300 Gold!",
+        event_cache_smash_ok_res: "Successful! You found 300 Gold!",
+        event_fountain_drink_res: "{hero} feels stronger! (+1 Stat Point)",
+        event_ignore_res: "You move on without taking any risks.",
+        log_status_affect: "{target} is affected by {type}!",
+        log_status_poison: "{target} is poisoned! (-{damage} HP)",
+        log_status_burn: "{target} is burning! (-{damage} HP)",
+        log_status_sleep: "{target} is asleep...",
+        log_status_stun: "{target} is stunned!",
+        log_status_wakeup: "{target} woke up!",
+        log_phoenix_survive: "✨ {target} survives with 1 HP! (Phoenix)",
+        log_target_set: "Target set to {target}",
+        err_no_hero_village: "Recruit at least one hero in the village first!",
+        err_invalid_save: "Invalid save file structure.",
+        err_parse_file: "Error parsing file.",
+        debug_applied: "Debug bonuses applied! Cores, Gold, and Hero XP updated."
     },
     es: {
         subtitle: "Aventura y Recluta",
@@ -382,7 +410,6 @@ const TRANSLATIONS = {
         poison_dart: "Dardo Envenenado",
         steal: "Robar",
         haste: "Celeridad",
-        basic_heal: "Curar",
         small_heal: "Cura Pequeña (20%)",
         medium_heal: "Cura Mediana (50%)",
         high_heal: "Cura Grande (85%)",
@@ -423,7 +450,6 @@ const TRANSLATIONS = {
         small_group_heal_desc: "Cura menor para todos.",
         medium_group_heal_desc: "Cura avanzada para todos.",
         high_group_heal_desc: "Rezo sagrado para todos.",
-        forge_title: "Mystic Forge",
         forge_title: "Fragua Mística",
         roster_size_title: "Espacio de Héroes",
         party_size_title: "Calidad de Formación",
@@ -521,13 +547,35 @@ const TRANSLATIONS = {
         btn_unequip: "DESEQUIPAR",
         confirm_awaken: "¿Despertar este objeto por {cost} Núcleos?",
         awakened_msg: "¡DESPERTADO! El objeto es ahora: {name}",
-        opt_careful_desc: "Encuentra 100 de Oro.",
-        opt_smash: "Romper",
-        opt_smash_desc: "Encuentra 300 de Oro, pero arriésgate a una trampa.",
-        opt_drink: "Beber",
-        opt_drink_desc: "Un héroe aleatorio gana +1 punto de Atributo.",
-        opt_ignore: "Ignorar",
-        opt_ignore_desc: "Sigue adelante con precaución."
+        label_no_affixes: "Sin Afijos",
+        label_affixes: "Afijos",
+        label_lvl_req: "Req Nvl {lvl}",
+        event_shrine_pray_res: "La deidad te sonríe. ¡Equipo completamente curado!",
+        event_shrine_desecrate_res: "Encuentras 5 Núcleos en los escombros, pero sientes una oscura maldición. ¡Equipo dañado!",
+        event_cache_careful_res: "¡Has encontrado 100 de Oro!",
+        event_cache_smash_trap_res: "¡Se activó una trampa! El equipo recibió daño, ¡pero encontraste 300 de Oro!",
+        event_cache_smash_ok_res: "¡Éxito! ¡Has encontrado 300 de Oro!",
+        event_fountain_drink_res: "¡{hero} se siente más fuerte! (+1 Punto de Atributo)",
+        event_ignore_res: "Sigues adelante sin correr riesgos.",
+        log_status_affect: "¡{target} está afectado por {type}!",
+        log_status_poison: "¡{target} está envenenado! (-{damage} PV)",
+        log_status_burn: "¡{target} se está quemando! (-{damage} PV)",
+        log_status_sleep: "{target} está dormido...",
+        log_status_stun: "¡{target} está aturdido!",
+        log_status_wakeup: "¡{target} se ha despertado!",
+        log_phoenix_survive: "¡✨ {target} sobrevive con 1 PV! (Fénix)",
+        log_target_set: "Objetivo fijado en {target}",
+        err_no_hero_village: "¡Primero recluta al menos un héroe en la aldea!",
+        err_invalid_save: "Estructura de archivo de guardado no válida.",
+        err_parse_file: "Error al procesar el archivo.",
+        debug_applied: "¡Bonos de depuración aplicados! Núcleos, Oro y XP de héroes actualizados.",
+        btn_level_up: "Subir Nivel",
+        name_affix_template: "{name} del {affix}",
+        vampire: "Vampiro",
+        sage: "Sabio",
+        titan: "Titán",
+        assassin: "Asesino",
+        phoenix: "Fénix"
     },
     ca: {
         subtitle: "Aventura i Recluta",
@@ -650,7 +698,6 @@ const TRANSLATIONS = {
         poison_dart: "Dard Enverinat",
         steal: "Robar",
         haste: "Hesta",
-        basic_heal: "Curar",
         small_heal: "Cura Petita (20%)",
         medium_heal: "Cura Mitjana (50%)",
         high_heal: "Cura Gran (85%)",
@@ -741,7 +788,36 @@ const TRANSLATIONS = {
         opt_drink: "Beure",
         opt_drink_desc: "Un heroi aleatori guanya +1 punt d'Atribut.",
         opt_ignore: "Ignorar",
-        opt_ignore_desc: "Continua amb precaució."
+        opt_ignore_desc: "Continua amb precaució.",
+        label_no_affixes: "Sense Afixos",
+        label_affixes: "Afixos",
+        label_lvl_req: "Niv req {lvl}",
+        event_shrine_pray_res: "La deïtat et somriu. Equip completament curat!",
+        event_shrine_desecrate_res: "Trobes 5 Nuclis entre les runes, però sents una maledicció fosca. Equip danyat!",
+        event_cache_careful_res: "Has trobat 100 d'Or!",
+        event_cache_smash_trap_res: "S'ha activat una trampa! L'equip ha rebut dany, però has trobat 300 d'Or!",
+        event_cache_smash_ok_res: "Èxit! Has trobat 300 d'Or!",
+        event_fountain_drink_res: "{hero} se sent més fort! (+1 Punt d'Atribut)",
+        event_ignore_res: "Continues sense prendre cap risc.",
+        log_status_affect: "{target} està afectat per {type}!",
+        log_status_poison: "{target} està enverinat! (-{damage} PV)",
+        log_status_burn: "{target} s'està cremant! (-{damage} PV)",
+        log_status_sleep: "{target} està adormit...",
+        log_status_stun: "{target} està atordit!",
+        log_status_wakeup: "{target} s'ha despertat!",
+        log_phoenix_survive: "✨ {target} sobreviu amb 1 PV! (Fènix)",
+        log_target_set: "Objectiu fixat a {target}",
+        err_no_hero_village: "Recluta almenys un heroi a la vila primer!",
+        err_invalid_save: "Estructura del fitxer de salvament no vàlida.",
+        err_parse_file: "Error en processar el fitxer.",
+        debug_applied: "Bonificacions de depuració aplicades!",
+        btn_level_up: "Pujar Nivell",
+        name_affix_template: "{name} del {affix}",
+        vampire: "Vampir",
+        sage: "Savi",
+        titan: "Titan",
+        assassin: "Assassí",
+        phoenix: "Fènix"
     },
     eu: {
         subtitle: "Abentura eta Errekluta",
@@ -864,7 +940,6 @@ const TRANSLATIONS = {
         poison_dart: "Dardo Pozoitsua",
         steal: "Lapurtu",
         haste: "Bizkortasuna",
-        basic_heal: "Sendatu",
         small_heal: "Sendaketa Txikia (20%)",
         medium_heal: "Sendaketa Ertaina (50%)",
         high_heal: "Sendaketa Handia (85%)",
@@ -952,7 +1027,36 @@ const TRANSLATIONS = {
         opt_drink: "Edan",
         opt_drink_desc: "Ausazko heroi batek +1 Atributu puntu irabazten du.",
         opt_ignore: "Ez ikusi egin",
-        opt_ignore_desc: "Aurrera jarraitu kontu handiz."
+        opt_ignore_desc: "Aurrera jarraitu kontu handiz.",
+        label_no_affixes: "Afijorik gabe",
+        label_affixes: "Afijoak",
+        label_lvl_req: "{lvl} Nila beharrezkoa",
+        event_shrine_pray_res: "Jainkoak irribarre egiten dizu. Taldea guztiz sendatuta!",
+        event_shrine_desecrate_res: "5 Nukleo aurkitu dituzu hondakinen artean, baina madarikazio ilun bat sentitzen duzu. Taldea kaltetuta!",
+        event_cache_careful_res: "100 Urre aurkitu dituzu!",
+        event_cache_smash_trap_res: "Tranpa bat aktibatu da! Taldeak kaltea jaso du, baina 300 Urre aurkitu dituzu!",
+        event_cache_smash_ok_res: "Arrakasta! 300 Urre aurkitu dituzu!",
+        event_fountain_drink_res: "{hero} indartsuago sentitzen da! (+1 Atributu puntu)",
+        event_ignore_res: "Arriskurik hartu gabe jarraitzen duzu.",
+        log_status_affect: "{target} {type}-(e)k kaltetuta dago!",
+        log_status_poison: "{target} pozoinduta dago! (-{damage} PV)",
+        log_status_burn: "{target} erretzen ari da! (-{damage} PV)",
+        log_status_sleep: "{target} lo dago...",
+        log_status_stun: "{target} zorabiatuta dago!",
+        log_status_wakeup: "{target} esnatu da!",
+        log_phoenix_survive: "✨ {target}-ek biziraun du 1 PVrekin! (Fenixa)",
+        log_target_set: "Helburua {target}-n ezarria",
+        err_no_hero_village: "Erreklutatu gutxienez heroi bat herrian lehenago!",
+        err_invalid_save: "Gordetako fitxategiaren egitura okerra.",
+        err_parse_file: "Errorea fitxategia aztertzean.",
+        debug_applied: "Arazte-bonuak aplikatuta!",
+        btn_level_up: "Maila Igo",
+        name_affix_template: "{affix}(r)en {name}",
+        vampire: "Banpiro",
+        sage: "Jakitun",
+        titan: "Titan",
+        assassin: "Hiltzaile",
+        phoenix: "Fenix"
     },
     gl: {
         subtitle: "Aventura e Recluta",
@@ -1075,7 +1179,6 @@ const TRANSLATIONS = {
         poison_dart: "Dardo Envelenado",
         steal: "Roubar",
         haste: "Celeridade",
-        basic_heal: "Curar",
         small_heal: "Cura Pequena (20%)",
         medium_heal: "Cura Mediana (50%)",
         high_heal: "Cura Grande (85%)",
@@ -1166,7 +1269,36 @@ const TRANSLATIONS = {
         opt_drink: "Beber",
         opt_drink_desc: "Un heroe aleatorio gaña +1 punto de Atributo.",
         opt_ignore: "Ignorar",
-        opt_ignore_desc: "Continúa con precaución."
+        opt_ignore_desc: "Continúa con precaución.",
+        label_no_affixes: "Sen Afixos",
+        label_affixes: "Afixos",
+        label_lvl_req: "Niv req {lvl}",
+        event_shrine_pray_res: "A deidade sorrinche. ¡Equipo totalmente curado!",
+        event_shrine_desecrate_res: "Atopas 5 Núcleos entre os cascallos, pero sentes unha escura maldición. ¡Equipo danado!",
+        event_cache_careful_res: "¡Atopaches 100 de Ouro!",
+        event_cache_smash_trap_res: "¡Activouse unha trampa! O equipo recibiu dano, pero atopaches 300 de Ouro!",
+        event_cache_smash_ok_res: "¡Éxito! Atopaches 300 de Ouro!",
+        event_fountain_drink_res: "¡{hero} síntese máis forte! (+1 Punto de Atributo)",
+        event_ignore_res: "Continúas sen correr riscos.",
+        log_status_affect: "¡{target} está afectado por {type}!",
+        log_status_poison: "¡{target} está envelenado! (-{damage} PV)",
+        log_status_burn: "¡{target} estase queimando! (-{damage} PV)",
+        log_status_sleep: "{target} está durmido...",
+        log_status_stun: "¡{target} está atordado!",
+        log_status_wakeup: "¡{target} espertou!",
+        log_phoenix_survive: "¡✨ {target} sobrevive con 1 PV! (Fénix)",
+        log_target_set: "Obxectivo fixado en {target}",
+        err_no_hero_village: "¡Primeiro recluta polo menos un heroe na aldea!",
+        err_invalid_save: "Estrutura de arquivo de gardado non válida.",
+        err_parse_file: "Erro ao procesar o arquivo.",
+        debug_applied: "¡Bonos de depuración aplicados!",
+        btn_level_up: "Subir Nivel",
+        name_affix_template: "{name} do {affix}",
+        vampire: "Vampiro",
+        sage: "Sabio",
+        titan: "Titán",
+        assassin: "Asasino",
+        phoenix: "Fénix"
     }
 };
 
@@ -1180,6 +1312,21 @@ export function t(key) {
 }
 
 export function formatEquipmentName(materialId, familyId, slot = null) {
+    // If first argument is an object, assume it's an item object
+    if (typeof materialId === 'object' && materialId !== null) {
+        const item = materialId;
+        const baseName = formatEquipmentName(item.material, item.type === 'weapon' ? item.family : item.archetype, item.slot);
+        if (item.affixes && item.affixes.length > 0) {
+            let finalName = baseName;
+            const template = t('name_affix_template');
+            item.affixes.forEach(aff => {
+                finalName = template.replace('{name}', finalName).replace('{affix}', t(aff));
+            });
+            return finalName;
+        }
+        return baseName;
+    }
+
     const lang = TRANSLATIONS[currentLang] ? currentLang : 'en';
     const matName = t(materialId);
     const famName = t(familyId);
@@ -1187,7 +1334,7 @@ export function formatEquipmentName(materialId, familyId, slot = null) {
 
     if (lang === 'en') {
         return `${matName} ${famName}${slot ? ' ' + slotName : ''}`;
-    } else if (lang === 'es' || lang === 'ca' || lang === 'gl') {
+    } else if (lang.startsWith('es') || lang === 'ca' || lang === 'gl') {
         return `${famName} ${matName}${slot ? ' ' + slotName : ''}`;
     } else if (lang === 'eu') {
         return `${matName} ${famName}${slot ? ' ' + slotName : ''}`;

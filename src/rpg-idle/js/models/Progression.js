@@ -37,6 +37,7 @@ export class ProgressionManager {
                 tiny_mana_potion: 0
             },
             equipmentInventory: [],
+            autoBattle: false,
             trainingSessions: {} // { heroIndex: { startTime, regimeId } }
         };
 
@@ -88,13 +89,14 @@ export class ProgressionManager {
     }
 
     addCores(amount) {
-        this.cores += amount;
+        this.cores = Math.round((this.cores + amount) * 100) / 100;
         this.saveState();
     }
 
     spendCores(amount) {
+        amount = Math.round(amount * 100) / 100;
         if (this.cores >= amount) {
-            this.cores -= amount;
+            this.cores = Math.round((this.cores - amount) * 100) / 100;
             this.saveState();
             return true;
         }
@@ -102,13 +104,14 @@ export class ProgressionManager {
     }
 
     addGold(amount) {
-        this.prog.gold += amount;
+        this.prog.gold = Math.round((this.prog.gold + amount) * 100) / 100;
         this.saveState();
     }
 
     spendGold(amount) {
+        amount = Math.round(amount * 100) / 100;
         if (this.prog.gold >= amount) {
-            this.prog.gold -= amount;
+            this.prog.gold = Math.round((this.prog.gold - amount) * 100) / 100;
             this.saveState();
             return true;
         }
@@ -213,6 +216,11 @@ export class ProgressionManager {
             this.prog.milestone = value;
             this.saveState();
         }
+    }
+
+    setAutoBattle(value) {
+        this.prog.autoBattle = !!value;
+        this.saveState();
     }
 
     resetMilestone() {

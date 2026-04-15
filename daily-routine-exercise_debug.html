@@ -415,9 +415,17 @@ const DEFAULT_ROUTINE = [
   { ex: "SENT", start: 20, tag: "Recuperación" },
   { ex: "FLEX", start: 6, tag: "Al Fallo" }
 ];
+function generateId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+const loadedRoutine = JSON.parse(localStorage.getItem("workout_routine") || JSON.stringify(DEFAULT_ROUTINE));
+const normalizedRoutine = loadedRoutine.map((step) => ({
+  ...step,
+  id: step.id || generateId()
+}));
 const state = {
   history: JSON.parse(localStorage.getItem("workout_history_v2") || "{}"),
-  routine: JSON.parse(localStorage.getItem("workout_routine") || JSON.stringify(DEFAULT_ROUTINE)),
+  routine: normalizedRoutine,
   results: [],
   startTime: null,
   stepStartTime: null,
@@ -2800,12 +2808,12 @@ function showRoutine() {
 }
 function renderRoutineList() {
   const list = document.getElementById("routine-list");
-  list.innerHTML = state.routine.map((step, idx) => {
+  list.innerHTML = state.routine.map((step) => {
     const ex = EXERCISES[step.ex];
     return `
       <div style="background:#222; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50; position: relative;">
         
-        <button onclick="removeRoutineStep(${idx})" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 2px solid #f44336; color: #f44336; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; z-index: 10;">X</button>
+        <button onclick="removeRoutineStep('${step.id}')" style="position: absolute; top: 15px; right: 15px; background: transparent; border: 2px solid #f44336; color: #f44336; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; z-index: 10;">X</button>
         
         <div style="font-weight:bold; color:#4CAF50; font-size: 0.9rem;">${t(step.tag)} (${step.start})</div>
         <div style="font-size:1.2rem; margin: 8px 0; padding-right: 35px;">${t(ex.name)}</div>
@@ -2823,15 +2831,17 @@ function renderRoutineList() {
       const draggedStep = state.routine.splice(evt.oldIndex, 1)[0];
       state.routine.splice(evt.newIndex, 0, draggedStep);
       localStorage.setItem("workout_routine", JSON.stringify(state.routine));
-      renderRoutineList();
     }
   });
 }
-function removeRoutineStep(idx) {
+function removeRoutineStep(id) {
   if (confirm("¿Borrar ejercicio?")) {
-    state.routine.splice(idx, 1);
-    localStorage.setItem("workout_routine", JSON.stringify(state.routine));
-    renderRoutineList();
+    const idx = state.routine.findIndex((s) => s.id === id);
+    if (idx !== -1) {
+      state.routine.splice(idx, 1);
+      localStorage.setItem("workout_routine", JSON.stringify(state.routine));
+      renderRoutineList();
+    }
   }
 }
 function closeRoutine() {
@@ -2859,7 +2869,7 @@ function appendNewExercise() {
   const ex = document.getElementById("builder-ex").value;
   const start = parseInt(document.getElementById("builder-start").value) || 0;
   const tag = document.getElementById("builder-tag").value.trim() || t(EXERCISES[ex].name);
-  state.routine.unshift({ ex, start, tag });
+  state.routine.unshift({ id: generateId(), ex, start, tag });
   localStorage.setItem("workout_routine", JSON.stringify(state.routine));
   closeAddExercise();
   renderRoutineList();
@@ -2882,7 +2892,10 @@ function importJSON(event) {
     const data = JSON.parse(e.target.result);
     if (data.version && data.version >= 3) {
       state.history = data.history || {};
-      state.routine = data.routine || DEFAULT_ROUTINE;
+      state.routine = (data.routine || DEFAULT_ROUTINE).map((step) => ({
+        ...step,
+        id: step.id || generateId()
+      }));
       localStorage.setItem("workout_routine", JSON.stringify(state.routine));
     } else {
       state.history = data;

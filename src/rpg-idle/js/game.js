@@ -16,9 +16,11 @@ export class RPGGame {
         this.activeIndices = Progression.prog.activeHeroIndices;
         this.heroes = this.activeIndices.map(idx => new Hero(Progression.prog.heroes[idx]));
         
-        this.autoBattle = false;
+        this.autoBattle = !!Progression.prog.autoBattle;
         const toggle = document.getElementById('autobattle-toggle');
-        if (toggle) toggle.checked = this.autoBattle;
+        if (toggle) {
+            toggle.checked = this.autoBattle;
+        }
 
         this.canvas = document.getElementById('combatCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -126,29 +128,23 @@ export class RPGGame {
         const events = [
             {
                 id: 'forsaken_shrine',
-                title: 'The Forsaken Shrine',
-                desc: 'A crumbling statue of a forgotten deity. You feel a faint pulse of energy.',
                 options: [
-                    { id: 'pray', label: 'Pray', desc: 'Restore full HP to the party.' },
-                    { id: 'desecrate', label: 'Desecrate', desc: 'Take 20% damage, gain 5 Cores.' }
+                    { id: 'pray' },
+                    { id: 'desecrate' }
                 ]
             },
             {
                 id: 'hidden_cache',
-                title: 'The Hidden Cache',
-                desc: 'A dusty chest hidden behind some rocks.',
                 options: [
-                    { id: 'careful', label: 'Open Carefully', desc: 'Find 100 Gold.' },
-                    { id: 'smash', label: 'Smash Open', desc: 'Find 300 Gold, but risk a trap.' }
+                    { id: 'careful' },
+                    { id: 'smash' }
                 ]
             },
             {
                 id: 'mystic_fountain',
-                title: 'Mystic Fountain',
-                desc: 'A pool of shimmering blue water.',
                 options: [
-                    { id: 'drink', label: 'Drink', desc: 'A random hero gains +1 Stat Point.' },
-                    { id: 'ignore', label: 'Ignore', desc: 'Move on cautiously.' }
+                    { id: 'drink' },
+                    { id: 'ignore' }
                 ]
             }
         ];
@@ -192,45 +188,53 @@ export class RPGGame {
     }
 
     handleEventChoice(choiceId) {
-        const event = this.currentEvent;
-        let msg = "";
+        let msgKey = "";
+        let msgParams = {};
 
         if (choiceId === 'pray') {
             this.heroes.forEach(h => h.hp = h.maxHp);
-            msg = "The deity smiles upon you. Party fully healed!";
+            msgKey = "event_shrine_pray_res";
         } else if (choiceId === 'desecrate') {
             this.heroes.forEach(h => {
                 const dmg = Math.floor(h.maxHp * 0.2);
                 h.hp = Math.max(1, h.hp - dmg);
             });
             Progression.addCores(5);
-            msg = "You find 5 Cores in the rubble, but feel a dark curse. Party damaged!";
+            msgKey = "event_shrine_desecrate_res";
         } else if (choiceId === 'careful') {
             Progression.addGold(100);
-            msg = "You found 100 Gold!";
+            msgKey = "event_cache_careful_res";
         } else if (choiceId === 'smash') {
             if (Math.random() < 0.3) {
                 this.heroes.forEach(h => {
                     const dmg = Math.floor(h.maxHp * 0.15);
                     h.hp = Math.max(1, h.hp - dmg);
                 });
-                msg = "A trap was triggered! Party took damage, but you found 300 Gold!";
+                msgKey = "event_cache_smash_trap_res";
             } else {
-                msg = "Successful! You found 300 Gold!";
+                msgKey = "event_cache_smash_ok_res";
             }
             Progression.addGold(300);
         } else if (choiceId === 'drink') {
             const h = this.heroes[Math.floor(Math.random() * this.heroes.length)];
             h.statPoints += 1;
-            msg = `${h.name} feels stronger! (+1 Stat Point)`;
+            msgKey = "event_fountain_drink_res";
+            msgParams = { hero: h.name };
         } else if (choiceId === 'ignore') {
-            msg = "You move on without taking any risks.";
+            msgKey = "event_ignore_res";
         }
 
         document.getElementById('event-overlay').remove();
-        alert(msg);
-        this.currentEvent = null;
-        this.nextCombat();
+        
+        let finalMsg = t(msgKey);
+        for (let k in msgParams) {
+            finalMsg = finalMsg.replace(`{${k}}`, msgParams[k]);
+        }
+
+        window.showResultModal(t(this.currentEvent.id), finalMsg, () => {
+            this.currentEvent = null;
+            this.nextCombat();
+        });
     }
 
     endCombat(result, goldBonus = 1.0) {
@@ -280,9 +284,9 @@ export class RPGGame {
             ).join('');
 
             document.getElementById('victory-rewards').innerHTML = `
-                <p>💰 +${goldEarned} ${t('gold')}</p>
-                <p>✨ +${expEarned} ${t('exp_for_heroes')}</p>
-                ${coresEarned > 0 ? `<p>🔮 +${coresEarned} ${t('cores')}</p>` : ''}
+                <p>💰 +${goldEarned.toFixed(2).replace(/\.00$/, '')} ${t('gold')}</p>
+                <p>✨ +${expEarned.toFixed(2).replace(/\.00$/, '')} ${t('exp_for_heroes')}</p>
+                ${coresEarned > 0 ? `<p>🔮 +${coresEarned.toFixed(2).replace(/\.00$/, '')} ${t('cores')}</p>` : ''}
                 ${levelUpMessages}
             `;
             document.getElementById('win-overlay').style.display = 'flex';
@@ -342,7 +346,7 @@ export class RPGGame {
 
             document.getElementById('defeat-rewards').innerHTML = `
                 <p>${t('milestone')}: ${this.currentMilestone}</p>
-                ${expEarned > 0 ? `<p>✨ +${expEarned} ${t('exp_for_heroes')}</p>` : ''}
+                ${expEarned > 0 ? `<p>✨ +${expEarned.toFixed(2).replace(/\.00$/, '')} ${t('exp_for_heroes')}</p>` : ''}
                 ${levelUpMessages}
             `;
             document.getElementById('lose-overlay').style.display = 'flex';
@@ -362,10 +366,12 @@ export class RPGGame {
         }
     }
 
-    log(msg) {
+    log(msg, color = null) {
         const logEl = document.getElementById('combat-log');
         const p = document.createElement('p');
-        p.innerText = msg;
+        p.style.margin = '2px 0';
+        if (color) p.style.color = color;
+        p.innerHTML = msg;
         logEl.appendChild(p);
         logEl.scrollTop = logEl.scrollHeight;
 

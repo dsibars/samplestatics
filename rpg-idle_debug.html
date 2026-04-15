@@ -81,6 +81,7 @@ class ProgressionManager {
         tiny_mana_potion: 0
       },
       equipmentInventory: [],
+      autoBattle: false,
       trainingSessions: {}
       // { heroIndex: { startTime, regimeId } }
     };
@@ -126,24 +127,26 @@ class ProgressionManager {
     localStorage.setItem(this.progKey, JSON.stringify(this.prog));
   }
   addCores(amount) {
-    this.cores += amount;
+    this.cores = Math.round((this.cores + amount) * 100) / 100;
     this.saveState();
   }
   spendCores(amount) {
+    amount = Math.round(amount * 100) / 100;
     if (this.cores >= amount) {
-      this.cores -= amount;
+      this.cores = Math.round((this.cores - amount) * 100) / 100;
       this.saveState();
       return true;
     }
     return false;
   }
   addGold(amount) {
-    this.prog.gold += amount;
+    this.prog.gold = Math.round((this.prog.gold + amount) * 100) / 100;
     this.saveState();
   }
   spendGold(amount) {
+    amount = Math.round(amount * 100) / 100;
     if (this.prog.gold >= amount) {
-      this.prog.gold -= amount;
+      this.prog.gold = Math.round((this.prog.gold - amount) * 100) / 100;
       this.saveState();
       return true;
     }
@@ -235,6 +238,10 @@ class ProgressionManager {
       this.prog.milestone = value;
       this.saveState();
     }
+  }
+  setAutoBattle(value) {
+    this.prog.autoBattle = !!value;
+    this.saveState();
   }
   resetMilestone() {
     this.prog.milestone = 0;
@@ -1040,6 +1047,13 @@ const TRANSLATIONS = {
     lang: "Language",
     btn_export: "EXPORT JSON",
     btn_import: "IMPORT JSON",
+    btn_level_up: "Level Up",
+    name_affix_template: "{name} of the {affix}",
+    vampire: "Vampire",
+    sage: "Sage",
+    titan: "Titan",
+    assassin: "Assassin",
+    phoenix: "Phoenix",
     effective: "Effective!",
     resisted: "Resisted",
     tavern_title: "Recruit Heroes",
@@ -1149,7 +1163,6 @@ const TRANSLATIONS = {
     poison_dart: "Poison Dart",
     steal: "Steal",
     haste: "Haste",
-    basic_heal: "Heal",
     small_heal: "Small Heal (20%)",
     medium_heal: "Medium Heal (50%)",
     high_heal: "High Heal (85%)",
@@ -1286,9 +1299,31 @@ const TRANSLATIONS = {
     btn_unequip: "UNEQUIP",
     confirm_awaken: "Awaken this item for {cost} Cores?",
     awakened_msg: "AWAKENED! Item is now: {name}",
+    label_no_affixes: "No Affixes",
+    label_affixes: "Affixes",
+    label_lvl_req: "Lvl {lvl} Req",
     opt_drink_desc: "A random hero gains +1 Stat Point.",
     opt_ignore: "Ignore",
-    opt_ignore_desc: "Move on cautiously."
+    opt_ignore_desc: "Move on cautiously.",
+    event_shrine_pray_res: "The deity smiles upon you. Party fully healed!",
+    event_shrine_desecrate_res: "You find 5 Cores in the rubble, but feel a dark curse. Party damaged!",
+    event_cache_careful_res: "You found 100 Gold!",
+    event_cache_smash_trap_res: "A trap was triggered! Party took damage, but you found 300 Gold!",
+    event_cache_smash_ok_res: "Successful! You found 300 Gold!",
+    event_fountain_drink_res: "{hero} feels stronger! (+1 Stat Point)",
+    event_ignore_res: "You move on without taking any risks.",
+    log_status_affect: "{target} is affected by {type}!",
+    log_status_poison: "{target} is poisoned! (-{damage} HP)",
+    log_status_burn: "{target} is burning! (-{damage} HP)",
+    log_status_sleep: "{target} is asleep...",
+    log_status_stun: "{target} is stunned!",
+    log_status_wakeup: "{target} woke up!",
+    log_phoenix_survive: "✨ {target} survives with 1 HP! (Phoenix)",
+    log_target_set: "Target set to {target}",
+    err_no_hero_village: "Recruit at least one hero in the village first!",
+    err_invalid_save: "Invalid save file structure.",
+    err_parse_file: "Error parsing file.",
+    debug_applied: "Debug bonuses applied! Cores, Gold, and Hero XP updated."
   },
   es: {
     subtitle: "Aventura y Recluta",
@@ -1411,7 +1446,6 @@ const TRANSLATIONS = {
     poison_dart: "Dardo Envenenado",
     steal: "Robar",
     haste: "Celeridad",
-    basic_heal: "Curar",
     small_heal: "Cura Pequeña (20%)",
     medium_heal: "Cura Mediana (50%)",
     high_heal: "Cura Grande (85%)",
@@ -1452,7 +1486,6 @@ const TRANSLATIONS = {
     small_group_heal_desc: "Cura menor para todos.",
     medium_group_heal_desc: "Cura avanzada para todos.",
     high_group_heal_desc: "Rezo sagrado para todos.",
-    forge_title: "Mystic Forge",
     forge_title: "Fragua Mística",
     roster_size_title: "Espacio de Héroes",
     party_size_title: "Calidad de Formación",
@@ -1550,13 +1583,35 @@ const TRANSLATIONS = {
     btn_unequip: "DESEQUIPAR",
     confirm_awaken: "¿Despertar este objeto por {cost} Núcleos?",
     awakened_msg: "¡DESPERTADO! El objeto es ahora: {name}",
-    opt_careful_desc: "Encuentra 100 de Oro.",
-    opt_smash: "Romper",
-    opt_smash_desc: "Encuentra 300 de Oro, pero arriésgate a una trampa.",
-    opt_drink: "Beber",
-    opt_drink_desc: "Un héroe aleatorio gana +1 punto de Atributo.",
-    opt_ignore: "Ignorar",
-    opt_ignore_desc: "Sigue adelante con precaución."
+    label_no_affixes: "Sin Afijos",
+    label_affixes: "Afijos",
+    label_lvl_req: "Req Nvl {lvl}",
+    event_shrine_pray_res: "La deidad te sonríe. ¡Equipo completamente curado!",
+    event_shrine_desecrate_res: "Encuentras 5 Núcleos en los escombros, pero sientes una oscura maldición. ¡Equipo dañado!",
+    event_cache_careful_res: "¡Has encontrado 100 de Oro!",
+    event_cache_smash_trap_res: "¡Se activó una trampa! El equipo recibió daño, ¡pero encontraste 300 de Oro!",
+    event_cache_smash_ok_res: "¡Éxito! ¡Has encontrado 300 de Oro!",
+    event_fountain_drink_res: "¡{hero} se siente más fuerte! (+1 Punto de Atributo)",
+    event_ignore_res: "Sigues adelante sin correr riesgos.",
+    log_status_affect: "¡{target} está afectado por {type}!",
+    log_status_poison: "¡{target} está envenenado! (-{damage} PV)",
+    log_status_burn: "¡{target} se está quemando! (-{damage} PV)",
+    log_status_sleep: "{target} está dormido...",
+    log_status_stun: "¡{target} está aturdido!",
+    log_status_wakeup: "¡{target} se ha despertado!",
+    log_phoenix_survive: "¡✨ {target} sobrevive con 1 PV! (Fénix)",
+    log_target_set: "Objetivo fijado en {target}",
+    err_no_hero_village: "¡Primero recluta al menos un héroe en la aldea!",
+    err_invalid_save: "Estructura de archivo de guardado no válida.",
+    err_parse_file: "Error al procesar el archivo.",
+    debug_applied: "¡Bonos de depuración aplicados! Núcleos, Oro y XP de héroes actualizados.",
+    btn_level_up: "Subir Nivel",
+    name_affix_template: "{name} del {affix}",
+    vampire: "Vampiro",
+    sage: "Sabio",
+    titan: "Titán",
+    assassin: "Asesino",
+    phoenix: "Fénix"
   },
   ca: {
     subtitle: "Aventura i Recluta",
@@ -1679,7 +1734,6 @@ const TRANSLATIONS = {
     poison_dart: "Dard Enverinat",
     steal: "Robar",
     haste: "Hesta",
-    basic_heal: "Curar",
     small_heal: "Cura Petita (20%)",
     medium_heal: "Cura Mitjana (50%)",
     high_heal: "Cura Gran (85%)",
@@ -1770,7 +1824,36 @@ const TRANSLATIONS = {
     opt_drink: "Beure",
     opt_drink_desc: "Un heroi aleatori guanya +1 punt d'Atribut.",
     opt_ignore: "Ignorar",
-    opt_ignore_desc: "Continua amb precaució."
+    opt_ignore_desc: "Continua amb precaució.",
+    label_no_affixes: "Sense Afixos",
+    label_affixes: "Afixos",
+    label_lvl_req: "Niv req {lvl}",
+    event_shrine_pray_res: "La deïtat et somriu. Equip completament curat!",
+    event_shrine_desecrate_res: "Trobes 5 Nuclis entre les runes, però sents una maledicció fosca. Equip danyat!",
+    event_cache_careful_res: "Has trobat 100 d'Or!",
+    event_cache_smash_trap_res: "S'ha activat una trampa! L'equip ha rebut dany, però has trobat 300 d'Or!",
+    event_cache_smash_ok_res: "Èxit! Has trobat 300 d'Or!",
+    event_fountain_drink_res: "{hero} se sent més fort! (+1 Punt d'Atribut)",
+    event_ignore_res: "Continues sense prendre cap risc.",
+    log_status_affect: "{target} està afectat per {type}!",
+    log_status_poison: "{target} està enverinat! (-{damage} PV)",
+    log_status_burn: "{target} s'està cremant! (-{damage} PV)",
+    log_status_sleep: "{target} està adormit...",
+    log_status_stun: "{target} està atordit!",
+    log_status_wakeup: "{target} s'ha despertat!",
+    log_phoenix_survive: "✨ {target} sobreviu amb 1 PV! (Fènix)",
+    log_target_set: "Objectiu fixat a {target}",
+    err_no_hero_village: "Recluta almenys un heroi a la vila primer!",
+    err_invalid_save: "Estructura del fitxer de salvament no vàlida.",
+    err_parse_file: "Error en processar el fitxer.",
+    debug_applied: "Bonificacions de depuració aplicades!",
+    btn_level_up: "Pujar Nivell",
+    name_affix_template: "{name} del {affix}",
+    vampire: "Vampir",
+    sage: "Savi",
+    titan: "Titan",
+    assassin: "Assassí",
+    phoenix: "Fènix"
   },
   eu: {
     subtitle: "Abentura eta Errekluta",
@@ -1893,7 +1976,6 @@ const TRANSLATIONS = {
     poison_dart: "Dardo Pozoitsua",
     steal: "Lapurtu",
     haste: "Bizkortasuna",
-    basic_heal: "Sendatu",
     small_heal: "Sendaketa Txikia (20%)",
     medium_heal: "Sendaketa Ertaina (50%)",
     high_heal: "Sendaketa Handia (85%)",
@@ -1981,7 +2063,36 @@ const TRANSLATIONS = {
     opt_drink: "Edan",
     opt_drink_desc: "Ausazko heroi batek +1 Atributu puntu irabazten du.",
     opt_ignore: "Ez ikusi egin",
-    opt_ignore_desc: "Aurrera jarraitu kontu handiz."
+    opt_ignore_desc: "Aurrera jarraitu kontu handiz.",
+    label_no_affixes: "Afijorik gabe",
+    label_affixes: "Afijoak",
+    label_lvl_req: "{lvl} Nila beharrezkoa",
+    event_shrine_pray_res: "Jainkoak irribarre egiten dizu. Taldea guztiz sendatuta!",
+    event_shrine_desecrate_res: "5 Nukleo aurkitu dituzu hondakinen artean, baina madarikazio ilun bat sentitzen duzu. Taldea kaltetuta!",
+    event_cache_careful_res: "100 Urre aurkitu dituzu!",
+    event_cache_smash_trap_res: "Tranpa bat aktibatu da! Taldeak kaltea jaso du, baina 300 Urre aurkitu dituzu!",
+    event_cache_smash_ok_res: "Arrakasta! 300 Urre aurkitu dituzu!",
+    event_fountain_drink_res: "{hero} indartsuago sentitzen da! (+1 Atributu puntu)",
+    event_ignore_res: "Arriskurik hartu gabe jarraitzen duzu.",
+    log_status_affect: "{target} {type}-(e)k kaltetuta dago!",
+    log_status_poison: "{target} pozoinduta dago! (-{damage} PV)",
+    log_status_burn: "{target} erretzen ari da! (-{damage} PV)",
+    log_status_sleep: "{target} lo dago...",
+    log_status_stun: "{target} zorabiatuta dago!",
+    log_status_wakeup: "{target} esnatu da!",
+    log_phoenix_survive: "✨ {target}-ek biziraun du 1 PVrekin! (Fenixa)",
+    log_target_set: "Helburua {target}-n ezarria",
+    err_no_hero_village: "Erreklutatu gutxienez heroi bat herrian lehenago!",
+    err_invalid_save: "Gordetako fitxategiaren egitura okerra.",
+    err_parse_file: "Errorea fitxategia aztertzean.",
+    debug_applied: "Arazte-bonuak aplikatuta!",
+    btn_level_up: "Maila Igo",
+    name_affix_template: "{affix}(r)en {name}",
+    vampire: "Banpiro",
+    sage: "Jakitun",
+    titan: "Titan",
+    assassin: "Hiltzaile",
+    phoenix: "Fenix"
   },
   gl: {
     subtitle: "Aventura e Recluta",
@@ -2104,7 +2215,6 @@ const TRANSLATIONS = {
     poison_dart: "Dardo Envelenado",
     steal: "Roubar",
     haste: "Celeridade",
-    basic_heal: "Curar",
     small_heal: "Cura Pequena (20%)",
     medium_heal: "Cura Mediana (50%)",
     high_heal: "Cura Grande (85%)",
@@ -2195,7 +2305,36 @@ const TRANSLATIONS = {
     opt_drink: "Beber",
     opt_drink_desc: "Un heroe aleatorio gaña +1 punto de Atributo.",
     opt_ignore: "Ignorar",
-    opt_ignore_desc: "Continúa con precaución."
+    opt_ignore_desc: "Continúa con precaución.",
+    label_no_affixes: "Sen Afixos",
+    label_affixes: "Afixos",
+    label_lvl_req: "Niv req {lvl}",
+    event_shrine_pray_res: "A deidade sorrinche. ¡Equipo totalmente curado!",
+    event_shrine_desecrate_res: "Atopas 5 Núcleos entre os cascallos, pero sentes unha escura maldición. ¡Equipo danado!",
+    event_cache_careful_res: "¡Atopaches 100 de Ouro!",
+    event_cache_smash_trap_res: "¡Activouse unha trampa! O equipo recibiu dano, pero atopaches 300 de Ouro!",
+    event_cache_smash_ok_res: "¡Éxito! Atopaches 300 de Ouro!",
+    event_fountain_drink_res: "¡{hero} síntese máis forte! (+1 Punto de Atributo)",
+    event_ignore_res: "Continúas sen correr riscos.",
+    log_status_affect: "¡{target} está afectado por {type}!",
+    log_status_poison: "¡{target} está envelenado! (-{damage} PV)",
+    log_status_burn: "¡{target} estase queimando! (-{damage} PV)",
+    log_status_sleep: "{target} está durmido...",
+    log_status_stun: "¡{target} está atordado!",
+    log_status_wakeup: "¡{target} espertou!",
+    log_phoenix_survive: "¡✨ {target} sobrevive con 1 PV! (Fénix)",
+    log_target_set: "Obxectivo fixado en {target}",
+    err_no_hero_village: "¡Primeiro recluta polo menos un heroe na aldea!",
+    err_invalid_save: "Estrutura de arquivo de gardado non válida.",
+    err_parse_file: "Erro ao procesar o arquivo.",
+    debug_applied: "¡Bonos de depuración aplicados!",
+    btn_level_up: "Subir Nivel",
+    name_affix_template: "{name} do {affix}",
+    vampire: "Vampiro",
+    sage: "Sabio",
+    titan: "Titán",
+    assassin: "Asasino",
+    phoenix: "Fénix"
   }
 };
 const SHARED_KEY = "static_apps_lang";
@@ -2205,13 +2344,26 @@ function t(key) {
   return TRANSLATIONS[lang][key] || TRANSLATIONS["en"][key] || key;
 }
 function formatEquipmentName(materialId, familyId, slot = null) {
+  if (typeof materialId === "object" && materialId !== null) {
+    const item = materialId;
+    const baseName = formatEquipmentName(item.material, item.type === "weapon" ? item.family : item.archetype, item.slot);
+    if (item.affixes && item.affixes.length > 0) {
+      let finalName = baseName;
+      const template = t("name_affix_template");
+      item.affixes.forEach((aff) => {
+        finalName = template.replace("{name}", finalName).replace("{affix}", t(aff));
+      });
+      return finalName;
+    }
+    return baseName;
+  }
   const lang = TRANSLATIONS[currentLang] ? currentLang : "en";
   const matName = t(materialId);
   const famName = t(familyId);
   const slotName = slot ? t("slot_" + slot) : "";
   if (lang === "en") {
     return `${matName} ${famName}${slot ? " " + slotName : ""}`;
-  } else if (lang === "es" || lang === "ca" || lang === "gl") {
+  } else if (lang.startsWith("es") || lang === "ca" || lang === "gl") {
     return `${famName} ${matName}${slot ? " " + slotName : ""}`;
   } else if (lang === "eu") {
     return `${matName} ${famName}${slot ? " " + slotName : ""}`;
@@ -2571,16 +2723,16 @@ class CombatManager {
         if (eff.type === "poison") {
           const dmg = Math.floor(participant.maxHp * eff.power);
           this.applyDamage(participant, dmg);
-          this.game.log(`${participant.name} is poisoned! (-${dmg} HP)`);
+          this.game.log(t("log_status_poison").replace("{target}", participant.name).replace("{damage}", dmg), "#f0f");
         } else if (eff.type === "burn") {
           const dmg = Math.floor(participant.maxHp * eff.power);
           this.applyDamage(participant, dmg);
-          this.game.log(`${participant.name} is burning! (-${dmg} HP)`);
+          this.game.log(t("log_status_burn").replace("{target}", participant.name).replace("{damage}", dmg), "#f50");
         } else if (eff.type === "sleep") {
-          this.game.log(`${participant.name} is asleep...`);
+          this.game.log(t("log_status_sleep").replace("{target}", participant.name), "#aaa");
           skipTurn = true;
         } else if (eff.type === "stun") {
-          this.game.log(`${participant.name} is stunned!`);
+          this.game.log(t("log_status_stun").replace("{target}", participant.name), "#ff0");
           skipTurn = true;
         }
         eff.duration--;
@@ -2603,7 +2755,7 @@ class CombatManager {
       if (regenAmount > 0) {
         participant.hp = Math.min(participant.maxHp, participant.hp + regenAmount);
         if (this.game.onHeal) this.game.onHeal(participant, regenAmount);
-        this.game.log(t("log_heals").replace("{attacker}", t("origin_cook")).replace("{target}", participant.name).replace("{amount}", regenAmount));
+        this.game.log(t("log_heals").replace("{attacker}", t("origin_cook")).replace("{target}", participant.name).replace("{amount}", regenAmount), "#0f0");
       }
     }
     if (this.enemies.includes(participant)) {
@@ -2661,8 +2813,8 @@ class CombatManager {
     if (roundedAmount >= target.hp && target.hasPhoenix && !target.phoenixUsed) {
       target.hp = 1;
       target.phoenixUsed = true;
-      this.game.log(`✨ ${target.name} survives with 1 HP! (Phoenix)`);
-      if (this.game.onHeal) this.game.onHeal(target, "REVIVE");
+      this.game.log(t("log_phoenix_survive").replace("{target}", target.name), "#0ff");
+      if (this.game.onHeal) this.game.onHeal(target, 1);
       return;
     }
     target.hp = Math.max(0, target.hp - roundedAmount);
@@ -2671,7 +2823,7 @@ class CombatManager {
       const sleepIdx = target.statusEffects.findIndex((e) => e.type === "sleep");
       if (sleepIdx > -1) {
         target.statusEffects.splice(sleepIdx, 1);
-        this.game.log(`${target.name} woke up!`);
+        this.game.log(t("log_status_wakeup").replace("{target}", target.name), "#ff0");
         if (target.recalculateStats) target.recalculateStats();
       }
     }
@@ -2686,7 +2838,7 @@ class CombatManager {
     this.targetIndex = idx;
     const target = this.enemies[idx];
     if (target) {
-      this.game.log(`Target set to ${target.name}`);
+      this.game.log(t("log_target_set").replace("{target}", target.name), "#0af");
     }
   }
   heroAction(hero, skillId, targetIndex = null) {
@@ -2756,12 +2908,12 @@ class CombatManager {
         if (skillData.category === "support") {
           if (skillId === "haste") {
             this.applyStatusEffect(target, { type: "haste", duration: 3 });
-            this.game.log(`${actor.name} uses Haste on ${target.name}!`);
+            this.game.log(t("log_uses_skill").replace("{attacker}", actor.name).replace("{skill}", t("haste")) + ` (${t("select_target")}: ${target.name})`, "#0ff");
           } else {
             const healAmount = Math.floor(target.maxHp * result.amount * mult);
             target.hp = Math.min(target.maxHp, target.hp + healAmount);
             if (this.game.onHeal) this.game.onHeal(target, healAmount);
-            this.game.log(t("log_heals").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{amount}", healAmount));
+            this.game.log(t("log_heals").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{amount}", healAmount), "#0f0");
           }
         } else {
           const finalDamage = Math.max(1, Math.floor(result.amount * mult));
@@ -2796,9 +2948,9 @@ class CombatManager {
             this.applyStatusEffect(target, { type: "sleep", duration: 2 });
           }
           if (skillId === "basic_attack" || skillId === "double_attack" || skillId === "triple_attack") {
-            this.game.log(feedback + t("log_attack").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{damage}", finalDamage));
+            this.game.log(feedback + t("log_attack").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{damage}", finalDamage), isActorHero ? null : "#f77");
           } else {
-            this.game.log(feedback + t("log_uses_skill").replace("{attacker}", actor.name).replace("{skill}", t(skillId)) + ` (Target: ${target.name})`);
+            this.game.log(feedback + t("log_uses_skill").replace("{attacker}", actor.name).replace("{skill}", t(skillId)) + ` (${t("available_label").replace(":", "").trim()} ${t("select_target")}: ${target.name})`, isActorHero ? "#0ff" : "#f77");
           }
           if (!isActorHero) {
             this.game.triggerFlash("rgba(255, 0, 0, 0.3)", 300);
@@ -2817,7 +2969,7 @@ class CombatManager {
       target.statusEffects.push(effect);
     }
     if (target.recalculateStats) target.recalculateStats();
-    this.game.log(`${target.name} is affected by ${effect.type}!`);
+    this.game.log(t("log_status_affect").replace("{target}", target.name).replace("{type}", t(effect.type)), "#ff0");
   }
   useItem(hero, itemId) {
     if (this.isActionInProgress || this.isCombatOver) return;
@@ -2913,9 +3065,11 @@ class RPGGame {
     this.currentMilestone = Progression.prog.milestone;
     this.activeIndices = Progression.prog.activeHeroIndices;
     this.heroes = this.activeIndices.map((idx) => new Hero(Progression.prog.heroes[idx]));
-    this.autoBattle = false;
+    this.autoBattle = !!Progression.prog.autoBattle;
     const toggle = document.getElementById("autobattle-toggle");
-    if (toggle) toggle.checked = this.autoBattle;
+    if (toggle) {
+      toggle.checked = this.autoBattle;
+    }
     this.canvas = document.getElementById("combatCanvas");
     this.ctx = this.canvas.getContext("2d");
     this.resizeCanvas();
@@ -3000,29 +3154,23 @@ class RPGGame {
     const events = [
       {
         id: "forsaken_shrine",
-        title: "The Forsaken Shrine",
-        desc: "A crumbling statue of a forgotten deity. You feel a faint pulse of energy.",
         options: [
-          { id: "pray", label: "Pray", desc: "Restore full HP to the party." },
-          { id: "desecrate", label: "Desecrate", desc: "Take 20% damage, gain 5 Cores." }
+          { id: "pray" },
+          { id: "desecrate" }
         ]
       },
       {
         id: "hidden_cache",
-        title: "The Hidden Cache",
-        desc: "A dusty chest hidden behind some rocks.",
         options: [
-          { id: "careful", label: "Open Carefully", desc: "Find 100 Gold." },
-          { id: "smash", label: "Smash Open", desc: "Find 300 Gold, but risk a trap." }
+          { id: "careful" },
+          { id: "smash" }
         ]
       },
       {
         id: "mystic_fountain",
-        title: "Mystic Fountain",
-        desc: "A pool of shimmering blue water.",
         options: [
-          { id: "drink", label: "Drink", desc: "A random hero gains +1 Stat Point." },
-          { id: "ignore", label: "Ignore", desc: "Move on cautiously." }
+          { id: "drink" },
+          { id: "ignore" }
         ]
       }
     ];
@@ -3060,43 +3208,49 @@ class RPGGame {
     window.game = this;
   }
   handleEventChoice(choiceId) {
-    this.currentEvent;
-    let msg = "";
+    let msgKey = "";
+    let msgParams = {};
     if (choiceId === "pray") {
       this.heroes.forEach((h) => h.hp = h.maxHp);
-      msg = "The deity smiles upon you. Party fully healed!";
+      msgKey = "event_shrine_pray_res";
     } else if (choiceId === "desecrate") {
       this.heroes.forEach((h) => {
         const dmg = Math.floor(h.maxHp * 0.2);
         h.hp = Math.max(1, h.hp - dmg);
       });
       Progression.addCores(5);
-      msg = "You find 5 Cores in the rubble, but feel a dark curse. Party damaged!";
+      msgKey = "event_shrine_desecrate_res";
     } else if (choiceId === "careful") {
       Progression.addGold(100);
-      msg = "You found 100 Gold!";
+      msgKey = "event_cache_careful_res";
     } else if (choiceId === "smash") {
       if (Math.random() < 0.3) {
         this.heroes.forEach((h) => {
           const dmg = Math.floor(h.maxHp * 0.15);
           h.hp = Math.max(1, h.hp - dmg);
         });
-        msg = "A trap was triggered! Party took damage, but you found 300 Gold!";
+        msgKey = "event_cache_smash_trap_res";
       } else {
-        msg = "Successful! You found 300 Gold!";
+        msgKey = "event_cache_smash_ok_res";
       }
       Progression.addGold(300);
     } else if (choiceId === "drink") {
       const h = this.heroes[Math.floor(Math.random() * this.heroes.length)];
       h.statPoints += 1;
-      msg = `${h.name} feels stronger! (+1 Stat Point)`;
+      msgKey = "event_fountain_drink_res";
+      msgParams = { hero: h.name };
     } else if (choiceId === "ignore") {
-      msg = "You move on without taking any risks.";
+      msgKey = "event_ignore_res";
     }
     document.getElementById("event-overlay").remove();
-    alert(msg);
-    this.currentEvent = null;
-    this.nextCombat();
+    let finalMsg = t(msgKey);
+    for (let k in msgParams) {
+      finalMsg = finalMsg.replace(`{${k}}`, msgParams[k]);
+    }
+    window.showResultModal(t(this.currentEvent.id), finalMsg, () => {
+      this.currentEvent = null;
+      this.nextCombat();
+    });
   }
   endCombat(result, goldBonus = 1) {
     this.popupOpenTime = performance.now();
@@ -3136,9 +3290,9 @@ class RPGGame {
         (lu) => `<p style="color: #0af; font-weight: bold;">${t("log_level_up").replace("{hero}", lu.name).replace("{level}", lu.level)}</p>`
       ).join("");
       document.getElementById("victory-rewards").innerHTML = `
-                <p>💰 +${goldEarned} ${t("gold")}</p>
-                <p>✨ +${expEarned} ${t("exp_for_heroes")}</p>
-                ${coresEarned > 0 ? `<p>🔮 +${coresEarned} ${t("cores")}</p>` : ""}
+                <p>💰 +${goldEarned.toFixed(2).replace(/\.00$/, "")} ${t("gold")}</p>
+                <p>✨ +${expEarned.toFixed(2).replace(/\.00$/, "")} ${t("exp_for_heroes")}</p>
+                ${coresEarned > 0 ? `<p>🔮 +${coresEarned.toFixed(2).replace(/\.00$/, "")} ${t("cores")}</p>` : ""}
                 ${levelUpMessages}
             `;
       document.getElementById("win-overlay").style.display = "flex";
@@ -3189,7 +3343,7 @@ class RPGGame {
       ).join("");
       document.getElementById("defeat-rewards").innerHTML = `
                 <p>${t("milestone")}: ${this.currentMilestone}</p>
-                ${expEarned > 0 ? `<p>✨ +${expEarned} ${t("exp_for_heroes")}</p>` : ""}
+                ${expEarned > 0 ? `<p>✨ +${expEarned.toFixed(2).replace(/\.00$/, "")} ${t("exp_for_heroes")}</p>` : ""}
                 ${levelUpMessages}
             `;
       document.getElementById("lose-overlay").style.display = "flex";
@@ -3206,11 +3360,13 @@ class RPGGame {
       text.innerText = t("show_logs");
     }
   }
-  log(msg) {
+  log(msg, color = null) {
     var _a, _b;
     const logEl = document.getElementById("combat-log");
     const p = document.createElement("p");
-    p.innerText = msg;
+    p.style.margin = "2px 0";
+    if (color) p.style.color = color;
+    p.innerHTML = msg;
     logEl.appendChild(p);
     logEl.scrollTop = logEl.scrollHeight;
     const participant = (_a = this.currentCombat) == null ? void 0 : _a.turnOrder[this.currentCombat.currentTurnIndex];
@@ -3518,14 +3674,16 @@ function updateCoresUI() {
 }
 window.startAdventure = () => {
   if (Progression.prog.heroes.length === 0) {
-    alert("Recruit at least one hero in the village first!");
+    window.showToast(t("err_no_hero_village"));
     window.showVillage();
     return;
   }
   const allLvl1 = Progression.prog.heroes.every((h) => h.level === 1);
   if (Progression.prog.milestone > 1 && allLvl1) {
-    alert(t("greedy_reset_msg"));
-    Progression.resetMilestone();
+    window.showResultModal(t("milestone"), t("greedy_reset_msg"), () => {
+      Progression.resetMilestone();
+    });
+    return;
   }
   showView("view-game");
   document.getElementById("combat-log").innerHTML = "";
@@ -3545,7 +3703,8 @@ window.nextCombat = () => {
 };
 window.showVillage = () => {
   if (Progression.checkFreeHero()) {
-    alert(t("free_hero_welcome") || "Hello adventurer! I have a present for you!");
+    window.showResultModal(t("tavern_title"), t("free_hero_welcome"), () => {
+    });
     const currentNames = Progression.prog.heroes.map((h) => h.name);
     Progression.addHero(Hero.generateRandom(1, currentNames).toJSON());
   }
@@ -3569,8 +3728,8 @@ window.switchVillageTab = (tab) => {
   if (tab === "forge") updateForgeUI();
 };
 function updateVillageResourcesUI() {
-  document.getElementById("village-gold-val").innerText = Progression.prog.gold;
-  document.getElementById("village-cores-val").innerText = Progression.cores;
+  document.getElementById("village-gold-val").innerText = Progression.prog.gold.toFixed(2).replace(/\.00$/, "");
+  document.getElementById("village-cores-val").innerText = Progression.cores.toFixed(2).replace(/\.00$/, "");
 }
 function updateTavernUI() {
   const tavernList = document.getElementById("tavern-hero-list");
@@ -3592,10 +3751,11 @@ function updateTavernUI() {
   if (Progression.prog.heroes.length < Progression.getMaxRosterSize()) {
     const recruitCard = document.createElement("div");
     const cost = 500;
+    const displayCost = cost.toFixed(2).replace(/\.00$/, "");
     recruitCard.style = "background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px;";
     recruitCard.innerHTML = `
             <div style="font-weight:bold; color:var(--primary);">${t("recruit_new")}</div>
-            <div style="margin: 5px 0;">💰 ${cost}</div>
+            <div style="margin: 5px 0;">💰 ${displayCost}</div>
             <button class="menu-btn primary" style="padding: 5px 15px; font-size:0.8rem;" onclick="window.recruitHero(${cost})">${t("btn_recruit")}</button>
         `;
     tavernList.appendChild(recruitCard);
@@ -3617,7 +3777,7 @@ function updateShopUI() {
                 <div style="font-weight:bold;">${t(item.id)}</div>
                 <div style="font-size:0.8rem; color:#aaa;">${t("owned")}: ${Progression.prog.inventory[item.id] || 0}</div>
             </div>
-            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyItem('${item.id}', ${item.cost})">💰 ${item.cost}</button>
+            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyItem('${item.id}', ${item.cost})">💰 ${item.cost.toFixed(2).replace(/\.00$/, "")}</button>
         `;
     shopList.appendChild(itemRow);
   });
@@ -3646,12 +3806,13 @@ function updateUpgradesUI() {
     else if (b.id === "rosterSizeLevel") extra = ` (${4 + level} max)`;
     else if (b.id === "partySizeLevel") extra = ` (${1 + level} heroes)`;
     const label = extra;
+    const displayCost = cost.toFixed(2).replace(/\.00$/, "");
     upgradeRow.innerHTML = `
             <div>
                 <div style="font-weight:bold;">${b.title}</div>
                 <div style="font-size:0.8rem; color:#aaa;">${t("level_label")}: ${level}${isMax ? " [MAX]" : label}</div>
             </div>
-            ${isMax ? '<span style="color:#888;">MAX</span>' : `<button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyBuilding('${b.id}')">🔮 ${cost}</button>`}
+            ${isMax ? '<span style="color:#888;">MAX</span>' : `<button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyBuilding('${b.id}')">🔮 ${displayCost}</button>`}
         `;
     upgradeList.appendChild(upgradeRow);
   });
@@ -3684,15 +3845,16 @@ function updateWeaponShopUI() {
       const tier = MATERIAL_TIERS[tierId];
       if (tier.levelReq <= shopLvl) {
         const cost = 100 * tier.mult;
+        const displayCost = cost.toFixed(2).replace(/\.00$/, "");
         const row = document.createElement("div");
-        row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+        row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px; border-left: 4px solid var(--primary);";
         row.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold;">${formatEquipmentName(tierId, familyId)}</div>
-                        <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
-                        <div style="font-size:0.75rem; color:#888; margin-top:4px; font-style:italic;">${t(familyId + "_desc")}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight:bold; color: white; font-size: 1.1rem;">${formatEquipmentName({ type: "weapon", material: tierId, family: familyId })}</div>
+                        <div style="font-size:0.8rem; color:var(--primary); margin-bottom: 5px;">Tier ${tier.levelReq}</div>
+                        <div style="font-size:0.85rem; color:#ccc; line-height: 1.4;">${t(familyId + "_desc")}</div>
                     </div>
-                    <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${familyId}', '${tierId}', 'weapon', ${cost})">💰 ${cost}</button>
+                    <button class="menu-btn primary" style="padding: 12px 20px; min-width: 100px;" onclick="window.buyEquipment('${familyId}', '${tierId}', 'weapon', ${cost})">💰 ${displayCost}</button>
                 `;
         container.appendChild(row);
       }
@@ -3710,15 +3872,16 @@ function updateArmorShopUI() {
         const slots = ["head", "body", "legs"];
         slots.forEach((slot) => {
           const cost = 80 * tier.mult;
+          const displayCost = cost.toFixed(2).replace(/\.00$/, "");
           const row = document.createElement("div");
-          row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+          row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px; border-left: 4px solid #0fa;";
           row.innerHTML = `
-                        <div>
-                            <div style="font-weight:bold;">${formatEquipmentName(tierId, archId, slot)}</div>
-                            <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
-                            <div style="font-size:0.75rem; color:#888; margin-top:4px; font-style:italic;">${t(archId + "_desc")}</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight:bold; color: white; font-size: 1.1rem;">${formatEquipmentName({ type: "armor", material: tierId, archetype: archId, slot })}</div>
+                            <div style="font-size:0.8rem; color:#0fa; margin-bottom: 5px;">Tier ${tier.levelReq}</div>
+                            <div style="font-size:0.85rem; color:#ccc; line-height: 1.4;">${t(archId + "_desc")}</div>
                         </div>
-                        <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${archId}', '${tierId}', 'armor', ${cost}, '${slot}')">💰 ${cost}</button>
+                        <button class="menu-btn primary" style="padding: 12px 20px; min-width: 100px;" onclick="window.buyEquipment('${archId}', '${tierId}', 'armor', ${cost}, '${slot}')">💰 ${displayCost}</button>
                     `;
           container.appendChild(row);
         });
@@ -3797,37 +3960,94 @@ function updateGymUI() {
 function updateForgeUI() {
   const container = document.getElementById("forge-inventory-list");
   container.innerHTML = "";
-  Progression.prog.equipmentInventory.forEach((item, i) => {
+  const createForgeRow = (item, sourceData) => {
     const cost = 50;
+    const displayCost = cost.toFixed(2).replace(/\.00$/, "");
     const canAwaken = item.level >= 10 || item.material === "gold" || item.material === "mythril";
     const row = document.createElement("div");
     row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+    const affixLabel = t("label_affixes");
+    const noAffixLabel = t("label_no_affixes");
+    let subText = item.affixes ? affixLabel + ": " + item.affixes.join(", ") : noAffixLabel;
+    if (sourceData.heroName) subText = `[${sourceData.heroName}] ${subText}`;
+    const upgradeCost = Math.round(100 * Math.pow(1.5, item.level || 0));
+    const canUpgrade = Progression.prog.gold >= upgradeCost;
+    const btnText = canAwaken ? `🔮 ${displayCost}` : `🔮 ${displayCost} (${t("label_lvl_req").replace("{lvl}", "10")})`;
     row.innerHTML = `
-            <div>
-                <div style="font-weight:bold;">${item.name} (Lvl ${item.level || 0})</div>
-                <div style="font-size:0.8rem; color:#aaa;">${item.affixes ? "Affixes: " + item.affixes.join(", ") : "No Affixes"}</div>
+            <div style="flex: 1;">
+                <div style="font-weight:bold; color: white;">${formatEquipmentName(item)} ${item.level > 0 ? "(Lvl " + item.level + ")" : ""}</div>
+                <div style="font-size:0.8rem; color:#aaa;">${subText}</div>
             </div>
-            <button class="menu-btn ${canAwaken ? "primary" : "secondary"}" style="padding: 8px 15px;" ${canAwaken ? "" : "disabled"} onclick="window.awakenItem(${i}, ${cost})">🔮 ${cost}</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="menu-btn ${canUpgrade ? "primary" : "secondary"}" style="padding: 8px 12px; font-size: 0.75rem;" ${canUpgrade ? "" : "disabled"} onclick='window.levelUpItem(${JSON.stringify(sourceData)}, ${upgradeCost})'>⬆️ ${upgradeCost}G</button>
+                <button class="menu-btn ${canAwaken ? "primary" : "secondary"}" style="padding: 8px 12px; font-size: 0.75rem;" ${canAwaken ? "" : "disabled"} onclick='window.awakenItem(${JSON.stringify(sourceData)}, ${cost})'>${btnText}</button>
+            </div>
         `;
     container.appendChild(row);
+  };
+  Progression.prog.equipmentInventory.forEach((item, i) => {
+    createForgeRow(item, { type: "inventory", index: i });
+  });
+  Progression.prog.heroes.forEach((hero, hIdx) => {
+    Object.entries(hero.equipment).forEach(([slot, item]) => {
+      if (item) {
+        createForgeRow(item, { type: "equipped", heroIndex: hIdx, slot, heroName: hero.name });
+      }
+    });
   });
 }
-window.awakenItem = (idx, cost) => {
+window.awakenItem = (source, cost) => {
   if (Progression.cores >= cost) {
     if (confirm(t("confirm_awaken").replace("{cost}", cost))) {
+      let item;
+      if (source.type === "inventory") {
+        item = Progression.prog.equipmentInventory[source.index];
+      } else {
+        item = Progression.prog.heroes[source.heroIndex].equipment[source.slot];
+      }
+      if (!item) return;
       Progression.spendCores(cost);
-      const item = Progression.prog.equipmentInventory[idx];
       if (!item.affixes) item.affixes = [];
       const affix = AFFIXES[Math.floor(Math.random() * AFFIXES.length)];
       item.affixes.push(affix);
-      item.name += ` of the ${affix.charAt(0).toUpperCase() + affix.slice(1)}`;
+      if (source.type === "equipped") {
+        const heroData = Progression.prog.heroes[source.heroIndex];
+        const heroObj = new Hero(heroData);
+        heroObj.recalculateStats();
+        Progression.prog.heroes[source.heroIndex] = heroObj.toJSON();
+      }
       Progression.saveState();
-      alert(t("awakened_msg").replace("{name}", item.name));
+      window.showToast(t("awakened_msg").replace("{name}", formatEquipmentName(item)));
       updateForgeUI();
       updateVillageUI();
     }
   } else {
-    alert(t("not_enough_cores"));
+    window.showToast(t("not_enough_cores"));
+  }
+};
+window.levelUpItem = (source, cost) => {
+  if (Progression.prog.gold >= cost) {
+    let item;
+    if (source.type === "inventory") {
+      item = Progression.prog.equipmentInventory[source.index];
+    } else {
+      item = Progression.prog.heroes[source.heroIndex].equipment[source.slot];
+    }
+    if (!item) return;
+    Progression.spendGold(cost);
+    item.level = (item.level || 0) + 1;
+    if (source.type === "equipped") {
+      const heroData = Progression.prog.heroes[source.heroIndex];
+      const heroObj = new Hero(heroData);
+      heroObj.recalculateStats();
+      Progression.prog.heroes[source.heroIndex] = heroObj.toJSON();
+    }
+    Progression.saveState();
+    window.showToast(t("learned"));
+    updateForgeUI();
+    updateVillageUI();
+  } else {
+    window.showToast(t("not_enough_gold"));
   }
 };
 window.startTraining = (heroIndex, regimeId) => {
@@ -3887,17 +4107,17 @@ window.claimTraining = (heroIndex) => {
 window.buyEquipment = (id, tier, type, cost, slot = null) => {
   if (Progression.prog.gold >= cost) {
     Progression.spendGold(cost);
-    const item = { type, material: tier, level: 0, name: formatEquipmentName(tier, id, slot) };
+    const item = { type, material: tier, level: 0 };
     if (type === "weapon") item.family = id;
     else {
       item.archetype = id;
       item.slot = slot;
     }
     Progression.addEquipment(item);
-    alert(t("learned") + "!");
+    window.showToast(t("learned") + "!");
     updateVillageUI();
   } else {
-    alert(t("not_enough_gold"));
+    window.showToast(t("not_enough_gold"));
   }
 };
 window.recruitHero = (cost) => {
@@ -3941,8 +4161,10 @@ window.showHeroDetails = (index) => {
     const row = document.createElement("div");
     row.style = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px;";
     const canUpgrade = heroData.statPoints > 0;
+    const bonus = st.val - (heroData[st.id] || 0);
+    const bonusText = bonus > 0 ? ` <span style="font-size:0.85rem; color:var(--primary); font-style:italic;">(+${bonus.toFixed(0)})</span>` : "";
     row.innerHTML = `
-            <div><span style="font-weight:bold; color: #aaa;">${st.label}:</span> <span style="font-size:1.1rem; color:white;">${st.val}</span></div>
+            <div><span style="font-weight:bold; color: #aaa;">${st.label}:</span> <span style="font-size:1.1rem; color:white;">${st.val}${bonusText}</span></div>
             <button class="menu-btn ${canUpgrade ? "primary" : "secondary"}" style="padding: 5px 15px; width: 40px;" ${canUpgrade ? "" : "disabled"} onclick="window.increaseStat(${index}, '${st.id}')">+</button>
         `;
     statsContainer.appendChild(row);
@@ -3966,7 +4188,7 @@ window.showHeroDetails = (index) => {
   const totalHeroes = Progression.prog.heroes.length;
   if (totalHeroes === 1) {
     fireBtn = `<button class="menu-btn primary" 
-                    style="padding: 10px 20px; font-size: 0.9rem; border-color: var(--primary); color: var(--primary);" 
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: var(--primary);" 
                     onclick="window.switchHero(${index})">
                 ${t("btn_switch_hero")}
             </button>`;
@@ -4030,7 +4252,7 @@ window.showHeroEquip = (index) => {
     row.innerHTML = `
             <div style="display: flex; flex-direction: column;">
                 <div style="font-weight: bold; color: #aaa; font-size: 0.8rem;">${slot.name}</div>
-                <div style="color: white; font-size: 1.1rem;">${item ? item.name : "---"}</div>
+                <div style="color: white; font-size: 1.1rem;">${item ? formatEquipmentName(item) : "---"}</div>
             </div>
             <div style="color: #666; font-size: 0.8rem; font-style: italic;">${t("tap_to_manage")}</div>
         `;
@@ -4063,7 +4285,7 @@ window.manageSlot = (heroIndex, slotId) => {
     if (canEquip) {
       itemsHTML += `
                 <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>${item.name} (Lvl ${item.level || 0})</div>
+                    <div>${formatEquipmentName(item)} (Lvl ${item.level || 0})</div>
                     <button class="menu-btn primary" style="padding: 5px 15px;" onclick="window.doEquip(${heroIndex}, '${slotId}', ${idx})">${t("btn_equip")}</button>
                 </div>
             `;
@@ -4122,7 +4344,7 @@ window.fireHero = (index) => {
   const heroData = Progression.prog.heroes[index];
   if (!heroData) return;
   if (Progression.prog.heroes.length <= 1) {
-    alert(t("fire_limit_msg"));
+    window.showToast(t("fire_limit_msg"));
     return;
   }
   if (confirm(t("confirm_fire").replace("{hero}", heroData.name))) {
@@ -4250,7 +4472,7 @@ window.buyBuilding = (type) => {
       Progression.saveState();
       updateVillageUI();
       updateCoresUI();
-      alert("Debug bonuses applied! Cores, Gold, and Hero XP updated.");
+      window.showToast(t("debug_applied"));
     }
     return;
   }
@@ -4286,13 +4508,13 @@ window.clearGameData = () => {
   }
 };
 window.toggleAutoBattle = (checked) => {
-  localStorage.setItem("rpg_autobattle", checked ? "true" : "false");
-  if (game) {
-    game.autoBattle = checked;
-    if (checked && game.currentCombat && !game.currentCombat.isCombatOver) {
-      const participant = game.currentCombat.turnOrder[game.currentCombat.currentTurnIndex];
-      if (participant && game.heroes.includes(participant)) {
-        game.currentCombat.heroAutoTurn(participant);
+  Progression.setAutoBattle(checked);
+  if (window.game) {
+    window.game.autoBattle = checked;
+    if (checked && window.game.currentCombat && !window.game.currentCombat.isCombatOver) {
+      const participant = window.game.currentCombat.turnOrder[window.game.currentCombat.currentTurnIndex];
+      if (participant && window.game.heroes.includes(participant)) {
+        window.game.currentCombat.heroAutoTurn(participant);
       }
     }
   }
@@ -4332,10 +4554,10 @@ window.importData = (event) => {
         alert(t("wipe_success") || "Data imported successfully!");
         location.reload();
       } else {
-        alert("Invalid save file structure.");
+        window.showToast(t("err_invalid_save"));
       }
     } catch (err) {
-      alert("Error parsing file.");
+      window.showToast(t("err_parse_file"));
     }
   };
   r.readAsText(event.target.files[0]);
@@ -4376,6 +4598,45 @@ window.awakenItem = awakenItem;
 window.startTraining = startTraining;
 window.cancelTraining = cancelTraining;
 window.claimTraining = claimTraining;
+window.showToast = function(msg, duration = 3e3) {
+  const toast = document.createElement("div");
+  toast.style = `
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.85); color: white; padding: 10px 20px;
+        border: 1px solid var(--primary); border-radius: 5px; z-index: 9999;
+        font-size: 0.9rem; pointer-events: none; transition: opacity 0.3s;
+    `;
+  toast.innerText = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+};
+window.showResultModal = function(title, msg, onConfirm) {
+  const overlay = document.createElement("div");
+  overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+        z-index: 3000; padding: 20px; box-sizing: border-box;
+    `;
+  const content = document.createElement("div");
+  content.style = `
+        background: #111; border: 2px solid var(--primary); border-radius: 12px;
+        padding: 30px; max-width: 500px; width: 100%; text-align: center;
+    `;
+  content.innerHTML = `
+        <h2 style="color: var(--primary); margin-top: 0;">${title}</h2>
+        <p style="color: white; font-size: 1.1rem; line-height: 1.6; margin: 20px 0;">${msg}</p>
+        <button class="menu-btn primary" style="padding: 15px; width: 100%;">${t("btn_continue")}</button>
+    `;
+  overlay.appendChild(content);
+  document.body.appendChild(overlay);
+  content.querySelector("button").onclick = () => {
+    overlay.remove();
+    if (onConfirm) onConfirm();
+  };
+};
 function escapeHTML(str) {
   if (!str) return "";
   return str.replace(/[&<>"']/g, function(m) {

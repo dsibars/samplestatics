@@ -79,16 +79,16 @@ export class CombatManager {
                 if (eff.type === 'poison') {
                     const dmg = Math.floor(participant.maxHp * eff.power);
                     this.applyDamage(participant, dmg);
-                    this.game.log(`${participant.name} is poisoned! (-${dmg} HP)`);
+                    this.game.log(t('log_status_poison').replace('{target}', participant.name).replace('{damage}', dmg), '#f0f');
                 } else if (eff.type === 'burn') {
                     const dmg = Math.floor(participant.maxHp * eff.power);
                     this.applyDamage(participant, dmg);
-                    this.game.log(`${participant.name} is burning! (-${dmg} HP)`);
+                    this.game.log(t('log_status_burn').replace('{target}', participant.name).replace('{damage}', dmg), '#f50');
                 } else if (eff.type === 'sleep') {
-                    this.game.log(`${participant.name} is asleep...`);
+                    this.game.log(t('log_status_sleep').replace('{target}', participant.name), '#aaa');
                     skipTurn = true;
                 } else if (eff.type === 'stun') {
-                    this.game.log(`${participant.name} is stunned!`);
+                    this.game.log(t('log_status_stun').replace('{target}', participant.name), '#ff0');
                     skipTurn = true;
                 }
 
@@ -115,7 +115,7 @@ export class CombatManager {
             if (regenAmount > 0) {
                 participant.hp = Math.min(participant.maxHp, participant.hp + regenAmount);
                 if (this.game.onHeal) this.game.onHeal(participant, regenAmount);
-                this.game.log(t('log_heals').replace('{attacker}', t('origin_cook')).replace('{target}', participant.name).replace('{amount}', regenAmount));
+                this.game.log(t('log_heals').replace('{attacker}', t('origin_cook')).replace('{target}', participant.name).replace('{amount}', regenAmount), '#0f0');
             }
         }
 
@@ -186,8 +186,8 @@ export class CombatManager {
         if (roundedAmount >= target.hp && target.hasPhoenix && !target.phoenixUsed) {
             target.hp = 1;
             target.phoenixUsed = true;
-            this.game.log(`✨ ${target.name} survives with 1 HP! (Phoenix)`);
-            if (this.game.onHeal) this.game.onHeal(target, "REVIVE");
+            this.game.log(t('log_phoenix_survive').replace('{target}', target.name), '#0ff');
+            if (this.game.onHeal) this.game.onHeal(target, 1);
             return;
         }
 
@@ -198,7 +198,7 @@ export class CombatManager {
             const sleepIdx = target.statusEffects.findIndex(e => e.type === 'sleep');
             if (sleepIdx > -1) {
                 target.statusEffects.splice(sleepIdx, 1);
-                this.game.log(`${target.name} woke up!`);
+                this.game.log(t('log_status_wakeup').replace('{target}', target.name), '#ff0');
                 if (target.recalculateStats) target.recalculateStats();
             }
         }
@@ -215,7 +215,7 @@ export class CombatManager {
         this.targetIndex = idx;
         const target = this.enemies[idx];
         if (target) {
-            this.game.log(`Target set to ${target.name}`);
+            this.game.log(t('log_target_set').replace('{target}', target.name), '#0af');
         }
     }
 
@@ -298,12 +298,12 @@ export class CombatManager {
                 if (skillData.category === 'support') {
                     if (skillId === 'haste') {
                         this.applyStatusEffect(target, { type: 'haste', duration: 3 });
-                        this.game.log(`${actor.name} uses Haste on ${target.name}!`);
+                        this.game.log(t('log_uses_skill').replace('{attacker}', actor.name).replace('{skill}', t('haste')) + ` (${t('select_target')}: ${target.name})`, '#0ff');
                     } else {
                         const healAmount = Math.floor(target.maxHp * result.amount * mult);
                         target.hp = Math.min(target.maxHp, target.hp + healAmount);
                         if (this.game.onHeal) this.game.onHeal(target, healAmount);
-                        this.game.log(t('log_heals').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{amount}', healAmount));
+                        this.game.log(t('log_heals').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{amount}', healAmount), '#0f0');
                     }
                 } else {
                     const finalDamage = Math.max(1, Math.floor(result.amount * mult));
@@ -343,9 +343,9 @@ export class CombatManager {
                     }
 
                     if (skillId === 'basic_attack' || skillId === 'double_attack' || skillId === 'triple_attack') {
-                        this.game.log(feedback + t('log_attack').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{damage}', finalDamage));
+                        this.game.log(feedback + t('log_attack').replace('{attacker}', actor.name).replace('{target}', target.name).replace('{damage}', finalDamage), isActorHero ? null : '#f77');
                     } else {
-                        this.game.log(feedback + t('log_uses_skill').replace('{attacker}', actor.name).replace('{skill}', t(skillId)) + ` (Target: ${target.name})`);
+                        this.game.log(feedback + t('log_uses_skill').replace('{attacker}', actor.name).replace('{skill}', t(skillId)) + ` (${t('available_label').replace(':','').trim()} ${t('select_target')}: ${target.name})`, isActorHero ? '#0ff' : '#f77');
                     }
 
                     if (!isActorHero) {
@@ -367,7 +367,7 @@ export class CombatManager {
             target.statusEffects.push(effect);
         }
         if (target.recalculateStats) target.recalculateStats();
-        this.game.log(`${target.name} is affected by ${effect.type}!`);
+        this.game.log(t('log_status_affect').replace('{target}', target.name).replace('{type}', t(effect.type)), '#ff0');
     }
 
     useItem(hero, itemId) {

@@ -59,14 +59,16 @@ function updateCoresUI() {
 
 window.startAdventure = () => {
     if (Progression.prog.heroes.length === 0) {
-        alert('Recruit at least one hero in the village first!');
+        window.showToast(t('err_no_hero_village'));
         window.showVillage();
         return;
     }
     const allLvl1 = Progression.prog.heroes.every(h => h.level === 1);
     if (Progression.prog.milestone > 1 && allLvl1) {
-        alert(t('greedy_reset_msg'));
-        Progression.resetMilestone();
+        window.showResultModal(t('milestone'), t('greedy_reset_msg'), () => {
+            Progression.resetMilestone();
+        });
+        return;
     }
     
     showView('view-game');
@@ -92,7 +94,7 @@ window.nextCombat = () => {
 
 window.showVillage = () => {
     if (Progression.checkFreeHero()) {
-        alert(t('free_hero_welcome') || "Hello adventurer! I have a present for you!");
+        window.showResultModal(t('tavern_title'), t('free_hero_welcome'), () => {});
         const currentNames = Progression.prog.heroes.map(h => h.name);
         Progression.addHero(Hero.generateRandom(1, currentNames).toJSON());
     }
@@ -119,8 +121,8 @@ window.switchVillageTab = (tab) => {
 };
 
 function updateVillageResourcesUI() {
-    document.getElementById('village-gold-val').innerText = Progression.prog.gold;
-    document.getElementById('village-cores-val').innerText = Progression.cores;
+    document.getElementById('village-gold-val').innerText = Progression.prog.gold.toFixed(2).replace(/\.00$/, '');
+    document.getElementById('village-cores-val').innerText = Progression.cores.toFixed(2).replace(/\.00$/, '');
 }
 
 function updateTavernUI() {
@@ -145,10 +147,11 @@ function updateTavernUI() {
     if (Progression.prog.heroes.length < Progression.getMaxRosterSize()) {
         const recruitCard = document.createElement('div');
         const cost = 500;
+        const displayCost = cost.toFixed(2).replace(/\.00$/, '');
         recruitCard.style = 'background: rgba(0,242,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px;';
         recruitCard.innerHTML = `
             <div style="font-weight:bold; color:var(--primary);">${t('recruit_new')}</div>
-            <div style="margin: 5px 0;">💰 ${cost}</div>
+            <div style="margin: 5px 0;">💰 ${displayCost}</div>
             <button class="menu-btn primary" style="padding: 5px 15px; font-size:0.8rem;" onclick="window.recruitHero(${cost})">${t('btn_recruit')}</button>
         `;
         tavernList.appendChild(recruitCard);
@@ -172,7 +175,7 @@ function updateShopUI() {
                 <div style="font-weight:bold;">${t(item.id)}</div>
                 <div style="font-size:0.8rem; color:#aaa;">${t('owned')}: ${Progression.prog.inventory[item.id] || 0}</div>
             </div>
-            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyItem('${item.id}', ${item.cost})">💰 ${item.cost}</button>
+            <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyItem('${item.id}', ${item.cost})">💰 ${item.cost.toFixed(2).replace(/\.00$/, '')}</button>
         `;
         shopList.appendChild(itemRow);
     });
@@ -206,12 +209,13 @@ function updateUpgradesUI() {
         
         const label = extra;
 
+        const displayCost = cost.toFixed(2).replace(/\.00$/, '');
         upgradeRow.innerHTML = `
             <div>
                 <div style="font-weight:bold;">${b.title}</div>
                 <div style="font-size:0.8rem; color:#aaa;">${t('level_label')}: ${level}${isMax ? ' [MAX]' : label}</div>
             </div>
-            ${isMax ? '<span style="color:#888;">MAX</span>' : `<button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyBuilding('${b.id}')">🔮 ${cost}</button>`}
+            ${isMax ? '<span style="color:#888;">MAX</span>' : `<button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyBuilding('${b.id}')">🔮 ${displayCost}</button>`}
         `;
         upgradeList.appendChild(upgradeRow);
     });
@@ -248,15 +252,16 @@ function updateWeaponShopUI() {
             const tier = MATERIAL_TIERS[tierId];
             if (tier.levelReq <= shopLvl) {
                 const cost = 100 * tier.mult;
+                const displayCost = cost.toFixed(2).replace(/\.00$/, '');
                 const row = document.createElement('div');
-                row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;';
+                row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px; border-left: 4px solid var(--primary);';
                 row.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold;">${formatEquipmentName(tierId, familyId)}</div>
-                        <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
-                        <div style="font-size:0.75rem; color:#888; margin-top:4px; font-style:italic;">${t(familyId + '_desc')}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight:bold; color: white; font-size: 1.1rem;">${formatEquipmentName({type: 'weapon', material: tierId, family: familyId})}</div>
+                        <div style="font-size:0.8rem; color:var(--primary); margin-bottom: 5px;">Tier ${tier.levelReq}</div>
+                        <div style="font-size:0.85rem; color:#ccc; line-height: 1.4;">${t(familyId + '_desc')}</div>
                     </div>
-                    <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${familyId}', '${tierId}', 'weapon', ${cost})">💰 ${cost}</button>
+                    <button class="menu-btn primary" style="padding: 12px 20px; min-width: 100px;" onclick="window.buyEquipment('${familyId}', '${tierId}', 'weapon', ${cost})">💰 ${displayCost}</button>
                 `;
                 container.appendChild(row);
             }
@@ -276,15 +281,16 @@ function updateArmorShopUI() {
                 const slots = ['head', 'body', 'legs'];
                 slots.forEach(slot => {
                     const cost = 80 * tier.mult;
+                    const displayCost = cost.toFixed(2).replace(/\.00$/, '');
                     const row = document.createElement('div');
-                    row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;';
+                    row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px; border-left: 4px solid #0fa;';
                     row.innerHTML = `
-                        <div>
-                            <div style="font-weight:bold;">${formatEquipmentName(tierId, archId, slot)}</div>
-                            <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
-                            <div style="font-size:0.75rem; color:#888; margin-top:4px; font-style:italic;">${t(archId + '_desc')}</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight:bold; color: white; font-size: 1.1rem;">${formatEquipmentName({type: 'armor', material: tierId, archetype: archId, slot: slot})}</div>
+                            <div style="font-size:0.8rem; color:#0fa; margin-bottom: 5px;">Tier ${tier.levelReq}</div>
+                            <div style="font-size:0.85rem; color:#ccc; line-height: 1.4;">${t(archId + '_desc')}</div>
                         </div>
-                        <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${archId}', '${tierId}', 'armor', ${cost}, '${slot}')">💰 ${cost}</button>
+                        <button class="menu-btn primary" style="padding: 12px 20px; min-width: 100px;" onclick="window.buyEquipment('${archId}', '${tierId}', 'armor', ${cost}, '${slot}')">💰 ${displayCost}</button>
                     `;
                     container.appendChild(row);
                 });
@@ -371,39 +377,113 @@ function updateForgeUI() {
     const container = document.getElementById('forge-inventory-list');
     container.innerHTML = '';
 
-    Progression.prog.equipmentInventory.forEach((item, i) => {
+    const createForgeRow = (item, sourceData) => {
         const cost = 50;
+        const displayCost = cost.toFixed(2).replace(/\.00$/, '');
         const canAwaken = (item.level >= 10 || item.material === 'gold' || item.material === 'mythril');
-
         const row = document.createElement('div');
         row.style = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;';
+        
+        const affixLabel = t('label_affixes');
+        const noAffixLabel = t('label_no_affixes');
+        let subText = item.affixes ? affixLabel + ': ' + item.affixes.join(', ') : noAffixLabel;
+        if (sourceData.heroName) subText = `[${sourceData.heroName}] ${subText}`;
+
+        const upgradeCost = Math.round(100 * Math.pow(1.5, item.level || 0));
+        const canUpgrade = Progression.prog.gold >= upgradeCost;
+        const btnText = canAwaken ? `🔮 ${displayCost}` : `🔮 ${displayCost} (${t('label_lvl_req').replace('{lvl}', '10')})`;
+
         row.innerHTML = `
-            <div>
-                <div style="font-weight:bold;">${item.name} (Lvl ${item.level || 0})</div>
-                <div style="font-size:0.8rem; color:#aaa;">${item.affixes ? 'Affixes: ' + item.affixes.join(', ') : 'No Affixes'}</div>
+            <div style="flex: 1;">
+                <div style="font-weight:bold; color: white;">${formatEquipmentName(item)} ${item.level > 0 ? '(Lvl '+item.level+')' : ''}</div>
+                <div style="font-size:0.8rem; color:#aaa;">${subText}</div>
             </div>
-            <button class="menu-btn ${canAwaken ? 'primary' : 'secondary'}" style="padding: 8px 15px;" ${canAwaken ? '' : 'disabled'} onclick="window.awakenItem(${i}, ${cost})">🔮 ${cost}</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="menu-btn ${canUpgrade ? 'primary' : 'secondary'}" style="padding: 8px 12px; font-size: 0.75rem;" ${canUpgrade ? '' : 'disabled'} onclick='window.levelUpItem(${JSON.stringify(sourceData)}, ${upgradeCost})'>⬆️ ${upgradeCost}G</button>
+                <button class="menu-btn ${canAwaken ? 'primary' : 'secondary'}" style="padding: 8px 12px; font-size: 0.75rem;" ${canAwaken ? '' : 'disabled'} onclick='window.awakenItem(${JSON.stringify(sourceData)}, ${cost})'>${btnText}</button>
+            </div>
         `;
         container.appendChild(row);
+    };
+
+    // Inventory items
+    Progression.prog.equipmentInventory.forEach((item, i) => {
+        createForgeRow(item, { type: 'inventory', index: i });
+    });
+
+    // Equipped items
+    Progression.prog.heroes.forEach((hero, hIdx) => {
+        Object.entries(hero.equipment).forEach(([slot, item]) => {
+            if (item) {
+                createForgeRow(item, { type: 'equipped', heroIndex: hIdx, slot: slot, heroName: hero.name });
+            }
+        });
     });
 }
 
-window.awakenItem = (idx, cost) => {
+window.awakenItem = (source, cost) => {
     if (Progression.cores >= cost) {
         if (confirm(t("confirm_awaken").replace("{cost}", cost))) {
+            let item;
+            if (source.type === 'inventory') {
+                item = Progression.prog.equipmentInventory[source.index];
+            } else {
+                item = Progression.prog.heroes[source.heroIndex].equipment[source.slot];
+            }
+
+            if (!item) return;
+
             Progression.spendCores(cost);
-            const item = Progression.prog.equipmentInventory[idx];
             if (!item.affixes) item.affixes = [];
             const affix = AFFIXES[Math.floor(Math.random() * AFFIXES.length)];
             item.affixes.push(affix);
-            item.name += ` of the ${affix.charAt(0).toUpperCase() + affix.slice(1)}`;
+
+            if (source.type === 'equipped') {
+                // If equipped, we need to make sure the stats recalculate for that hero
+                const heroData = Progression.prog.heroes[source.heroIndex];
+                const heroObj = new Hero(heroData);
+                heroObj.recalculateStats();
+                Progression.prog.heroes[source.heroIndex] = heroObj.toJSON();
+            }
+
             Progression.saveState();
-            alert(t("awakened_msg").replace("{name}", item.name));
+            window.showToast(t("awakened_msg").replace("{name}", formatEquipmentName(item)));
             updateForgeUI();
             updateVillageUI();
         }
     } else {
-        alert(t('not_enough_cores'));
+        window.showToast(t('not_enough_cores'));
+    }
+};
+
+window.levelUpItem = (source, cost) => {
+    if (Progression.prog.gold >= cost) {
+        let item;
+        if (source.type === 'inventory') {
+            item = Progression.prog.equipmentInventory[source.index];
+        } else {
+            item = Progression.prog.heroes[source.heroIndex].equipment[source.slot];
+        }
+
+        if (!item) return;
+
+        Progression.spendGold(cost);
+        item.level = (item.level || 0) + 1;
+
+        if (source.type === 'equipped') {
+            const heroData = Progression.prog.heroes[source.heroIndex];
+            const heroObj = new Hero(heroData);
+            heroObj.recalculateStats();
+            // Apply back to state
+            Progression.prog.heroes[source.heroIndex] = heroObj.toJSON();
+        }
+
+        Progression.saveState();
+        window.showToast(t('learned')); // "Aprendido" or "Completo" for level up feedback
+        updateForgeUI();
+        updateVillageUI();
+    } else {
+        window.showToast(t('not_enough_gold'));
     }
 };
 
@@ -469,17 +549,17 @@ window.claimTraining = (heroIndex) => {
 window.buyEquipment = (id, tier, type, cost, slot = null) => {
     if (Progression.prog.gold >= cost) {
         Progression.spendGold(cost);
-        const item = { type, material: tier, level: 0, name: formatEquipmentName(tier, id, slot) };
+        const item = { type, material: tier, level: 0 };
         if (type === 'weapon') item.family = id;
         else {
             item.archetype = id;
             item.slot = slot;
         }
         Progression.addEquipment(item);
-        alert(t('learned') + "!");
+        window.showToast(t('learned') + "!");
         updateVillageUI();
     } else {
-        alert(t('not_enough_gold'));
+        window.showToast(t('not_enough_gold'));
     }
 };
 
@@ -532,8 +612,12 @@ window.showHeroDetails = (index) => {
         const row = document.createElement('div');
         row.style = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px;';
         const canUpgrade = heroData.statPoints > 0;
+        
+        const bonus = st.val - (heroData[st.id] || 0);
+        const bonusText = bonus > 0 ? ` <span style="font-size:0.85rem; color:var(--primary); font-style:italic;">(+${bonus.toFixed(0)})</span>` : '';
+
         row.innerHTML = `
-            <div><span style="font-weight:bold; color: #aaa;">${st.label}:</span> <span style="font-size:1.1rem; color:white;">${st.val}</span></div>
+            <div><span style="font-weight:bold; color: #aaa;">${st.label}:</span> <span style="font-size:1.1rem; color:white;">${st.val}${bonusText}</span></div>
             <button class="menu-btn ${canUpgrade ? 'primary' : 'secondary'}" style="padding: 5px 15px; width: 40px;" ${canUpgrade ? '' : 'disabled'} onclick="window.increaseStat(${index}, '${st.id}')">+</button>
         `;
         statsContainer.appendChild(row);
@@ -563,7 +647,7 @@ window.showHeroDetails = (index) => {
 
     if (totalHeroes === 1) {
         fireBtn = `<button class="menu-btn primary" 
-                    style="padding: 10px 20px; font-size: 0.9rem; border-color: var(--primary); color: var(--primary);" 
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: var(--primary);" 
                     onclick="window.switchHero(${index})">
                 ${t('btn_switch_hero')}
             </button>`;
@@ -640,7 +724,7 @@ window.showHeroEquip = (index) => {
         row.innerHTML = `
             <div style="display: flex; flex-direction: column;">
                 <div style="font-weight: bold; color: #aaa; font-size: 0.8rem;">${slot.name}</div>
-                <div style="color: white; font-size: 1.1rem;">${item ? item.name : '---'}</div>
+                <div style="color: white; font-size: 1.1rem;">${item ? formatEquipmentName(item) : '---'}</div>
             </div>
             <div style="color: #666; font-size: 0.8rem; font-style: italic;">${t('tap_to_manage')}</div>
         `;
@@ -680,7 +764,7 @@ window.manageSlot = (heroIndex, slotId) => {
         if (canEquip) {
             itemsHTML += `
                 <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>${item.name} (Lvl ${item.level || 0})</div>
+                    <div>${formatEquipmentName(item)} (Lvl ${item.level || 0})</div>
                     <button class="menu-btn primary" style="padding: 5px 15px;" onclick="window.doEquip(${heroIndex}, '${slotId}', ${idx})">${t("btn_equip")}</button>
                 </div>
             `;
@@ -749,7 +833,7 @@ window.fireHero = (index) => {
     if (!heroData) return;
 
     if (Progression.prog.heroes.length <= 1) {
-        alert(t('fire_limit_msg'));
+        window.showToast(t('fire_limit_msg'));
         return;
     }
 
@@ -898,7 +982,7 @@ window.buyBuilding = (type) => {
             Progression.saveState();
             updateVillageUI();
             updateCoresUI();
-            alert("Debug bonuses applied! Cores, Gold, and Hero XP updated.");
+            window.showToast(t('debug_applied'));
         }
         return;
     }
@@ -941,13 +1025,13 @@ window.clearGameData = () => {
 };
 
 window.toggleAutoBattle = (checked) => {
-    localStorage.setItem('rpg_autobattle', checked ? 'true' : 'false');
-    if (game) {
-        game.autoBattle = checked;
-        if (checked && game.currentCombat && !game.currentCombat.isCombatOver) {
-            const participant = game.currentCombat.turnOrder[game.currentCombat.currentTurnIndex];
-            if (participant && game.heroes.includes(participant)) {
-                game.currentCombat.heroAutoTurn(participant);
+    Progression.setAutoBattle(checked);
+    if (window.game) {
+        window.game.autoBattle = checked;
+        if (checked && window.game.currentCombat && !window.game.currentCombat.isCombatOver) {
+            const participant = window.game.currentCombat.turnOrder[window.game.currentCombat.currentTurnIndex];
+            if (participant && window.game.heroes.includes(participant)) {
+                window.game.currentCombat.heroAutoTurn(participant);
             }
         }
     }
@@ -990,10 +1074,10 @@ window.importData = (event) => {
                 alert(t('wipe_success') || 'Data imported successfully!');
                 location.reload();
             } else {
-                alert("Invalid save file structure.");
+                window.showToast(t('err_invalid_save'));
             }
         } catch (err) {
-            alert("Error parsing file.");
+            window.showToast(t('err_parse_file'));
         }
     };
     r.readAsText(event.target.files[0]);
@@ -1038,6 +1122,47 @@ window.awakenItem = awakenItem;
 window.startTraining = startTraining;
 window.cancelTraining = cancelTraining;
 window.claimTraining = claimTraining;
+
+window.showToast = function(msg, duration = 3000) {
+    const toast = document.createElement('div');
+    toast.style = `
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.85); color: white; padding: 10px 20px;
+        border: 1px solid var(--primary); border-radius: 5px; z-index: 9999;
+        font-size: 0.9rem; pointer-events: none; transition: opacity 0.3s;
+    `;
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+};
+
+window.showResultModal = function(title, msg, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+        z-index: 3000; padding: 20px; box-sizing: border-box;
+    `;
+    const content = document.createElement('div');
+    content.style = `
+        background: #111; border: 2px solid var(--primary); border-radius: 12px;
+        padding: 30px; max-width: 500px; width: 100%; text-align: center;
+    `;
+    content.innerHTML = `
+        <h2 style="color: var(--primary); margin-top: 0;">${title}</h2>
+        <p style="color: white; font-size: 1.1rem; line-height: 1.6; margin: 20px 0;">${msg}</p>
+        <button class="menu-btn primary" style="padding: 15px; width: 100%;">${t('btn_continue')}</button>
+    `;
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+    content.querySelector('button').onclick = () => {
+        overlay.remove();
+        if (onConfirm) onConfirm();
+    };
+};
 
 function escapeHTML(str) {
     if (!str) return '';
