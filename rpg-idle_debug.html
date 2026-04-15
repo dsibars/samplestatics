@@ -49,32 +49,40 @@ class ProgressionManager {
   constructor() {
     this.coreKey = "rpg_cores";
     this.progKey = "rpg_progression";
+    this.versionKey = "rpg_data_version";
+    this.currentVersion = "2025-04-15-v1";
     this.loadState();
   }
   loadState() {
+    const savedVersion = localStorage.getItem(this.versionKey);
+    if (savedVersion !== this.currentVersion) {
+      console.warn("RPG Idle: Version mismatch, autowiping data.");
+      localStorage.removeItem(this.coreKey);
+      localStorage.removeItem(this.progKey);
+      localStorage.setItem(this.versionKey, this.currentVersion);
+    }
     this.cores = parseInt(localStorage.getItem(this.coreKey)) || 0;
     const defaultProg = {
+      version: this.currentVersion,
       heroes: [],
       activeHeroIndices: [],
-      // Indices of active heroes in the roster
       village: {
         rosterSizeLevel: 0,
-        // Max heroes = 4 + Level (Max 8)
         partySizeLevel: 0,
-        // Max party = 1 + Level (Max 4)
         gymLevel: 0,
-        // % XP for passive heroes (Max 50)
         weaponShopLevel: 0,
         armorShopLevel: 0,
         debugLevel: 0
       },
       milestone: 0,
       gold: 0,
-      // Player starts with 0 money
       inventory: {
         tiny_potion: 0,
         tiny_mana_potion: 0
-      }
+      },
+      equipmentInventory: [],
+      trainingSessions: {}
+      // { heroIndex: { startTime, regimeId } }
     };
     try {
       const saved = JSON.parse(localStorage.getItem(this.progKey));
@@ -84,12 +92,16 @@ class ProgressionManager {
           this.prog.village = {
             rosterSizeLevel: 0,
             partySizeLevel: 0,
-            gymLevel: 0
+            gymLevel: 0,
+            weaponShopLevel: 0,
+            armorShopLevel: 0
           };
         }
         if (!Array.isArray(this.prog.activeHeroIndices)) {
           this.prog.activeHeroIndices = this.prog.heroes.length > 0 ? [0] : [];
         }
+        if (!this.prog.equipmentInventory) this.prog.equipmentInventory = [];
+        if (!this.prog.trainingSessions) this.prog.trainingSessions = {};
         if (this.prog.heroes) {
           this.prog.heroes.forEach((h) => {
             if (h.skills) {
@@ -167,6 +179,7 @@ class ProgressionManager {
     }
   }
   toggleHeroActive(index) {
+    if (this.prog.trainingSessions[index]) return false;
     const activeIdx = this.prog.activeHeroIndices.indexOf(index);
     if (activeIdx > -1) {
       if (this.prog.activeHeroIndices.length > 1) {
@@ -185,6 +198,7 @@ class ProgressionManager {
     }
   }
   swapActiveHero(index) {
+    if (this.prog.trainingSessions[index]) return false;
     if (this.prog.heroes[index]) {
       this.prog.activeHeroIndices = [index];
       this.saveState();
@@ -229,10 +243,25 @@ class ProgressionManager {
   removeHero(index) {
     const isActive = this.prog.activeHeroIndices.includes(index);
     if (isActive) return false;
+    if (this.prog.trainingSessions[index]) return false;
+    const hero = this.prog.heroes[index];
+    if (hero.equipment) {
+      Object.values(hero.equipment).forEach((item) => {
+        if (item) this.prog.equipmentInventory.push(item);
+      });
+    }
     this.prog.heroes.splice(index, 1);
     this.prog.activeHeroIndices = this.prog.activeHeroIndices.map((idx) => {
       return idx > index ? idx - 1 : idx;
     });
+    const newSessions = {};
+    Object.keys(this.prog.trainingSessions).forEach((key) => {
+      const k = parseInt(key);
+      if (k === index) return;
+      const newKey = k > index ? k - 1 : k;
+      newSessions[newKey] = this.prog.trainingSessions[key];
+    });
+    this.prog.trainingSessions = newSessions;
     this.saveState();
     return true;
   }
@@ -248,8 +277,406 @@ class ProgressionManager {
     }
     return false;
   }
+  addEquipment(item) {
+    item.id = Date.now() + Math.random().toString(36).substr(2, 9);
+    this.prog.equipmentInventory.push(item);
+    this.saveState();
+  }
+  equipItem(heroIndex, slot, itemIndex) {
+    const hero = this.prog.heroes[heroIndex];
+    const item = this.prog.equipmentInventory[itemIndex];
+    if (!hero || !item) return false;
+    if (hero.equipment[slot]) {
+      this.prog.equipmentInventory.push(hero.equipment[slot]);
+    }
+    hero.equipment[slot] = item;
+    this.prog.equipmentInventory.splice(itemIndex, 1);
+    this.saveState();
+    return true;
+  }
+  unequipItem(heroIndex, slot) {
+    const hero = this.prog.heroes[heroIndex];
+    if (!hero || !hero.equipment[slot]) return false;
+    this.prog.equipmentInventory.push(hero.equipment[slot]);
+    hero.equipment[slot] = null;
+    this.saveState();
+    return true;
+  }
+  startTraining(heroIndex, regimeId) {
+    if (this.prog.activeHeroIndices.includes(heroIndex)) return false;
+    if (this.prog.trainingSessions[heroIndex]) return false;
+    this.prog.trainingSessions[heroIndex] = {
+      startTime: Date.now(),
+      regimeId
+    };
+    this.saveState();
+    return true;
+  }
+  cancelTraining(heroIndex) {
+    if (this.prog.trainingSessions[heroIndex]) {
+      delete this.prog.trainingSessions[heroIndex];
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+  completeTraining(heroIndex, regimeData) {
+    const session = this.prog.trainingSessions[heroIndex];
+    if (!session) return null;
+    const gymMult = 1 + this.prog.village.gymLevel / 100;
+    const rewards = {
+      exp: Math.floor(regimeData.exp * gymMult),
+      gold: 0,
+      cores: 0,
+      item: null
+    };
+    if (regimeData.goldChance && Math.random() < regimeData.goldChance) {
+      rewards.gold = Math.floor(50 * gymMult);
+    }
+    if (regimeData.coreReward) {
+      rewards.cores = regimeData.coreReward;
+    }
+    if (regimeData.itemChance && Math.random() < regimeData.itemChance) {
+      rewards.item = "tiny_potion";
+    }
+    delete this.prog.trainingSessions[heroIndex];
+    this.saveState();
+    return rewards;
+  }
 }
 const Progression = new ProgressionManager();
+const SKILLS_DATA = {
+  basic_attack: {
+    id: "basic_attack",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 1,
+    mpCost: 0,
+    tier: 1,
+    unlockCost: 0,
+    targetType: "single_enemy"
+  },
+  double_attack: {
+    id: "double_attack",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.7,
+    mpCost: 10,
+    tier: 2,
+    unlockCost: 2,
+    dependency: "basic_attack",
+    targetType: "single_enemy"
+  },
+  triple_attack: {
+    id: "triple_attack",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.6,
+    mpCost: 20,
+    tier: 3,
+    unlockCost: 5,
+    dependency: "double_attack",
+    targetType: "single_enemy"
+  },
+  whirlwind: {
+    id: "whirlwind",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.6,
+    mpCost: 15,
+    tier: 2,
+    unlockCost: 3,
+    dependency: "basic_attack",
+    targetType: "all_enemies"
+  },
+  blade_dance: {
+    id: "blade_dance",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.4,
+    mpCost: 35,
+    tier: 3,
+    unlockCost: 7,
+    dependency: "whirlwind",
+    targetType: "all_enemies"
+  },
+  small_fire_ball: {
+    id: "small_fire_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "fire",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  medium_fire_ball: {
+    id: "medium_fire_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.8,
+    mpCost: 25,
+    element: "fire",
+    tier: 2,
+    unlockCost: 3,
+    dependency: "small_fire_ball",
+    targetType: "single_enemy"
+  },
+  meteor: {
+    id: "meteor",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 2.2,
+    mpCost: 50,
+    element: "fire",
+    tier: 3,
+    unlockCost: 10,
+    dependency: "medium_fire_ball",
+    targetType: "single_enemy",
+    splash: 0.3
+  },
+  small_water_ball: {
+    id: "small_water_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "water",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  blizzard: {
+    id: "blizzard",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1,
+    mpCost: 30,
+    element: "water",
+    tier: 2,
+    unlockCost: 5,
+    dependency: "small_water_ball",
+    targetType: "all_enemies"
+  },
+  tsunami: {
+    id: "tsunami",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.6,
+    mpCost: 60,
+    element: "water",
+    tier: 3,
+    unlockCost: 10,
+    dependency: "blizzard",
+    targetType: "all_enemies"
+  },
+  small_wind_ball: {
+    id: "small_wind_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "wind",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  medium_wind_ball: {
+    id: "medium_wind_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.8,
+    mpCost: 25,
+    element: "wind",
+    tier: 2,
+    unlockCost: 3,
+    dependency: "small_wind_ball",
+    targetType: "single_enemy"
+  },
+  big_wind_ball: {
+    id: "big_wind_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 2.5,
+    mpCost: 45,
+    element: "wind",
+    tier: 3,
+    unlockCost: 8,
+    dependency: "medium_wind_ball",
+    targetType: "single_enemy"
+  },
+  small_storm_ball: {
+    id: "small_storm_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "storm",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  chain_lightning: {
+    id: "chain_lightning",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.5,
+    mpCost: 40,
+    element: "storm",
+    tier: 2,
+    unlockCost: 6,
+    dependency: "small_storm_ball",
+    targetType: "single_enemy",
+    jump: 0.8
+  },
+  big_storm_ball: {
+    id: "big_storm_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 2.5,
+    mpCost: 45,
+    element: "storm",
+    tier: 3,
+    unlockCost: 8,
+    dependency: "chain_lightning",
+    targetType: "single_enemy"
+  },
+  poison_dart: {
+    id: "poison_dart",
+    category: "tricker",
+    stat: "strength",
+    baseMultiplier: 0.8,
+    mpCost: 5,
+    tier: 1,
+    unlockCost: 2,
+    targetType: "single_enemy"
+  },
+  steal: {
+    id: "steal",
+    category: "tricker",
+    stat: "speed",
+    baseMultiplier: 0,
+    mpCost: 10,
+    tier: 2,
+    unlockCost: 4,
+    dependency: "poison_dart",
+    targetType: "single_enemy"
+  },
+  haste: {
+    id: "haste",
+    category: "support",
+    stat: "speed",
+    mpCost: 15,
+    tier: 2,
+    unlockCost: 4,
+    targetType: "single_ally"
+  },
+  small_heal: {
+    id: "small_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.2,
+    mpCost: 8,
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_ally"
+  },
+  medium_heal: {
+    id: "medium_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.5,
+    mpCost: 20,
+    tier: 2,
+    dependency: "small_heal",
+    unlockCost: 3,
+    targetType: "single_ally"
+  },
+  high_heal: {
+    id: "high_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.85,
+    mpCost: 40,
+    tier: 3,
+    unlockCost: 7,
+    dependency: "medium_heal",
+    targetType: "single_ally"
+  },
+  small_group_heal: {
+    id: "small_group_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.1,
+    mpCost: 15,
+    tier: 1,
+    unlockCost: 2,
+    targetType: "all_allies"
+  },
+  medium_group_heal: {
+    id: "medium_group_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.35,
+    mpCost: 35,
+    tier: 2,
+    unlockCost: 5,
+    dependency: "small_group_heal",
+    targetType: "all_allies"
+  },
+  high_group_heal: {
+    id: "high_group_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.65,
+    mpCost: 65,
+    tier: 3,
+    unlockCost: 10,
+    dependency: "medium_group_heal",
+    targetType: "all_allies"
+  }
+};
+const WEAPON_FAMILIES = {
+  dagger: {
+    id: "dagger",
+    spdBonus: 2,
+    evaBonus: 5,
+    dmgMult: 0.8
+  },
+  broadsword: {
+    id: "broadsword",
+    spdBonus: 0,
+    evaBonus: 0,
+    dmgMult: 1
+  },
+  battle_axe: {
+    id: "battle_axe",
+    spdBonus: -2,
+    evaBonus: 0,
+    dmgMult: 1.5
+  },
+  wand: {
+    id: "wand",
+    spdBonus: 0,
+    evaBonus: 0,
+    dmgMult: 0.4,
+    magBonus: 5,
+    mpCostReduction: 0.1
+  }
+};
+const MATERIAL_TIERS = {
+  wooden: { id: "wooden", levelReq: 1, mult: 1 },
+  iron: { id: "iron", levelReq: 2, mult: 1.5 },
+  steel: { id: "steel", levelReq: 3, mult: 2.2 },
+  gold: { id: "gold", levelReq: 4, mult: 3.5 },
+  mythril: { id: "mythril", levelReq: 5, mult: 5 }
+};
+const ARMOR_ARCHETYPES = {
+  plate: { id: "plate", defMult: 2, hpMult: 1.2, spdPenalty: -3, evaPenalty: -10 },
+  leather: { id: "leather", defMult: 1, evaBonus: 10, spdPenalty: 0 },
+  robes: { id: "robes", defMult: 0.5, mpMult: 1.5, magMult: 1.2, spdPenalty: 0 }
+};
 class Hero {
   constructor(data) {
     this.name = data.name;
@@ -257,21 +684,13 @@ class Hero {
     this.exp = data.exp || 0;
     this.statPoints = data.statPoints || 0;
     this.skillPoints = data.skillPoints || 0;
-    const boosts = Progression.prog.upgrades || {};
     this.baseMaxHp = data.baseMaxHp || data.maxHp || 10;
-    this.maxHp = this.baseMaxHp + (boosts.hp_boost || 0) * 10;
-    this.hp = data.hp ?? this.maxHp;
     this.baseMaxMp = data.baseMaxMp || data.maxMp || 5;
-    this.maxMp = this.baseMaxMp;
-    this.mp = data.mp ?? this.maxMp;
     this.baseStrength = data.baseStrength || data.strength || 1;
-    this.strength = this.baseStrength + (boosts.attack_boost || 0);
     this.baseSpeed = data.baseSpeed || data.speed || 1;
-    this.speed = this.baseSpeed;
     this.baseDefense = data.baseDefense || data.defense || 1;
-    this.defense = this.baseDefense + (boosts.defense_boost || 0);
     this.baseMagicPower = data.baseMagicPower || data.magicPower || 1;
-    this.magicPower = this.baseMagicPower;
+    this.origin = data.origin || "origin_warrior";
     this.skills = data.skills;
     if (Array.isArray(this.skills)) {
       const skillMap = {};
@@ -280,7 +699,6 @@ class Hero {
     } else if (!this.skills || typeof this.skills !== "object") {
       this.skills = { basic_attack: 0 };
     }
-    this.origin = data.origin || "origin_warrior_frustrated";
     this.equipment = data.equipment || {
       head: null,
       body: null,
@@ -289,6 +707,10 @@ class Hero {
       rightHand: null,
       accessory: null
     };
+    this.statusEffects = [];
+    this.recalculateStats();
+    this.hp = data.hp ?? this.maxHp;
+    this.mp = data.mp ?? this.maxMp;
   }
   static generateRandom(level = 1, existingNames = []) {
     const pool = [
@@ -357,13 +779,13 @@ class Hero {
     const name = finalPool[Math.floor(Math.random() * finalPool.length)];
     const origins = [
       "origin_clown",
-      "origin_warrior_frustrated",
-      "origin_thief_bored",
-      "origin_cook_angry",
-      "origin_farmer_lost",
-      "origin_guard_lazy",
-      "origin_monk_silent",
-      "origin_poet_sad"
+      "origin_warrior",
+      "origin_thief",
+      "origin_cook",
+      "origin_farmer",
+      "origin_guard",
+      "origin_monk",
+      "origin_poet"
     ];
     const origin = origins[Math.floor(Math.random() * origins.length)];
     let stats = {
@@ -410,17 +832,133 @@ class Hero {
     this.level++;
     this.statPoints += this.level % 5 === 0 ? 3 : 2;
     this.skillPoints += 1;
+    this.recalculateStats();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
   }
+  getTraitMultipliers() {
+    const mults = {
+      maxHp: 1,
+      maxMp: 1,
+      strength: 1,
+      speed: 1,
+      defense: 1,
+      magicPower: 1,
+      critChance: 0,
+      accuracy: 1,
+      goldBonus: 1,
+      mpRecovery: 1
+    };
+    switch (this.origin) {
+      case "origin_clown":
+        mults.critChance += 15;
+        mults.accuracy -= 0.05;
+        break;
+      case "origin_warrior":
+        mults.defense *= 1.1;
+        mults.maxHp *= 1.05;
+        break;
+      case "origin_thief":
+        mults.speed *= 1.1;
+        mults.goldBonus *= 1.1;
+        break;
+      case "origin_farmer":
+        mults.maxHp *= 1.15;
+        break;
+      case "origin_monk":
+        mults.maxMp *= 1.15;
+        mults.mpRecovery *= 1.2;
+        break;
+    }
+    return mults;
+  }
   recalculateStats() {
     const boosts = Progression.prog.upgrades || {};
-    this.maxHp = this.baseMaxHp + (boosts.hp_boost || 0) * 10;
-    this.maxMp = this.baseMaxMp;
-    this.strength = this.baseStrength + (boosts.attack_boost || 0);
-    this.speed = this.baseSpeed;
-    this.defense = this.baseDefense + (boosts.defense_boost || 0);
-    this.magicPower = this.baseMagicPower;
+    const traitMults = this.getTraitMultipliers();
+    let equipBonus = {
+      maxHp: 0,
+      maxMp: 0,
+      strength: 0,
+      speed: 0,
+      defense: 0,
+      magicPower: 0,
+      evasion: 0,
+      critChance: 0,
+      accuracy: 0,
+      mpCostReduction: 0,
+      vampirism: 0,
+      sturdy: 0
+      // Phoenix chance
+    };
+    Object.values(this.equipment).forEach((item) => {
+      if (!item) return;
+      let itemPower = 0;
+      if (item.type === "weapon") {
+        const family = WEAPON_FAMILIES[item.family];
+        const tier = MATERIAL_TIERS[item.material];
+        if (family && tier) {
+          tier.mult;
+          const upgradeMult = Math.pow(1.1, item.level || 0);
+          itemPower = 2 * tier.mult * upgradeMult;
+          equipBonus.strength += itemPower * family.dmgMult;
+          equipBonus.speed += family.spdBonus;
+          equipBonus.evasion += family.evaBonus || 0;
+          if (family.magBonus) equipBonus.magicPower += family.magBonus * tier.mult * upgradeMult;
+          if (family.mpCostReduction) equipBonus.mpCostReduction += family.mpCostReduction;
+        }
+      } else if (item.type === "armor") {
+        const arch = ARMOR_ARCHETYPES[item.archetype];
+        const tier = MATERIAL_TIERS[item.material];
+        if (arch && tier) {
+          tier.mult;
+          const upgradeMult = Math.pow(1.1, item.level || 0);
+          itemPower = 5 * tier.mult * upgradeMult;
+          equipBonus.defense += itemPower * arch.defMult;
+          equipBonus.maxHp += itemPower * (arch.hpMult || 0);
+          equipBonus.maxMp += itemPower * (arch.mpMult || 0);
+          equipBonus.magicPower += itemPower * (arch.magMult || 0);
+          equipBonus.speed += arch.spdPenalty || 0;
+          equipBonus.evasion += arch.evaPenalty || arch.evaBonus || 0;
+        }
+      }
+      if (item.affixes) {
+        item.affixes.forEach((aff) => {
+          switch (aff) {
+            case "vampire":
+              equipBonus.vampirism += 0.05;
+              break;
+            case "sage":
+              equipBonus.mpCostReduction += 0.1;
+              break;
+            case "titan":
+              equipBonus.maxHp += this.baseMaxHp * 0.2;
+              equipBonus.speed -= 2;
+              break;
+            case "assassin":
+              equipBonus.critChance += 10;
+              equipBonus.accuracy += 20;
+              break;
+            case "phoenix":
+              equipBonus.sturdy = 1;
+              break;
+          }
+        });
+      }
+    });
+    let hasteMult = 1;
+    if (this.statusEffects.some((e) => e.type === "haste")) hasteMult = 1.5;
+    this.maxHp = Math.floor((this.baseMaxHp + (boosts.hp_boost || 0) * 10 + equipBonus.maxHp) * traitMults.maxHp);
+    this.maxMp = Math.floor((this.baseMaxMp + equipBonus.maxMp) * traitMults.maxMp);
+    this.strength = Math.floor((this.baseStrength + (boosts.attack_boost || 0) + equipBonus.strength) * traitMults.strength);
+    this.speed = Math.floor((this.baseSpeed + equipBonus.speed) * traitMults.speed * hasteMult);
+    this.defense = Math.floor((this.baseDefense + (boosts.defense_boost || 0) + equipBonus.defense) * traitMults.defense);
+    this.magicPower = Math.floor((this.baseMagicPower + equipBonus.magicPower) * traitMults.magicPower);
+    this.evasion = equipBonus.evasion;
+    this.mpCostReduction = equipBonus.mpCostReduction;
+    this.vampirism = equipBonus.vampirism;
+    this.critChanceBonus = equipBonus.critChance;
+    this.accuracyBonus = equipBonus.accuracy;
+    this.hasPhoenix = !!equipBonus.sturdy;
     this.hp = Math.min(this.hp, this.maxHp);
     this.mp = Math.min(this.mp, this.maxMp);
   }
@@ -433,10 +971,16 @@ class Hero {
       ctx.lineWidth = 2;
       ctx.strokeRect(x - 22, y - 22, 44, 44);
     }
+    this.statusEffects.forEach((eff, i) => {
+      ctx.fillStyle = this.getStatusColor(eff.type);
+      ctx.beginPath();
+      ctx.arc(x - 15 + i * 10, y - 35, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
     ctx.fillStyle = "#fff";
     ctx.font = "12px Outfit";
     ctx.textAlign = "center";
-    ctx.fillText(this.name, x, y - 30);
+    ctx.fillText(this.name, x, y - 45);
     ctx.fillStyle = "#000";
     ctx.fillRect(x - 20, y + 25, 40, 5);
     ctx.fillStyle = "#0f0";
@@ -445,6 +989,22 @@ class Hero {
     ctx.fillRect(x - 20, y + 32, 40, 3);
     ctx.fillStyle = "#0af";
     ctx.fillRect(x - 20, y + 32, 40 * (this.mp / this.maxMp), 3);
+  }
+  getStatusColor(type) {
+    switch (type) {
+      case "poison":
+        return "#0f0";
+      case "sleep":
+        return "#88f";
+      case "stun":
+        return "#ff0";
+      case "burn":
+        return "#f80";
+      case "haste":
+        return "#0ff";
+      default:
+        return "#fff";
+    }
   }
   toJSON() {
     return {
@@ -465,506 +1025,6 @@ class Hero {
       origin: this.origin,
       equipment: this.equipment
     };
-  }
-}
-const SKILLS_DATA = {
-  // Physical
-  basic_attack: {
-    id: "basic_attack",
-    category: "physical",
-    group: "multi_attack",
-    tier: 1,
-    unlockCost: 0,
-    // Everyone starts with this
-    enhanceCostBase: 1,
-    baseMultiplier: 1,
-    mpCost: 0,
-    stat: "strength",
-    targetType: "single_enemy"
-  },
-  double_attack: {
-    id: "double_attack",
-    category: "physical",
-    group: "multi_attack",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 0.6,
-    // Per hit (60% x 2 = 120%)
-    mpCost: 10,
-    stat: "strength",
-    dependency: "basic_attack",
-    targetType: "single_enemy"
-  },
-  triple_attack: {
-    id: "triple_attack",
-    category: "physical",
-    group: "multi_attack",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 0.45,
-    // Per hit (45% x 3 = 135%)
-    mpCost: 20,
-    stat: "strength",
-    dependency: "double_attack",
-    targetType: "single_enemy"
-  },
-  // Magic - Fire
-  small_fire_ball: {
-    id: "small_fire_ball",
-    category: "magic",
-    group: "ball_fire",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "fire",
-    targetType: "single_enemy"
-  },
-  medium_fire_ball: {
-    id: "medium_fire_ball",
-    category: "magic",
-    group: "ball_fire",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_fire_ball",
-    element: "fire"
-  },
-  big_fire_ball: {
-    id: "big_fire_ball",
-    category: "magic",
-    group: "ball_fire",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_fire_ball",
-    element: "fire"
-  },
-  // Magic - Water
-  small_water_ball: {
-    id: "small_water_ball",
-    category: "magic",
-    group: "ball_water",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "water",
-    targetType: "single_enemy"
-  },
-  medium_water_ball: {
-    id: "medium_water_ball",
-    category: "magic",
-    group: "ball_water",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_water_ball",
-    element: "water"
-  },
-  big_water_ball: {
-    id: "big_water_ball",
-    category: "magic",
-    group: "ball_water",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_water_ball",
-    element: "water"
-  },
-  // Magic - Wind
-  small_wind_ball: {
-    id: "small_wind_ball",
-    category: "magic",
-    group: "ball_wind",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "wind",
-    targetType: "single_enemy"
-  },
-  medium_wind_ball: {
-    id: "medium_wind_ball",
-    category: "magic",
-    group: "ball_wind",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_wind_ball",
-    element: "wind"
-  },
-  big_wind_ball: {
-    id: "big_wind_ball",
-    category: "magic",
-    group: "ball_wind",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_wind_ball",
-    element: "wind"
-  },
-  // Magic - Storm
-  small_storm_ball: {
-    id: "small_storm_ball",
-    category: "magic",
-    group: "ball_storm",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.8,
-    mpCost: 10,
-    stat: "magicPower",
-    element: "storm",
-    targetType: "single_enemy"
-  },
-  medium_storm_ball: {
-    id: "medium_storm_ball",
-    category: "magic",
-    group: "ball_storm",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    baseMultiplier: 1.2,
-    mpCost: 20,
-    stat: "magicPower",
-    dependency: "small_storm_ball",
-    element: "storm"
-  },
-  big_storm_ball: {
-    id: "big_storm_ball",
-    category: "magic",
-    group: "ball_storm",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    baseMultiplier: 1.8,
-    mpCost: 35,
-    stat: "magicPower",
-    dependency: "medium_storm_ball",
-    element: "storm",
-    targetType: "single_enemy"
-  },
-  // Tricker (Placeholders)
-  poison_dart: {
-    id: "poison_dart",
-    category: "tricker",
-    group: "poison",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.5,
-    mpCost: 12,
-    stat: "strength",
-    targetType: "single_enemy"
-  },
-  steal: {
-    id: "steal",
-    category: "tricker",
-    group: "theft",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    baseMultiplier: 0.1,
-    mpCost: 5,
-    stat: "speed",
-    targetType: "single_enemy"
-  },
-  // Support
-  small_heal: {
-    id: "small_heal",
-    category: "support",
-    group: "healing",
-    tier: 1,
-    unlockCost: 1,
-    enhanceCostBase: 1,
-    power: 0.2,
-    mpCost: 10,
-    stat: "magicPower",
-    targetType: "single_ally"
-  },
-  medium_heal: {
-    id: "medium_heal",
-    category: "support",
-    group: "healing",
-    tier: 2,
-    unlockCost: 20,
-    enhanceCostBase: 2,
-    power: 0.5,
-    mpCost: 25,
-    stat: "magicPower",
-    targetType: "ally",
-    dependency: "small_heal"
-  },
-  high_heal: {
-    id: "high_heal",
-    category: "support",
-    group: "healing",
-    tier: 3,
-    unlockCost: 50,
-    enhanceCostBase: 4,
-    power: 0.85,
-    mpCost: 45,
-    stat: "magicPower",
-    targetType: "single_ally",
-    dependency: "medium_heal"
-  },
-  small_group_heal: {
-    id: "small_group_heal",
-    category: "support",
-    group: "healing_group",
-    tier: 1,
-    unlockCost: 10,
-    enhanceCostBase: 2,
-    power: 0.1,
-    mpCost: 20,
-    stat: "magicPower",
-    targetType: "all_allies"
-  },
-  medium_group_heal: {
-    id: "medium_group_heal",
-    category: "support",
-    group: "healing_group",
-    tier: 2,
-    unlockCost: 35,
-    enhanceCostBase: 4,
-    power: 0.35,
-    mpCost: 45,
-    stat: "magicPower",
-    targetType: "all",
-    dependency: "small_group_heal"
-  },
-  high_group_heal: {
-    id: "high_group_heal",
-    category: "support",
-    group: "healing_group",
-    tier: 3,
-    unlockCost: 75,
-    enhanceCostBase: 8,
-    power: 0.65,
-    mpCost: 80,
-    stat: "magicPower",
-    targetType: "all_allies",
-    dependency: "medium_group_heal"
-  }
-};
-class Enemy {
-  constructor(name, level, stats, isBoss = false, element = "neutral", skills = { basic_attack: 0 }) {
-    this.name = name;
-    this.level = level;
-    this.isBoss = isBoss;
-    this.element = element;
-    this.maxHp = stats.hp;
-    this.hp = this.maxHp;
-    this.maxMp = stats.mp || 0;
-    this.mp = this.maxMp;
-    this.strength = stats.strength;
-    this.speed = stats.speed;
-    this.defense = stats.defense;
-    this.magicPower = stats.magicPower || 1;
-    this.skills = skills;
-  }
-  static generate(level, milestone) {
-    const names = ["Slime", "Goblin", "Wolf", "Skeleton", "Orc", "Dark Knight"];
-    const nameIdx = Math.min(names.length - 1, Math.floor(milestone / 10));
-    const name = names[nameIdx];
-    const isBoss = milestone % 5 === 0;
-    const bossesPassed = Math.floor(milestone / 5);
-    const postBossesPassed = Math.floor((milestone - 1) / 5);
-    const totalStacks = Math.max(0, bossesPassed - 2 + (postBossesPassed - 2));
-    const multiplier = Math.pow(1.3, totalStacks);
-    let stats = {
-      hp: Math.floor((8 + level * 4) * multiplier),
-      strength: Number(((2 + level * 1.5) * multiplier).toFixed(1)),
-      speed: Number(((1 + level * 0.5) * multiplier).toFixed(1)),
-      defense: Number((level * 0.5 * multiplier).toFixed(1)),
-      magicPower: Number((level * 0.5 * multiplier).toFixed(1))
-    };
-    let element = "neutral";
-    if (milestone <= 10) {
-      element = "neutral";
-      if (milestone <= 3) {
-        stats.speed = 1;
-        stats.defense = 0;
-        stats.strength = 3;
-      } else if (milestone === 4) {
-        stats.speed = 2;
-        stats.defense = 0.5;
-        stats.strength = 5;
-      } else if (milestone === 5) {
-        stats.speed = 3.5;
-        stats.defense = 1;
-        stats.strength = 10;
-        stats.hp *= 1.5;
-      } else if (milestone <= 9) {
-        stats.speed = 4;
-        stats.defense = 2;
-        stats.strength = 12;
-      } else if (milestone === 10) {
-        stats.speed = 5;
-        stats.defense = 4;
-        stats.strength = 20;
-        stats.hp *= 1.5;
-      }
-    } else if (milestone <= 15) {
-      stats.defense *= 1.5;
-      if (isBoss) {
-        stats.defense *= 1.7;
-        stats.hp *= 1.5;
-      }
-    } else if (milestone <= 20) {
-      stats.strength *= 1.7;
-      stats.speed *= 0.7;
-      if (isBoss) {
-        stats.strength *= 1.3;
-        stats.speed *= 0.8;
-        stats.hp *= 1.5;
-      }
-    } else if (milestone <= 40) {
-      if (milestone <= 25) element = "fire";
-      else if (milestone <= 30) element = "water";
-      else if (milestone <= 35) element = "wind";
-      else if (milestone <= 40) element = "storm";
-      if (isBoss) {
-        stats.hp *= 1.5;
-        stats.strength *= 1.2;
-        stats.speed *= 1.2;
-      }
-    } else {
-      const elementRand = Math.random();
-      if (elementRand > 0.33) {
-        const elements = ["fire", "water", "wind", "storm"];
-        element = elements[Math.floor(Math.random() * elements.length)];
-      }
-      if (isBoss) {
-        stats.hp *= 1.5;
-        stats.strength *= 1.2;
-        stats.speed *= 1.2;
-      }
-    }
-    const skills = { basic_attack: 0 };
-    if (element !== "neutral") {
-      const skillId = `small_${element}_ball`;
-      skills[skillId] = 0;
-    }
-    if (milestone >= 21 && isBoss) {
-      skills["double_attack"] = 0;
-      if (element !== "neutral") {
-        const skillId = `medium_${element}_ball`;
-        skills[skillId] = 0;
-      }
-    }
-    let totalMpNeeded = 0;
-    Object.keys(skills).forEach((sId) => {
-      const sData = SKILLS_DATA[sId];
-      if (sData && sData.mpCost > 0) {
-        totalMpNeeded += sData.mpCost * 2;
-      }
-    });
-    stats.mp = totalMpNeeded;
-    stats.hp = Math.floor(stats.hp);
-    stats.strength = Number(stats.strength.toFixed(1));
-    stats.speed = Number(stats.speed.toFixed(1));
-    stats.defense = Number(stats.defense.toFixed(1));
-    stats.magicPower = Number(stats.magicPower.toFixed(1));
-    return new Enemy(isBoss ? `Giant ${name}` : name, level, stats, isBoss, element, skills);
-  }
-  draw(ctx, x, y) {
-    ctx.fillStyle = this.isBoss ? "#f0f" : "#f55";
-    if (this.hp <= 0) ctx.fillStyle = "#444";
-    ctx.beginPath();
-    ctx.arc(x, y, this.isBoss ? 40 : 30, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 16px Outfit";
-    ctx.textAlign = "center";
-    ctx.fillText(`Lvl ${this.level} ${this.name}`, x, y - 50);
-    const barWidth = 120;
-    ctx.fillStyle = "#000";
-    ctx.fillRect(x - barWidth / 2, y + 50, barWidth, 10);
-    ctx.fillStyle = "#f55";
-    ctx.fillRect(x - barWidth / 2, y + 50, barWidth * (this.hp / this.maxHp), 10);
-    ctx.fillStyle = "#fff";
-    ctx.font = "10px Outfit";
-    ctx.fillText(`${Math.ceil(this.hp)} / ${this.maxHp}`, x, y + 60);
-    this.drawElementDiagram(ctx, x - 100, y);
-  }
-  drawElementDiagram(ctx, x, y) {
-    const positions = {
-      fire: { x: 0, y: -25, color: "#ff4444" },
-      wind: { x: 25, y: 0, color: "#44ff44" },
-      storm: { x: 0, y: 25, color: "#ffff44" },
-      water: { x: -25, y: 0, color: "#4444ff" }
-    };
-    const elements = ["fire", "wind", "storm", "water"];
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.strokeStyle = "#666";
-    ctx.lineWidth = 2;
-    elements.forEach((el, i) => {
-      const start = positions[el];
-      const next = positions[elements[(i + 1) % 4]];
-      this.drawArrow(ctx, start.x, start.y, next.x, next.y);
-    });
-    elements.forEach((el) => {
-      const pos = positions[el];
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
-      ctx.strokeStyle = pos.color;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      if (this.element === el) {
-        ctx.fillStyle = pos.color;
-        ctx.fill();
-      }
-    });
-    ctx.restore();
-  }
-  drawArrow(ctx, x1, y1, x2, y2) {
-    const headlen = 5;
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    const ox = Math.cos(angle) * 10;
-    const oy = Math.sin(angle) * 10;
-    const sx = x1 + ox;
-    const sy = y1 + oy;
-    const ex = x2 - ox;
-    const ey = y2 - oy;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(ex, ey);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex - headlen * Math.cos(angle - Math.PI / 6), ey - headlen * Math.sin(angle - Math.PI / 6));
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex - headlen * Math.cos(angle + Math.PI / 6), ey - headlen * Math.sin(angle + Math.PI / 6));
-    ctx.stroke();
   }
 }
 const TRANSLATIONS = {
@@ -1038,14 +1098,23 @@ const TRANSLATIONS = {
     stat_magic: "Magic",
     confirm_wipe: "Are you sure you want to completely wipe your progression?",
     wipe_success: "Data wiped successfully!",
-    origin_clown: "Emprisoned Clown",
-    origin_warrior_frustrated: "Frustrated Town Warrior",
-    origin_thief_bored: "Bored Thief",
-    origin_cook_angry: "Angry Master Cook",
-    origin_farmer_lost: "Lost Turnip Farmer",
-    origin_guard_lazy: "Lazy City Guard",
-    origin_monk_silent: "Silent Vow Monk",
-    origin_poet_sad: "Sad Street Poet",
+    origin_clown: "Clown",
+    origin_clown_desc: "Joker's Luck: Increases Crit Chance by 15%, but reduces Accuracy by 5%.",
+    origin_warrior: "Warrior",
+    origin_warrior_desc: "Battle Scars: Increases Defense by 10% and Max HP by 5%.",
+    origin_thief: "Thief",
+    origin_thief_desc: "Swift Hands: Increases Speed by 10%. Combat victories grant 10% more Gold.",
+    origin_cook: "Cook",
+    origin_cook_desc: "Hearty Meal: While in the party, all allies regenerate 5% HP at the start of their turn.",
+    origin_farmer: "Farmer",
+    origin_farmer_desc: "Roots of the Earth: Increases this hero's Max HP by 15%.",
+    origin_guard: "Guard",
+    origin_guard_desc: "Shield Wall: While in the party, all allies take 10% less Physical Damage.",
+    origin_monk: "Monk",
+    origin_monk_desc: "Inner Peace: Increases Max MP by 15% and boosts MP recovery rate.",
+    origin_poet: "Poeta",
+    origin_poet_desc: "Inspiring Verse: While in the party, all allies have their Magic Power increased by 10%.",
+    critical_label: "CRITICAL!",
     physical: "Physical",
     magic: "Magic",
     tricker: "Tricker",
@@ -1079,12 +1148,11 @@ const TRANSLATIONS = {
     big_storm_ball: "Big Storm Ball",
     poison_dart: "Poison Dart",
     steal: "Steal",
+    haste: "Haste",
     basic_heal: "Heal",
     small_heal: "Small Heal (20%)",
     medium_heal: "Medium Heal (50%)",
     high_heal: "High Heal (85%)",
-    small_group_heal: "Small Grp Heal (10%)",
-    medium_group_heal: "Med Grp Heal (35%)",
     small_group_heal: "Small Grp Heal (10%)",
     medium_group_heal: "Med Grp Heal (35%)",
     high_group_heal: "High Grp Heal (65%)",
@@ -1115,17 +1183,19 @@ const TRANSLATIONS = {
     big_storm_ball_desc: "Devastating lightning storm.",
     poison_dart_desc: "Weak strike that poisons.",
     steal_desc: "Attempt to steal from enemy.",
+    haste_desc: "Boost speed for 3 turns.",
     small_heal_desc: "Minor medical treatment.",
     medium_heal_desc: "Advanced medical healing.",
     high_heal_desc: "Miraculous sacred healing.",
     small_group_heal_desc: "Minor heal for everyone.",
     medium_group_heal_desc: "Advanced heal for everyone.",
     high_group_heal_desc: "Sacred prayer for everyone.",
+    forge_title: "Mystic Forge",
     roster_size_title: "Hero Roster Size",
     party_size_title: "Hero Roster Quality",
     gym_title: "Hero Roster Gym",
-    btn_select: "Add to Party",
-    btn_unselect: "Unselect from Party",
+    btn_select_party: "Add to Party",
+    btn_unselect_party: "Unselect from Party",
     need_min_hero: "You need at least one hero in the party!",
     party_limit_reached: "Party size limit reached!",
     free_hero_welcome: "Hello adventurer! I have a present for you!",
@@ -1148,7 +1218,77 @@ const TRANSLATIONS = {
     debug_confirm: "You are gonna break the game. Sure?",
     oneshot_jump_confirm: "You one-shotted the boss with massive damage! Jump 10 levels?",
     btn_switch_hero: "🔁 SWITCH HERO",
-    confirm_switch_unique: "This will replace your current hero with a new Level 1 hero. All progress on this hero will be lost. Continue?"
+    confirm_switch_unique: "This will replace your current hero with a new Level 1 hero. All progress on this hero will be lost. Continue?",
+    dagger: "Dagger",
+    broadsword: "Broadsword",
+    battle_axe: "Battle Axe",
+    wand: "Wand",
+    dagger_desc: "Light and fast. +Speed, +Evasion, but lower damage.",
+    broadsword_desc: "Balanced weapon with no penalties.",
+    battle_axe_desc: "Heavy and slow. High damage, but -Speed.",
+    wand_desc: "Magic focuser. +Magic, -MP Cost, but very low physical damage.",
+    plate: "Plate Armor",
+    leather: "Leather Armor",
+    robes: "Robes",
+    plate_desc: "Heavy protection. ++Defense, +HP, but -Speed and --Evasion.",
+    leather_desc: "Light and flexible. +Evasion.",
+    robes_desc: "Mystical fabric. ++MP, +Magic, but low defense.",
+    wooden: "Wooden",
+    iron: "Iron",
+    steel: "Steel",
+    gold: "Gold",
+    mythril: "Mythril",
+    light_sparring: "Light Sparring",
+    endurance_run: "Endurance Run",
+    master_class: "Master Class",
+    heroic_pilgrimage: "Heroic Pilgrimage",
+    volcano_cleanup: "Volcano Cleanup",
+    mountain_guard: "Mountain Guard",
+    storm_tracker: "Storm Tracker",
+    whirlwind: "Whirlwind",
+    blade_dance: "Blade Dance",
+    meteor: "Meteor",
+    blizzard: "Blizzard",
+    tsunami: "Tsunami",
+    chain_lightning: "Chain Lightning",
+    whirlwind_desc: "Spinning strike hitting all enemies.",
+    blade_dance_desc: "A flurry of blades hitting all enemies.",
+    meteor_desc: "Fiery rock hitting one with splash damage.",
+    blizzard_desc: "Freezing blizzard hitting all enemies.",
+    tsunami_desc: "Colossal wave hitting all enemies.",
+    chain_lightning_desc: "Electric arc jumping between enemies.",
+    forsaken_shrine: "The Forsaken Shrine",
+    forsaken_shrine_desc: "A crumbling statue of a forgotten deity. You feel a faint pulse of energy.",
+    hidden_cache: "The Hidden Cache",
+    hidden_cache_desc: "A dusty chest hidden behind some rocks.",
+    mystic_fountain: "Mystic Fountain",
+    mystic_fountain_desc: "A pool of shimmering blue water.",
+    opt_pray: "Pray",
+    opt_pray_desc: "Restore full HP to the party.",
+    opt_desecrate: "Desecrate",
+    opt_desecrate_desc: "Take 20% damage, gain 5 Cores.",
+    opt_careful: "Open Carefully",
+    opt_careful_desc: "Find 100 Gold.",
+    opt_smash: "Smash Open",
+    opt_smash_desc: "Find 300 Gold, but risk a trap.",
+    opt_drink: "Drink",
+    opt_ignore: "Ignore",
+    opt_ignore_desc: "Move on cautiously.",
+    btn_claim: "CLAIM REWARDS",
+    btn_cancel: "CANCEL",
+    training_complete: "COMPLETE!",
+    status_label: "Status",
+    left_label: "left",
+    manage_slot: "Manage",
+    equipped_label: "Equipped",
+    available_label: "Available",
+    btn_equip: "EQUIP",
+    btn_unequip: "UNEQUIP",
+    confirm_awaken: "Awaken this item for {cost} Cores?",
+    awakened_msg: "AWAKENED! Item is now: {name}",
+    opt_drink_desc: "A random hero gains +1 Stat Point.",
+    opt_ignore: "Ignore",
+    opt_ignore_desc: "Move on cautiously."
   },
   es: {
     subtitle: "Aventura y Recluta",
@@ -1170,8 +1310,8 @@ const TRANSLATIONS = {
     btn_recruit: "RECLUTAR",
     btn_buy: "COMPRAR",
     basic_attack: "Ataque",
-    double_attack: "Ataque Doble (10 MP)",
-    basic_water_ball: "Bola de Hielo (15 MP)",
+    double_attack: "Ataque Doble (10 PM)",
+    basic_water_ball: "Bola de Hielo (15 PM)",
     tiny_potion: "Poción Pequeña",
     tiny_mana_potion: "Poción de Maná Pequeña",
     hero_limit: "¡Límite de héroes alcanzado!",
@@ -1199,7 +1339,7 @@ const TRANSLATIONS = {
     skills: "🗡️ HABILIDADES",
     items: "🎒 OBJETOS",
     show_logs: "📜 VER REGISTRO",
-    hide_logs: "📜 OCULTAR REGISTRO",
+    hide_logs: "📜 OCULTAR REGISTRE",
     options_back: "🔙 VOLVER",
     roster_title: "Lista de Héroes",
     hero_roster: "Equipo",
@@ -1220,14 +1360,23 @@ const TRANSLATIONS = {
     stat_magic: "Magia",
     confirm_wipe: "¿Estás seguro de que quieres borrar toda tu progresión?",
     wipe_success: "¡Datos borrados con éxito!",
-    origin_clown: "Payaso Encarcelado",
-    origin_warrior_frustrated: "Guerrero Frustrado",
-    origin_thief_bored: "Ladrón Aburrido",
-    origin_cook_angry: "Cocinero Enfurecido",
-    origin_farmer_lost: "Granjero de Nabos Perdido",
-    origin_guard_lazy: "Guardia Perezoso",
-    origin_monk_silent: "Monje en Voto de Silencio",
-    origin_poet_sad: "Poeta Callejero Triste",
+    origin_clown: "Payaso",
+    origin_clown_desc: "Suerte del Bufón: Aumenta la Prob. de Crítico un 15%, pero reduce la Precisión un 5%.",
+    origin_warrior: "Guerrero",
+    origin_warrior_desc: "Cicatrices de Guerra: Aumenta la Defensa un 10% y los PV Máx. un 5%.",
+    origin_thief: "Ladrón",
+    origin_thief_desc: "Manos Rápidas: Aumenta la Velocidad un 10%. Las victorias otorgan un 10% más de Oro.",
+    origin_cook: "Cocinero",
+    origin_cook_desc: "Comida Copiosa: Mientras esté en el equipo, todos los aliados regeneran un 5% de PV al inicio de su turno.",
+    origin_farmer: "Granjero",
+    origin_farmer_desc: "Raíces de la Tierra: Aumenta los PV Máx. de este héroe un 15%.",
+    origin_guard: "Guardia",
+    origin_guard_desc: "Muro de Escudos: Mientras esté en el equipo, todos los aliados reciben un 10% menos de Daño Físico.",
+    origin_monk: "Monje",
+    origin_monk_desc: "Paz Interior: Aumenta los PM Máx. un 15% y mejora la tasa de recuperación de PM.",
+    origin_poet: "Poeta",
+    origin_poet_desc: "Versos Inspiradores: Mientras esté en el equipo, el Poder Mágico de todos los aliados aumenta un 10%.",
+    critical_label: "¡CRÍTICO!",
     physical: "Físico",
     magic: "Magia",
     tricker: "Astucia",
@@ -1239,7 +1388,7 @@ const TRANSLATIONS = {
     greedy_reset_msg: "Oh... eras tan codicioso... el mundo ha cambiado. ¡Empecemos de nuevo!",
     ball_fire: "Magia de Fuego",
     ball_water: "Magia de Agua",
-    ball_wind: "Magia de Viento",
+    ball_wind: "Magia de Vento",
     ball_storm: "Magia de Tormenta",
     healing: "Curación",
     poison: "Veneno",
@@ -1261,6 +1410,7 @@ const TRANSLATIONS = {
     big_storm_ball: "Bola de Tormenta Grande",
     poison_dart: "Dardo Envenenado",
     steal: "Robar",
+    haste: "Celeridad",
     basic_heal: "Curar",
     small_heal: "Cura Pequeña (20%)",
     medium_heal: "Cura Mediana (50%)",
@@ -1295,17 +1445,20 @@ const TRANSLATIONS = {
     big_storm_ball_desc: "Tormenta de rayos fatal.",
     poison_dart_desc: "Ataque débil que envenena.",
     steal_desc: "Intenta robar al enemigo.",
+    haste_desc: "Aumenta la velocidad por 3 turnos.",
     small_heal_desc: "Tratamiento médico menor.",
     medium_heal_desc: "Curación médica avanzada.",
     high_heal_desc: "Curación sagrada milagrosa.",
     small_group_heal_desc: "Cura menor para todos.",
     medium_group_heal_desc: "Cura avanzada para todos.",
     high_group_heal_desc: "Rezo sagrado para todos.",
+    forge_title: "Mystic Forge",
+    forge_title: "Fragua Mística",
     roster_size_title: "Espacio de Héroes",
     party_size_title: "Calidad de Formación",
     gym_title: "Gimnasio de Héroes",
-    btn_select: "Añadir al Equipo",
-    btn_unselect: "Quitar del Equipo",
+    btn_select_party: "Añadir al Equipo",
+    btn_unselect_party: "Quitar del Equipo",
     need_min_hero: "¡Necesitas al menos un héroe en el equipo!",
     party_limit_reached: "¡Límite de equipo alcanzado!",
     free_hero_welcome: "¡Hola aventurero! ¡Tengo un regalo para ti!",
@@ -1328,7 +1481,82 @@ const TRANSLATIONS = {
     debug_confirm: "Vas a romper el juego. ¿Estás seguro?",
     oneshot_jump_confirm: "¡Has derrotado al jefe de un solo golpe con un daño masivo! ¿Quieres saltar 10 niveles?",
     btn_switch_hero: "🔁 CAMBIAR HÉROE",
-    confirm_switch_unique: "¿Deseas cambiar tu héroe actual por uno nuevo de Nivel 1? Perderás todo el progreso de este héroe."
+    confirm_switch_unique: "¿Deseas cambiar tu héroe actual por uno nuevo de Nivel 1? Perderás todo el progreso de este héroe.",
+    dagger: "Daga",
+    broadsword: "Espada Ancha",
+    battle_axe: "Hacha de Batalla",
+    wand: "Varita",
+    dagger_desc: "Ligera y rápida. +Velocidad, +Evasión, pero menor daño.",
+    broadsword_desc: "Arma equilibrada sin penalizaciones.",
+    battle_axe_desc: "Pesada y lenta. Gran daño, pero -Velocidad.",
+    wand_desc: "Enfoque mágico. +Magia, -Coste MP, pero muy bajo daño físico.",
+    plate: "Armadura de Placas",
+    leather: "Armadura de Cuero",
+    robes: "Túnicas",
+    plate_desc: "Protección pesada. ++Defensa, +PV, pero -Velocidad y --Evasión.",
+    leather_desc: "Ligera y flexible. +Evasión.",
+    robes_desc: "Tela mística. ++PM, +Magia, pero baja defensa.",
+    wooden: "de Madera",
+    iron: "de Hierro",
+    steel: "de Acero",
+    gold: "de Oro",
+    mythril: "de Mitril",
+    light_sparring: "Combate Ligero",
+    endurance_run: "Carrera de Resistencia",
+    master_class: "Clase Maestra",
+    heroic_pilgrimage: "Peregrinaje Heroico",
+    volcano_cleanup: "Limpieza del Volcán",
+    mountain_guard: "Guardia de la Montaña",
+    storm_tracker: "Rastreador de Tormentas",
+    whirlwind: "Torbellino",
+    blade_dance: "Danza de Hojas",
+    meteor: "Meteoro",
+    blizzard: "Ventisca",
+    tsunami: "Tsunami",
+    chain_lightning: "Rayo en Cadena",
+    whirlwind_desc: "Ataque giratorio que golpea a todos los enemigos.",
+    blade_dance_desc: "Una ráfaga de espadas que golpea a todos los enemigos.",
+    meteor_desc: "Roca ardiente que golpea a uno con daño de salpicadura.",
+    blizzard_desc: "Tormenta helada que golpea a todos los enemigos.",
+    tsunami_desc: "Ola colosal que golpea a todos los enemigos.",
+    chain_lightning_desc: "Arco eléctrico que salta entre enemigos.",
+    forsaken_shrine: "El Santuario Olvidado",
+    forsaken_shrine_desc: "Una estatua derruida de una deidad olvidada. Sientes un débil pulso de energía.",
+    hidden_cache: "El Alijo Oculto",
+    hidden_cache_desc: "Un cofre polvoriento escondido tras unas rocas.",
+    mystic_fountain: "Fuente Mística",
+    mystic_fountain_desc: "Un estanque de agua azul brillante.",
+    opt_pray: "Rezar",
+    opt_pray_desc: "Restaura todos los PV del equipo.",
+    opt_desecrate: "Profanar",
+    opt_desecrate_desc: "Recibe un 20% de daño, gana 5 Núcleos.",
+    opt_careful: "Abrir con Cuidado",
+    opt_careful_desc: "Encuentra 100 de Oro.",
+    opt_smash: "Romper para Abrir",
+    opt_smash_desc: "Encuentra 300 de Oro, pero arriésgate a una trampa.",
+    opt_drink: "Beber",
+    opt_drink_desc: "Un héroe aleatorio gana +1 Punto de Atributo.",
+    opt_ignore: "Ignorar",
+    opt_ignore_desc: "Continuar con cautela.",
+    btn_claim: "RECLAMAR RECOMPENSAS",
+    btn_cancel: "CANCELAR",
+    training_complete: "¡COMPLETO!",
+    status_label: "Estado",
+    left_label: "restante",
+    manage_slot: "Gestionar",
+    equipped_label: "Equipado",
+    available_label: "Disponible",
+    btn_equip: "EQUIPAR",
+    btn_unequip: "DESEQUIPAR",
+    confirm_awaken: "¿Despertar este objeto por {cost} Núcleos?",
+    awakened_msg: "¡DESPERTADO! El objeto es ahora: {name}",
+    opt_careful_desc: "Encuentra 100 de Oro.",
+    opt_smash: "Romper",
+    opt_smash_desc: "Encuentra 300 de Oro, pero arriésgate a una trampa.",
+    opt_drink: "Beber",
+    opt_drink_desc: "Un héroe aleatorio gana +1 punto de Atributo.",
+    opt_ignore: "Ignorar",
+    opt_ignore_desc: "Sigue adelante con precaución."
   },
   ca: {
     subtitle: "Aventura i Recluta",
@@ -1350,8 +1578,8 @@ const TRANSLATIONS = {
     btn_recruit: "RECLUTAR",
     btn_buy: "COMPRAR",
     basic_attack: "Atac",
-    double_attack: "Atac Doble (10 MP)",
-    basic_water_ball: "Bola de Aigua (15 MP)",
+    double_attack: "Atac Doble (10 PM)",
+    basic_water_ball: "Bola de Aigua (15 PM)",
     tiny_potion: "Poció Petita",
     tiny_mana_potion: "Poció de Manà Petita",
     hero_limit: "Límit d'herois assolit!",
@@ -1400,14 +1628,23 @@ const TRANSLATIONS = {
     stat_magic: "Màgia",
     confirm_wipe: "Estàs segur que vols esborrar tota la teva progressió?",
     wipe_success: "Dades esborrades amb èxit!",
-    origin_clown: "Pallasso Empresonat",
-    origin_warrior_frustrated: "Guerrer Frustrat",
-    origin_thief_bored: "Lladre Avorrit",
-    origin_cook_angry: "Cuiner Enfurit",
-    origin_farmer_lost: "Graner de Naps Perdut",
-    origin_guard_lazy: "Guàrdia Peresós",
-    origin_monk_silent: "Monjo en Vot de Silenci",
-    origin_poet_sad: "Poeta de Carrer Trist",
+    origin_clown: "Pallasso",
+    origin_clown_desc: "Sort del Bufó: Augmenta la Prob. de Crític un 15%, però redueix la Precisió un 5%.",
+    origin_warrior: "Guerrer",
+    origin_warrior_desc: "Cicatrius de Guerra: Augmenta la Defensa un 10% i els PV Màx. un 5%.",
+    origin_thief: "Lladre",
+    origin_thief_desc: "Mans Ràpides: Augmenta la Velocitat un 10%. Les victòries atorguen un 10% més d'Or.",
+    origin_cook: "Cuiner",
+    origin_cook_desc: "Teca Complit: Mentre sigui a l'equip, tots els aliats regeneren un 5% de PV a l'inici del seu torn.",
+    origin_farmer: "Pagès",
+    origin_farmer_desc: "Arrels de la Terra: Augmenta els PV Màx. d'aquest heroi un 15%.",
+    origin_guard: "Guàrdia",
+    origin_guard_desc: "Mur d'Escuts: Mentre sigui a l'equip, tots els aliats reben un 10% menys de Dany Físic.",
+    origin_monk: "Monjo",
+    origin_monk_desc: "Pau Interior: Augmenta els PM Màx. un 15% i millora la taxa de recuperació de PM.",
+    origin_poet: "Poeta",
+    origin_poet_desc: "Versos Inspiradors: Mentre sigui a l'equip, el Poder Màgic de tots els aliats augmenta un 10%.",
+    critical_label: "CRÍTIC!",
     physical: "Físic",
     magic: "Màgia",
     tricker: "Astúcia",
@@ -1416,10 +1653,10 @@ const TRANSLATIONS = {
     btn_fire_hero: "ACOMIADAR HEROI",
     confirm_fire: "Estàs segur que vols acomiadar a {hero}? Aquesta acció no es pot desfer.",
     fire_limit_msg: "No pots acomiadar el teu únic heroi!",
-    greedy_reset_msg: "Oh... eres tan codiciós... el món ha canviat. Tornem a començar!",
+    greedy_reset_msg: "Oh... eres tan codició... el món ha canviat. Tornem a començar!",
     ball_fire: "Màgia de Foc",
     ball_water: "Màgia de Aigua",
-    ball_wind: "Màgia de Vent",
+    ball_wind: "Màgia de Vento",
     ball_storm: "Màgia de Tempesta",
     healing: "Curació",
     poison: "Verí",
@@ -1441,6 +1678,7 @@ const TRANSLATIONS = {
     big_storm_ball: "Bola de Tempesta Gran",
     poison_dart: "Dard Enverinat",
     steal: "Robar",
+    haste: "Hesta",
     basic_heal: "Curar",
     small_heal: "Cura Petita (20%)",
     medium_heal: "Cura Mitjana (50%)",
@@ -1469,12 +1707,13 @@ const TRANSLATIONS = {
     big_water_ball_desc: "Màgia de zero absolut.",
     small_wind_ball_desc: "Ràfega de vent afilada.",
     medium_wind_ball_desc: "Tornado de màgia de vent.",
-    big_wind_ball_desc: "Cicló devastador de vent.",
+    big_wind_ball_desc: "Ciclón devastador de vent.",
     small_storm_ball_desc: "Chispa elèctrica crepitjant.",
     medium_storm_ball_desc: "Onada de màgia elèctrica.",
     big_storm_ball_desc: "Tormenta de llamps fatal.",
     poison_dart_desc: "Atac feble que enverina.",
     steal_desc: "Intenta robar a l'enemic.",
+    haste_desc: "Augmenta la velocitat per 3 torns.",
     small_heal_desc: "Tractament mèdic menor.",
     medium_heal_desc: "Curació mèdica avançada.",
     high_heal_desc: "Curació sagrada miraculosa.",
@@ -1482,7 +1721,56 @@ const TRANSLATIONS = {
     medium_group_heal_desc: "Cura avançada per a tots.",
     high_group_heal_desc: "Pregària sagrada per a tots.",
     btn_switch_hero: "🔁 CANVIAR HEROI",
-    confirm_switch_unique: "Vols canviar el teu heroi actual per un de nou de Nivell 1? Perdràs tot el progrés d'aquest heroi."
+    confirm_switch_unique: "Vols canviar el teu heroi actual per un de nou de Nivell 1? Perdràs tot el progrés d'aquest heroi.",
+    dagger: "Daga",
+    broadsword: "Espasa Ampla",
+    battle_axe: "Destral de Guerra",
+    wand: "Varita",
+    plate: "Armadura de Plaques",
+    leather: "Armadura de Cuir",
+    robes: "Túniques",
+    wooden: "de Fusta",
+    iron: "de Ferro",
+    steel: "d'Acer",
+    gold: "d'Or",
+    mythril: "de Mitril",
+    light_sparring: "Combat Lleuger",
+    endurance_run: "Cursa de Resistència",
+    master_class: "Classe Mestra",
+    hero_pilgrimage: "Pelegrinatge Heroic",
+    volcano_cleanup: "Neteja del Volcà",
+    mountain_guard: "Guàrdia de la Muntanya",
+    storm_tracker: "Rastrejador de Tempestes",
+    whirlwind: "Remolí",
+    blade_dance: "Dansa de Fulles",
+    meteor: "Meteorit",
+    blizzard: "Torb",
+    tsunami: "Tsunami",
+    chain_lightning: "Llampec en Cadena",
+    whirlwind_desc: "Atac giratori que colpeja tots els enemics.",
+    blade_dance_desc: "Una ràfega d'espases que colpeja tots els enemics.",
+    meteor_desc: "Roca ardent que colpeja un amb dany dequitxada.",
+    blizzard_desc: "Tormenta de neu que colpeja tots els enemics.",
+    tsunami_desc: "Onada colossal que colpeja tots els enemics.",
+    chain_lightning_desc: "Arc elèctric que salta entre enemics.",
+    forsaken_shrine: "El Santuari Abandonat",
+    forsaken_shrine_desc: "Una estàtua en runes d'una deïtat oblidada. Sents un pols d'energia.",
+    hidden_cache: "L'Amagatall Ocult",
+    hidden_cache_desc: "Un cofre polsós amagat darrere d'unes roques.",
+    mystic_fountain: "Font Mística",
+    mystic_fountain_desc: "Una bassa d'aigua blava brillant.",
+    opt_pray: "Pregar",
+    opt_pray_desc: "Restaura tots els PV de l'equip.",
+    opt_desecrate: "Profanar",
+    opt_desecrate_desc: "Rep un 20% de dany, guanya 5 Nuclis.",
+    opt_careful: "Obrir amb Compte",
+    opt_careful_desc: "Troba 100 d'Or.",
+    opt_smash: "Trencar",
+    opt_smash_desc: "Troba 300 d'Or, però arrisca't a una trampa.",
+    opt_drink: "Beure",
+    opt_drink_desc: "Un heroi aleatori guanya +1 punt d'Atribut.",
+    opt_ignore: "Ignorar",
+    opt_ignore_desc: "Continua amb precaució."
   },
   eu: {
     subtitle: "Abentura eta Errekluta",
@@ -1504,8 +1792,8 @@ const TRANSLATIONS = {
     btn_recruit: "ERREKLUTATU",
     btn_buy: "EROSI",
     basic_attack: "Erasoa",
-    double_attack: "Eraso Bikoitza (10 MP)",
-    basic_water_ball: "Ur Bola (15 MP)",
+    double_attack: "Eraso Bikoitza (10 PM)",
+    basic_water_ball: "Ur Bola (15 PM)",
     tiny_potion: "Edabe Txikia",
     tiny_mana_potion: "Mana Edabe Txikia",
     hero_limit: "Heroi muga lortuta!",
@@ -1554,15 +1842,24 @@ const TRANSLATIONS = {
     stat_magic: "Magia",
     confirm_wipe: "Ziur zaude zure progresio guztia ezabatu nahi duzula?",
     wipe_success: "Datuak ondo ezabatu dira!",
-    origin_clown: "Gidatutako Pailazoa",
-    origin_warrior_frustrated: "Gudari Zapuztua",
-    origin_thief_bored: "Lapur Bored",
-    origin_cook_angry: "Sukaldari Sutsua",
-    origin_farmer_lost: "Nabo Baserritar Galdua",
-    origin_guard_lazy: "Guardia Alferra",
-    origin_monk_silent: "Isiltasun Zin Monjea",
-    origin_poet_sad: "Kaleko Poeta Tristea",
-    physical: "Fisikoa",
+    origin_clown: "Pailazoa",
+    origin_clown_desc: "Pailazoaren Zortea: Kritiko aukera %15 igotzen du, baina Zehaztasuna %5 jaitsi.",
+    origin_warrior: "Gudaria",
+    origin_warrior_desc: "Gudu Arrakalak: Defentsa %10 eta bizi-puntu maximoak %5 igotzen ditu.",
+    origin_thief: "Lapurra",
+    origin_thief_desc: "Esku Azkarrak: Abiadura %10 igotzen du. Garaipenek %10 urre gehiago ematen dute.",
+    origin_cook: "Sukaldaria",
+    origin_cook_desc: "Otordu Oparoa: Taldean dagoela, aliatu guztiek biziaren %5 berreskuratzen dute txanda hasieran.",
+    origin_farmer: "Baserritarra",
+    origin_farmer_desc: "Lurraren Sustraiak: Heroi honen bizi-puntu maximoak %15 igotzen ditu.",
+    origin_guard: "Guardia",
+    origin_guard_desc: "Ezkutu Harresia: Taldean dagoela, aliatuek %10 kalte fisiko gutxiago jasaten dute.",
+    origin_monk: "Monjea",
+    origin_monk_desc: "Barne Bakea: Mana maximoa %15 igotzen du eta mana berreskuratzea bizkortu.",
+    origin_poet: "Poeta",
+    origin_poet_desc: "Bertso Inspiratzaileak: Taldean dagoela, aliatu guztien botere magikoa %10 igotzen da.",
+    critical_label: "KRITIKOA!",
+    physical: "Físikoa",
     magic: "Magia",
     tricker: "Ziri",
     support: "Laguntza",
@@ -1595,6 +1892,7 @@ const TRANSLATIONS = {
     big_storm_ball: "Ekaitz Bola Handia",
     poison_dart: "Dardo Pozoitsua",
     steal: "Lapurtu",
+    haste: "Bizkortasuna",
     basic_heal: "Sendatu",
     small_heal: "Sendaketa Txikia (20%)",
     medium_heal: "Sendaketa Ertaina (50%)",
@@ -1629,11 +1927,61 @@ const TRANSLATIONS = {
     big_storm_ball_desc: "Tximista ekaitz suntsitzailea.",
     poison_dart_desc: "Pozoitzen duen eraso ahula.",
     steal_desc: "Etsaiari lapurtzen saiatu.",
+    haste_desc: "Abiadura areagotu 3 txandaz.",
     small_group_heal_desc: "Guztientzako sendaketa txikia.",
     medium_group_heal_desc: "Guztientzako sendaketa aurreratua.",
     high_group_heal_desc: "Guztientzako otoitz sakratua.",
     btn_switch_hero: "🔁 HEROIA ALDATU",
-    confirm_switch_unique: "Zure uneko heroia 1. Mailako berri batekin aldatu nahi duzu? Heroi honen aurrerapen guztia galduko duzu."
+    confirm_switch_unique: "Zure uneko heroia 1. Mailako berri batekin aldatu nahi duzu? Heroi honen aurrerapen guztia galduko duzu.",
+    dagger: "Daga",
+    broadsword: "Ezpata Zabala",
+    battle_axe: "Bataila-Aizkora",
+    wand: "Makila Magikoa",
+    plate: "Plaka-Armadura",
+    leather: "Larruzko Armadura",
+    robes: "Tunika",
+    wooden: "Zurezko",
+    iron: "Burdinezko",
+    steel: "Altzairuzko",
+    gold: "Urrezko",
+    mythril: "Mitrilezko",
+    light_sparring: "Borroka Arina",
+    endurance_run: "Iraupen Lasterketa",
+    master_class: "Maistra Klasea",
+    hero_pilgrimage: "Erromesaldi Heroikoa",
+    volcano_cleanup: "Sumendi Garbiketa",
+    mountain_guard: "Mendi Guardia",
+    storm_tracker: "Ekaitz Jarraitzailea",
+    whirlwind: "Zirrunbiloa",
+    blade_dance: "Labana Dantza",
+    meteor: "Meteoroa",
+    blizzard: "Elur-Ekaitza",
+    tsunami: "Tsunami",
+    chain_lightning: "Kate-Tximista",
+    whirlwind_desc: "Etsai guztiei eraso birakaria.",
+    blade_dance_desc: "Etsai guztiei ezpata sorta bat.",
+    meteor_desc: "Su-harri bati eraso, zipriztin kaltearekin.",
+    blizzard_desc: "Etsai guztiei elur-ekaitza.",
+    tsunami_desc: "Etsai guztiei olatu erraldoia.",
+    chain_lightning_desc: "Etsaien artean salto egiten duen tximista.",
+    forsaken_shrine: "Santuario Utzia",
+    forsaken_shrine_desc: "Jainko ahaztu baten estatua hautsia. Energia-pultsu ahul bat sentitzen duzu.",
+    hidden_cache: "Ezkutuko Biltegia",
+    hidden_cache_desc: "Harri batzuen atzean ezkutatutako kutxa hautsez betea.",
+    mystic_fountain: "Iturri Mistikoa",
+    mystic_fountain_desc: "Ur urdin distiratsuko putzu bat.",
+    opt_pray: "Otoitz Egin",
+    opt_pray_desc: "Taldearen PV guztiak berreskuratu.",
+    opt_desecrate: "Zikindu",
+    opt_desecrate_desc: "%20ko kaltea jaso, 5 Nukleo irabazi.",
+    opt_careful: "Arretaz Ireki",
+    opt_careful_desc: "100 Urre aurkitu.",
+    opt_smash: "Apurtu",
+    opt_smash_desc: "300 Urre aurkitu, baina tranpa baten arriskua hartu.",
+    opt_drink: "Edan",
+    opt_drink_desc: "Ausazko heroi batek +1 Atributu puntu irabazten du.",
+    opt_ignore: "Ez ikusi egin",
+    opt_ignore_desc: "Aurrera jarraitu kontu handiz."
   },
   gl: {
     subtitle: "Aventura e Recluta",
@@ -1655,8 +2003,8 @@ const TRANSLATIONS = {
     btn_recruit: "RECLUTAR",
     btn_buy: "COMPRAR",
     basic_attack: "Ataque",
-    double_attack: "Ataque Dobre (10 MP)",
-    basic_water_ball: "Bóla de Auga (15 MP)",
+    double_attack: "Ataque Dobre (10 PM)",
+    basic_water_ball: "Bóla de Auga (15 PM)",
     tiny_potion: "Poción Pequena",
     tiny_mana_potion: "Poción de Maná Pequena",
     hero_limit: "Límite de heroes alcanzado!",
@@ -1684,7 +2032,7 @@ const TRANSLATIONS = {
     skills: "🗡️ HABILIDADES",
     items: "🎒 OBXECTOS",
     show_logs: "📜 VER REXISTRO",
-    hide_logs: "📜 OCULTAR REXISTRO",
+    hide_logs: "📜 OCULTAR REGISTRE",
     options_back: "🔙 VOLVER",
     roster_title: "Lista de Heroes",
     hero_roster: "Equipo",
@@ -1705,14 +2053,23 @@ const TRANSLATIONS = {
     stat_magic: "Maxia",
     confirm_wipe: "Estás seguro de que queres borrar toda a túa progresión?",
     wipe_success: "Datos borrados con éxito!",
-    origin_clown: "Pallaso Encarcerado",
-    origin_warrior_frustrated: "Guerreiro Frustrado",
-    origin_thief_bored: "Ladrón Aburrido",
-    origin_cook_angry: "Cociñeiro Enfurecido",
-    origin_farmer_lost: "Granxeiro de Nabos Perdido",
-    origin_guard_lazy: "Garda Preguiceiro",
-    origin_monk_silent: "Monxe en Voto de Silencio",
-    origin_poet_sad: "Poeta de Rúa Triste",
+    origin_clown: "Pallaso",
+    origin_clown_desc: "Sorte do Bufón: Aumenta a Prob. de Crítico un 15%, pero reduce a Precisión un 5%.",
+    origin_warrior: "Guerreiro",
+    origin_warrior_desc: "Cicatrices de Guerra: Aumenta a Defensa un 10% e os PV Máx. un 5%.",
+    origin_thief: "Ladrón",
+    origin_thief_desc: "Mans Rápidas: Aumenta a Velocidade un 10%. As vitorias outorgan un 10% máis de Ouro.",
+    origin_cook: "Cociñeiro",
+    origin_cook_desc: "Comida Abundante: Mentres estea no equipo, todos os aliados regeneran un 5% de PV ao inicio da súa quenda.",
+    origin_farmer: "Labrego",
+    origin_farmer_desc: "Raíces da Terra: Aumenta os PV Máx. deste heroe un 15%.",
+    origin_guard: "Garda",
+    origin_guard_desc: "Muro de Escudos: Mentres estea no equipo, todos os aliados reciben un 10% menos de Dano Físico.",
+    origin_monk: "Monxe",
+    origin_monk_desc: "Paz Interior: Aumenta os PM Máx. un 15% e mellora a taxa de recuperacion de PM.",
+    origin_poet: "Poeta",
+    origin_poet_desc: "Versos Inspiradores: Mentres estea no equipo, o Poder Máxico de todos os aliados aumenta un 10%.",
+    critical_label: "¡CRÍTICO!",
     physical: "Físico",
     magic: "Maxia",
     tricker: "Astucia",
@@ -1746,6 +2103,7 @@ const TRANSLATIONS = {
     big_storm_ball: "Bóla de Tormenta Grande",
     poison_dart: "Dardo Envelenado",
     steal: "Roubar",
+    haste: "Celeridade",
     basic_heal: "Curar",
     small_heal: "Cura Pequena (20%)",
     medium_heal: "Cura Mediana (50%)",
@@ -1775,19 +2133,69 @@ const TRANSLATIONS = {
     small_wind_ball_desc: "Ráfaga de vento afiada.",
     medium_wind_ball_desc: "Tornado de maxia de vento.",
     big_wind_ball_desc: "Ciclón devastador de vento.",
-    btn_switch_hero: "🔁 CAMBIAR HEROE",
-    confirm_switch_unique: "Queres cambiar o teu heroe actual por un novo de Nivel 1? Perderás todo o progreso deste heroe.",
     small_storm_ball_desc: "Chispa eléctrica crepitante.",
     medium_storm_ball_desc: "Oleada de maxia eléctrica.",
     big_storm_ball_desc: "Tormenta de raios fatal.",
     poison_dart_desc: "Ataque débil que envelena.",
     steal_desc: "Intenta roubar ao inimigo.",
-    small_heal_desc: "Tratamento médico menor.",
+    haste_desc: "Aumenta a velocidade por 3 quendas.",
+    small_heal_desc: "Tratamiento médico menor.",
     medium_heal_desc: "Curación médica avanzada.",
     high_heal_desc: "Curación sagrada milagrosa.",
     small_group_heal_desc: "Cura menor para todos.",
     medium_group_heal_desc: "Cura avanzada para todos.",
-    high_group_heal_desc: "Prezo sagrado para todos."
+    high_group_heal_desc: "Prezo sagrado para todos.",
+    btn_switch_hero: "🔁 CAMBIAR HEROE",
+    confirm_switch_unique: "Queres cambiar o teu heroe actual por un novo de Nivel 1? Perderás todo o progreso deste heroe.",
+    dagger: "Daga",
+    broadsword: "Espada Ancha",
+    battle_axe: "Hacha de Batalla",
+    wand: "Varita",
+    plate: "Armadura de Placas",
+    leather: "Armadura de Coiro",
+    robes: "Túnicas",
+    wooden: "de Madeira",
+    iron: "de Ferro",
+    steel: "de Aceiro",
+    gold: "de Ouro",
+    mythril: "de Mitril",
+    light_sparring: "Combate Lixeiro",
+    endurance_run: "Carreira de Resistencia",
+    master_class: "Clase Mestra",
+    hero_pilgrimage: "Peregrinaxe Heroica",
+    volcano_cleanup: "Limpeza do Volcán",
+    mountain_guard: "Garda da Montaña",
+    storm_tracker: "Rastreador de Tormentas",
+    whirlwind: "Torbellino",
+    blade_dance: "Danza de Follas",
+    meteor: "Meteoro",
+    blizzard: "Ventisca",
+    tsunami: "Tsunami",
+    chain_lightning: "Lóstrego en Cadea",
+    whirlwind_desc: "Ataque giratorio que golpea a todos os inimigos.",
+    blade_dance_desc: "Unha ráfaga de espadas que golpea a todos os inimigos.",
+    meteor_desc: "Rocha ardente que golpea a un con dano de salpicadura.",
+    blizzard_desc: "Tormenta xeada que golpea a todos os inimigos.",
+    tsunami_desc: "Onda colosal que golpea a todos os inimigos.",
+    chain_lightning_desc: "Arco eléctrico que salta entre inimigos.",
+    forsaken_shrine: "O Santuario Abandonado",
+    forsaken_shrine_desc: "Unha estatua en ruínas dunha deidade esquecida. Sentes un feble pulso de enerxía.",
+    hidden_cache: "O Agocho Oculto",
+    hidden_cache_desc: "Un cofre poeirento escondido tras unhas rochas.",
+    mystic_fountain: "Fonte Mística",
+    mystic_fountain_desc: "Un estanque de auga azul brillante.",
+    opt_pray: "Prezar",
+    opt_pray_desc: "Restaura todos os PV do equipo.",
+    opt_desecrate: "Profanar",
+    opt_desecrate_desc: "Recibe un 20% de dano, gaña 5 Núcleos.",
+    opt_careful: "Abrir con Coidado",
+    opt_careful_desc: "Atopa 100 de Ouro.",
+    opt_smash: "Romper",
+    opt_smash_desc: "Atopa 300 de Ouro, pero arrisca a unha trampa.",
+    opt_drink: "Beber",
+    opt_drink_desc: "Un heroe aleatorio gaña +1 punto de Atributo.",
+    opt_ignore: "Ignorar",
+    opt_ignore_desc: "Continúa con precaución."
   }
 };
 const SHARED_KEY = "static_apps_lang";
@@ -1795,6 +2203,20 @@ let currentLang = localStorage.getItem(SHARED_KEY) || "en";
 function t(key) {
   const lang = TRANSLATIONS[currentLang] ? currentLang : "en";
   return TRANSLATIONS[lang][key] || TRANSLATIONS["en"][key] || key;
+}
+function formatEquipmentName(materialId, familyId, slot = null) {
+  const lang = TRANSLATIONS[currentLang] ? currentLang : "en";
+  const matName = t(materialId);
+  const famName = t(familyId);
+  const slotName = slot ? t("slot_" + slot) : "";
+  if (lang === "en") {
+    return `${matName} ${famName}${slot ? " " + slotName : ""}`;
+  } else if (lang === "es" || lang === "ca" || lang === "gl") {
+    return `${famName} ${matName}${slot ? " " + slotName : ""}`;
+  } else if (lang === "eu") {
+    return `${matName} ${famName}${slot ? " " + slotName : ""}`;
+  }
+  return `${matName} ${famName}${slot ? " " + slotName : ""}`;
 }
 function applyTranslations() {
   document.documentElement.lang = currentLang;
@@ -1811,6 +2233,124 @@ function changeLanguage() {
     currentLang = selector.value;
     localStorage.setItem(SHARED_KEY, currentLang);
     location.reload();
+  }
+}
+class Enemy {
+  constructor(data) {
+    this.id = data.id || "enemy_" + Math.random().toString(36).substr(2, 9);
+    this.name = data.name;
+    this.type = data.type || "slime";
+    this.level = data.level || 1;
+    this.maxHp = data.maxHp || 10;
+    this.hp = data.hp ?? this.maxHp;
+    this.maxMp = data.maxMp || 5;
+    this.mp = data.mp ?? this.maxMp;
+    this.strength = data.strength || 1;
+    this.speed = data.speed || 1;
+    this.defense = data.defense || 1;
+    this.magicPower = data.magicPower || 1;
+    this.element = data.element || "neutral";
+    this.skills = data.skills || { basic_attack: 0 };
+    this.isBoss = data.isBoss || false;
+    this.statusEffects = [];
+  }
+  static generate(level = 1, milestone = 1, index = 0) {
+    const types = [
+      { id: "slime", name: "Slime", hp: 8, str: 1, spd: 1, def: 1, mag: 1, el: "water" },
+      { id: "goblin", name: "Goblin", hp: 12, str: 2, spd: 3, def: 1, mag: 0, el: "wind" },
+      { id: "wolf", name: "Wolf", hp: 10, str: 3, spd: 4, def: 1, mag: 0, el: "neutral" },
+      { id: "wisp", name: "Wisp", hp: 6, str: 1, spd: 5, def: 0, mag: 3, el: "storm" },
+      { id: "golem", name: "Golem", hp: 25, str: 4, spd: 1, def: 5, mag: 1, el: "fire" }
+    ];
+    const isBoss = milestone % 10 === 0 && milestone > 0 && index === 0;
+    const type = types[Math.floor(Math.random() * types.length)];
+    const mult = 1 + (level - 1) * 0.2;
+    const bossMult = isBoss ? 4 : 1;
+    const nameSuffix = index > 0 ? ` ${String.fromCharCode(65 + index)}` : "";
+    return new Enemy({
+      name: (isBoss ? "BOSS: " : "") + type.name + nameSuffix,
+      type: type.id,
+      level,
+      maxHp: Math.floor(type.hp * mult * bossMult),
+      strength: Math.floor(type.str * mult * bossMult),
+      speed: Math.floor(type.spd * mult * (isBoss ? 1.5 : 1)),
+      defense: Math.floor(type.def * mult * bossMult),
+      magicPower: Math.floor(type.mag * mult * bossMult),
+      element: type.el,
+      isBoss,
+      skills: { basic_attack: 0 }
+    });
+  }
+  static generateGroup(milestone) {
+    const level = Math.max(1, Math.floor(milestone / 2));
+    const isBossMilestone = milestone % 10 === 0 && milestone > 0;
+    let count = 1;
+    if (isBossMilestone) {
+      count = milestone >= 50 ? 3 : 1;
+    } else {
+      const roll = Math.random();
+      if (milestone < 5) count = 1;
+      else if (milestone < 15) count = roll < 0.7 ? 1 : 2;
+      else if (milestone < 30) count = roll < 0.4 ? 1 : roll < 0.8 ? 2 : 3;
+      else count = roll < 0.3 ? 2 : roll < 0.7 ? 3 : 4;
+    }
+    const group = [];
+    for (let i = 0; i < count; i++) {
+      group.push(this.generate(level, milestone, i));
+    }
+    if (count > 1) {
+      const hpReduction = 1.2 / count;
+      group.forEach((e) => {
+        e.maxHp = Math.floor(e.maxHp * hpReduction);
+        e.hp = e.maxHp;
+        e.strength = Math.floor(e.strength * (1.1 / count) + 1);
+        e.magicPower = Math.floor(e.magicPower * (1.1 / count) + 1);
+      });
+    }
+    return group;
+  }
+  draw(ctx, x, y, isTurn) {
+    ctx.fillStyle = this.isBoss ? "#f0f" : "#f00";
+    if (this.hp <= 0) ctx.fillStyle = "#444";
+    const size = this.isBoss ? 30 : 20;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+    if (isTurn) {
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    this.statusEffects.forEach((eff, i) => {
+      ctx.fillStyle = this.getStatusColor(eff.type);
+      ctx.beginPath();
+      ctx.arc(x - 15 + i * 10, y - size - 20, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = "#fff";
+    ctx.font = "12px Outfit";
+    ctx.textAlign = "center";
+    ctx.fillText(this.name, x, y - size - 30);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(x - size, y + size + 5, size * 2, 5);
+    ctx.fillStyle = "#f00";
+    ctx.fillRect(x - size, y + size + 5, size * 2 * (this.hp / this.maxHp), 5);
+  }
+  getStatusColor(type) {
+    switch (type) {
+      case "poison":
+        return "#0f0";
+      case "sleep":
+        return "#88f";
+      case "stun":
+        return "#ff0";
+      case "burn":
+        return "#f80";
+      case "haste":
+        return "#0ff";
+      default:
+        return "#fff";
+    }
   }
 }
 class CombatAttackCalculator {
@@ -1854,8 +2394,15 @@ class CombatAttackCalculator {
    * Calculates evasion chance (0-100)
    */
   static calculateEvasionChance(attacker, defender) {
-    const sAttacker = this.getFinalStat(attacker, "speed");
-    const sDefender = this.getFinalStat(defender, "speed");
+    let sAttacker = this.getFinalStat(attacker, "speed");
+    let sDefender = this.getFinalStat(defender, "speed");
+    if (attacker.getTraitMultipliers) {
+      const mults = attacker.getTraitMultipliers();
+      sAttacker *= mults.accuracy;
+    }
+    if (attacker.accuracyBonus) {
+      sAttacker *= 1 + attacker.accuracyBonus / 100;
+    }
     const R = sDefender / sAttacker;
     if (R <= 1) {
       return Math.max(0, (R - 0.5) * 20);
@@ -1867,26 +2414,41 @@ class CombatAttackCalculator {
    * Main calculation entry point
    * @returns {Object} { amount, evasionChance, isMiss, elementMult }
    */
-  static calculate(attacker, defender, skillData, skillLevel = 0) {
+  static calculate(attacker, defender, skillData, skillLevel = 0, partyTraits = {}) {
     const evasionChance = this.calculateEvasionChance(attacker, defender);
+    let critChance = 0;
+    if (attacker.getTraitMultipliers) {
+      critChance += attacker.getTraitMultipliers().critChance;
+    }
+    if (attacker.critChanceBonus) {
+      critChance += attacker.critChanceBonus;
+    }
     const isMiss = Math.random() * 100 < evasionChance;
+    const isCrit = !isMiss && Math.random() * 100 < critChance;
     if (isMiss) {
-      return { amount: 0, evasionChance, isMiss: true, elementMult: 1 };
+      return { amount: 0, evasionChance, isMiss: true, elementMult: 1, isCrit: false };
     }
     const multiplier = 1 + 5e-3 * (skillData.tier || 1) * skillLevel;
-    const baseStatValue = this.getFinalStat(attacker, skillData.stat);
+    let baseStatValue = this.getFinalStat(attacker, skillData.stat);
+    if (skillData.stat === "magicPower" && partyTraits.magicPowerBoost) {
+      baseStatValue *= 1 + partyTraits.magicPowerBoost;
+    }
     if (skillData.category === "support") {
       const power = skillData.power || 0.1;
       const finalPercentage = power * multiplier;
-      return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1 };
+      return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1, isCrit: false };
     } else {
       const damageMultiplier = skillData.baseMultiplier || 1;
-      const rawDamage = baseStatValue * damageMultiplier * multiplier;
+      let rawDamage = baseStatValue * damageMultiplier * multiplier;
+      if (isCrit) rawDamage *= 1.5;
       const targetDefense = this.getFinalStat(defender, "defense");
       const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
       const elementMult = this.getElementMultiplier(skillData.element, defender.element);
-      const finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
-      return { amount: finalDamage, evasionChance, isMiss: false, elementMult };
+      let finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
+      if (skillData.category === "physical" && partyTraits.physicalDamageReduction) {
+        finalDamage = Math.floor(finalDamage * (1 - partyTraits.physicalDamageReduction));
+      }
+      return { amount: finalDamage, evasionChance, isMiss: false, elementMult, isCrit };
     }
   }
 }
@@ -1903,7 +2465,6 @@ class CombatTurnAutoAgent {
       return data && target.mp >= data.mpCost;
     });
     const injuredAllies = allies.filter((a) => a.hp > 0 && a.hp / a.maxHp <= 0.7);
-    allies.filter((a) => a.hp > 0 && a.hp / a.maxHp <= 0.4);
     if (injuredAllies.length > 0) {
       const healSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category === "support" && (s.targetType === "single_ally" || s.targetType === "all_allies")).sort((a, b) => (b.power || 0) - (a.power || 0));
       if (healSkills.length > 0) {
@@ -1922,12 +2483,17 @@ class CombatTurnAutoAgent {
     }
     const attackSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category !== "support").sort((a, b) => (b.baseMultiplier || 0) - (a.baseMultiplier || 0));
     let chosenSkill = attackSkills[0] || SKILLS_DATA["basic_attack"];
+    let targetIndex = 0;
+    const aliveEnemies = [];
+    for (let i = 0; i < enemies.length; i++) {
+      if (enemies[i].hp > 0) {
+        aliveEnemies.push({ e: enemies[i], idx: i });
+      }
+    }
     const aoeSkill = attackSkills.find((s) => s.targetType === "all_enemies");
-    if (aoeSkill && enemies.filter((e) => e.hp > 0).length > 1) {
+    if (aoeSkill && aliveEnemies.length > 1) {
       chosenSkill = aoeSkill;
     }
-    let targetIndex = 0;
-    const aliveEnemies = enemies.map((e, idx) => ({ e, idx })).filter((item) => item.e.hp > 0);
     if (aliveEnemies.length > 0) {
       if (type === "smart") {
         aliveEnemies.sort((a, b) => a.e.hp - b.e.hp);
@@ -1943,24 +2509,53 @@ class CombatTurnAutoAgent {
   }
 }
 class CombatManager {
-  constructor(game2, heroes, enemy) {
+  constructor(game2, heroes, enemies) {
     this.game = game2;
     this.heroes = heroes;
-    this.enemy = enemy;
+    this.enemies = enemies;
     this.turnOrder = [];
     this.currentTurnIndex = 0;
     this.isCombatOver = false;
     this.isActionInProgress = false;
     this.autoTurnTimeout = null;
     this.itemUsedThisTurn = false;
+    this.targetIndex = null;
+    this.partyTraits = this.calculatePartyTraits();
     this.initTurnOrder();
+  }
+  calculatePartyTraits() {
+    const traits = {
+      hpRegen: 0,
+      physicalDamageReduction: 0,
+      magicPowerBoost: 0,
+      goldBonus: 1
+    };
+    this.heroes.forEach((hero) => {
+      if (hero.hp > 0) {
+        switch (hero.origin) {
+          case "origin_cook":
+            traits.hpRegen += 0.05;
+            break;
+          case "origin_guard":
+            traits.physicalDamageReduction += 0.1;
+            break;
+          case "origin_poet":
+            traits.magicPowerBoost += 0.1;
+            break;
+          case "origin_thief":
+            traits.goldBonus += 0.1;
+            break;
+        }
+      }
+    });
+    return traits;
   }
   stop() {
     this.isCombatOver = true;
     clearTimeout(this.autoTurnTimeout);
   }
   initTurnOrder() {
-    this.turnOrder = [...this.heroes, this.enemy].sort((a, b) => b.speed - a.speed);
+    this.turnOrder = [...this.heroes, ...this.enemies].sort((a, b) => b.speed - a.speed);
   }
   nextTurn() {
     if (this.isCombatOver) return;
@@ -1969,8 +2564,50 @@ class CombatManager {
       this.advanceTurn();
       return;
     }
-    if (participant === this.enemy) {
-      this.enemyTurn();
+    let skipTurn = false;
+    if (participant.statusEffects.length > 0) {
+      for (let i = participant.statusEffects.length - 1; i >= 0; i--) {
+        const eff = participant.statusEffects[i];
+        if (eff.type === "poison") {
+          const dmg = Math.floor(participant.maxHp * eff.power);
+          this.applyDamage(participant, dmg);
+          this.game.log(`${participant.name} is poisoned! (-${dmg} HP)`);
+        } else if (eff.type === "burn") {
+          const dmg = Math.floor(participant.maxHp * eff.power);
+          this.applyDamage(participant, dmg);
+          this.game.log(`${participant.name} is burning! (-${dmg} HP)`);
+        } else if (eff.type === "sleep") {
+          this.game.log(`${participant.name} is asleep...`);
+          skipTurn = true;
+        } else if (eff.type === "stun") {
+          this.game.log(`${participant.name} is stunned!`);
+          skipTurn = true;
+        }
+        eff.duration--;
+        if (eff.duration <= 0) {
+          participant.statusEffects.splice(i, 1);
+          if (participant.recalculateStats) participant.recalculateStats();
+        }
+      }
+    }
+    if (participant.hp <= 0) {
+      this.advanceTurn();
+      return;
+    }
+    if (skipTurn) {
+      setTimeout(() => this.advanceTurn(), 1e3);
+      return;
+    }
+    if (this.heroes.includes(participant) && this.partyTraits.hpRegen > 0) {
+      const regenAmount = Math.floor(participant.maxHp * this.partyTraits.hpRegen);
+      if (regenAmount > 0) {
+        participant.hp = Math.min(participant.maxHp, participant.hp + regenAmount);
+        if (this.game.onHeal) this.game.onHeal(participant, regenAmount);
+        this.game.log(t("log_heals").replace("{attacker}", t("origin_cook")).replace("{target}", participant.name).replace("{amount}", regenAmount));
+      }
+    }
+    if (this.enemies.includes(participant)) {
+      this.enemyTurn(participant);
     } else {
       const turnMsg = t("s_turn").replace("{hero}", participant.name);
       this.game.log(participant.name + turnMsg);
@@ -1988,9 +2625,8 @@ class CombatManager {
       const context = {
         target: hero,
         allies: this.heroes,
-        enemies: [this.enemy],
+        enemies: this.enemies.filter((e) => e.hp > 0),
         type: "smart"
-        // Heroes are always smart in auto battle
       };
       const decision = CombatTurnAutoAgent.decideAction(context);
       this.handleSkillAction(hero, decision.skillId, decision.targetIndex);
@@ -2004,9 +2640,9 @@ class CombatManager {
     this.nextTurn();
   }
   checkCombatEnd() {
-    if (this.enemy.hp <= 0) {
+    if (this.enemies.every((e) => e.hp <= 0)) {
       this.isCombatOver = true;
-      setTimeout(() => this.game.endCombat("win"), 1e3);
+      setTimeout(() => this.game.endCombat("win", this.partyTraits.goldBonus), 1e3);
       return true;
     }
     const allHeroesDead = this.heroes.every((h) => h.hp <= 0);
@@ -2018,26 +2654,51 @@ class CombatManager {
     return false;
   }
   applyDamage(target, amount) {
-    if (target === this.enemy && target.isBoss && target.hp === target.maxHp && typeof amount === "number" && amount >= target.maxHp * 3) {
+    if (this.enemies.includes(target) && target.isBoss && target.hp === target.maxHp && typeof amount === "number" && amount >= target.maxHp * 3) {
       this.oneShotJumpPossible = true;
     }
     const roundedAmount = typeof amount === "number" ? Math.round(amount) : 0;
+    if (roundedAmount >= target.hp && target.hasPhoenix && !target.phoenixUsed) {
+      target.hp = 1;
+      target.phoenixUsed = true;
+      this.game.log(`✨ ${target.name} survives with 1 HP! (Phoenix)`);
+      if (this.game.onHeal) this.game.onHeal(target, "REVIVE");
+      return;
+    }
     target.hp = Math.max(0, target.hp - roundedAmount);
     if (this.game.onDamage) this.game.onDamage(target, roundedAmount);
+    if (roundedAmount > 0) {
+      const sleepIdx = target.statusEffects.findIndex((e) => e.type === "sleep");
+      if (sleepIdx > -1) {
+        target.statusEffects.splice(sleepIdx, 1);
+        this.game.log(`${target.name} woke up!`);
+        if (target.recalculateStats) target.recalculateStats();
+      }
+    }
     if (target.hp === 0) {
       if (this.game.onDeath) this.game.onDeath(target);
+      if (this.heroes.includes(target)) {
+        this.partyTraits = this.calculatePartyTraits();
+      }
     }
   }
-  // Formulas moved to CombatAttackCalculator
+  setTargetIndex(idx) {
+    this.targetIndex = idx;
+    const target = this.enemies[idx];
+    if (target) {
+      this.game.log(`Target set to ${target.name}`);
+    }
+  }
   heroAction(hero, skillId, targetIndex = null) {
     this.handleSkillAction(hero, skillId, targetIndex);
   }
   handleSkillAction(actor, skillId, targetIndex = null) {
+    var _a;
     if (this.isActionInProgress || this.isCombatOver) return;
     const skillData = SKILLS_DATA[skillId];
     if (!skillData) return;
     if (actor.mp < skillData.mpCost) {
-      if (actor !== this.enemy) {
+      if (this.heroes.includes(actor)) {
         this.game.log(t("not_enough_mp") || "Not enough MP!");
         this.game.showActionPanel(actor);
       } else {
@@ -2050,41 +2711,64 @@ class CombatManager {
     actor.mp -= skillData.mpCost;
     const skillLevel = actor.skills[skillId] || 0;
     let delay = 500;
-    let targets = [];
     const isActorHero = this.heroes.includes(actor);
-    const allies = isActorHero ? this.heroes : [this.enemy];
-    const enemies = isActorHero ? [this.enemy] : this.heroes;
+    const allies = isActorHero ? this.heroes : this.enemies;
+    const enemies = isActorHero ? this.enemies : this.heroes;
+    let baseTargets = [];
     if (skillData.targetType === "all_allies") {
-      targets = allies.filter((a) => a.hp > 0);
+      baseTargets = allies.filter((a) => a.hp > 0);
     } else if (skillData.targetType === "single_ally") {
-      targets = [targetIndex !== null ? allies[targetIndex] : actor];
+      baseTargets = [targetIndex !== null ? allies[targetIndex] : actor];
     } else if (skillData.targetType === "all_enemies") {
-      targets = enemies.filter((e) => e.hp > 0);
+      baseTargets = enemies.filter((e) => e.hp > 0);
     } else if (skillData.targetType === "single_enemy") {
-      targets = [targetIndex !== null ? enemies[targetIndex] : enemies[0]];
+      if (targetIndex !== null) {
+        baseTargets = [enemies[targetIndex]];
+      } else if (this.targetIndex !== null && !enemies.includes(actor) && ((_a = enemies[this.targetIndex]) == null ? void 0 : _a.hp) > 0) {
+        baseTargets = [enemies[this.targetIndex]];
+      } else {
+        const alive = enemies.filter((e) => e.hp > 0);
+        baseTargets = alive.length > 0 ? [alive[0]] : [];
+      }
     } else if (skillData.targetType === "self") {
-      targets = [actor];
+      baseTargets = [actor];
     }
-    targets.forEach((target) => {
-      const result = CombatAttackCalculator.calculate(actor, target, skillData, skillLevel);
+    const mainTarget = baseTargets[0];
+    let targetsWithMultipliers = baseTargets.map((t2) => ({ target: t2, mult: 1 }));
+    if (skillData.splash && mainTarget) {
+      const others = enemies.filter((e) => e.hp > 0 && e !== mainTarget);
+      others.forEach((o) => targetsWithMultipliers.push({ target: o, mult: skillData.splash }));
+    }
+    if (skillData.jump && mainTarget) {
+      const others = enemies.filter((e) => e.hp > 0 && e !== mainTarget);
+      let currentMult = skillData.jump;
+      others.forEach((o) => {
+        targetsWithMultipliers.push({ target: o, mult: currentMult });
+        currentMult *= skillData.jump;
+      });
+    }
+    targetsWithMultipliers.forEach(({ target, mult }) => {
+      const result = CombatAttackCalculator.calculate(actor, target, skillData, skillLevel, this.partyTraits);
       if (result.isMiss) {
         this.game.log(t("log_miss").replace("{attacker}", actor.name).replace("{target}", target.name));
         if (this.game.onDamage) this.game.onDamage(target, t("miss_label") || "Miss!");
-        if (target === this.enemy) ;
-        else {
-          this.game.triggerFlash("rgba(255, 255, 255, 0.1)", 200);
-        }
       } else {
         if (skillData.category === "support") {
-          const healAmount = Math.floor(target.maxHp * result.amount);
-          target.hp = Math.min(target.maxHp, target.hp + healAmount);
-          if (this.game.onHeal) this.game.onHeal(target, healAmount);
-          this.game.log(t("log_heals").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{amount}", healAmount));
+          if (skillId === "haste") {
+            this.applyStatusEffect(target, { type: "haste", duration: 3 });
+            this.game.log(`${actor.name} uses Haste on ${target.name}!`);
+          } else {
+            const healAmount = Math.floor(target.maxHp * result.amount * mult);
+            target.hp = Math.min(target.maxHp, target.hp + healAmount);
+            if (this.game.onHeal) this.game.onHeal(target, healAmount);
+            this.game.log(t("log_heals").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{amount}", healAmount));
+          }
         } else {
-          const finalDamage = result.amount;
-          let elementFeedback = "";
-          if (result.elementMult > 1) elementFeedback = `[${t("effective") || "Effective!"}] `;
-          else if (result.elementMult < 1) elementFeedback = `[${t("resisted") || "Resisted"}] `;
+          const finalDamage = Math.max(1, Math.floor(result.amount * mult));
+          let feedback = "";
+          if (result.isCrit) feedback += `[${t("critical_label") || "CRITICAL!"}] `;
+          if (result.elementMult > 1) feedback += `[${t("effective") || "Effective!"}] `;
+          else if (result.elementMult < 1) feedback += `[${t("resisted") || "Resisted"}] `;
           if (skillId === "double_attack") {
             this.applyDamage(target, finalDamage);
             setTimeout(() => this.applyDamage(target, finalDamage), 300);
@@ -2097,10 +2781,24 @@ class CombatManager {
           } else {
             this.applyDamage(target, finalDamage);
           }
+          if (actor.vampirism && finalDamage > 0) {
+            const heal = Math.floor(finalDamage * actor.vampirism);
+            if (heal > 0) {
+              actor.hp = Math.min(actor.maxHp, actor.hp + heal);
+              if (this.game.onHeal) this.game.onHeal(actor, heal);
+            }
+          }
+          if (skillId === "poison_dart" && Math.random() < 0.5) {
+            this.applyStatusEffect(target, { type: "poison", duration: 3, power: 0.05 });
+          } else if (skillId === "meteor" && Math.random() < 0.3) {
+            this.applyStatusEffect(target, { type: "burn", duration: 3, power: 0.02 });
+          } else if (skillId === "blizzard" && Math.random() < 0.2) {
+            this.applyStatusEffect(target, { type: "sleep", duration: 2 });
+          }
           if (skillId === "basic_attack" || skillId === "double_attack" || skillId === "triple_attack") {
-            this.game.log(elementFeedback + t("log_attack").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{damage}", finalDamage));
+            this.game.log(feedback + t("log_attack").replace("{attacker}", actor.name).replace("{target}", target.name).replace("{damage}", finalDamage));
           } else {
-            this.game.log(elementFeedback + t("log_uses_skill").replace("{attacker}", actor.name).replace("{skill}", t(skillId)));
+            this.game.log(feedback + t("log_uses_skill").replace("{attacker}", actor.name).replace("{skill}", t(skillId)) + ` (Target: ${target.name})`);
           }
           if (!isActorHero) {
             this.game.triggerFlash("rgba(255, 0, 0, 0.3)", 300);
@@ -2108,8 +2806,18 @@ class CombatManager {
         }
       }
     });
-    if (this.enemy.hp === 0) delay += 1e3;
+    if (this.enemies.every((e) => e.hp <= 0)) delay += 1e3;
     setTimeout(() => this.advanceTurn(), delay);
+  }
+  applyStatusEffect(target, effect) {
+    const existing = target.statusEffects.find((e) => e.type === effect.type);
+    if (existing) {
+      existing.duration = Math.max(existing.duration, effect.duration);
+    } else {
+      target.statusEffects.push(effect);
+    }
+    if (target.recalculateStats) target.recalculateStats();
+    this.game.log(`${target.name} is affected by ${effect.type}!`);
   }
   useItem(hero, itemId) {
     if (this.isActionInProgress || this.isCombatOver) return;
@@ -2129,17 +2837,16 @@ class CombatManager {
     this.isActionInProgress = false;
     setTimeout(() => this.game.showActionPanel(hero), 500);
   }
-  enemyTurn() {
+  enemyTurn(enemy) {
     if (this.isCombatOver) return;
     const context = {
-      target: this.enemy,
-      allies: [this.enemy],
-      enemies: this.heroes,
+      target: enemy,
+      allies: this.enemies.filter((e) => e.hp > 0),
+      enemies: this.heroes.filter((h) => h.hp > 0),
       type: "random"
-      // Enemies are random for now as requested
     };
     const decision = CombatTurnAutoAgent.decideAction(context);
-    this.handleSkillAction(this.enemy, decision.skillId, decision.targetIndex);
+    this.handleSkillAction(enemy, decision.skillId, decision.targetIndex);
   }
 }
 class Particle {
@@ -2202,7 +2909,7 @@ class FloatingText {
 class RPGGame {
   constructor() {
     this.currentCombat = null;
-    this.currentEnemy = null;
+    this.enemies = [];
     this.currentMilestone = Progression.prog.milestone;
     this.activeIndices = Progression.prog.activeHeroIndices;
     this.heroes = this.activeIndices.map((idx) => new Hero(Progression.prog.heroes[idx]));
@@ -2219,18 +2926,20 @@ class RPGGame {
     this.isRunning = false;
     this.screenFlash = { color: "#ff0000", life: 0 };
     this.lastActionTime = 0;
+    this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
   }
   resizeCanvas() {
     const container = this.canvas.parentElement;
     this.canvas.width = container.clientWidth;
     this.canvas.height = container.clientHeight;
-    if (this.currentEnemy) {
+    if (this.enemies.length > 0 || this.currentEvent) {
       this.updateUI();
     }
   }
   startAdventure() {
     this.currentMilestone = Math.floor(Progression.prog.milestone / 5) * 5;
     this.heroes.forEach((h) => {
+      h.recalculateStats();
       h.hp = h.maxHp;
       h.mp = h.maxMp;
     });
@@ -2265,8 +2974,13 @@ class RPGGame {
   }
   nextCombat() {
     this.currentMilestone++;
-    const level = Math.max(1, Math.floor(this.currentMilestone / 2));
-    this.currentEnemy = Enemy.generate(level, this.currentMilestone);
+    const isBossMilestone = this.currentMilestone % 10 === 0;
+    const isEventMilestone = this.currentMilestone % 5 === 0 && !isBossMilestone;
+    if (isEventMilestone) {
+      this.triggerEvent();
+      return;
+    }
+    this.enemies = Enemy.generateGroup(this.currentMilestone);
     this.heroes.forEach((h) => {
       if (h.hp > 0) {
         h.hp = Math.min(h.maxHp, h.hp + Math.floor(h.maxHp * 0.2));
@@ -2278,17 +2992,119 @@ class RPGGame {
     }
     const toggle = document.getElementById("autobattle-toggle");
     if (toggle) toggle.checked = this.autoBattle;
-    this.currentCombat = new CombatManager(this, this.heroes, this.currentEnemy);
+    this.currentCombat = new CombatManager(this, this.heroes, this.enemies);
     this.updateUI();
     setTimeout(() => this.currentCombat.nextTurn(), 1e3);
   }
-  endCombat(result) {
+  triggerEvent() {
+    const events = [
+      {
+        id: "forsaken_shrine",
+        title: "The Forsaken Shrine",
+        desc: "A crumbling statue of a forgotten deity. You feel a faint pulse of energy.",
+        options: [
+          { id: "pray", label: "Pray", desc: "Restore full HP to the party." },
+          { id: "desecrate", label: "Desecrate", desc: "Take 20% damage, gain 5 Cores." }
+        ]
+      },
+      {
+        id: "hidden_cache",
+        title: "The Hidden Cache",
+        desc: "A dusty chest hidden behind some rocks.",
+        options: [
+          { id: "careful", label: "Open Carefully", desc: "Find 100 Gold." },
+          { id: "smash", label: "Smash Open", desc: "Find 300 Gold, but risk a trap." }
+        ]
+      },
+      {
+        id: "mystic_fountain",
+        title: "Mystic Fountain",
+        desc: "A pool of shimmering blue water.",
+        options: [
+          { id: "drink", label: "Drink", desc: "A random hero gains +1 Stat Point." },
+          { id: "ignore", label: "Ignore", desc: "Move on cautiously." }
+        ]
+      }
+    ];
+    const event = events[Math.floor(Math.random() * events.length)];
+    this.currentEvent = event;
+    this.showEventUI(event);
+  }
+  showEventUI(event) {
+    const overlay = document.createElement("div");
+    overlay.id = "event-overlay";
+    overlay.style = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+            z-index: 2000; padding: 20px; box-sizing: border-box;
+        `;
+    const content = document.createElement("div");
+    content.style = `
+            background: #111; border: 2px solid var(--primary); border-radius: 12px;
+            padding: 30px; max-width: 500px; width: 100%; text-align: center;
+        `;
+    content.innerHTML = `
+            <h2 style="color: var(--primary); margin-top: 0;">${t(event.id) || event.title}</h2>
+            <p style="color: white; font-size: 1.1rem; line-height: 1.6; margin: 20px 0;">${t(event.id + "_desc") || event.desc}</p>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                ${event.options.map((opt) => `
+                    <button class="menu-btn primary" style="padding: 15px;" onclick="window.game.handleEventChoice('${opt.id}')">
+                        <div style="font-weight: bold;">${t("opt_" + opt.id) || opt.label}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">${t("opt_" + opt.id + "_desc") || opt.desc}</div>
+                    </button>
+                `).join("")}
+            </div>
+        `;
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+    window.game = this;
+  }
+  handleEventChoice(choiceId) {
+    this.currentEvent;
+    let msg = "";
+    if (choiceId === "pray") {
+      this.heroes.forEach((h) => h.hp = h.maxHp);
+      msg = "The deity smiles upon you. Party fully healed!";
+    } else if (choiceId === "desecrate") {
+      this.heroes.forEach((h) => {
+        const dmg = Math.floor(h.maxHp * 0.2);
+        h.hp = Math.max(1, h.hp - dmg);
+      });
+      Progression.addCores(5);
+      msg = "You find 5 Cores in the rubble, but feel a dark curse. Party damaged!";
+    } else if (choiceId === "careful") {
+      Progression.addGold(100);
+      msg = "You found 100 Gold!";
+    } else if (choiceId === "smash") {
+      if (Math.random() < 0.3) {
+        this.heroes.forEach((h) => {
+          const dmg = Math.floor(h.maxHp * 0.15);
+          h.hp = Math.max(1, h.hp - dmg);
+        });
+        msg = "A trap was triggered! Party took damage, but you found 300 Gold!";
+      } else {
+        msg = "Successful! You found 300 Gold!";
+      }
+      Progression.addGold(300);
+    } else if (choiceId === "drink") {
+      const h = this.heroes[Math.floor(Math.random() * this.heroes.length)];
+      h.statPoints += 1;
+      msg = `${h.name} feels stronger! (+1 Stat Point)`;
+    } else if (choiceId === "ignore") {
+      msg = "You move on without taking any risks.";
+    }
+    document.getElementById("event-overlay").remove();
+    alert(msg);
+    this.currentEvent = null;
+    this.nextCombat();
+  }
+  endCombat(result, goldBonus = 1) {
     this.popupOpenTime = performance.now();
     let levelUps = [];
     if (result === "win") {
-      const goldEarned = 10 * this.currentMilestone;
+      const goldEarned = Math.floor(10 * this.currentMilestone * goldBonus);
       const expEarned = 20 * this.currentMilestone;
-      const coresEarned = this.currentEnemy.isBoss ? 5 : 0;
+      const coresEarned = this.enemies.some((e) => e.isBoss) ? 5 : 0;
       Progression.addGold(goldEarned);
       Progression.addCores(coresEarned);
       Progression.setMilestone(this.currentMilestone);
@@ -2336,9 +3152,11 @@ class RPGGame {
         }, 500);
       }
     } else {
-      const damageDealt = this.currentEnemy.maxHp - this.currentEnemy.hp;
+      const totalMaxHp = this.enemies.reduce((sum, e) => sum + e.maxHp, 0);
+      const totalCurrentHp = this.enemies.reduce((sum, e) => sum + Math.max(0, e.hp), 0);
+      const damageDealt = totalMaxHp - totalCurrentHp;
       const expPotential = 20 * this.currentMilestone;
-      let expEarned = Math.floor(damageDealt / this.currentEnemy.maxHp * expPotential);
+      let expEarned = Math.floor(damageDealt / totalMaxHp * expPotential);
       if (damageDealt > 0) expEarned = Math.max(1, expEarned);
       if (expEarned > 0) {
         const numActive = this.heroes.length;
@@ -2389,13 +3207,14 @@ class RPGGame {
     }
   }
   log(msg) {
+    var _a, _b;
     const logEl = document.getElementById("combat-log");
     const p = document.createElement("p");
     p.innerText = msg;
     logEl.appendChild(p);
     logEl.scrollTop = logEl.scrollHeight;
-    const participant = this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex];
-    if (!(participant instanceof Hero) || participant.hp <= 0 || this.currentCombat.isCombatOver) {
+    const participant = (_a = this.currentCombat) == null ? void 0 : _a.turnOrder[this.currentCombat.currentTurnIndex];
+    if (!(participant instanceof Hero) || participant.hp <= 0 || ((_b = this.currentCombat) == null ? void 0 : _b.isCombatOver)) {
       document.getElementById("action-panel").style.display = "none";
     }
     this.updateUI();
@@ -2404,12 +3223,43 @@ class RPGGame {
     document.getElementById("combat-milestone").innerText = `${t("milestone")}: ${this.currentMilestone}`;
     if (!this.isRunning) this.draw();
   }
+  getEnemyPositions() {
+    const count = this.enemies.length;
+    const positions = [];
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height * 0.3;
+    const spacing = 60;
+    if (count === 1) {
+      positions.push({ x: centerX, y: centerY });
+    } else if (count === 2) {
+      positions.push({ x: centerX - spacing, y: centerY });
+      positions.push({ x: centerX + spacing, y: centerY });
+    } else if (count === 3) {
+      positions.push({ x: centerX, y: centerY - spacing / 2 });
+      positions.push({ x: centerX - spacing, y: centerY + spacing / 2 });
+      positions.push({ x: centerX + spacing, y: centerY + spacing / 2 });
+    } else if (count === 4) {
+      positions.push({ x: centerX - spacing, y: centerY - spacing / 2 });
+      positions.push({ x: centerX + spacing, y: centerY - spacing / 2 });
+      positions.push({ x: centerX - spacing, y: centerY + spacing / 2 });
+      positions.push({ x: centerX + spacing, y: centerY + spacing / 2 });
+    }
+    return positions;
+  }
   draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    if (this.currentEnemy) {
-      const isTurn = this.currentCombat && this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex] === this.currentEnemy;
-      this.currentEnemy.draw(this.ctx, this.canvas.width / 2, this.canvas.height * 0.3, isTurn);
+    if (this.currentEvent) {
+      this.ctx.fillStyle = "#fff";
+      this.ctx.font = "24px Outfit";
+      this.ctx.textAlign = "center";
+      this.ctx.fillText("EVENT ENCOUNTER", this.canvas.width / 2, this.canvas.height / 2);
+      return;
     }
+    const enemyPos = this.getEnemyPositions();
+    this.enemies.forEach((e, i) => {
+      const isTurn = this.currentCombat && this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex] === e;
+      e.draw(this.ctx, enemyPos[i].x, enemyPos[i].y, isTurn);
+    });
     const heroSpacing = this.canvas.width / (this.heroes.length + 1);
     this.heroes.forEach((h, i) => {
       const isTurn = this.currentCombat && this.currentCombat.turnOrder[this.currentCombat.currentTurnIndex] === h;
@@ -2435,9 +3285,11 @@ class RPGGame {
   }
   addFloatingText(target, text, color) {
     let x, y;
-    if (target === this.currentEnemy) {
-      x = this.canvas.width / 2;
-      y = this.canvas.height * 0.3;
+    const enemyIndex = this.enemies.indexOf(target);
+    if (enemyIndex > -1) {
+      const pos = this.getEnemyPositions()[enemyIndex];
+      x = pos.x;
+      y = pos.y;
     } else {
       const index = this.heroes.indexOf(target);
       const heroSpacing = this.canvas.width / (this.heroes.length + 1);
@@ -2450,9 +3302,11 @@ class RPGGame {
   }
   onDeath(target) {
     let x, y, color;
-    if (target === this.currentEnemy) {
-      x = this.canvas.width / 2;
-      y = this.canvas.height * 0.3;
+    const enemyIndex = this.enemies.indexOf(target);
+    if (enemyIndex > -1) {
+      const pos = this.getEnemyPositions()[enemyIndex];
+      x = pos.x;
+      y = pos.y;
       color = target.isBoss ? "#f0f" : "#f00";
     } else {
       const index = this.heroes.indexOf(target);
@@ -2464,6 +3318,23 @@ class RPGGame {
     for (let i = 0; i < 20; i++) {
       this.particles.push(new Particle(x, y, color));
     }
+  }
+  handleCanvasClick(e) {
+    if (!this.currentCombat || this.currentCombat.isCombatOver) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const enemyPos = this.getEnemyPositions();
+    this.enemies.forEach((enemy, i) => {
+      if (enemy.hp <= 0) return;
+      const pos = enemyPos[i];
+      const dx = mouseX - pos.x;
+      const dy = mouseY - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 30) {
+        this.currentCombat.setTargetIndex(i);
+      }
+    });
   }
   showActionPanel(hero) {
     const panel = document.getElementById("action-panel");
@@ -2486,8 +3357,10 @@ class RPGGame {
         extra: `${skill.mpCost} MP`,
         disabled: hero.mp < skill.mpCost,
         onclick: () => {
-          if (skill.targetType === "ally") {
-            this.renderTargetSelection(hero, skillId);
+          if (skill.targetType === "single_enemy") {
+            this.renderTargetSelection(hero, skillId, "enemies");
+          } else if (skill.targetType === "single_ally") {
+            this.renderTargetSelection(hero, skillId, "allies");
           } else {
             panel.style.display = "none";
             this.currentCombat.heroAction(hero, skillId);
@@ -2497,13 +3370,14 @@ class RPGGame {
     });
     this.renderDynamicGrid(panel, options, "🛡️ " + t("skills"), () => this.showActionPanel(hero));
   }
-  renderTargetSelection(hero, skillId) {
+  renderTargetSelection(hero, skillId, type) {
     const panel = document.getElementById("action-panel");
-    const options = this.heroes.map((h, index) => ({
-      label: h.name,
-      extra: `${Math.ceil(h.hp)}/${h.maxHp} HP`,
-      disabled: h.hp <= 0,
-      color: "#0f0",
+    let targets = type === "allies" ? this.heroes : this.enemies;
+    const options = targets.map((t2, index) => ({
+      label: t2.name,
+      extra: `${Math.ceil(t2.hp)}/${t2.maxHp} HP`,
+      disabled: t2.hp <= 0,
+      color: type === "allies" ? "#0f0" : "#f00",
       onclick: () => {
         panel.style.display = "none";
         this.currentCombat.heroAction(hero, skillId, index);
@@ -2594,6 +3468,39 @@ class RPGGame {
   }
 }
 let game = null;
+const TRAINING_REGIMES = {
+  light_sparring: { id: "light_sparring", duration: 36e5, exp: 50 },
+  endurance_run: { id: "endurance_run", duration: 108e5, exp: 200, goldChance: 0.3 },
+  master_class: { id: "master_class", duration: 288e5, exp: 600, itemChance: 0.2 },
+  heroic_pilgrimage: { id: "heroic_pilgrimage", duration: 864e5, exp: 2e3, coreReward: 1 }
+};
+const QUESTS = {
+  volcano_cleanup: {
+    id: "volcano_cleanup",
+    duration: 144e5,
+    // 4h
+    exp: 300,
+    req: { type: "magicPower", value: 5, label: "High Magic" },
+    reward: { type: "fire_resist", label: "Fire Resist" }
+  },
+  mountain_guard: {
+    id: "mountain_guard",
+    duration: 144e5,
+    // 4h
+    exp: 300,
+    req: { type: "strength", value: 5, label: "High Strength" },
+    reward: { type: "str_growth", label: "Str Growth" }
+  },
+  storm_tracker: {
+    id: "storm_tracker",
+    duration: 144e5,
+    // 4h
+    exp: 300,
+    req: { type: "speed", value: 5, label: "High Speed" },
+    reward: { type: "storm_eff", label: "Storm Eff." }
+  }
+};
+const AFFIXES = ["vampire", "sage", "titan", "assassin", "phoenix"];
 function showView(viewId) {
   document.querySelectorAll(".view").forEach((view) => {
     view.classList.remove("active");
@@ -2606,7 +3513,8 @@ window.showMenu = () => {
   showView("view-menu");
 };
 function updateCoresUI() {
-  document.getElementById("menu-cores-val").innerText = Progression.cores;
+  const el = document.getElementById("menu-cores-val");
+  if (el) el.innerText = Progression.cores;
 }
 window.startAdventure = () => {
   if (Progression.prog.heroes.length === 0) {
@@ -2645,19 +3553,28 @@ window.showVillage = () => {
   showView("view-village");
   window.switchVillageTab("tavern");
 };
+window.currentVillageTab = "tavern";
 window.switchVillageTab = (tab) => {
-  const tabs = ["tavern", "shop", "upgrades", "weapon-shop", "armor-shop"];
+  window.currentVillageTab = tab;
+  const tabs = ["tavern", "shop", "upgrades", "weapon-shop", "armor-shop", "gym", "forge"];
   tabs.forEach((t2) => {
     const content = document.getElementById(`village-content-${t2}`);
     if (content) content.style.display = tab === t2 ? "block" : "none";
     const btn = document.getElementById(`tab-${t2}`);
     if (btn) btn.className = tab === t2 ? "menu-btn primary" : "menu-btn secondary";
   });
+  if (tab === "weapon-shop") updateWeaponShopUI();
+  if (tab === "armor-shop") updateArmorShopUI();
+  if (tab === "gym") updateGymUI();
+  if (tab === "forge") updateForgeUI();
 };
-function updateVillageUI() {
+function updateVillageResourcesUI() {
   document.getElementById("village-gold-val").innerText = Progression.prog.gold;
   document.getElementById("village-cores-val").innerText = Progression.cores;
+}
+function updateTavernUI() {
   const tavernList = document.getElementById("tavern-hero-list");
+  if (!tavernList) return;
   tavernList.innerHTML = "";
   Progression.prog.heroes.forEach((h, i) => {
     const isActive = Progression.prog.activeHeroIndices.includes(i);
@@ -2666,7 +3583,7 @@ function updateVillageUI() {
     card.onclick = () => window.showHeroDetails(i);
     card.innerHTML = `
             ${isActive ? '<div style="position:absolute; top:5px; right:5px; font-size:0.8rem; background:var(--primary); color:black; padding:2px 5px; border-radius:4px; font-weight:bold;">ACTIVE</div>' : ""}
-            <div style="font-weight:bold;">${h.name}</div>
+            <div style="font-weight:bold;">${escapeHTML(h.name)}</div>
             <div style="font-size:0.8rem; color:#aaa;">Lvl ${h.level} ${t(h.origin)}</div>
             <div style="font-size:0.7rem; color:#aaa;">${t("stat_hp")}: ${h.baseMaxHp} ${t("stat_attack").toUpperCase()}: ${h.baseStrength} | SP: ${h.statPoints}</div>
         `;
@@ -2683,7 +3600,10 @@ function updateVillageUI() {
         `;
     tavernList.appendChild(recruitCard);
   }
+}
+function updateShopUI() {
   const shopList = document.getElementById("shop-item-list");
+  if (!shopList) return;
   shopList.innerHTML = "";
   const items = [
     { id: "tiny_potion", cost: 20 },
@@ -2701,7 +3621,10 @@ function updateVillageUI() {
         `;
     shopList.appendChild(itemRow);
   });
+}
+function updateUpgradesUI() {
   const upgradeList = document.getElementById("upgrades-list");
+  if (!upgradeList) return;
   upgradeList.innerHTML = "";
   const buildings = [
     { id: "rosterSizeLevel", title: t("roster_size_title") || "Roster Size", max: 4 },
@@ -2709,6 +3632,7 @@ function updateVillageUI() {
     { id: "gymLevel", title: t("gym_title") || "Hero Gym", max: 50 },
     { id: "weaponShopLevel", title: t("weapon_shop_upgrade") || "Weapon Shop", max: 5 },
     { id: "armorShopLevel", title: t("armor_shop_upgrade") || "Armor Shop", max: 5 },
+    { id: "forgeLevel", title: t("forge_title") || "Mystic Forge", max: 1 },
     { id: "debugLevel", title: t("debug_title") || "DEBUG ME", max: 999 }
   ];
   buildings.forEach((b) => {
@@ -2731,11 +3655,251 @@ function updateVillageUI() {
         `;
     upgradeList.appendChild(upgradeRow);
   });
+}
+function updateVillageTabsVisibilityUI() {
   const wShopBtn = document.getElementById("tab-weapon-shop");
   if (wShopBtn) wShopBtn.style.display = Progression.prog.village.weaponShopLevel > 0 ? "block" : "none";
   const aShopBtn = document.getElementById("tab-armor-shop");
   if (aShopBtn) aShopBtn.style.display = Progression.prog.village.armorShopLevel > 0 ? "block" : "none";
+  const forgeBtn = document.getElementById("tab-forge");
+  if (forgeBtn) forgeBtn.style.display = Progression.prog.village.forgeLevel > 0 ? "block" : "none";
 }
+function updateVillageUI() {
+  updateVillageResourcesUI();
+  updateTavernUI();
+  updateShopUI();
+  updateUpgradesUI();
+  updateVillageTabsVisibilityUI();
+  if (window.currentVillageTab === "weapon-shop") updateWeaponShopUI();
+  if (window.currentVillageTab === "armor-shop") updateArmorShopUI();
+  if (window.currentVillageTab === "gym") updateGymUI();
+  if (window.currentVillageTab === "forge") updateForgeUI();
+}
+function updateWeaponShopUI() {
+  const container = document.getElementById("weapon-shop-item-list");
+  container.innerHTML = "";
+  const shopLvl = Progression.prog.village.weaponShopLevel;
+  Object.keys(WEAPON_FAMILIES).forEach((familyId) => {
+    Object.keys(MATERIAL_TIERS).forEach((tierId) => {
+      const tier = MATERIAL_TIERS[tierId];
+      if (tier.levelReq <= shopLvl) {
+        const cost = 100 * tier.mult;
+        const row = document.createElement("div");
+        row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+        row.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold;">${formatEquipmentName(tierId, familyId)}</div>
+                        <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
+                        <div style="font-size:0.75rem; color:#888; margin-top:4px; font-style:italic;">${t(familyId + "_desc")}</div>
+                    </div>
+                    <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${familyId}', '${tierId}', 'weapon', ${cost})">💰 ${cost}</button>
+                `;
+        container.appendChild(row);
+      }
+    });
+  });
+}
+function updateArmorShopUI() {
+  const container = document.getElementById("armor-shop-item-list");
+  container.innerHTML = "";
+  const shopLvl = Progression.prog.village.armorShopLevel;
+  Object.keys(ARMOR_ARCHETYPES).forEach((archId) => {
+    Object.keys(MATERIAL_TIERS).forEach((tierId) => {
+      const tier = MATERIAL_TIERS[tierId];
+      if (tier.levelReq <= shopLvl) {
+        const slots = ["head", "body", "legs"];
+        slots.forEach((slot) => {
+          const cost = 80 * tier.mult;
+          const row = document.createElement("div");
+          row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+          row.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold;">${formatEquipmentName(tierId, archId, slot)}</div>
+                            <div style="font-size:0.8rem; color:#aaa;">Tier ${tier.levelReq}</div>
+                            <div style="font-size:0.75rem; color:#888; margin-top:4px; font-style:italic;">${t(archId + "_desc")}</div>
+                        </div>
+                        <button class="menu-btn primary" style="padding: 8px 15px;" onclick="window.buyEquipment('${archId}', '${tierId}', 'armor', ${cost}, '${slot}')">💰 ${cost}</button>
+                    `;
+          container.appendChild(row);
+        });
+      }
+    });
+  });
+}
+function updateGymUI() {
+  const container = document.getElementById("gym-hero-list");
+  container.innerHTML = "";
+  Progression.prog.heroes.forEach((h, i) => {
+    const isActive = Progression.prog.activeHeroIndices.includes(i);
+    const session = Progression.prog.trainingSessions[i];
+    const card = document.createElement("div");
+    card.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px;";
+    let actionHTML = "";
+    if (isActive) {
+      actionHTML = `<span style="color: #666; font-style: italic;">In Active Party</span>`;
+    } else if (session) {
+      const regime = TRAINING_REGIMES[session.regimeId] || QUESTS[session.regimeId];
+      const elapsed = Date.now() - session.startTime;
+      const remaining = regime.duration - elapsed;
+      if (remaining <= 0) {
+        actionHTML = `
+                    <div style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">${t("training_complete")}</div>
+                    <button class="menu-btn primary" onclick="window.claimTraining(${i})">${t("btn_claim")}</button>
+                `;
+      } else {
+        const remMin = Math.ceil(remaining / 6e4);
+        actionHTML = `
+                    <div style="color: #aaa; margin-bottom: 10px;">${t("status_label")}: ${t(session.regimeId)} (${remMin}m ${t("left_label")})</div>
+                    <button class="menu-btn secondary" onclick="window.cancelTraining(${i})">${t("btn_cancel")}</button>
+                `;
+      }
+    } else {
+      actionHTML = `
+                <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">Training:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom:15px;">
+                    ${Object.keys(TRAINING_REGIMES).map((rId) => `
+                        <button class="menu-btn primary" style="font-size: 0.7rem; padding: 5px;" onclick="window.startTraining(${i}, '${rId}')">
+                            ${t(rId)}<br>(${TRAINING_REGIMES[rId].duration / 36e5}h)
+                        </button>
+                    `).join("")}
+                </div>
+                <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">Quests:</div>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+                    ${Object.keys(QUESTS).map((qId) => {
+        const q = QUESTS[qId];
+        const heroObj = new Hero(h);
+        const canDo = heroObj[q.req.type] >= q.req.value;
+        return `
+                            <button class="menu-btn ${canDo ? "primary" : "secondary"}" style="font-size: 0.7rem; padding: 10px; display:flex; justify-content:space-between; align-items:center;" ${canDo ? "" : "disabled"} onclick="window.startTraining(${i}, '${qId}')">
+                                <div style="text-align:left;">
+                                    <div style="font-weight:bold;">${t(qId)}</div>
+                                    <div style="font-size:0.6rem; color:#aaa;">Req: ${q.req.label} ${q.req.value}+</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div>${q.duration / 36e5}h</div>
+                                    <div style="font-size:0.6rem; color:var(--primary);">${q.reward.label}</div>
+                                </div>
+                            </button>
+                        `;
+      }).join("")}
+                </div>
+            `;
+    }
+    card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="font-weight: bold;">${escapeHTML(h.name)} (Lvl ${h.level})</div>
+            </div>
+            ${actionHTML}
+        `;
+    container.appendChild(card);
+  });
+}
+function updateForgeUI() {
+  const container = document.getElementById("forge-inventory-list");
+  container.innerHTML = "";
+  Progression.prog.equipmentInventory.forEach((item, i) => {
+    const cost = 50;
+    const canAwaken = item.level >= 10 || item.material === "gold" || item.material === "mythril";
+    const row = document.createElement("div");
+    row.style = "background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom:10px;";
+    row.innerHTML = `
+            <div>
+                <div style="font-weight:bold;">${item.name} (Lvl ${item.level || 0})</div>
+                <div style="font-size:0.8rem; color:#aaa;">${item.affixes ? "Affixes: " + item.affixes.join(", ") : "No Affixes"}</div>
+            </div>
+            <button class="menu-btn ${canAwaken ? "primary" : "secondary"}" style="padding: 8px 15px;" ${canAwaken ? "" : "disabled"} onclick="window.awakenItem(${i}, ${cost})">🔮 ${cost}</button>
+        `;
+    container.appendChild(row);
+  });
+}
+window.awakenItem = (idx, cost) => {
+  if (Progression.cores >= cost) {
+    if (confirm(t("confirm_awaken").replace("{cost}", cost))) {
+      Progression.spendCores(cost);
+      const item = Progression.prog.equipmentInventory[idx];
+      if (!item.affixes) item.affixes = [];
+      const affix = AFFIXES[Math.floor(Math.random() * AFFIXES.length)];
+      item.affixes.push(affix);
+      item.name += ` of the ${affix.charAt(0).toUpperCase() + affix.slice(1)}`;
+      Progression.saveState();
+      alert(t("awakened_msg").replace("{name}", item.name));
+      updateForgeUI();
+      updateVillageUI();
+    }
+  } else {
+    alert(t("not_enough_cores"));
+  }
+};
+window.startTraining = (heroIndex, regimeId) => {
+  if (Progression.startTraining(heroIndex, regimeId)) {
+    updateGymUI();
+  }
+};
+window.cancelTraining = (heroIndex) => {
+  if (confirm("Cancel session? No rewards will be given.")) {
+    Progression.cancelTraining(heroIndex);
+    updateGymUI();
+  }
+};
+window.claimTraining = (heroIndex) => {
+  const session = Progression.prog.trainingSessions[heroIndex];
+  if (!session) return;
+  const regime = TRAINING_REGIMES[session.regimeId] || QUESTS[session.regimeId];
+  let success = true;
+  if (QUESTS[session.regimeId]) {
+    const heroData = Progression.prog.heroes[heroIndex];
+    const heroObj = new Hero(heroData);
+    const req = QUESTS[session.regimeId].req;
+    const diff = heroObj[req.type] - req.value;
+    const successChance = 0.7 + diff * 0.05;
+    success = Math.random() < Math.min(0.95, successChance);
+  }
+  const rewards = Progression.completeTraining(heroIndex, regime);
+  if (rewards) {
+    if (!success) {
+      rewards.exp = Math.floor(rewards.exp * 0.5);
+      rewards.gold = Math.floor(rewards.gold * 0.5);
+      rewards.cores = 0;
+      rewards.item = null;
+    }
+    const heroData = Progression.prog.heroes[heroIndex];
+    const heroObj = new Hero(heroData);
+    const leveled = heroObj.gainExp(rewards.exp);
+    Progression.prog.heroes[heroIndex] = heroObj.toJSON();
+    if (rewards.gold) Progression.addGold(rewards.gold);
+    if (rewards.cores) Progression.addCores(rewards.cores);
+    if (rewards.item) Progression.addItem(rewards.item);
+    let msg = (success ? "" : "QUEST PARTIALLY FAILED (50% rewards)\n") + `Rewards for ${escapeHTML(heroObj.name)}:
+✨ +${rewards.exp} EXP`;
+    if (rewards.gold) msg += `
+💰 +${rewards.gold} Gold`;
+    if (rewards.cores) msg += `
+🔮 +${rewards.cores} Core`;
+    if (rewards.item) msg += `
+🎒 +1 ${t(rewards.item)}`;
+    if (leveled) msg += `
+🌟 LEVEL UP! Now Level ${heroObj.level}`;
+    alert(msg);
+    updateGymUI();
+    updateVillageUI();
+  }
+};
+window.buyEquipment = (id, tier, type, cost, slot = null) => {
+  if (Progression.prog.gold >= cost) {
+    Progression.spendGold(cost);
+    const item = { type, material: tier, level: 0, name: formatEquipmentName(tier, id, slot) };
+    if (type === "weapon") item.family = id;
+    else {
+      item.archetype = id;
+      item.slot = slot;
+    }
+    Progression.addEquipment(item);
+    alert(t("learned") + "!");
+    updateVillageUI();
+  } else {
+    alert(t("not_enough_gold"));
+  }
+};
 window.recruitHero = (cost) => {
   if (Progression.prog.gold >= cost) {
     const currentNames = Progression.prog.heroes.map((h) => h.name);
@@ -2752,7 +3916,10 @@ window.showHeroDetails = (index) => {
   window.currentHeroIndex = index;
   const heroData = Progression.prog.heroes[index];
   if (!heroData) return;
-  document.getElementById("hero-details-name").innerText = `${heroData.name} (${heroData.level})`;
+  document.getElementById("hero-details-name").innerHTML = `
+        ${escapeHTML(heroData.name)} (${heroData.level})
+        <span onclick="window.showTraitInfo('${heroData.origin}')" style="cursor:pointer; font-size:1.2rem; margin-left:10px; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border:1px solid var(--primary); border-radius:50%; color:var(--primary);">?</span>
+    `;
   document.getElementById("hero-details-sp").innerText = heroData.statPoints;
   const nextLevelExp = heroData.level * 20;
   const expPercent = Math.min(100, heroData.exp / nextLevelExp * 100);
@@ -2761,13 +3928,14 @@ window.showHeroDetails = (index) => {
   document.getElementById("label-sp").innerText = t("stat_points") + ":";
   const statsContainer = document.getElementById("hero-stats-container");
   statsContainer.innerHTML = "";
+  const heroObj = new Hero(heroData);
   const stats = [
-    { id: "baseMaxHp", label: t("stat_hp"), val: heroData.baseMaxHp },
-    { id: "baseMaxMp", label: t("stat_mp"), val: heroData.baseMaxMp },
-    { id: "baseStrength", label: t("stat_attack"), val: heroData.baseStrength },
-    { id: "baseSpeed", label: t("stat_speed"), val: heroData.baseSpeed },
-    { id: "baseDefense", label: t("stat_defense"), val: heroData.baseDefense },
-    { id: "baseMagicPower", label: t("stat_magic"), val: heroData.baseMagicPower }
+    { id: "baseMaxHp", label: t("stat_hp"), val: heroObj.maxHp },
+    { id: "baseMaxMp", label: t("stat_mp"), val: heroObj.maxMp },
+    { id: "baseStrength", label: t("stat_attack"), val: heroObj.strength },
+    { id: "baseSpeed", label: t("stat_speed"), val: heroObj.speed },
+    { id: "baseDefense", label: t("stat_defense"), val: heroObj.defense },
+    { id: "baseMagicPower", label: t("stat_magic"), val: heroObj.magicPower }
   ];
   stats.forEach((st) => {
     const row = document.createElement("div");
@@ -2782,15 +3950,17 @@ window.showHeroDetails = (index) => {
   const actionContainer = document.createElement("div");
   actionContainer.style = "margin-top: 20px; display: flex; flex-direction: column; gap: 10px;";
   const isActive = Progression.prog.activeHeroIndices.includes(index);
+  const isTraining = !!Progression.prog.trainingSessions[index];
   const numActive = Progression.prog.activeHeroIndices.length;
   const maxSize = Progression.getMaxPartySize();
   const canUnselect = numActive > 1;
-  const canSelect = numActive < maxSize || maxSize === 1 && numActive === 1;
+  const canSelect = !isTraining && (numActive < maxSize || maxSize === 1 && numActive === 1);
   let toggleBtn = "";
   if (isActive) {
-    toggleBtn = `<button class="menu-btn ${canUnselect ? "secondary" : "secondary"}" style="width: 100%; opacity: ${canUnselect ? 1 : 0.5};" ${canUnselect ? `onclick="window.toggleHeroActive(${index})"` : ""}>❌ ${t("btn_unselect") || "Unselect from Party"}</button>`;
+    toggleBtn = `<button class="menu-btn ${canUnselect ? "secondary" : "secondary"}" style="width: 100%; opacity: ${canUnselect ? 1 : 0.5};" ${canUnselect ? `onclick="window.toggleHeroActive(${index})"` : ""}>❌ ${t("btn_unselect_party") || "Unselect from Party"}</button>`;
   } else {
-    toggleBtn = `<button class="menu-btn ${canSelect ? "primary" : "secondary"}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ""}>⚔️ ${t("btn_select") || "Add to Party"}</button>`;
+    const busyLabel = isTraining ? " (Busy)" : "";
+    toggleBtn = `<button class="menu-btn ${canSelect ? "primary" : "secondary"}" style="width: 100%; opacity: ${canSelect ? 1 : 0.5};" ${canSelect ? `onclick="window.toggleHeroActive(${index})"` : ""}>⚔️ ${t("btn_select_party") || "Add to Party"}${busyLabel}</button>`;
   }
   let fireBtn = "";
   const totalHeroes = Progression.prog.heroes.length;
@@ -2801,9 +3971,10 @@ window.showHeroDetails = (index) => {
                 ${t("btn_switch_hero")}
             </button>`;
   } else {
+    const canFire = !isActive && !isTraining;
     fireBtn = `<button class="menu-btn secondary" 
-                    style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${isActive ? "opacity: 0.3; cursor: default;" : ""}" 
-                    ${!isActive ? `onclick="window.fireHero(${index})"` : ""}>
+                    style="padding: 10px 20px; font-size: 0.9rem; border-color: #f55; color: #f55; ${!canFire ? "opacity: 0.3; cursor: default;" : ""}"
+                    ${canFire ? `onclick="window.fireHero(${index})"` : ""}>
                 🗑️ ${t("btn_fire_hero")}
             </button>`;
   }
@@ -2812,6 +3983,29 @@ window.showHeroDetails = (index) => {
   document.getElementById("btn-hero-skills").onclick = () => window.showHeroSkills(index);
   document.getElementById("btn-hero-equip").onclick = () => window.showHeroEquip(index);
   showView("view-hero-details");
+};
+window.showTraitInfo = (origin) => {
+  const modal = document.createElement("div");
+  modal.id = "trait-info-modal";
+  modal.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center;
+        z-index: 1000; padding: 20px; box-sizing: border-box;
+    `;
+  modal.onclick = () => modal.remove();
+  const content = document.createElement("div");
+  content.style = `
+        background: #111; border: 2px solid var(--primary); border-radius: 12px;
+        padding: 20px; max-width: 400px; width: 100%; text-align: center;
+    `;
+  content.onclick = (e) => e.stopPropagation();
+  content.innerHTML = `
+        <h2 style="color: var(--primary); margin-top: 0;">${t(origin)}</h2>
+        <p style="color: white; line-height: 1.6; font-size: 1.1rem; margin: 20px 0;">${t(origin + "_desc")}</p>
+        <button class="menu-btn primary" style="padding: 10px 30px;" onclick="document.getElementById('trait-info-modal').remove()">OK</button>
+    `;
+  modal.appendChild(content);
+  document.body.appendChild(modal);
 };
 window.showHeroEquip = (index) => {
   window.currentHeroIndex = index;
@@ -2831,7 +4025,8 @@ window.showHeroEquip = (index) => {
   slots.forEach((slot) => {
     const item = heroData.equipment ? heroData.equipment[slot.id] : null;
     const row = document.createElement("div");
-    row.style = `background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; ${!item ? "opacity: 0.5;" : ""}`;
+    row.style = `background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;`;
+    row.onclick = () => window.manageSlot(index, slot.id);
     row.innerHTML = `
             <div style="display: flex; flex-direction: column;">
                 <div style="font-weight: bold; color: #aaa; font-size: 0.8rem;">${slot.name}</div>
@@ -2842,6 +4037,64 @@ window.showHeroEquip = (index) => {
     container.appendChild(row);
   });
   showView("view-hero-equip");
+};
+window.manageSlot = (heroIndex, slotId) => {
+  const modal = document.createElement("div");
+  modal.id = "manage-slot-modal";
+  modal.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+        z-index: 1001; padding: 20px; box-sizing: border-box;
+    `;
+  modal.onclick = () => modal.remove();
+  const content = document.createElement("div");
+  content.style = `
+        background: #111; border: 2px solid var(--primary); border-radius: 12px;
+        padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto;
+    `;
+  content.onclick = (e) => e.stopPropagation();
+  let itemsHTML = "";
+  const isWeaponSlot = slotId === "leftHand" || slotId === "rightHand";
+  const isArmorSlot = ["head", "body", "legs"].includes(slotId);
+  Progression.prog.equipmentInventory.forEach((item, idx) => {
+    let canEquip = false;
+    if (isWeaponSlot && item.type === "weapon") canEquip = true;
+    if (isArmorSlot && item.type === "armor" && item.slot === slotId) canEquip = true;
+    if (canEquip) {
+      itemsHTML += `
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>${item.name} (Lvl ${item.level || 0})</div>
+                    <button class="menu-btn primary" style="padding: 5px 15px;" onclick="window.doEquip(${heroIndex}, '${slotId}', ${idx})">${t("btn_equip")}</button>
+                </div>
+            `;
+    }
+  });
+  const hero = Progression.prog.heroes[heroIndex];
+  const currentItem = hero.equipment[slotId];
+  content.innerHTML = `
+        <h3 style="color: var(--primary); margin-top: 0;">${t("manage_slot")} ${t("slot_" + slotId)}</h3>
+        ${currentItem ? `
+            <div style="background: rgba(0,242,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div>${t("equipped_label")}: ${currentItem.name}</div>
+                <button class="menu-btn secondary" style="padding: 5px 15px;" onclick="window.doUnequip(${heroIndex}, '${slotId}')">${t("btn_unequip")}</button>
+            </div>
+        ` : ""}
+        <div style="font-weight: bold; margin-bottom: 10px; color: #888;">${t("available_label")}:</div>
+        ${itemsHTML || '<div style="color: #666; font-style: italic;">No items available for this slot.</div>'}
+        <button class="menu-btn secondary" style="width: 100%; margin-top: 20px;" onclick="document.getElementById('manage-slot-modal').remove()">${t("btn_cancel")}</button>
+    `;
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+};
+window.doEquip = (heroIndex, slot, itemIdx) => {
+  Progression.equipItem(heroIndex, slot, itemIdx);
+  document.getElementById("manage-slot-modal").remove();
+  window.showHeroEquip(heroIndex);
+};
+window.doUnequip = (heroIndex, slot) => {
+  Progression.unequipItem(heroIndex, slot);
+  document.getElementById("manage-slot-modal").remove();
+  window.showHeroEquip(heroIndex);
 };
 window.toggleHeroActive = (index) => {
   const isActive = Progression.prog.activeHeroIndices.includes(index);
@@ -2860,7 +4113,8 @@ window.toggleHeroActive = (index) => {
     if (Progression.prog.activeHeroIndices.includes(index)) {
       alert(t("need_min_hero") || "You need at least one hero in the party!");
     } else {
-      alert(t("party_limit_reached") || "Party size limit reached!");
+      const isBusy = !!Progression.prog.trainingSessions[index];
+      alert(isBusy ? "Hero is busy training!" : t("party_limit_reached") || "Party size limit reached!");
     }
   }
 };
@@ -3108,7 +4362,32 @@ window.showHeroDetails = showHeroDetails;
 window.increaseStat = increaseStat;
 window.showHeroSkills = showHeroSkills;
 window.learnSkill = learnSkill;
-window.switchSkillTab = switchSkillTab;</script>
+window.switchSkillTab = switchSkillTab;
+window.showTraitInfo = showTraitInfo;
+window.manageSlot = manageSlot;
+window.doEquip = doEquip;
+window.doUnequip = doUnequip;
+window.buyEquipment = buyEquipment;
+window.updateWeaponShopUI = updateWeaponShopUI;
+window.updateArmorShopUI = updateArmorShopUI;
+window.updateGymUI = updateGymUI;
+window.updateForgeUI = updateForgeUI;
+window.awakenItem = awakenItem;
+window.startTraining = startTraining;
+window.cancelTraining = cancelTraining;
+window.claimTraining = claimTraining;
+function escapeHTML(str) {
+  if (!str) return "";
+  return str.replace(/[&<>"']/g, function(m) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[m];
+  });
+}</script>
   <style rel="stylesheet" crossorigin>:root {
   --primary: #00f2ff;
   --primary-dark: #00a8b3;
@@ -3358,6 +4637,8 @@ body {
             <button id="tab-shop" class="menu-btn secondary" onclick="window.switchVillageTab('shop')" data-i18n="shop_title">Shop</button>
             <button id="tab-weapon-shop" class="menu-btn secondary" onclick="window.switchVillageTab('weapon-shop')" data-i18n="weapon_shop_title" style="display: none;">Weapon Shop</button>
             <button id="tab-armor-shop" class="menu-btn secondary" onclick="window.switchVillageTab('armor-shop')" data-i18n="armor_shop_title" style="display: none;">Armor Shop</button>
+            <button id="tab-gym" class="menu-btn secondary" onclick="window.switchVillageTab('gym')" data-i18n="gym_title">Gym</button>
+            <button id="tab-forge" class="menu-btn secondary" onclick="window.switchVillageTab('forge')" data-i18n="forge_title" style="display: none;">Forge</button>
             <button id="tab-upgrades" class="menu-btn secondary" onclick="window.switchVillageTab('upgrades')" data-i18n="upgrades_title">Upgrades</button>
         </div>
 
@@ -3377,15 +4658,29 @@ body {
 
         <div id="village-content-weapon-shop" class="village-tab-content" style="display: none;">
             <h2 data-i18n="weapon_shop_title">Weapon Shop</h2>
-            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
-                <p data-i18n="shop_empty">No items available yet.</p>
+            <div id="weapon-shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Weapon items will be injected here -->
             </div>
         </div>
 
         <div id="village-content-armor-shop" class="village-tab-content" style="display: none;">
             <h2 data-i18n="armor_shop_title">Armor Shop</h2>
-            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align: center; color: #888;">
-                <p data-i18n="shop_empty">No items available yet.</p>
+            <div id="armor-shop-item-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Armor items will be injected here -->
+            </div>
+        </div>
+
+        <div id="village-content-gym" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="gym_title">Hero Gym</h2>
+            <div id="gym-hero-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Gym hero list here -->
+            </div>
+        </div>
+
+        <div id="village-content-forge" class="village-tab-content" style="display: none;">
+            <h2 data-i18n="forge_title">Mystic Forge</h2>
+            <div id="forge-inventory-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                <!-- Forge inventory here -->
             </div>
         </div>
 
