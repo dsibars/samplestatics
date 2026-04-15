@@ -7,8 +7,8 @@ export class PlayerService {
         this.data = this._load();
     }
 
-    _load() {
-        const defaultData = {
+    _getDefaultData() {
+        return {
             gold: 0,
             cores: 0,
             milestone: 0,
@@ -18,7 +18,10 @@ export class PlayerService {
             },
             equipmentInventory: []
         };
-        return persistence.load(this.STORAGE_KEY, defaultData);
+    }
+
+    _load() {
+        return persistence.load(this.STORAGE_KEY, this._getDefaultData());
     }
 
     save() {
@@ -68,7 +71,7 @@ export class PlayerService {
     }
 
     reset() {
-        this.data = this._load();
+        this.data = this._getDefaultData();
         this.save();
     }
 }
