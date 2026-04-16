@@ -52,6 +52,12 @@ export class CatalogService {
     listOrigins() {
         return this.origins;
     }
+
+    getSkillUpgradeCost(skillId, currentLevel) {
+        const skill = this.getSkill(skillId);
+        if (!skill) return 0;
+        return Math.max(1, skill.tier * currentLevel);
+    }
 }
 
 export const catalogService = new CatalogService();
