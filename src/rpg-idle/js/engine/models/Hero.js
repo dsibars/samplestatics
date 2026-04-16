@@ -221,6 +221,24 @@ export class Hero {
         return Result.ok(this[statId]);
     }
 
+    learnSkill(skillId, unlockCost) {
+        if (this.skillPoints < unlockCost) return Result.fail('error_no_skill_points');
+        if (this.skills[skillId] !== undefined) return Result.fail('error_skill_already_unlocked');
+
+        this.skills[skillId] = 0;
+        this.skillPoints -= unlockCost;
+        return Result.ok(this.skills[skillId]);
+    }
+
+    upgradeSkill(skillId, upgradeCost) {
+        if (this.skills[skillId] === undefined) return Result.fail('error_skill_locked');
+        if (this.skillPoints < upgradeCost) return Result.fail('error_no_skill_points');
+
+        this.skills[skillId]++;
+        this.skillPoints -= upgradeCost;
+        return Result.ok(this.skills[skillId]);
+    }
+
     toJSON() {
         return {
             id: this.id,

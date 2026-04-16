@@ -110,6 +110,28 @@ export class HeroService {
         return result;
     }
 
+    learnHeroSkill(heroId, skillId, unlockCost) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.learnSkill(skillId, unlockCost);
+        if (result.success) {
+            this.save(hero);
+        }
+        return result;
+    }
+
+    upgradeHeroSkill(heroId, skillId, upgradeCost) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.upgradeSkill(skillId, upgradeCost);
+        if (result.success) {
+            this.save(hero);
+        }
+        return result;
+    }
+
     equipItem(heroId, slot, equipmentId) {
         const hero = this.get(heroId);
         if (!hero) return Result.fail('error_hero_not_found');
