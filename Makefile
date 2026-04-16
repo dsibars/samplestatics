@@ -8,7 +8,9 @@ test-all:
 	@node --test src/rpg-idle/js/engine/tests/unit/*.test.js
 	@echo "Step 2: Running Functional Test - Battle System..."
 	@node --test src/rpg-idle/js/engine/tests/engine-functional/BattleSystem.test.js
-	@echo "Step 3: Running Functional Test - Infinite Adventure..."
+	@echo "Step 3: Running Functional Test - Village System..."
+	@node --test src/rpg-idle/js/engine/tests/engine-functional/VillageSystem.test.js
+	@echo "Step 4: Running Functional Test - Infinite Adventure..."
 	@node --test src/rpg-idle/js/engine/tests/engine-functional/InfiniteAdventure.test.js
 	@echo "All tests passed!"
 

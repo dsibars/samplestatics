@@ -118,8 +118,9 @@ test('Infinite Adventure Functional Test', async (t) => {
     // Spend points
     const points = hero.statPoints;
     for(let i=0; i<points; i++) {
-        // Spend all in strength for this test to ensure win
+        // Spend in strength and HP to ensure win
         engine.heroes.increaseHeroStat(hero.id, 'baseStrength');
+        engine.heroes.increaseHeroStat(hero.id, 'baseMaxHp');
     }
     assert.strictEqual(hero.statPoints, 0);
 
