@@ -60,6 +60,52 @@ The `BattleService` supports both automated and manual combat:
 
 This design ensures the UI can prompt the user for input at the correct time while the engine handles all timing and rule enforcement.
 
+### UI Integration Example (Pseudo-code)
+
+```javascript
+// During a battle
+function updateBattle() {
+    const result = engine.battle.nextTurn();
+
+    if (result.success) {
+        if (result.data.event) {
+            // An action was performed (by enemy or in auto-battle)
+            displayActionAnimation(result.data.event);
+            updateUIStats();
+        }
+
+        if (result.data.actionRequired) {
+            // It's the player's turn (manual mode)
+            showSkillButtons(result.data.entity);
+        } else if (result.data.battleOver) {
+            showBattleSummary(result.data.winner);
+        } else {
+            // Wait a bit then continue auto-flow
+            setTimeout(updateBattle, 1000);
+        }
+    }
+}
+
+// When player clicks a skill
+function onSkillClick(skillId, targetId) {
+    const actor = engine.battle.getCurrentActor();
+    const result = engine.battle.executeAction(actor, skillId, targetId);
+    if (result.success) {
+        displayActionAnimation(result.data.event);
+        updateUIStats();
+        // Continue flow
+        setTimeout(updateBattle, 1000);
+    }
+}
+```
+
+## Persistence and State Management
+
+The engine uses `localStorage` via the `Persistence` core utility.
+- **Automatic Saving**: Most service methods (e.g., `addGold`, `recruitHero`, `equipItem`) automatically persist changes.
+- **App Restarts**: To simulate an app restart or force-reload state in tests, use `engine.restart()`.
+- **Manual Data Modification**: If you manually modify a model instance (e.g., `hero.baseStrength += 10`), you **must** call the corresponding service's save method (e.g., `engine.heroes.save(hero)`) to persist the change.
+
 ## Testing
 
 - **Unit Tests**: Located in `tests/unit/`, focusing on individual services and models.

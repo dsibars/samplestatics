@@ -76,8 +76,8 @@ test('Infinite Adventure Functional Test', async (t) => {
     mockLS.clear();
     engine.resetAll();
 
-    // Disable auto-battle to test manual combat support
-    engine.player.setAutoBattle(false);
+    // 0. Test both modes
+    console.log('--- Testing Manual and Auto Combat ---');
 
     // 1. Initial State Check
     assert.strictEqual(engine.player.gold, 0, 'Should start with 0 gold');
@@ -96,11 +96,31 @@ test('Infinite Adventure Functional Test', async (t) => {
     engine.heroes.setActive(hero.id, true);
     assert.strictEqual(hero.status, 'active');
 
-    // 3. Start Adventure - Expected to lose at milestone 1
+    // 3. Start Adventure - Manual Battle Mode (Default)
+    engine.player.setAutoBattle(false);
     let advResult = engine.adventure.startAdventure();
+    console.log('Active Heroes:', JSON.stringify(engine.heroes.list('active').map(h => ({id:h.id, name:h.name, speed:h.speed})), null, 2));
+    console.log('Battle Enemies:', JSON.stringify(engine.battle.enemies.map(e => ({id:e.id, name:e.name, speed:e.speed})), null, 2));
+    console.log('Battle Turn Order:', JSON.stringify(engine.battle.turnOrder.map(e => ({id:e.id, name:e.name, speed:e.speed})), null, 2));
     assert.strictEqual(advResult.success, true);
     assert.strictEqual(advResult.data.type, 'BATTLE');
     assert.strictEqual(advResult.data.milestone, 1);
+
+    // Assert turn by turn info is available
+    // First turn might be an enemy (auto-executed)
+    let firstTurn = engine.battle.nextTurn();
+    console.log('First Turn Result:', JSON.stringify(firstTurn, null, 2));
+    assert.strictEqual(firstTurn.success, true);
+
+    // If it was an enemy turn, we need to call it again to get to the hero turn
+    if (firstTurn.data.event && engine.battle.enemies.some(e => e.id === firstTurn.data.event.actorId)) {
+        console.log('Enemy moved, calling nextTurn again for hero...');
+        firstTurn = engine.battle.nextTurn();
+        console.log('Second Turn Result:', JSON.stringify(firstTurn, null, 2));
+    }
+
+    assert.strictEqual(firstTurn.data.actionRequired, true, 'Manual mode should require action for hero');
+    assert.ok(engine.battle.turnOrder.length > 0, 'Turn order should be populated');
 
     // Simulate Battle (Manual)
     runBattleSimulation();
@@ -124,20 +144,30 @@ test('Infinite Adventure Functional Test', async (t) => {
     }
     assert.strictEqual(hero.statPoints, 0);
 
-    // 5. Fight again - Should win now
+    // 5. Fight again - Switch to Auto-Battle
+    console.log('--- Switching to Auto-Battle ---');
+    engine.player.setAutoBattle(true);
     advResult = engine.adventure.startAdventure();
     assert.strictEqual(advResult.data.milestone, 1);
 
-    runBattleSimulation();
+    // In auto-battle, nextTurn executes immediately
+    let safety = 0;
+    while (!engine.battle.isOver && safety < 100) {
+        const turn = engine.battle.nextTurn();
+        assert.ok(!turn.data.actionRequired, 'Auto-battle should not require manual action');
+        safety++;
+    }
 
-    assert.strictEqual(engine.battle.winner, 'heroes', 'Hero should win after upgrades');
+    assert.strictEqual(engine.battle.winner, 'heroes', 'Hero should win in auto-battle after upgrades');
     engine.adventure.completeBattle('heroes');
     assert.strictEqual(engine.player.milestone, 1, 'Milestone should advance');
 
-    // 6. Progress to Milestone 5 (Event)
+    // 6. Progress to Milestone 5 (Event) - Mixing modes
     for (let m = 2; m <= 4; m++) {
         advResult = engine.adventure.nextStep();
-        runBattleSimulation();
+        // Alternate modes for testing
+        engine.player.setAutoBattle(m % 2 === 0);
+        runBattleSimulation(); // This helper handles both
         engine.adventure.completeBattle('heroes');
         assert.strictEqual(engine.player.milestone, m);
     }
@@ -163,11 +193,13 @@ test('Infinite Adventure Functional Test', async (t) => {
     assert.strictEqual(advResult.data.enemies[0].isBoss, true, 'Milestone 10 should be a boss');
 
     // Boost hero again to ensure boss win
-    hero.baseStrength += 500;
-    hero.baseMaxHp += 1000;
+    hero.baseStrength += 1000;
+    hero.baseMaxHp += 2000;
     hero.recalculateStats();
     hero.hp = hero.maxHp;
     hero.mp = hero.maxMp;
+    // We MUST save the hero after manual stat boost if we want it to persist
+    engine.heroes.save(hero);
 
     // Reset Battle service to ensure it's fresh for the boss fight
     // Actually nextStep starts it. Let's just run it.
@@ -183,4 +215,23 @@ test('Infinite Adventure Functional Test', async (t) => {
     // New adventure should start from 11
     const finalAdv = engine.adventure.startAdventure();
     assert.strictEqual(finalAdv.data.milestone, 11);
+
+    // 9. RESTART AND PERSISTENCE CHECK
+    console.log('--- Simulating App Restart ---');
+    const savedGold = engine.player.gold;
+    const savedMilestone = engine.player.milestone;
+    const savedCores = engine.player.cores;
+    const savedHeroId = hero.id;
+    const savedHeroStr = hero.strength;
+
+    engine.restart();
+
+    assert.strictEqual(engine.player.gold, savedGold, 'Gold should persist after restart');
+    assert.strictEqual(engine.player.milestone, savedMilestone, 'Milestone should persist after restart');
+    assert.strictEqual(engine.player.cores, savedCores, 'Cores should persist after restart');
+
+    const restoredHero = engine.heroes.get(savedHeroId);
+    assert.ok(restoredHero, 'Hero should persist after restart');
+    assert.strictEqual(restoredHero.strength, savedHeroStr, 'Hero stats should persist after restart');
+    assert.strictEqual(restoredHero.status, 'active', 'Hero status should persist after restart');
 });

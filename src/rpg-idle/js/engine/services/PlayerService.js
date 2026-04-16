@@ -29,6 +29,10 @@ export class PlayerService {
         persistence.save(this.STORAGE_KEY, this.data);
     }
 
+    reload() {
+        this.data = this._load();
+    }
+
     get gold() { return this.data.gold; }
     get cores() { return this.data.cores; }
     get milestone() { return this.data.milestone; }
