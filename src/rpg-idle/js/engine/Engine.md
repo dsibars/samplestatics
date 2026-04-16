@@ -110,3 +110,17 @@ The engine uses `localStorage` via the `Persistence` core utility.
 
 - **Unit Tests**: Located in `tests/unit/`, focusing on individual services and models.
 - **Functional Tests**: Located in `tests/engine-functional/`, focusing on end-to-end game scenarios using only the engine API.
+    - `BattleSystem.test.js`: Detailed assertions for manual and auto-combat interactions.
+    - `InfiniteAdventure.test.js`: High-level progression and persistence test.
+
+### Ordered Test Execution
+
+Tests should be run in order of increasing complexity to fail fast:
+1.  **Unit Tests**: Verify individual building blocks.
+2.  **Battle System**: Verify the core combat engine (manual & auto).
+3.  **Infinite Adventure**: Verify the high-level game loop and progression.
+
+Use the provided command to run all tests in the correct order:
+```bash
+make test-all
+```
