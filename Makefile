@@ -2,6 +2,20 @@
 
 APP ?= daily-routine-exercise
 
+test-all:
+	@echo "Running all RPG Idle Engine tests..."
+	@echo "Step 1: Running Unit Tests..."
+	@node --test src/rpg-idle/js/engine/tests/unit/*.test.js
+	@echo "Step 2: Running Functional Test - Battle System..."
+	@node --test src/rpg-idle/js/engine/tests/engine-functional/BattleSystem.test.js
+	@echo "Step 3: Running Functional Test - Village System..."
+	@node --test src/rpg-idle/js/engine/tests/engine-functional/VillageSystem.test.js
+	@echo "Step 4: Running Functional Test - Infinite Adventure..."
+	@node --test src/rpg-idle/js/engine/tests/engine-functional/InfiniteAdventure.test.js
+	@echo "Step 5: Running Performance Benchmark..."
+	@node --test src/rpg-idle/js/engine/tests/engine-functional/BattleBenchmark.test.js
+	@echo "All tests passed!"
+
 build:
 	@if [ ! -d "src/$(APP)" ]; then echo "Error: App '$(APP)' not found in src/"; exit 1; fi
 	@echo "Building APP: $(APP)..."

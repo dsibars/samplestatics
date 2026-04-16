@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { BattleService } from '../services/BattleService.js';
+import { BattleService } from '../../services/BattleService.js';
 
 const mockHero = {
     id: 'h1',

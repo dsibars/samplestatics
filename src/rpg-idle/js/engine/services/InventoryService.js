@@ -30,6 +30,10 @@ export class InventoryService {
         persistence.save(this.STORAGE_KEY, toSave);
     }
 
+    reload() {
+        this.data = this._load();
+    }
+
     // Item methods
     getItemCount(id) {
         return this.data.items[id] || 0;

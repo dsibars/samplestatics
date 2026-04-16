@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { GymService } from '../services/GymService.js';
-import { Result } from '../core/Result.js';
+import { GymService } from '../../services/GymService.js';
+import { Result } from '../../core/Result.js';
 
 const mockPlayer = {
     addGold() {},

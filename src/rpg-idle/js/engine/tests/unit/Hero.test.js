@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { Hero } from '../models/Hero.js';
+import { Hero } from '../../models/Hero.js';
 
 // Mock crypto and localStorage for Node environment
 if (typeof globalThis.crypto === 'undefined') {

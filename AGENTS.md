@@ -36,6 +36,10 @@ Or to build a specific app (e.g., the hub):
 make build APP=hub
 ```
 
+## RPG Idle Engine
+
+The `rpg-idle` app is undergoing a refactor to move logic into a standalone engine. When working on `rpg-idle`, please refer to [src/rpg-idle/js/engine/Engine.md](src/rpg-idle/js/engine/Engine.md) for detailed documentation on the engine architecture, roadmap, and coding standards.
+
 ### What the Makefile does:
 - Ensures the correct Node environment via `nvm`.
 - Installs or updates dependencies using `npm install`.

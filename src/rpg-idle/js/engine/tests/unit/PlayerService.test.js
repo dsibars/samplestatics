@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { PlayerService } from '../services/PlayerService.js';
+import { PlayerService } from '../../services/PlayerService.js';
 
 // Mock localStorage for Node environment
 globalThis.localStorage = {

@@ -239,8 +239,8 @@ export class Hero {
             hp: this.hp,
             mp: this.mp,
             status: this.status,
-            skills: this.skills,
-            equipment: this.equipment
+            skills: JSON.parse(JSON.stringify(this.skills)),
+            equipment: JSON.parse(JSON.stringify(this.equipment))
         };
     }
 }

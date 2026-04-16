@@ -10,6 +10,7 @@ export class AdventureService {
     }
 
     startAdventure() {
+        this.currentMilestone = this.player.milestone;
         const activeHeroes = this.heroes.list('active');
         if (activeHeroes.length === 0) return Result.fail('error_no_active_heroes');
 
