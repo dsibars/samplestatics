@@ -79,6 +79,7 @@ export class ProgressionManager {
                 this.prog = defaultProg;
             }
         } catch (e) {
+            console.error("RPG Idle: Error loading progression:", e);
             this.prog = defaultProg;
         }
     }
