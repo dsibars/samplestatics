@@ -71,7 +71,7 @@ export function showHistory() {
   
   list.innerHTML = sortedKeys.map((k, i) => {
     const s = state.history[k];
-    const prevK = sortedKeys.slice(i + 1).find(key => key < k);
+    const prevK = sortedKeys[i + 1];
     const prevS = prevK ? state.history[prevK] : null;
     
     const mins = Math.floor(s.duration / 60);
