@@ -188,41 +188,34 @@ export class HeroDetailsView extends View {
 
     onMount() {
         super.onMount();
-        this.element.addEventListener('click', (e) => {
-            const target = e.target;
 
-            // Tab switching
-            if (target.classList.contains('tab-btn')) {
-                this.activeTab = target.dataset.tab;
-                this.update();
-                return;
-            }
+        // Protected Tab switching
+        this.addInteractionListener('.tab-btn', (e, target) => {
+            this.activeTab = target.dataset.tab;
+            this.update();
+        });
 
-            // Stat increase
-            if (target.dataset.action === 'increase-stat') {
-                const statId = target.dataset.stat;
-                engine.heroes.increaseHeroStat(this.props.heroId, statId);
-                this.update();
-                return;
-            }
+        // Protected Stat increase
+        this.addInteractionListener('[data-action="increase-stat"]', (e, target) => {
+            const statId = target.dataset.stat;
+            engine.heroes.increaseHeroStat(this.props.heroId, statId);
+            this.update();
+        });
 
-            // Learn skill
-            if (target.dataset.action === 'learn-skill') {
-                const skillId = target.dataset.skill;
-                const cost = parseInt(target.dataset.cost);
-                engine.heroes.learnHeroSkill(this.props.heroId, skillId, cost);
-                this.update();
-                return;
-            }
+        // Protected Learn skill
+        this.addInteractionListener('[data-action="learn-skill"]', (e, target) => {
+            const skillId = target.dataset.skill;
+            const cost = parseInt(target.dataset.cost);
+            engine.heroes.learnHeroSkill(this.props.heroId, skillId, cost);
+            this.update();
+        });
 
-            // Upgrade skill
-            if (target.dataset.action === 'upgrade-skill') {
-                const skillId = target.dataset.skill;
-                const cost = parseInt(target.dataset.cost);
-                engine.heroes.upgradeHeroSkill(this.props.heroId, skillId, cost);
-                this.update();
-                return;
-            }
+        // Protected Upgrade skill
+        this.addInteractionListener('[data-action="upgrade-skill"]', (e, target) => {
+            const skillId = target.dataset.skill;
+            const cost = parseInt(target.dataset.cost);
+            engine.heroes.upgradeHeroSkill(this.props.heroId, skillId, cost);
+            this.update();
         });
     }
 }
