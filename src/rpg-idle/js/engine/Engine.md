@@ -47,6 +47,19 @@ We are currently following a phased approach to migrate the legacy RPG Idle appl
 3.  **Engine Integration**: Refactoring the legacy app to use the engine services for all logic and state management.
 4.  **Concerns Separation**: Once the legacy code is fully replaced, we will iterate to enforce a strict separation between visual components and the engine logic.
 
+## Combat Flow (Manual vs. Auto)
+
+The `BattleService` supports both automated and manual combat:
+
+- **Auto-Battle**: When `player.autoBattle` is `true`, `battle.nextTurn()` will automatically execute actions for both enemies and heroes.
+- **Manual Combat**: When `player.autoBattle` is `false`:
+    1. `battle.nextTurn()` will automatically execute turns for enemies.
+    2. For heroes, `battle.nextTurn()` will return a `Result` with `actionRequired: true`.
+    3. The UI (or test) must then call `battle.executeAction(actor, skillId, targetId)` to perform the hero's move.
+    4. Execution of the action automatically advances the battle to the next turn.
+
+This design ensures the UI can prompt the user for input at the correct time while the engine handles all timing and rule enforcement.
+
 ## Testing
 
 - **Unit Tests**: Located in `tests/unit/`, focusing on individual services and models.

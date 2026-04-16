@@ -43,13 +43,41 @@ if (!globalThis.crypto.randomUUID) {
 // Now import engine dynamically
 const { engine } = await import('../../Engine.js');
 
+/**
+ * Helper to simulate a battle until it's over.
+ * It handles both auto-turns (enemies/auto-battle) and manual turns (heroes).
+ */
+function runBattleSimulation() {
+    let safetyBreak = 0;
+    while (!engine.battle.isOver && safetyBreak < 1000) {
+        const turnResult = engine.battle.nextTurn();
+
+        if (turnResult.success && turnResult.data.actionRequired) {
+            // Manual action required for a hero
+            const actor = engine.battle.turnOrder[engine.battle.currentTurnIndex];
+
+            // AI strategy for test: attack first healthy enemy
+            const target = engine.battle.enemies.find(e => e.hp > 0);
+            if (target) {
+                engine.battle.executeAction(actor, 'basic_attack', target.id);
+            }
+        }
+
+        safetyBreak++;
+    }
+
+    if (safetyBreak >= 1000) {
+        throw new Error('Battle simulation timed out - possible infinite loop');
+    }
+}
+
 test('Infinite Adventure Functional Test', async (t) => {
     // Reset state
     mockLS.clear();
     engine.resetAll();
 
-    // Enable auto-battle to avoid infinite loop in nextTurn()
-    engine.player.setAutoBattle(true);
+    // Disable auto-battle to test manual combat support
+    engine.player.setAutoBattle(false);
 
     // 1. Initial State Check
     assert.strictEqual(engine.player.gold, 0, 'Should start with 0 gold');
@@ -74,13 +102,8 @@ test('Infinite Adventure Functional Test', async (t) => {
     assert.strictEqual(advResult.data.type, 'BATTLE');
     assert.strictEqual(advResult.data.milestone, 1);
 
-    // Simulate Battle
-    let safetyBreak = 0;
-    while (!engine.battle.isOver && safetyBreak < 100) {
-        engine.battle.nextTurn();
-        safetyBreak++;
-    }
-    assert.ok(safetyBreak < 100, 'Battle should not loop forever');
+    // Simulate Battle (Manual)
+    runBattleSimulation();
     assert.strictEqual(engine.battle.isOver, true, 'Battle should be over');
     assert.strictEqual(engine.battle.winner, 'enemies', 'Hero should lose the first battle without upgrades');
 
@@ -105,11 +128,7 @@ test('Infinite Adventure Functional Test', async (t) => {
     advResult = engine.adventure.startAdventure();
     assert.strictEqual(advResult.data.milestone, 1);
 
-    safetyBreak = 0;
-    while (!engine.battle.isOver && safetyBreak < 100) {
-        engine.battle.nextTurn();
-        safetyBreak++;
-    }
+    runBattleSimulation();
 
     assert.strictEqual(engine.battle.winner, 'heroes', 'Hero should win after upgrades');
     engine.adventure.completeBattle('heroes');
@@ -118,7 +137,7 @@ test('Infinite Adventure Functional Test', async (t) => {
     // 6. Progress to Milestone 5 (Event)
     for (let m = 2; m <= 4; m++) {
         advResult = engine.adventure.nextStep();
-        while (!engine.battle.isOver) { engine.battle.nextTurn(); }
+        runBattleSimulation();
         engine.adventure.completeBattle('heroes');
         assert.strictEqual(engine.player.milestone, m);
     }
@@ -133,7 +152,7 @@ test('Infinite Adventure Functional Test', async (t) => {
     for (let m = 6; m <= 9; m++) {
         advResult = engine.adventure.nextStep();
         if (advResult.data.type === 'BATTLE') {
-            while (!engine.battle.isOver) { engine.battle.nextTurn(); }
+            runBattleSimulation();
             engine.adventure.completeBattle('heroes');
         }
         // If it's an event (rare but possible depending on logic), we skip
@@ -148,15 +167,12 @@ test('Infinite Adventure Functional Test', async (t) => {
     hero.baseMaxHp += 1000;
     hero.recalculateStats();
     hero.hp = hero.maxHp;
+    hero.mp = hero.maxMp;
 
     // Reset Battle service to ensure it's fresh for the boss fight
     // Actually nextStep starts it. Let's just run it.
 
-    let safety = 0;
-    while (!engine.battle.isOver && safety < 1000) {
-        engine.battle.nextTurn();
-        safety++;
-    }
+    runBattleSimulation();
     assert.strictEqual(engine.battle.winner, 'heroes', 'Hero should win against boss');
 
     engine.adventure.completeBattle('heroes');
