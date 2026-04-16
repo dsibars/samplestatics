@@ -1,7 +1,9 @@
 import { engine } from '../engine/Engine.js';
 import { HeroDetailsView } from './views/HeroDetailsView.js';
+import { applyTranslations } from '../i18n.js';
 
 async function initV2() {
+    applyTranslations();
     // 1. Initialize Engine (auto-loads from localStorage)
     console.log('Initializing Engine...');
 
