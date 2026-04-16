@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { AdventureService } from '../services/AdventureService.js';
+import { AdventureService } from '../../services/AdventureService.js';
 
 const mockPlayer = {
     milestone: 0,

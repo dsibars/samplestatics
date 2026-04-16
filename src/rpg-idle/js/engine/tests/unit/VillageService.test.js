@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { VillageService } from '../services/VillageService.js';
+import { VillageService } from '../../services/VillageService.js';
 
 const mockPlayer = {
     cores: 1000,

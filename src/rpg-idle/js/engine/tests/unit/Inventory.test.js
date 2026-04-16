@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { InventoryService } from '../services/InventoryService.js';
-import { Equipment } from '../models/Equipment.js';
+import { InventoryService } from '../../services/InventoryService.js';
+import { Equipment } from '../../models/Equipment.js';
 
 // Mock localStorage for Node environment
 globalThis.localStorage = {

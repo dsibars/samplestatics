@@ -12,6 +12,7 @@ export class PlayerService {
             gold: 0,
             cores: 0,
             milestone: 0,
+            autoBattle: false,
             inventory: {
                 tiny_potion: 0,
                 tiny_mana_potion: 0
@@ -31,6 +32,13 @@ export class PlayerService {
     get gold() { return this.data.gold; }
     get cores() { return this.data.cores; }
     get milestone() { return this.data.milestone; }
+    get autoBattle() { return this.data.autoBattle; }
+
+    setAutoBattle(value) {
+        this.data.autoBattle = !!value;
+        this.save();
+        return Result.ok(this.data.autoBattle);
+    }
 
     addGold(amount) {
         this.data.gold = Math.round((this.data.gold + amount) * 100) / 100;

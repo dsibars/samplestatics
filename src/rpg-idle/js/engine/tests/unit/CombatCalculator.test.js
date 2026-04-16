@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { CombatCalculator } from '../core/CombatCalculator.js';
+import { CombatCalculator } from '../../core/CombatCalculator.js';
 
 test('CombatCalculator: Damage Multiplier', () => {
     // R >= 10
