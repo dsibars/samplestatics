@@ -40,12 +40,11 @@ Models are plain JavaScript classes representing game entities. They often conta
 
 ## Project Roadmap
 
-We are currently following a phased approach to migrate the legacy RPG Idle application to this engine:
+We are following a phased approach to transition the RPG Idle application to this new engine:
 
 1.  **Parallel Enhancement (Current)**: Filling and enhancing the engine services to match or exceed legacy functionality while maintaining comprehensive unit and functional tests.
-2.  **Data Model Migration**: Refactoring the legacy code to use UUIDs and ID-based logic instead of array indices, preparing the ground for the engine without switching to it yet.
-3.  **Engine Integration**: Refactoring the legacy app to use the engine services for all logic and state management.
-4.  **Concerns Separation**: Once the legacy code is fully replaced, we will iterate to enforce a strict separation between visual components and the engine logic.
+2.  **V2 UX Development (Pending)**: Instead of refactoring the legacy code, we will develop a completely new UI ("V2") from scratch. This V2 will live in a separate `presentation` directory at the same level as `engine` and will be powered 100% by the engine API. During this phase, a button will be added to the legacy app to allow users to switch to the V2 preview.
+3.  **Replacement**: Once the V2 experience is feature-complete and polished, we will remove the legacy "V1" code and promote V2 as the primary game interface.
 
 ## Combat Flow (Manual vs. Auto)
 
