@@ -12,6 +12,8 @@ test-all:
 	@node --test src/rpg-idle/js/engine/tests/engine-functional/VillageSystem.test.js
 	@echo "Step 4: Running Functional Test - Infinite Adventure..."
 	@node --test src/rpg-idle/js/engine/tests/engine-functional/InfiniteAdventure.test.js
+	@echo "Step 5: Running Performance Benchmark..."
+	@node --test src/rpg-idle/js/engine/tests/engine-functional/BattleBenchmark.test.js
 	@echo "All tests passed!"
 
 build:
