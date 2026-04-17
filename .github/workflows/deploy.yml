@@ -1,0 +1,39 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: # Allows manual trigger
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Build all apps
+        run: |
+          # If we are on main, build to root of staging.
+          # If we wanted branch-specific subfolders, we could adjust STAGING_DIR here,
+          # but note that GitHub Pages (actions/deploy-pages) replaces the entire site.
+          make build-all STAGING_DIR=dist_gh_pages
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist_gh_pages'
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
