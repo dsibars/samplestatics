@@ -161,14 +161,14 @@ export class CombatManager {
     checkCombatEnd() {
         if (this.enemies.every(e => e.hp <= 0)) {
             this.isCombatOver = true;
-            setTimeout(() => this.game.endCombat('win', this.partyTraits.goldBonus), 1000);
+            setTimeout(() => this.game.endCombat('win', this.partyTraits.goldBonus), 500);
             return true;
         }
 
         const allHeroesDead = this.heroes.every(h => h.hp <= 0);
         if (allHeroesDead) {
             this.isCombatOver = true;
-            setTimeout(() => this.game.endCombat('lose'), 1000);
+            setTimeout(() => this.game.endCombat('lose'), 500);
             return true;
         }
 
@@ -355,7 +355,7 @@ export class CombatManager {
             }
         });
 
-        if (this.enemies.every(e => e.hp <= 0)) delay += 1000;
+        if (this.enemies.every(e => e.hp <= 0)) delay += 500;
         setTimeout(() => this.advanceTurn(), delay);
     }
 
