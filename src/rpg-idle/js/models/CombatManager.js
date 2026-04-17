@@ -141,7 +141,7 @@ export class CombatManager {
             const context = {
                 target: hero,
                 allies: this.heroes,
-                enemies: this.enemies.filter(e => e.hp > 0),
+                enemies: this.enemies,
                 type: 'smart'
             };
 
@@ -397,8 +397,8 @@ export class CombatManager {
 
         const context = {
             target: enemy,
-            allies: this.enemies.filter(e => e.hp > 0),
-            enemies: this.heroes.filter(h => h.hp > 0),
+            allies: this.enemies,
+            enemies: this.heroes,
             type: 'random'
         };
 

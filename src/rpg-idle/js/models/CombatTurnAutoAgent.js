@@ -17,10 +17,10 @@ export class CombatTurnAutoAgent {
         const injuredAllies = allies.filter(a => a.hp > 0 && a.hp / a.maxHp <= 0.7); // < 70% HP
 
         if (injuredAllies.length > 0) {
-            // Find best heal skill
+            // Find best heal skill (must have power property for actual healing)
             const healSkills = availableSkills
                 .map(sId => SKILLS_DATA[sId])
-                .filter(s => s.category === 'support' && (s.targetType === 'single_ally' || s.targetType === 'all_allies'))
+                .filter(s => s.category === 'support' && s.power > 0 && (s.targetType === 'single_ally' || s.targetType === 'all_allies'))
                 .sort((a, b) => (b.power || 0) - (a.power || 0));
 
             if (healSkills.length > 0) {
@@ -45,7 +45,26 @@ export class CombatTurnAutoAgent {
             }
         }
 
-        // 2. Offensive logic
+        // 2. Support logic (non-healing)
+        const supportSkills = availableSkills
+            .map(sId => SKILLS_DATA[sId])
+            .filter(s => s.category === 'support' && (!s.power || s.power <= 0));
+
+        if (supportSkills.length > 0) {
+            // For now, only Haste is available. Apply to someone who doesn't have it.
+            const hasteSkill = supportSkills.find(s => s.id === 'haste');
+            if (hasteSkill) {
+                const targetWithoutHaste = allies.find(a => a.hp > 0 && !a.statusEffects.some(e => e.type === 'haste'));
+                if (targetWithoutHaste) {
+                    return {
+                        skillId: hasteSkill.id,
+                        targetIndex: hasteSkill.targetType === 'single_ally' ? allies.indexOf(targetWithoutHaste) : null
+                    };
+                }
+            }
+        }
+
+        // 3. Offensive logic
         const attackSkills = availableSkills
             .map(sId => SKILLS_DATA[sId])
             .filter(s => s.category !== 'support')
@@ -54,7 +73,7 @@ export class CombatTurnAutoAgent {
         // Default to basic_attack if nothing else
         let chosenSkill = attackSkills[0] || SKILLS_DATA['basic_attack'];
 
-        // 3. Targeting & AoE decision
+        // 4. Targeting & AoE decision
         let targetIndex = 0;
         const aliveEnemies = enemies
             .map((e, idx) => ({ e, idx }))

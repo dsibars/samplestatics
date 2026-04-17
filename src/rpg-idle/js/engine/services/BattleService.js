@@ -62,7 +62,10 @@ export class BattleService {
 
         if (healthyOpponents.length === 0) return this._checkBattleEnd();
 
-        const target = healthyOpponents[Math.floor(Math.random() * healthyOpponents.length)];
+        // Target enemy with lowest HP (smart focus)
+        healthyOpponents.sort((a, b) => a.hp - b.hp);
+        const target = healthyOpponents[0];
+
         return this.executeAction(entity, 'basic_attack', target.id);
     }
 

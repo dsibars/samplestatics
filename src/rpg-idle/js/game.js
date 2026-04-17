@@ -500,7 +500,7 @@ export class RPGGame {
     }
 
     handleCanvasClick(e) {
-        if (!this.currentCombat || this.currentCombat.isCombatOver) return;
+        if (!this.currentCombat || this.currentCombat.isCombatOver || this.autoBattle) return;
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
@@ -542,9 +542,21 @@ export class RPGGame {
                 disabled: hero.mp < skill.mpCost,
                 onclick: () => {
                     if (skill.targetType === 'single_enemy') {
-                        this.renderTargetSelection(hero, skillId, 'enemies');
+                        const aliveEnemies = this.enemies.filter(e => e.hp > 0);
+                        if (aliveEnemies.length === 1) {
+                            panel.style.display = 'none';
+                            this.currentCombat.heroAction(hero, skillId, this.enemies.indexOf(aliveEnemies[0]));
+                        } else {
+                            this.renderTargetSelection(hero, skillId, 'enemies');
+                        }
                     } else if (skill.targetType === 'single_ally') {
-                        this.renderTargetSelection(hero, skillId, 'allies');
+                        const aliveAllies = this.heroes.filter(a => a.hp > 0);
+                        if (aliveAllies.length === 1) {
+                            panel.style.display = 'none';
+                            this.currentCombat.heroAction(hero, skillId, this.heroes.indexOf(aliveAllies[0]));
+                        } else {
+                            this.renderTargetSelection(hero, skillId, 'allies');
+                        }
                     } else {
                         panel.style.display = 'none';
                         this.currentCombat.heroAction(hero, skillId);
