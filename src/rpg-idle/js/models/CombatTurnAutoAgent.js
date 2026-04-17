@@ -36,7 +36,11 @@ export class CombatTurnAutoAgent {
                     const sortedInjured = [...injuredAllies].sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
                     const bestTarget = sortedInjured[0];
                     const targetIndex = allies.indexOf(bestTarget);
-                    return { skillId: singleHeal.id, targetIndex };
+
+                    return {
+                        skillId: singleHeal.id,
+                        targetIndex: singleHeal.targetType === 'single_ally' ? targetIndex : null
+                    };
                 }
             }
         }
@@ -52,12 +56,9 @@ export class CombatTurnAutoAgent {
 
         // 3. Targeting & AoE decision
         let targetIndex = 0;
-        const aliveEnemies = [];
-        for (let i = 0; i < enemies.length; i++) {
-            if (enemies[i].hp > 0) {
-                aliveEnemies.push({ e: enemies[i], idx: i });
-            }
-        }
+        const aliveEnemies = enemies
+            .map((e, idx) => ({ e, idx }))
+            .filter(item => item.e.hp > 0);
 
         // If we have multiple enemies, favor AoE (if any exist in data)
         const aoeSkill = attackSkills.find(s => s.targetType === 'all_enemies');
@@ -78,7 +79,7 @@ export class CombatTurnAutoAgent {
 
         return { 
             skillId: chosenSkill.id, 
-            targetIndex: chosenSkill.targetType === 'single_enemy' ? targetIndex : null 
+            targetIndex: (chosenSkill.targetType === 'single_enemy' || chosenSkill.targetType === 'single_ally') ? targetIndex : null
         };
     }
 }

@@ -34,6 +34,9 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       minify: isDebug ? false : 'esbuild',
       cssMinify: isDebug ? false : 'esbuild',
+      rollupOptions: {
+        input: path.resolve(__dirname, 'src', appName, process.env.ENTRY_FILE || 'index.html'),
+      }
     }
   };
 });

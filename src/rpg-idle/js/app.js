@@ -1026,6 +1026,8 @@ window.clearGameData = () => {
 
 window.toggleAutoBattle = (checked) => {
     Progression.setAutoBattle(checked);
+
+    // Use the game instance if it exists (set in RPGGame constructor)
     if (window.game) {
         window.game.autoBattle = checked;
         if (checked && window.game.currentCombat && !window.game.currentCombat.isCombatOver) {

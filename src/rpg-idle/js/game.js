@@ -9,6 +9,7 @@ import { SKILLS_DATA } from './constants.js';
 
 export class RPGGame {
     constructor() {
+        window.game = this;
         this.currentCombat = null;
         this.enemies = [];
         this.currentMilestone = Progression.prog.milestone;
