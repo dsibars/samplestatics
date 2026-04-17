@@ -30,6 +30,11 @@ build:
 	@. $(HOME)/.nvm/nvm.sh && APP=$(APP) npm run build:prod
 	@cp dist/index.html ./$(APP).html
 	@if [ "$(APP)" = "hub" ]; then cp ./hub.html ./index.html; fi
+	@if [ -f "src/$(APP)/index_v2.html" ]; then \
+		echo "Building $(APP) V2..."; \
+		. $(HOME)/.nvm/nvm.sh && APP=$(APP) ENTRY_FILE=index_v2.html npm run build:prod; \
+		if [ -f "dist/index_v2.html" ]; then cp dist/index_v2.html ./$(APP)_v2.html; else cp dist/index.html ./$(APP)_v2.html; fi \
+	fi
 	
 	@echo "Build complete for $(APP)!"
 

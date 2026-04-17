@@ -119,6 +119,7 @@ class ProgressionManager {
         this.prog = defaultProg;
       }
     } catch (e) {
+      console.error("RPG Idle: Error loading progression:", e);
       this.prog = defaultProg;
     }
   }
@@ -1323,7 +1324,18 @@ const TRANSLATIONS = {
     err_no_hero_village: "Recruit at least one hero in the village first!",
     err_invalid_save: "Invalid save file structure.",
     err_parse_file: "Error parsing file.",
-    debug_applied: "Debug bonuses applied! Cores, Gold, and Hero XP updated."
+    debug_applied: "Debug bonuses applied! Cores, Gold, and Hero XP updated.",
+    v2_back_legacy: "BACK TO LEGACY",
+    v2_stats: "STATS",
+    v2_skills: "SKILLS",
+    v2_gear: "GEAR",
+    v2_points: "Points",
+    v2_locked: "LOCKED",
+    v2_upgrade: "UPGRADE",
+    v2_unlock: "UNLOCK",
+    v2_sp: "SP",
+    v2_exp: "EXP",
+    v2_hero_not_found: "Hero not found"
   },
   es: {
     subtitle: "Aventura y Recluta",
@@ -1605,6 +1617,17 @@ const TRANSLATIONS = {
     err_invalid_save: "Estructura de archivo de guardado no válida.",
     err_parse_file: "Error al procesar el archivo.",
     debug_applied: "¡Bonos de depuración aplicados! Núcleos, Oro y XP de héroes actualizados.",
+    v2_back_legacy: "VOLVER",
+    v2_stats: "ATRIBUTOS",
+    v2_skills: "HABILIDADES",
+    v2_gear: "EQUIPO",
+    v2_points: "Puntos",
+    v2_locked: "BLOQUEADO",
+    v2_upgrade: "MEJORAR",
+    v2_unlock: "DESBLOQUEAR",
+    v2_sp: "PH",
+    v2_exp: "EXP",
+    v2_hero_not_found: "Héroe no encontrado",
     btn_level_up: "Subir Nivel",
     name_affix_template: "{name} del {affix}",
     vampire: "Vampiro",
@@ -2629,19 +2652,17 @@ class CombatTurnAutoAgent {
           const sortedInjured = [...injuredAllies].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
           const bestTarget = sortedInjured[0];
           const targetIndex2 = allies.indexOf(bestTarget);
-          return { skillId: singleHeal.id, targetIndex: targetIndex2 };
+          return {
+            skillId: singleHeal.id,
+            targetIndex: singleHeal.targetType === "single_ally" ? targetIndex2 : null
+          };
         }
       }
     }
     const attackSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category !== "support").sort((a, b) => (b.baseMultiplier || 0) - (a.baseMultiplier || 0));
     let chosenSkill = attackSkills[0] || SKILLS_DATA["basic_attack"];
     let targetIndex = 0;
-    const aliveEnemies = [];
-    for (let i = 0; i < enemies.length; i++) {
-      if (enemies[i].hp > 0) {
-        aliveEnemies.push({ e: enemies[i], idx: i });
-      }
-    }
+    const aliveEnemies = enemies.map((e, idx) => ({ e, idx })).filter((item) => item.e.hp > 0);
     const aoeSkill = attackSkills.find((s) => s.targetType === "all_enemies");
     if (aoeSkill && aliveEnemies.length > 1) {
       chosenSkill = aoeSkill;
@@ -2656,7 +2677,7 @@ class CombatTurnAutoAgent {
     }
     return {
       skillId: chosenSkill.id,
-      targetIndex: chosenSkill.targetType === "single_enemy" ? targetIndex : null
+      targetIndex: chosenSkill.targetType === "single_enemy" || chosenSkill.targetType === "single_ally" ? targetIndex : null
     };
   }
 }
@@ -3060,6 +3081,7 @@ class FloatingText {
 }
 class RPGGame {
   constructor() {
+    window.game = this;
     this.currentCombat = null;
     this.enemies = [];
     this.currentMilestone = Progression.prog.milestone;
@@ -4877,6 +4899,9 @@ body {
                 </button>
                 <button class="menu-btn secondary" onclick="window.location.href='index.html'" style="margin-top: 10px;">
                     <span class="icon">🏠</span> <span data-i18n="btn_hub">MAIN HUB</span>
+                </button>
+                <button class="menu-btn primary" onclick="window.location.href='rpg-idle_v2.html'" style="margin-top: 20px; border-color: #f0f; color: #f0f; background: rgba(255, 0, 255, 0.05);">
+                    <span class="icon">🚀</span> <span>TRY V2 PREVIEW</span>
                 </button>
             </div>
         </div>

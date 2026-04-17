@@ -14,7 +14,7 @@
       <span>${S(a)}</span>
       <b>${t.totals[a]}</b>
     </div>
-  `).join("")}function Rn(){document.getElementById("view-welcome").classList.remove("active"),document.getElementById("view-history").classList.add("active");const t=document.getElementById("history-list"),e=Object.keys(p.history).sort().reverse();t.innerHTML=e.map((n,o)=>{const a=p.history[n],i=e.slice(o+1).find(d=>d<n),r=i?p.history[i]:null,s=Math.floor(a.duration/60),l=a.duration%60,c=a.steps.map(d=>`
+  `).join("")}function Rn(){document.getElementById("view-welcome").classList.remove("active"),document.getElementById("view-history").classList.add("active");const t=document.getElementById("history-list"),e=Object.keys(p.history).sort().reverse();t.innerHTML=e.map((n,o)=>{const a=p.history[n],i=e[o+1],r=i?p.history[i]:null,s=Math.floor(a.duration/60),l=a.duration%60,c=a.steps.map(d=>`
       <div>${S(d.tag)} ${S(oe[d.ex].name)}: <b>${d.value}</b></div>
     `).join(""),f=Object.keys(a.totals).map(d=>{const v=r?a.totals[d]-(r.totals[d]||0):null,w=v>=0?"+":"",b=v>=0?"pos":"neg",y=v!==null?`<span class="delta ${b}">(${w}${v})</span>`:"";return`<div>• ${S(d)}: <b>${a.totals[d]}</b> ${y}</div>`}).join("");return`
       <div class="hist-card">
