@@ -1030,10 +1030,25 @@ window.toggleAutoBattle = (checked) => {
     // Use the game instance if it exists (set in RPGGame constructor)
     if (window.game) {
         window.game.autoBattle = checked;
-        if (checked && window.game.currentCombat && !window.game.currentCombat.isCombatOver) {
-            const participant = window.game.currentCombat.turnOrder[window.game.currentCombat.currentTurnIndex];
-            if (participant && window.game.heroes.includes(participant)) {
-                window.game.currentCombat.heroAutoTurn(participant);
+        const combat = window.game.currentCombat;
+        if (combat && !combat.isCombatOver) {
+            // Sync marks: clearing when toggling either direction
+            combat.targetIndex = null;
+
+            const participant = combat.turnOrder[combat.currentTurnIndex];
+            const isHeroTurn = participant && window.game.heroes.includes(participant);
+
+            if (checked) {
+                // Turning ON auto-battle
+                if (isHeroTurn && participant.hp > 0) {
+                    document.getElementById('action-panel').style.display = 'none';
+                    combat.heroAutoTurn(participant);
+                }
+            } else {
+                // Turning OFF auto-battle
+                if (isHeroTurn && participant.hp > 0 && !combat.isActionInProgress) {
+                    window.game.showActionPanel(participant);
+                }
             }
         }
     }
