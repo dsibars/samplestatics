@@ -36,6 +36,7 @@ export class RPGGame {
         this.lastActionTime = 0;
 
         this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+        this.victoryTimer = null;
     }
 
     resizeCanvas() {
@@ -284,6 +285,13 @@ export class RPGGame {
                 `<p style="color: #0af; font-weight: bold;">${t('log_level_up').replace('{hero}', lu.name).replace('{level}', lu.level)}</p>`
             ).join('');
 
+            if (this.autoBattle) {
+                setTimeout(() => {
+                    if (window.nextCombat) window.nextCombat();
+                }, 500);
+                return;
+            }
+
             document.getElementById('victory-rewards').innerHTML = `
                 <p>💰 +${goldEarned.toFixed(2).replace(/\.00$/, '')} ${t('gold')}</p>
                 <p>✨ +${expEarned.toFixed(2).replace(/\.00$/, '')} ${t('exp_for_heroes')}</p>
@@ -291,6 +299,7 @@ export class RPGGame {
                 ${levelUpMessages}
             `;
             document.getElementById('win-overlay').style.display = 'flex';
+            this.startVictoryTimer();
 
             if (this.currentCombat && this.currentCombat.oneShotJumpPossible) {
                 setTimeout(() => {
@@ -599,6 +608,34 @@ export class RPGGame {
         }));
 
         this.renderDynamicGrid(panel, options, '🎒 ' + t('items'), () => this.showActionPanel(hero));
+    }
+
+    startVictoryTimer() {
+        this.stopVictoryTimer();
+        let seconds = 3;
+        const btn = document.querySelector('#win-overlay .menu-btn');
+        const originalText = t('btn_continue');
+
+        if (btn) btn.innerText = `${originalText} (${seconds})`;
+
+        this.victoryTimer = setInterval(() => {
+            seconds--;
+            if (seconds <= 0) {
+                this.stopVictoryTimer();
+                if (window.nextCombat) window.nextCombat();
+            } else {
+                if (btn) btn.innerText = `${originalText} (${seconds})`;
+            }
+        }, 1000);
+    }
+
+    stopVictoryTimer() {
+        if (this.victoryTimer) {
+            clearInterval(this.victoryTimer);
+            this.victoryTimer = null;
+        }
+        const btn = document.querySelector('#win-overlay .menu-btn');
+        if (btn) btn.innerText = t('btn_continue');
     }
 
     renderDynamicGrid(panel, options, title = '', backFn = null) {

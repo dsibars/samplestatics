@@ -85,6 +85,7 @@ window.nextCombat = () => {
     if (game && game.popupOpenTime && performance.now() - game.popupOpenTime < 300) return;
     lastNextCombatTime = performance.now();
     
+    if (game) game.stopVictoryTimer();
     document.getElementById('win-overlay').style.display = 'none';
     document.getElementById('combat-log').innerHTML = '';
     if (game) game.nextCombat();
