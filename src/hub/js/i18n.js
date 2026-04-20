@@ -11,6 +11,8 @@ export const TRANSLATIONS = {
     app_td_desc: "Juego épico de estrategia y oleadas para poner a prueba tus defensas.",
     app_rpg_title: "RPG Idle",
     app_rpg_desc: "Recluta héroes y embárcate en una aventura sin fin.",
+    app_magic_title: "Aventura Mágica",
+    app_magic_desc: "Dibuja poderosos hechizos y pon a prueba tus habilidades mágicas.",
     static_badge: "App Estática",
     lang: "Idioma"
   },
@@ -26,6 +28,8 @@ export const TRANSLATIONS = {
     app_td_desc: "Epic strategy and wave game to test your tactical defenses.",
     app_rpg_title: "RPG Idle",
     app_rpg_desc: "Recruit heroes and embark on an endless adventure.",
+    app_magic_title: "Magic Adventure",
+    app_magic_desc: "Draw powerful spells and test your magic skills.",
     static_badge: "Static App",
     lang: "Language"
   },
@@ -39,6 +43,8 @@ export const TRANSLATIONS = {
     app_todo_desc: "Gestor senzill de tasques diàries per a un enfocament professional.",
     app_td_title: "Defensa de la Torre",
     app_td_desc: "Joc èpic d'estrategia i onades per posar a prova les teves defenses.",
+    app_magic_title: "Aventura Màgica",
+    app_magic_desc: "Dibuixa encanteris poderosos i posa a prova les teves habilitats màgiques.",
     static_badge: "App Estàtica",
     lang: "Idioma"
   },
@@ -52,6 +58,8 @@ export const TRANSLATIONS = {
     app_todo_desc: "Eguneroko ataza kudeatzaile sinplea ikuspegi profesionalerako.",
     app_td_title: "Dorre Defentsa",
     app_td_desc: "Estrategia eta olatu joko epikoa zure defentsak probatzeko.",
+    app_magic_title: "Aventurazko Magia",
+    app_magic_desc: "Marraztu sorginkeria indartsuak eta probatu zure magia trebetasunak.",
     static_badge: "App Estatikoa",
     lang: "Hizkuntza"
   },
@@ -65,6 +73,8 @@ export const TRANSLATIONS = {
     app_todo_desc: "Gestor sencillo de tareas diarias para un enfoque profesional.",
     app_td_title: "Defensa da Torre",
     app_td_desc: "Xogo épico de estratexia e oleadas para poñer a proba as túas defensas.",
+    app_magic_title: "Aventura Máxica",
+    app_magic_desc: "Debuxa poderosos hechizos e pon a proba as túas habilidades máxicas.",
     static_badge: "App Estática",
     lang: "Idioma"
   }

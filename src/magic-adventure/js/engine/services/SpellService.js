@@ -40,28 +40,33 @@ export class SpellService {
                 }
             }
 
-            // Intensity based on size relative to some arbitrary "large" size (e.g., 200px)
+            // Granular intensity based on size.
+            // 100px is our "standard" size (intensity 1.0)
             if (item.metadata && item.metadata.boundingBox) {
-                const size = Math.max(item.metadata.boundingBox.width, item.metadata.boundingBox.height);
-                totalIntensity += size / 200;
+                const box = item.metadata.boundingBox;
+                // Using area/perimeter or diagonal might be more stable than just max side
+                const diagonal = Math.sqrt(box.width * box.width + box.height * box.height);
+                totalIntensity += diagonal / 141.4; // 141.4 is diagonal of 100x100
             }
         });
 
         if (!mainPattern) {
+            // "Fizzle" or "Spark" intensity
+            const intensity = Math.max(0.1, totalIntensity);
             return new Spell({
-                name: 'Basic Spark',
+                name: intensity > 0.5 ? 'Chaos Bolt' : 'Basic Spark',
                 type: 'spark',
                 element: 'Neutral',
-                mpCost: 5,
-                damage: Math.round(5 * totalIntensity)
+                mpCost: Math.round(5 * intensity),
+                damage: Math.round(8 * intensity)
             });
         }
 
         const baseDamage = mainPattern.config.baseDamage;
         const baseCost = mainPattern.config.baseCost;
 
-        // Final calculation
-        let intensity = Math.min(2, totalIntensity); // Cap intensity for now
+        // Every small change in size (totalIntensity) affects damage and cost
+        let intensity = totalIntensity;
         let damage = Math.round(baseDamage * intensity);
         let mpCost = Math.round(baseCost * intensity);
 

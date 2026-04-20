@@ -28,7 +28,31 @@ export class SquareDetector extends PatternDetector {
             edgeScore += (1 - Math.min(1, normalizedDist * 5)); // Reward being near edges
         });
 
-        const score = edgeScore / points.length;
+        let score = edgeScore / points.length;
+
+        // NEW: Check for corners to distinguish from circles
+        // We look for points that are very close to the bounding box corners
+        const corners = [
+            { x: box.x, y: box.y }, // Top-left
+            { x: box.x + box.width, y: box.y }, // Top-right
+            { x: box.x, y: box.y + box.height }, // Bottom-left
+            { x: box.x + box.width, y: box.y + box.height } // Bottom-right
+        ];
+
+        let cornerHits = 0;
+        const cornerThreshold = Math.max(box.width, box.height) * 0.2;
+
+        corners.forEach(corner => {
+            const hasPointNearCorner = points.some(p => this.getDistance(p, corner) < cornerThreshold);
+            if (hasPointNearCorner) cornerHits++;
+        });
+
+        // Boost score if we have 3 or 4 corners hit
+        if (cornerHits >= 3) {
+            score += 0.2;
+        } else if (cornerHits < 2) {
+            score -= 0.2;
+        }
 
         // Check if start and end are close
         const startEndDist = this.getDistance(points[0], points[points.length - 1]);
@@ -36,7 +60,7 @@ export class SquareDetector extends PatternDetector {
 
         const finalScore = (score * 0.7) + (closureScore * 0.3);
 
-        if (finalScore < 0.7) return null;
+        if (finalScore < 0.6) return null; // Lowered slightly from 0.7 but corner check adds reliability
 
         return {
             score: finalScore,
