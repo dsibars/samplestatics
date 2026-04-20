@@ -1,51 +1,47 @@
-# Magic Adventure: Gesture System Proposal
+# Magic Adventure: The Magic Circle System (Finalized)
 
-This document outlines a proposed expansion for the gesture recognition and spell system in Magic Adventure, focusing on variety, physical/magical combinations, and multi-stroke mechanics.
+The spellcasting system revolves around a "Magic Circle" UI. Each spell is a composition of a central **Core** and up to four **Complements**.
 
-## 1. Core Elements (Base Shapes)
+## 🏗 The Magic Circle UI
 
-The current base shapes represent elemental affinities:
-- **Circle**: Water (Fluid, defensive/versatile)
-- **Square**: Earth (Solid, high damage, expensive)
-- **Plus (+)**: Utility / Modifier (Multi-target, area of effect)
+The drawing area is divided into two main zones:
 
-## 2. New Physical Gestures (The Sword System)
+### 1. The Core (Inner Circle)
+- **Visual**: A central circle with a red semi-transparent background.
+- **Function**: Determines the base element and nature of the spell.
+- **Rule**: Exactly ONE gesture must be drawn here (can be multi-stroke).
 
-A new "Neutral" element category focused on "Sword" skills:
+### 2. The Complements (Outer Ring)
+- **Visual**: Four colored sections surrounding the core.
+- **Function**: Modifies the base spell using absolute multipliers.
+- **Rule**: Each section can stack the SAME symbol, but mixing different symbols in a single section will cause a "Failure to Cast".
 
-### Slashing
-- **Horizontal Line (-)**: `Slash`. A basic neutral attack. Fast and low MP cost.
-- **Two Horizontal Lines (=)**: `Double Slash`. Increased damage, higher MP cost.
-- **Three Horizontal Lines (≡)**: `Triple Slash`. High physical damage.
-- **Vertical Line (|)**: `Downward Cleave`. High critical chance.
+## 📜 Symbol Library & Math
 
-### Special Attacks
-- **Cross (X)**: `Cross-Cut`. A special physical attack with high intensity.
-- **V-Shape (V)**: `Riposte`. A counter-attack style spell.
+### Core Symbols (Elements)
+| Symbol | Element | Base Damage | Base MP Cost | Special Effect |
+| :--- | :--- | :--- | :--- | :--- |
+| `^` / `V` | **Fire** | 20 | 10 | Burning |
+| `S` | **Water** | 12 | 8 | Fluid |
+| `Square` | **Earth** | 15 | 12 | Impact |
+| `Circle` | **Light** | 8 | 15 | Defense |
+| `Z` | **Neutral** | 0 | 20 | Sleep |
+| `X` | **Poison** | 4 | 10 | Poison DoT |
 
-## 3. Composition & Combinations
+### Complementary Symbols (Modifiers)
+| Symbol | Type | Effect Modifier | MP Cost Modifier |
+| :--- | :--- | :--- | :--- |
+| `+` | **Boost** | +25% | +25% |
+| `-` | **Reduce** | -25% | -25% |
+| `∞` | **All** | 1.0x | +50% |
+| `>` | **Pierce** | 1.0x | +20% |
 
-The system should recognize multi-stroke compositions where shapes interact:
+## 🧪 Composition Examples
 
-### Elemental Infusions
-- **Circle + Horizontal Line**: `Water Blade`. A slash attack infused with water. Mix of physical and magical damage.
-- **Square + Cross**: `Quake Strike`. Earth-infused cross attack. High impact area damage.
-- **Plus (+) + Horizontal Line**: `Wide Slash`. Hits multiple targets with a physical cut.
+- **Fire** + `+` = **Greater Fireball** (25 Damage, 13 MP)
+- **Fire** + `+` + `+` = **Greater Greater Fireball** (31 Damage, 16 MP)
+- **Water** + `∞` = **Echoing Aqua Wave** (12 Damage, 12 MP)
+- **Poison** + `-` = **Minor Venom Cloud** (3 Damage, 8 MP)
 
-### Advanced Conjurations
-- **Triangle (Δ)**: `Fire` (Proposal for new base shape).
-- **Triangle + Horizontal Line**: `Fire Brand`. A burning blade attack.
-- **Circle + Circle**: `Great Bubble`. Enhanced defense or high-volume water attack.
-
-## 4. Proportional Scaling
-
-As implemented, the system uses a diagonal-based intensity scaling:
-- **Small Gestures**: "Quick-casts". Low MP, low damage. Useful for finishing off weak enemies.
-- **Medium Gestures**: Standard output.
-- **Large Gestures**: "Grand Spells". Consumes significant MP but delivers massive damage.
-
-## 5. Implementation Roadmap
-
-1.  **LineDetector**: Implement a detector for straight lines (Horizontal, Vertical, Diagonal).
-2.  **Composition Logic**: Enhance `RecognitionEngine` to detect spatial relationships between strokes (e.g., "Line is inside Circle").
-3.  **Stateful Spells**: Allow the `SpellService` to maintain a "building" state where multiple strokes add up to a single final spell before "launching".
+## 🛠 Strategic Progression
+As players increase their maximum MP, they can cast more complex compositions. A novice might only cast a basic **Fireball** (10 MP), while a master could cast a **Piercing Greater Echoing Fireball** with three `+` modifiers, creating a devastating but very expensive area attack.

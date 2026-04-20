@@ -52,7 +52,12 @@ export class MainView extends View {
         const strokes = drawingEngine.getStrokes();
         if (strokes.length === 0) return;
 
-        this.currentSpell = this.spellService.createSpellFromStrokes(strokes);
+        const canvasSize = {
+            width: this.canvasComp.canvas.width,
+            height: this.canvasComp.canvas.height
+        };
+
+        this.currentSpell = this.spellService.createSpellFromStrokes(strokes, canvasSize);
         this.infoComp.update({ spell: this.currentSpell });
 
         // Wait a bit to show results then clear? User said "clear the draw part to be ready to test another spell"
