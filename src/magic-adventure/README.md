@@ -1,52 +1,28 @@
 # Magic Adventure
 
-Magic Adventure is a drawing-based RPG combat simulator. Instead of selecting actions from a menu, players "prepare spells" by drawing mystical sigils on a canvas.
+Magic Adventure is a drawing-based RPG combat simulator. Instead of selecting actions from a menu, you are an apprentice mage who prepares spells by drawing mystical sigils.
 
-This application is built with a clean separation of concerns, following the architecture established in `rpg-idle` v2.
+## 🎮 How to Play
 
-## 🏗 Architecture
+1. **Draw your spell**: Use your mouse or finger to draw shapes in the white square.
+2. **Launch**: Once you've finished your drawing, press the **LAUNCH SPELL** button.
+3. **Analyze**: See the results of your magic in the info panel at the top.
 
-The project is divided into two main layers:
+## ✍️ Recognized Sigils
 
-### 1. Engine Layer (`js/engine/`)
-Responsible for the "brains" of the application.
-- **Core**: Contains `DrawingEngine.js` (raw data collection) and `RecognitionEngine.js` (orchestration of pattern matching).
-- **Patterns**: Modular detectors for specific shapes (Circle, Square, Plus).
-- **Services**: `SpellService.js` transforms recognized patterns into actionable game data.
-- **Models**: Defines the `Spell` structure.
+The elements of your spell depend on the shapes you draw:
 
-### 2. Presentation Layer (`js/presentation/`)
-Responsible for rendering and user interaction.
-- **Components**: Reusable UI elements like `CanvasComponent` (the drawing board) and `InfoComponent` (the spell display).
-- **Views**: `MainView.js` coordinates the components and the engine.
+| Sigil | Element / Effect |
+| :--- | :--- |
+| **Circle** | 💧 **Water**: Performs a Water-based attack. |
+| **Square** | 🪨 **Earth**: Performs an Earth-based attack. |
+| **Plus (+)** | 💥 **Multi-Target**: Modifies the spell to hit all enemies. |
+| **Point/Unknown** | ✨ **Neutral**: Defaults to a "Basic Spark". |
 
-## ✍️ Drawing Recognition System
+### ⚡ Size Matters
+The **size** of your drawing determines the power of the spell:
+- **Small drawings**: Low MP cost, but low damage.
+- **Large drawings**: Consumes more MP (up to 100%), but delivers massive damage.
 
-The core of Magic Adventure is its ability to recognize hand-drawn shapes and translate them into magic.
-
-### How it works
-1. **Point Collection**: As you draw, the engine records every point $(x, y)$ with a timestamp and a `drawId`.
-2. **Strokes**: Every time you lift your finger/mouse and touch again, a new `drawId` is assigned, allowing for multi-stroke sigils.
-3. **Pattern Matching**: When you press **LAUNCH**, the `RecognitionEngine` passes each stroke through a series of `PatternDetectors`. Each detector returns a confidence score.
-4. **Spell Mapping**: The `SpellService` looks at the highest-scoring patterns and their properties to build the final spell.
-
-### Recognized Gestures
-
-| Gesture | Element / Effect | Description |
-| :--- | :--- | :--- |
-| **Circle** | 💧 Water | Performs a Water-based attack. |
-| **Square** | 🪨 Earth | Performs an Earth-based attack. |
-| **Plus (+)** | 💥 Multi-Target | Modifies the spell to hit all enemies (increases MP cost). |
-| **Unknown** | ✨ Neutral | If a drawing isn't recognized, it defaults to a "Basic Spark". |
-
-### Intensity & MP
-The **size** of your drawing matters.
-- A **small** sigil results in a low-intensity spell with low MP cost.
-- A **large** sigil (filling more of the canvas) increases the spell's damage but consumes significantly more MP.
-
-## 🛠 Extending the System
-
-To add a new gesture:
-1. Create a new detector in `js/engine/patterns/` (e.g., `TriangleDetector.js`) extending the `PatternDetector` base class.
-2. Register the new detector in `js/engine/core/RecognitionEngine.js`.
-3. Add the mapping for the new shape in `js/engine/services/SpellService.js`.
+### 🧩 Combining Shapes
+You can draw multiple shapes before launching! For example, drawing a **Circle** and then a **Plus (+)** will create a "Water Ball Burst" that hits multiple enemies.
