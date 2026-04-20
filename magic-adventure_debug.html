@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Adventure</title>
+    <style>
+        body { margin: 0; background: #fafafa; }
+    </style>
+  <script type="module" crossorigin>(function polyfill() {
+  const relList = document.createElement("link").relList;
+  if (relList && relList.supports && relList.supports("modulepreload")) {
+    return;
+  }
+  for (const link of document.querySelectorAll('link[rel="modulepreload"]')) {
+    processPreload(link);
+  }
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== "childList") {
+        continue;
+      }
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === "LINK" && node.rel === "modulepreload")
+          processPreload(node);
+      }
+    }
+  }).observe(document, { childList: true, subtree: true });
+  function getFetchOpts(link) {
+    const fetchOpts = {};
+    if (link.integrity) fetchOpts.integrity = link.integrity;
+    if (link.referrerPolicy) fetchOpts.referrerPolicy = link.referrerPolicy;
+    if (link.crossOrigin === "use-credentials")
+      fetchOpts.credentials = "include";
+    else if (link.crossOrigin === "anonymous") fetchOpts.credentials = "omit";
+    else fetchOpts.credentials = "same-origin";
+    return fetchOpts;
+  }
+  function processPreload(link) {
+    if (link.ep)
+      return;
+    link.ep = true;
+    const fetchOpts = getFetchOpts(link);
+    fetch(link.href, fetchOpts);
+  }
+})();
+class Component {
+  constructor(props = {}) {
+    this.props = props;
+    this.element = null;
+  }
+  /**
+   * Should return a string of HTML or a DOM element
+   */
+  render() {
+    return "";
+  }
+  /**
+   * Called after the component is added to the DOM
+   */
+  mount(parent) {
+    const html = this.render();
+    if (typeof html === "string") {
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      this.element = temp.firstElementChild;
+    } else {
+      this.element = html;
+    }
+    if (parent) {
+      parent.appendChild(this.element);
+    }
+    this.onMount();
+    return this.element;
+  }
+  onMount() {
+  }
+  /**
+   * Adds a protected interaction listener to an element.
+   * Prevents double-taps and ghost clicks by tracking pointer state globally in the view.
+   */
+  addInteractionListener(selector, handler) {
+    if (!this.element) return;
+    const targets = this.element.querySelectorAll(selector);
+    targets.forEach((target) => {
+      target.addEventListener("pointerdown", (e) => {
+        if (window._rpgInteractionLocked) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        window._rpgInteractionLocked = true;
+        const pointerId = e.pointerId;
+        handler(e, target);
+        const unlock = (ev) => {
+          if (ev.pointerId === pointerId) {
+            setTimeout(() => {
+              window._rpgInteractionLocked = false;
+            }, 50);
+            window.removeEventListener("pointerup", unlock);
+            window.removeEventListener("pointercancel", unlock);
+          }
+        };
+        window.addEventListener("pointerup", unlock);
+        window.addEventListener("pointercancel", unlock);
+      });
+    });
+  }
+  update(newProps = {}) {
+    this.props = { ...this.props, ...newProps };
+    const oldElement = this.element;
+    const parent = oldElement ? oldElement.parentElement : null;
+    const newHtml = this.render();
+    let newElement;
+    if (typeof newHtml === "string") {
+      const temp = document.createElement("div");
+      temp.innerHTML = newHtml;
+      newElement = temp.firstElementChild;
+    } else {
+      newElement = newHtml;
+    }
+    if (parent && oldElement) {
+      parent.replaceChild(newElement, oldElement);
+    }
+    this.element = newElement;
+    this.onMount();
+  }
+}
+class View extends Component {
+  constructor(props = {}) {
+    super(props);
+    this.isMobile = window.innerHeight > window.innerWidth;
+    this._resizeHandler = this._handleResize.bind(this);
+    this._hasResizeListener = false;
+  }
+  onMount() {
+    if (!this._hasResizeListener) {
+      window.addEventListener("resize", this._resizeHandler);
+      this._hasResizeListener = true;
+    }
+  }
+  _handleResize() {
+    const wasMobile = this.isMobile;
+    this.isMobile = window.innerHeight > window.innerWidth;
+    if (wasMobile !== this.isMobile) {
+      this.update();
+    }
+  }
+  destroy() {
+    window.removeEventListener("resize", this._resizeHandler);
+  }
+}
+class CanvasComponent extends Component {
+  constructor(props) {
+    super(props);
+    this.canvas = null;
+    this.ctx = null;
+  }
+  render() {
+    return `
+            <div class="canvas-container" style="width: 100%; height: 50vh; background: #fff; border: 2px solid #333; cursor: crosshair; touch-action: none;">
+                <canvas id="drawing-canvas"></canvas>
+            </div>
+        `;
+  }
+  onMount() {
+    this.canvas = this.element.querySelector("#drawing-canvas");
+    this.ctx = this.canvas.getContext("2d");
+    this.resize();
+    window.addEventListener("resize", () => this.resize());
+    this.canvas.addEventListener("pointerdown", (e) => this.startDrawing(e));
+    this.canvas.addEventListener("pointermove", (e) => this.draw(e));
+    this.canvas.addEventListener("pointerup", () => this.stopDrawing());
+    this.canvas.addEventListener("pointercancel", () => this.stopDrawing());
+  }
+  resize() {
+    const rect = this.element.getBoundingClientRect();
+    this.canvas.width = rect.width;
+    this.canvas.height = rect.height;
+    this.redraw();
+  }
+  startDrawing(e) {
+    this.canvas.setPointerCapture(e.pointerId);
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    this.props.drawingEngine.startNewStroke();
+    this.props.drawingEngine.addPoint(x, y);
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, y);
+    this.ctx.strokeStyle = "#000";
+    this.ctx.lineWidth = 3;
+    this.ctx.lineCap = "round";
+  }
+  draw(e) {
+    if (!this.props.drawingEngine.isDrawing) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    this.props.drawingEngine.addPoint(x, y);
+    this.ctx.lineTo(x, y);
+    this.ctx.stroke();
+  }
+  stopDrawing() {
+    this.props.drawingEngine.stopStroke();
+  }
+  clear() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.props.drawingEngine.clear();
+  }
+  redraw() {
+    if (!this.ctx) return;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const strokes = this.props.drawingEngine.getStrokes();
+    strokes.forEach((stroke) => {
+      if (stroke.length < 1) return;
+      this.ctx.beginPath();
+      this.ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i++) {
+        this.ctx.lineTo(stroke[i].x, stroke[i].y);
+      }
+      this.ctx.stroke();
+    });
+  }
+}
+class InfoComponent extends Component {
+  constructor(props) {
+    super(props);
+  }
+  render() {
+    const spell = this.props.spell;
+    if (!spell) {
+      return `
+                <div class="info-panel" style="height: 15vh; background: #f0f0f0; padding: 10px; border: 1px solid #ccc; margin-bottom: 10px;">
+                    <p>Draw a spell below and press Launch!</p>
+                </div>
+            `;
+    }
+    return `
+            <div class="info-panel" style="height: 15vh; background: #e0f7fa; padding: 10px; border: 1px solid #00acc1; margin-bottom: 10px;">
+                <h2 style="margin: 0;">${spell.name}</h2>
+                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                    <span><strong>Element:</strong> ${spell.element}</span>
+                    <span><strong>MP Cost:</strong> ${spell.mpCost}/100</span>
+                    <span><strong>Damage:</strong> ${spell.damage}</span>
+                </div>
+                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
+                    Effects: ${spell.effects.length > 0 ? spell.effects.join(", ") : "None"}
+                </div>
+            </div>
+        `;
+  }
+}
+class DrawingEngine {
+  constructor() {
+    this.points = [];
+    this.currentDrawId = 0;
+    this.isDrawing = false;
+    this.config = {
+      sampleRateMs: 10
+      // Capture point every 10ms if moving
+    };
+    this.lastCaptureTime = 0;
+  }
+  startNewStroke() {
+    this.currentDrawId++;
+    this.isDrawing = true;
+  }
+  stopStroke() {
+    this.isDrawing = false;
+  }
+  addPoint(x, y) {
+    if (!this.isDrawing) return;
+    const now = Date.now();
+    if (now - this.lastCaptureTime < this.config.sampleRateMs) {
+      return;
+    }
+    this.points.push({
+      x,
+      y,
+      timestamp: now,
+      drawId: this.currentDrawId
+    });
+    this.lastCaptureTime = now;
+  }
+  getRawData() {
+    return [...this.points];
+  }
+  clear() {
+    this.points = [];
+    this.currentDrawId = 0;
+    this.isDrawing = false;
+    this.lastCaptureTime = 0;
+  }
+  /**
+   * Groups points by drawId for easier processing
+   */
+  getStrokes() {
+    const strokes = {};
+    this.points.forEach((p) => {
+      if (!strokes[p.drawId]) {
+        strokes[p.drawId] = [];
+      }
+      strokes[p.drawId].push(p);
+    });
+    return Object.values(strokes);
+  }
+}
+const drawingEngine = new DrawingEngine();
+class PatternDetector {
+  constructor(name) {
+    this.name = name;
+  }
+  /**
+   * Should return a score (0 to 1) and optional metadata if the stroke matches the pattern.
+   * @param {Array} strokePoints - Array of {x, y, timestamp, drawId}
+   * @returns {Object|null} { score, metadata } or null if definitely not a match
+   */
+  detect(strokePoints) {
+    throw new Error("detect() must be implemented by subclass");
+  }
+  /**
+   * Utility to get bounding box of points
+   */
+  getBoundingBox(points) {
+    if (points.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+    let minX = points[0].x, maxX = points[0].x;
+    let minY = points[0].y, maxY = points[0].y;
+    points.forEach((p) => {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y);
+      maxY = Math.max(maxY, p.y);
+    });
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+      centerX: (minX + maxX) / 2,
+      centerY: (minY + maxY) / 2
+    };
+  }
+  /**
+   * Utility to get distance between two points
+   */
+  getDistance(p1, p2) {
+    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+  }
+}
+class CircleDetector extends PatternDetector {
+  constructor() {
+    super("circle");
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    const radius = (box.width + box.height) / 4;
+    const centerX = box.centerX;
+    const centerY = box.centerY;
+    const aspectRatio = Math.min(box.width, box.height) / Math.max(box.width, box.height);
+    if (aspectRatio < 0.7) return null;
+    let totalDeviation = 0;
+    points.forEach((p) => {
+      const dist = this.getDistance(p, { x: centerX, y: centerY });
+      totalDeviation += Math.abs(dist - radius);
+    });
+    const avgDeviation = totalDeviation / points.length;
+    const score = Math.max(0, 1 - avgDeviation / radius);
+    const startEndDist = this.getDistance(points[0], points[points.length - 1]);
+    const closureScore = Math.max(0, 1 - startEndDist / (radius * 2));
+    const finalScore = score * 0.7 + closureScore * 0.3;
+    if (finalScore < 0.6) return null;
+    return {
+      score: finalScore,
+      type: "circle",
+      metadata: {
+        centerX,
+        centerY,
+        radius,
+        boundingBox: box
+      }
+    };
+  }
+}
+class SquareDetector extends PatternDetector {
+  constructor() {
+    super("square");
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    let edgeScore = 0;
+    points.forEach((p) => {
+      const distToLeft = Math.abs(p.x - box.x);
+      const distToRight = Math.abs(p.x - (box.x + box.width));
+      const distToTop = Math.abs(p.y - box.y);
+      const distToBottom = Math.abs(p.y - (box.y + box.height));
+      const minDist = Math.min(distToLeft, distToRight, distToTop, distToBottom);
+      const normalizedDist = minDist / Math.max(box.width, box.height);
+      edgeScore += 1 - Math.min(1, normalizedDist * 5);
+    });
+    const score = edgeScore / points.length;
+    const startEndDist = this.getDistance(points[0], points[points.length - 1]);
+    const closureScore = Math.max(0, 1 - startEndDist / Math.max(box.width, box.height));
+    const finalScore = score * 0.7 + closureScore * 0.3;
+    if (finalScore < 0.7) return null;
+    return {
+      score: finalScore,
+      type: "square",
+      metadata: {
+        boundingBox: box
+      }
+    };
+  }
+}
+class PlusDetector extends PatternDetector {
+  constructor() {
+    super("plus");
+  }
+  detect(points) {
+    if (points.length < 3) return null;
+    const box = this.getBoundingBox(points);
+    const centerX = box.centerX;
+    const centerY = box.centerY;
+    let centerPassScore = 0;
+    points.forEach((p) => {
+      const distToVerticalAxis = Math.abs(p.x - centerX);
+      const distToHorizontalAxis = Math.abs(p.y - centerY);
+      if (distToVerticalAxis < box.width * 0.2 || distToHorizontalAxis < box.height * 0.2) {
+        centerPassScore++;
+      }
+    });
+    const score = centerPassScore / points.length;
+    const startEndDist = this.getDistance(points[0], points[points.length - 1]);
+    const opennessScore = Math.min(1, startEndDist / Math.max(box.width, box.height));
+    const finalScore = score * 0.6 + opennessScore * 0.4;
+    if (finalScore < 0.6) return null;
+    return {
+      score: finalScore,
+      type: "plus",
+      metadata: {
+        boundingBox: box
+      }
+    };
+  }
+}
+class RecognitionEngine {
+  constructor() {
+    this.detectors = [
+      new CircleDetector(),
+      new SquareDetector(),
+      new PlusDetector()
+    ];
+  }
+  /**
+   * Evaluates raw stroke data and returns recognized patterns.
+   * @param {Array} strokes - Array of point arrays (one per stroke)
+   */
+  recognize(strokes) {
+    const results = [];
+    strokes.forEach((stroke, index) => {
+      let bestMatch = null;
+      this.detectors.forEach((detector) => {
+        const match = detector.detect(stroke);
+        if (match && (!bestMatch || match.score > bestMatch.score)) {
+          bestMatch = match;
+        }
+      });
+      if (bestMatch) {
+        results.push({
+          strokeIndex: index,
+          ...bestMatch
+        });
+      } else {
+        results.push({
+          strokeIndex: index,
+          type: "unknown",
+          score: 0,
+          metadata: {
+            boundingBox: this.calculateBoundingBox(stroke)
+          }
+        });
+      }
+    });
+    return results;
+  }
+  calculateBoundingBox(points) {
+    if (points.length === 0) return null;
+    let minX = points[0].x, maxX = points[0].x;
+    let minY = points[0].y, maxY = points[0].y;
+    points.forEach((p) => {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y);
+      maxY = Math.max(maxY, p.y);
+    });
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  }
+}
+const recognitionEngine = new RecognitionEngine();
+class Spell {
+  constructor({ name, type, element, mpCost, damage, effects = [] }) {
+    this.name = name;
+    this.type = type;
+    this.element = element;
+    this.mpCost = mpCost;
+    this.damage = damage;
+    this.effects = effects;
+  }
+}
+class SpellService {
+  constructor(recognitionEngine2) {
+    this.recognitionEngine = recognitionEngine2;
+    this.mappings = {
+      "circle": { element: "Water", baseDamage: 10, baseCost: 10, name: "Water Ball" },
+      "square": { element: "Earth", baseDamage: 15, baseCost: 15, name: "Stone Blast" },
+      "plus": { effect: "multi-target", nameModifier: "Burst" }
+    };
+  }
+  /**
+   * Converts recognized patterns into a Spell object.
+   */
+  createSpellFromStrokes(strokes) {
+    const recognized = this.recognitionEngine.recognize(strokes);
+    if (recognized.length === 0) {
+      return new Spell({
+        name: "Fizzle",
+        type: "none",
+        element: "None",
+        mpCost: 1,
+        damage: 0
+      });
+    }
+    let mainPattern = null;
+    const effects = [];
+    let totalIntensity = 0;
+    recognized.forEach((item) => {
+      const config = this.mappings[item.type];
+      if (config) {
+        if (config.element && !mainPattern) {
+          mainPattern = { ...item, config };
+        } else if (config.effect) {
+          effects.push(config.effect);
+        }
+      }
+      if (item.metadata && item.metadata.boundingBox) {
+        const size = Math.max(item.metadata.boundingBox.width, item.metadata.boundingBox.height);
+        totalIntensity += size / 200;
+      }
+    });
+    if (!mainPattern) {
+      return new Spell({
+        name: "Basic Spark",
+        type: "spark",
+        element: "Neutral",
+        mpCost: 5,
+        damage: Math.round(5 * totalIntensity)
+      });
+    }
+    const baseDamage = mainPattern.config.baseDamage;
+    const baseCost = mainPattern.config.baseCost;
+    let intensity = Math.min(2, totalIntensity);
+    let damage = Math.round(baseDamage * intensity);
+    let mpCost = Math.round(baseCost * intensity);
+    let name = mainPattern.config.name;
+    if (effects.includes("multi-target")) {
+      name = `${name} ${this.mappings["plus"].nameModifier}`;
+      damage = Math.round(damage * 0.7);
+      mpCost = Math.round(mpCost * 1.5);
+    }
+    return new Spell({
+      name,
+      type: mainPattern.type,
+      element: mainPattern.config.element,
+      mpCost: Math.min(100, mpCost),
+      damage,
+      effects
+    });
+  }
+}
+class MainView extends View {
+  constructor() {
+    super();
+    this.spellService = new SpellService(recognitionEngine);
+    this.currentSpell = null;
+    this.infoComp = new InfoComponent({ spell: null });
+    this.canvasComp = new CanvasComponent({ drawingEngine });
+  }
+  render() {
+    return `
+            <div class="main-view" style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif;">
+                <h1 style="text-align: center;">Magic Adventure Simulator</h1>
+                <div id="info-section"></div>
+                <div id="canvas-section"></div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button id="launch-btn" style="padding: 15px 40px; font-size: 1.2em; cursor: pointer; background: #673ab7; color: #fff; border: none; border-radius: 5px;">LAUNCH SPELL</button>
+                    <button id="clear-btn" style="padding: 10px 20px; font-size: 1em; cursor: pointer; background: #f44336; color: #fff; border: none; border-radius: 5px; margin-left: 10px;">Clear</button>
+                </div>
+            </div>
+        `;
+  }
+  onMount() {
+    this.infoComp.mount(this.element.querySelector("#info-section"));
+    this.canvasComp.mount(this.element.querySelector("#canvas-section"));
+    this.element.querySelector("#launch-btn").addEventListener("click", () => this.launchSpell());
+    this.element.querySelector("#clear-btn").addEventListener("click", () => this.canvasComp.clear());
+  }
+  launchSpell() {
+    const strokes = drawingEngine.getStrokes();
+    if (strokes.length === 0) return;
+    this.currentSpell = this.spellService.createSpellFromStrokes(strokes);
+    this.infoComp.update({ spell: this.currentSpell });
+    this.canvasComp.clear();
+  }
+}
+const main = new MainView();
+main.mount(document.getElementById("app"));</script>
+</head>
+<body>
+    <div id="app"></div>
+</body>
+</html>
