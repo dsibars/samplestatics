@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Adventure</title>
+    <style>
+        body { margin: 0; background: #fafafa; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="module">
+        import { MainView } from './js/presentation/views/MainView.js';
+        const main = new MainView();
+        main.mount(document.getElementById('app'));
+    </script>
+</body>
+</html>
