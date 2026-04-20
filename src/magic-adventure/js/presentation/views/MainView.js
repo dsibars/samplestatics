@@ -17,7 +17,18 @@ export class MainView extends View {
 
     render() {
         return `
-            <div class="main-view" style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif;">
+            <div class="main-view" style="
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                padding-top: max(20px, env(safe-area-inset-top));
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+                font-family: sans-serif;
+                box-sizing: border-box;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            ">
                 <h1 style="text-align: center;">Magic Adventure Simulator</h1>
                 <div id="info-section"></div>
                 <div id="canvas-section"></div>
@@ -41,7 +52,12 @@ export class MainView extends View {
         const strokes = drawingEngine.getStrokes();
         if (strokes.length === 0) return;
 
-        this.currentSpell = this.spellService.createSpellFromStrokes(strokes);
+        const canvasSize = {
+            width: this.canvasComp.canvas.width,
+            height: this.canvasComp.canvas.height
+        };
+
+        this.currentSpell = this.spellService.createSpellFromStrokes(strokes, canvasSize);
         this.infoComp.update({ spell: this.currentSpell });
 
         // Wait a bit to show results then clear? User said "clear the draw part to be ready to test another spell"

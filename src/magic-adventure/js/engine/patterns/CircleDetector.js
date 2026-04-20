@@ -34,9 +34,25 @@ export class CircleDetector extends PatternDetector {
         const startEndDist = this.getDistance(points[0], points[points.length - 1]);
         const closureScore = Math.max(0, 1 - (startEndDist / (radius * 2)));
 
-        const finalScore = (score * 0.7) + (closureScore * 0.3);
+        // NEW: Penalty for being too "square-like" (having points too close to corners of bounding box)
+        const corners = [
+            { x: box.x, y: box.y },
+            { x: box.x + box.width, y: box.y },
+            { x: box.x, y: box.y + box.height },
+            { x: box.x + box.width, y: box.y + box.height }
+        ];
+        const cornerThreshold = Math.max(box.width, box.height) * 0.1;
+        let cornersOccupied = 0;
+        corners.forEach(corner => {
+            if (points.some(p => this.getDistance(p, corner) < cornerThreshold)) {
+                cornersOccupied++;
+            }
+        });
 
-        if (finalScore < 0.6) return null;
+        const squarenessPenalty = (cornersOccupied / 4) * 0.3;
+        const finalScore = (score * 0.7) + (closureScore * 0.3) - squarenessPenalty;
+
+        if (finalScore < 0.55) return null;
 
         return {
             score: finalScore,

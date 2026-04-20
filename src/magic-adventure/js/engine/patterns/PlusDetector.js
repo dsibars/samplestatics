@@ -1,51 +1,33 @@
 import { PatternDetector } from './PatternDetector.js';
 
-/**
- * Detects cross/plus shapes or simple lines.
- * For now, let's make it a PlusDetector (represented by two intersecting lines, or just a messy scribble that looks like +)
- */
 export class PlusDetector extends PatternDetector {
     constructor() {
         super('plus');
     }
 
     detect(points) {
-        if (points.length < 3) return null;
-
+        if (points.length < 5) return null;
         const box = this.getBoundingBox(points);
 
-        // A plus sign usually has points that go through the center horizontally and vertically
-        // and doesn't fill the corners.
+        let horizontalPoints = 0;
+        let verticalPoints = 0;
+        const threshold = Math.max(box.width, box.height) * 0.35;
 
-        const centerX = box.centerX;
-        const centerY = box.centerY;
-
-        let centerPassScore = 0;
         points.forEach(p => {
-            const distToVerticalAxis = Math.abs(p.x - centerX);
-            const distToHorizontalAxis = Math.abs(p.y - centerY);
-
-            if (distToVerticalAxis < box.width * 0.2 || distToHorizontalAxis < box.height * 0.2) {
-                centerPassScore++;
-            }
+            if (Math.abs(p.y - box.centerY) < threshold) horizontalPoints++;
+            if (Math.abs(p.x - box.centerX) < threshold) verticalPoints++;
         });
 
-        const score = centerPassScore / points.length;
+        const hScore = horizontalPoints / points.length;
+        const vScore = verticalPoints / points.length;
 
-        // Also, it shouldn't be closed
-        const startEndDist = this.getDistance(points[0], points[points.length - 1]);
-        const opennessScore = Math.min(1, startEndDist / Math.max(box.width, box.height));
+        const score = (hScore + vScore) / 2;
+        if (score < 0.2) return null;
 
-        const finalScore = (score * 0.6) + (opennessScore * 0.4);
+        // NEW: Plus should be somewhat centered
+        const centerXDist = Math.abs(box.centerX - (box.x + box.width/2)) / box.width;
+        if (centerXDist > 0.3) return null;
 
-        if (finalScore < 0.6) return null;
-
-        return {
-            score: finalScore,
-            type: 'plus',
-            metadata: {
-                boundingBox: box
-            }
-        };
+        return { score, type: 'plus', metadata: { box } };
     }
 }
