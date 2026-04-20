@@ -72,9 +72,12 @@ export class SpellService {
         let mpCost = coreConfig.baseCost;
         let name = coreConfig.name;
         const effects = coreConfig.effect ? [coreConfig.effect] : [];
+        const modifiers = {};
 
         Object.values(slices).forEach(slice => {
             if (!slice) return;
+
+            modifiers[slice.config.type] = (modifiers[slice.config.type] || 0) + slice.count;
 
             for (let i = 0; i < slice.count; i++) {
                 mpCost *= slice.config.costMod;
@@ -98,7 +101,11 @@ export class SpellService {
             element: coreConfig.element,
             mpCost: Math.round(mpCost),
             damage: Math.round(damage),
-            effects
+            effects,
+            composition: {
+                core: coreConfig.name,
+                modifiers
+            }
         });
     }
 

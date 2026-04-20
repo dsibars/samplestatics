@@ -84,16 +84,19 @@ export class CanvasComponent extends Component {
         const outerRadius = Math.min(width, height) * 0.45;
         const innerRadius = outerRadius * 0.5;
 
-        // Draw 4 slices
+        // Draw 4 slices (as annular sectors to avoid overlapping the core)
         const colors = ['#e0f2f1', '#b2dfdb', '#80cbc4', '#4db6ac']; // Greenish to Bluish
         for (let i = 0; i < 4; i++) {
             const startAngle = i * Math.PI / 2 - Math.PI / 4;
             const endAngle = (i + 1) * Math.PI / 2 - Math.PI / 4;
 
             this.ctx.beginPath();
-            this.ctx.moveTo(centerX, centerY);
+            // Outer arc
             this.ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
+            // Inner arc (backwards)
+            this.ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
             this.ctx.closePath();
+
             this.ctx.fillStyle = colors[i];
             this.ctx.fill();
             this.ctx.strokeStyle = 'rgba(0,0,0,0.1)';
@@ -103,7 +106,7 @@ export class CanvasComponent extends Component {
         // Draw Core Circle
         this.ctx.beginPath();
         this.ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
         this.ctx.fill();
         this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
         this.ctx.setLineDash([5, 5]);

@@ -23,12 +23,24 @@ export class FireDetector extends PatternDetector {
         });
 
         const peakRelativeY = (peakY - box.y) / box.height;
-        if (peakRelativeY > 0.4) return null; // Peak not at top enough
+        if (peakRelativeY > 0.4) return null;
 
         // Start and end should be lower than the peak
         const startRelY = (points[0].y - box.y) / box.height;
         const endRelY = (points[points.length - 1].y - box.y) / box.height;
-        if (startRelY < 0.5 && endRelY < 0.5) return null;
+        if (startRelY < 0.2 && endRelY < 0.2) return null;
+
+        // Check for 2 distinct segments (going up then down, or down then up)
+        let directionChanges = 0;
+        let lastDir = 0;
+        for (let i = 1; i < points.length; i++) {
+            const dir = Math.sign(points[i].y - points[i-1].y);
+            if (dir !== 0 && dir !== lastDir) {
+                directionChanges++;
+                lastDir = dir;
+            }
+        }
+        if (directionChanges < 1) return null;
 
         return {
             score: 0.8,

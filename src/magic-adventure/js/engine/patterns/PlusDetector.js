@@ -22,8 +22,11 @@ export class PlusDetector extends PatternDetector {
         const vScore = verticalPoints / points.length;
 
         const score = (hScore + vScore) / 2;
-        // Even more relaxed for the complex multi-stroke combination
         if (score < 0.2) return null;
+
+        // NEW: Plus should be somewhat centered
+        const centerXDist = Math.abs(box.centerX - (box.x + box.width/2)) / box.width;
+        if (centerXDist > 0.3) return null;
 
         return { score, type: 'plus', metadata: { box } };
     }
