@@ -2,6 +2,7 @@ import { PatternDetector } from './PatternDetector.js';
 
 /**
  * Detects "V" or "^" like shapes for Fire.
+ * NOW DEPRECATED in favor of CaretDetector, but kept for legacy.
  */
 export class FireDetector extends PatternDetector {
     constructor() {
@@ -12,7 +13,6 @@ export class FireDetector extends PatternDetector {
         if (points.length < 5) return null;
         const box = this.getBoundingBox(points);
 
-        // Find the "peak" - should be near the top
         let peakY = points[0].y;
         let peakIndex = 0;
         points.forEach((p, i) => {
@@ -23,27 +23,14 @@ export class FireDetector extends PatternDetector {
         });
 
         const peakRelativeY = (peakY - box.y) / box.height;
-        if (peakRelativeY > 0.4) return null;
+        if (peakRelativeY > 0.3) return null;
 
-        // Start and end should be lower than the peak
         const startRelY = (points[0].y - box.y) / box.height;
         const endRelY = (points[points.length - 1].y - box.y) / box.height;
-        if (startRelY < 0.2 && endRelY < 0.2) return null;
-
-        // Check for 2 distinct segments (going up then down, or down then up)
-        let directionChanges = 0;
-        let lastDir = 0;
-        for (let i = 1; i < points.length; i++) {
-            const dir = Math.sign(points[i].y - points[i-1].y);
-            if (dir !== 0 && dir !== lastDir) {
-                directionChanges++;
-                lastDir = dir;
-            }
-        }
-        if (directionChanges < 1) return null;
+        if (startRelY < 0.4 || endRelY < 0.4) return null;
 
         return {
-            score: 0.8,
+            score: 0.5, // Low score to favor caret
             type: 'fire',
             metadata: { boundingBox: box }
         };

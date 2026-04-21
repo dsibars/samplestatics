@@ -8,6 +8,7 @@ import { XDetector } from '../patterns/XDetector.js';
 import { InfinityDetector } from '../patterns/InfinityDetector.js';
 import { ArrowDetector } from '../patterns/ArrowDetector.js';
 import { DashDetector } from '../patterns/DashDetector.js';
+import { CaretDetector } from '../patterns/CaretDetector.js';
 
 /**
  * RecognitionEngine orchestrates the pattern matching process.
@@ -15,16 +16,17 @@ import { DashDetector } from '../patterns/DashDetector.js';
 export class RecognitionEngine {
     constructor() {
         this.detectors = [
-            new FireDetector(),
-            new WaterDetector(),
-            new SquareDetector(), // Earth
-            new CircleDetector(), // Light/Shield
+            new CaretDetector(),  // Covers ^, v, <, >
             new ZDetector(),      // Sleep
             new XDetector(),      // Poison
             new PlusDetector(),   // Boost
             new DashDetector(),   // Reduce
             new InfinityDetector(), // All
-            new ArrowDetector()    // Pierce
+            new ArrowDetector(),    // Pierce (might conflict with Caret Right, position matters)
+            new SquareDetector(), // Earth (legacy)
+            new CircleDetector(), // Light/Shield (legacy)
+            new FireDetector(),   // Legacy Fire
+            new WaterDetector()   // Legacy Water
         ];
     }
 
@@ -46,6 +48,7 @@ export class RecognitionEngine {
         for (let i = 0; i < 4; i++) zoneStrokes[`complement-${i}`] = [];
 
         strokes.forEach(stroke => {
+            if (stroke.length === 0) return;
             const box = this.calculateBoundingBox(stroke);
             const zone = this.getZone(box.centerX, box.centerY, centerX, centerY, innerRadius);
             if (zoneStrokes[zone]) zoneStrokes[zone].push(stroke);
@@ -56,10 +59,7 @@ export class RecognitionEngine {
         Object.entries(zoneStrokes).forEach(([zone, strokesInZone]) => {
             if (strokesInZone.length === 0) return;
 
-            // Option A: Try to recognize strokes individually (for stacking same symbols)
-            // Option B: Try to recognize them as a single combined gesture (for multi-stroke symbols like Fire or Plus)
-
-            // Let's try combining them first. If we find a strong match, we use it.
+            // COMBINED RECOGNITION (priority)
             const allPoints = strokesInZone.flat();
             let bestCombinedMatch = null;
             this.detectors.forEach(detector => {
@@ -69,14 +69,15 @@ export class RecognitionEngine {
                 }
             });
 
-            if (bestCombinedMatch && bestCombinedMatch.score > 0.4) {
+            // Threshold for combined match
+            if (bestCombinedMatch && bestCombinedMatch.score > 0.5) {
                 results.push({
                     zone,
                     ...bestCombinedMatch,
-                    strokes: strokesInZone // Keep reference to original strokes for visual feedback
+                    strokes: strokesInZone
                 });
             } else {
-                // Fallback: Individual recognition
+                // INDIVIDUAL RECOGNITION (fallback)
                 strokesInZone.forEach(stroke => {
                     let bestMatch = null;
                     this.detectors.forEach(detector => {
@@ -86,7 +87,7 @@ export class RecognitionEngine {
                         }
                     });
 
-                    if (bestMatch) {
+                    if (bestMatch && bestMatch.score > 0.4) {
                         results.push({ zone, ...bestMatch, strokes: [stroke] });
                     } else {
                         results.push({
@@ -109,7 +110,6 @@ export class RecognitionEngine {
         if (dist <= innerRadius) return 'core';
 
         // Angle for slices: top, right, bottom, left (rotated 45deg)
-        // atan2 returns -PI to PI. We want 0 to 2PI.
         let angle = Math.atan2(y - centerY, x - centerX) + Math.PI / 4;
         if (angle < 0) angle += 2 * Math.PI;
 
