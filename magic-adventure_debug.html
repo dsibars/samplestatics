@@ -168,6 +168,7 @@ class CanvasComponent extends Component {
     this.ctx = this.canvas.getContext("2d");
     this.resize();
     window.addEventListener("resize", () => this.resize());
+    this.drawMagicCircle();
     this.canvas.addEventListener("pointerdown", (e) => this.startDrawing(e));
     this.canvas.addEventListener("pointermove", (e) => this.draw(e));
     this.canvas.addEventListener("pointerup", () => this.stopDrawing());
@@ -205,12 +206,80 @@ class CanvasComponent extends Component {
     this.props.drawingEngine.stopStroke();
   }
   clear() {
+    if (this.clearTimer) clearTimeout(this.clearTimer);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.drawMagicCircle();
     this.props.drawingEngine.clear();
+  }
+  highlightRecognized(recognizedItems) {
+    if (!this.ctx) return;
+    const typeColors = {
+      "fire": "#ff5722",
+      "water": "#2196f3",
+      "square": "#795548",
+      "circle": "#ffeb3b",
+      "sleep": "#9c27b0",
+      "poison": "#4caf50",
+      "plus": "#ffc107",
+      "dash": "#607d8b",
+      "infinity": "#00bcd4",
+      "arrow": "#e91e63"
+    };
+    recognizedItems.forEach((item) => {
+      if (item.type === "unknown" || !item.strokes) return;
+      const color = typeColors[item.type] || "#000";
+      this.ctx.strokeStyle = color;
+      this.ctx.lineWidth = 5;
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowColor = color;
+      item.strokes.forEach((stroke) => {
+        if (stroke.length < 1) return;
+        this.ctx.beginPath();
+        this.ctx.moveTo(stroke[0].x, stroke[0].y);
+        for (let i = 1; i < stroke.length; i++) {
+          this.ctx.lineTo(stroke[i].x, stroke[i].y);
+        }
+        this.ctx.stroke();
+      });
+    });
+    this.ctx.lineWidth = 3;
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowColor = "transparent";
+  }
+  drawMagicCircle() {
+    if (!this.ctx) return;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const outerRadius = Math.min(width, height) * 0.45;
+    const innerRadius = outerRadius * 0.5;
+    const colors = ["#e0f2f1", "#b2dfdb", "#80cbc4", "#4db6ac"];
+    for (let i = 0; i < 4; i++) {
+      const startAngle = i * Math.PI / 2 - Math.PI / 4;
+      const endAngle = (i + 1) * Math.PI / 2 - Math.PI / 4;
+      this.ctx.beginPath();
+      this.ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
+      this.ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+      this.ctx.closePath();
+      this.ctx.fillStyle = colors[i];
+      this.ctx.fill();
+      this.ctx.strokeStyle = "rgba(0,0,0,0.1)";
+      this.ctx.stroke();
+    }
+    this.ctx.beginPath();
+    this.ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+    this.ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+    this.ctx.fill();
+    this.ctx.strokeStyle = "rgba(255, 0, 0, 0.3)";
+    this.ctx.setLineDash([5, 5]);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
   }
   redraw() {
     if (!this.ctx) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.drawMagicCircle();
     const strokes = this.props.drawingEngine.getStrokes();
     strokes.forEach((stroke) => {
       if (stroke.length < 1) return;
@@ -236,13 +305,25 @@ class InfoComponent extends Component {
                 </div>
             `;
     }
+    let statsText = "";
+    if (spell.composition) {
+      const mods = [];
+      if (spell.composition.modifiers.boost) mods.push(`enhanced x${spell.composition.modifiers.boost}`);
+      if (spell.composition.modifiers.reduce) mods.push(`reduced x${spell.composition.modifiers.reduce}`);
+      if (spell.composition.modifiers.all) mods.push(`multienemy x${spell.composition.modifiers.all}`);
+      if (spell.composition.modifiers.pierce) mods.push(`piercing x${spell.composition.modifiers.pierce}`);
+      statsText = mods.length > 0 ? `Stats: ${mods.join(", ")}` : "Stats: Basic";
+    }
     return `
-            <div class="info-panel" style="height: 15vh; background: #e0f7fa; padding: 10px; border: 1px solid #00acc1; margin-bottom: 10px;">
+            <div class="info-panel" style="min-height: 15vh; background: #e0f7fa; padding: 10px; border: 1px solid #00acc1; margin-bottom: 10px;">
                 <h2 style="margin: 0;">${spell.name}</h2>
                 <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                    <span><strong>Element:</strong> ${spell.element}</span>
-                    <span><strong>MP Cost:</strong> ${spell.mpCost}/100</span>
+                    <span><strong>Type:</strong> ${spell.element}</span>
+                    <span><strong>MP Cost:</strong> ${spell.mpCost} MP</span>
                     <span><strong>Damage:</strong> ${spell.damage}</span>
+                </div>
+                <div style="font-size: 0.85em; color: #00796b; margin-top: 8px; border-top: 1px dashed #4db6ac; padding-top: 5px;">
+                    <strong>${statsText}</strong>
                 </div>
                 <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
                     Effects: ${spell.effects.length > 0 ? spell.effects.join(", ") : "None"}
@@ -369,8 +450,22 @@ class CircleDetector extends PatternDetector {
     const score = Math.max(0, 1 - avgDeviation / radius);
     const startEndDist = this.getDistance(points[0], points[points.length - 1]);
     const closureScore = Math.max(0, 1 - startEndDist / (radius * 2));
-    const finalScore = score * 0.7 + closureScore * 0.3;
-    if (finalScore < 0.6) return null;
+    const corners = [
+      { x: box.x, y: box.y },
+      { x: box.x + box.width, y: box.y },
+      { x: box.x, y: box.y + box.height },
+      { x: box.x + box.width, y: box.y + box.height }
+    ];
+    const cornerThreshold = Math.max(box.width, box.height) * 0.1;
+    let cornersOccupied = 0;
+    corners.forEach((corner) => {
+      if (points.some((p) => this.getDistance(p, corner) < cornerThreshold)) {
+        cornersOccupied++;
+      }
+    });
+    const squarenessPenalty = cornersOccupied / 4 * 0.3;
+    const finalScore = score * 0.7 + closureScore * 0.3 - squarenessPenalty;
+    if (finalScore < 0.55) return null;
     return {
       score: finalScore,
       type: "circle",
@@ -400,11 +495,32 @@ class SquareDetector extends PatternDetector {
       const normalizedDist = minDist / Math.max(box.width, box.height);
       edgeScore += 1 - Math.min(1, normalizedDist * 5);
     });
-    const score = edgeScore / points.length;
+    let score = edgeScore / points.length;
+    const corners = [
+      { x: box.x, y: box.y },
+      // Top-left
+      { x: box.x + box.width, y: box.y },
+      // Top-right
+      { x: box.x, y: box.y + box.height },
+      // Bottom-left
+      { x: box.x + box.width, y: box.y + box.height }
+      // Bottom-right
+    ];
+    let cornerHits = 0;
+    const cornerThreshold = Math.max(box.width, box.height) * 0.2;
+    corners.forEach((corner) => {
+      const hasPointNearCorner = points.some((p) => this.getDistance(p, corner) < cornerThreshold);
+      if (hasPointNearCorner) cornerHits++;
+    });
+    if (cornerHits >= 3) {
+      score += 0.2;
+    } else if (cornerHits < 2) {
+      score -= 0.2;
+    }
     const startEndDist = this.getDistance(points[0], points[points.length - 1]);
     const closureScore = Math.max(0, 1 - startEndDist / Math.max(box.width, box.height));
     const finalScore = score * 0.7 + closureScore * 0.3;
-    if (finalScore < 0.7) return null;
+    if (finalScore < 0.6) return null;
     return {
       score: finalScore,
       type: "square",
@@ -419,71 +535,270 @@ class PlusDetector extends PatternDetector {
     super("plus");
   }
   detect(points) {
-    if (points.length < 3) return null;
+    if (points.length < 5) return null;
     const box = this.getBoundingBox(points);
-    const centerX = box.centerX;
-    const centerY = box.centerY;
-    let centerPassScore = 0;
+    let horizontalPoints = 0;
+    let verticalPoints = 0;
+    const threshold = Math.max(box.width, box.height) * 0.35;
     points.forEach((p) => {
-      const distToVerticalAxis = Math.abs(p.x - centerX);
-      const distToHorizontalAxis = Math.abs(p.y - centerY);
-      if (distToVerticalAxis < box.width * 0.2 || distToHorizontalAxis < box.height * 0.2) {
-        centerPassScore++;
+      if (Math.abs(p.y - box.centerY) < threshold) horizontalPoints++;
+      if (Math.abs(p.x - box.centerX) < threshold) verticalPoints++;
+    });
+    const hScore = horizontalPoints / points.length;
+    const vScore = verticalPoints / points.length;
+    const score = (hScore + vScore) / 2;
+    if (score < 0.2) return null;
+    const centerXDist = Math.abs(box.centerX - (box.x + box.width / 2)) / box.width;
+    if (centerXDist > 0.3) return null;
+    return { score, type: "plus", metadata: { box } };
+  }
+}
+class WaterDetector extends PatternDetector {
+  constructor() {
+    super("water");
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    if (box.width < box.height * 0.5) return null;
+    let turns = 0;
+    let lastDir = 0;
+    for (let i = 2; i < points.length; i++) {
+      const dir = Math.sign(points[i].y - points[i - 1].y);
+      if (dir !== 0 && dir !== lastDir) {
+        turns++;
+        lastDir = dir;
+      }
+    }
+    if (turns < 1) return null;
+    return {
+      score: Math.min(1, turns / 3),
+      type: "water",
+      metadata: { boundingBox: box }
+    };
+  }
+}
+class FireDetector extends PatternDetector {
+  constructor() {
+    super("fire");
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    let peakY = points[0].y;
+    points.forEach((p, i) => {
+      if (p.y < peakY) {
+        peakY = p.y;
       }
     });
-    const score = centerPassScore / points.length;
-    const startEndDist = this.getDistance(points[0], points[points.length - 1]);
-    const opennessScore = Math.min(1, startEndDist / Math.max(box.width, box.height));
-    const finalScore = score * 0.6 + opennessScore * 0.4;
-    if (finalScore < 0.6) return null;
-    return {
-      score: finalScore,
-      type: "plus",
-      metadata: {
-        boundingBox: box
+    const peakRelativeY = (peakY - box.y) / box.height;
+    if (peakRelativeY > 0.4) return null;
+    const startRelY = (points[0].y - box.y) / box.height;
+    const endRelY = (points[points.length - 1].y - box.y) / box.height;
+    if (startRelY < 0.2 && endRelY < 0.2) return null;
+    let directionChanges = 0;
+    let lastDir = 0;
+    for (let i = 1; i < points.length; i++) {
+      const dir = Math.sign(points[i].y - points[i - 1].y);
+      if (dir !== 0 && dir !== lastDir) {
+        directionChanges++;
+        lastDir = dir;
       }
+    }
+    if (directionChanges < 1) return null;
+    return {
+      score: 0.8,
+      type: "fire",
+      metadata: { boundingBox: box }
+    };
+  }
+}
+class ZDetector extends PatternDetector {
+  constructor() {
+    super("sleep");
+  }
+  detect(points) {
+    if (points.length < 10) return null;
+    const box = this.getBoundingBox(points);
+    return {
+      score: 0.7,
+      type: "sleep",
+      metadata: { boundingBox: box }
+    };
+  }
+}
+class XDetector extends PatternDetector {
+  constructor() {
+    super("poison");
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    const aspectRatio = Math.min(box.width, box.height) / Math.max(box.width, box.height);
+    if (aspectRatio < 0.6) return null;
+    let diag1Score = 0;
+    let diag2Score = 0;
+    points.forEach((p) => {
+      const d1 = Math.abs((p.x - box.x) / box.width - (p.y - box.y) / box.height);
+      const d2 = Math.abs((p.x - box.x) / box.width - (1 - (p.y - box.y) / box.height));
+      if (d1 < 0.15) diag1Score++;
+      if (d2 < 0.15) diag2Score++;
+    });
+    const score = (diag1Score + diag2Score) / points.length;
+    if (score < 0.6) return null;
+    return { score, type: "poison", metadata: { boundingBox: box } };
+  }
+}
+class InfinityDetector extends PatternDetector {
+  constructor() {
+    super("infinity");
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    return {
+      score: 0.5,
+      type: "infinity",
+      metadata: { boundingBox: box }
+    };
+  }
+}
+class ArrowDetector extends PatternDetector {
+  constructor() {
+    super("arrow");
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    let maxX = points[0].x;
+    let maxIndex = 0;
+    points.forEach((p, i) => {
+      if (p.x > maxX) {
+        maxX = p.x;
+        maxIndex = i;
+      }
+    });
+    const relMaxX = (maxX - box.x) / box.width;
+    if (relMaxX < 0.8) return null;
+    const tipRelY = (points[maxIndex].y - box.y) / box.height;
+    if (tipRelY < 0.2 || tipRelY > 0.8) return null;
+    return {
+      score: 0.8,
+      type: "arrow",
+      metadata: { boundingBox: box }
+    };
+  }
+}
+class DashDetector extends PatternDetector {
+  constructor() {
+    super("dash");
+  }
+  detect(points) {
+    if (points.length < 2) return null;
+    const box = this.getBoundingBox(points);
+    if (box.width < 5) return null;
+    if (box.width < box.height) return null;
+    const aspectRatio = box.height / box.width;
+    if (aspectRatio > 0.4) return null;
+    return {
+      score: 0.9,
+      type: "dash",
+      metadata: { boundingBox: box }
     };
   }
 }
 class RecognitionEngine {
   constructor() {
     this.detectors = [
-      new CircleDetector(),
+      new FireDetector(),
+      new WaterDetector(),
       new SquareDetector(),
-      new PlusDetector()
+      // Earth
+      new CircleDetector(),
+      // Light/Shield
+      new ZDetector(),
+      // Sleep
+      new XDetector(),
+      // Poison
+      new PlusDetector(),
+      // Boost
+      new DashDetector(),
+      // Reduce
+      new InfinityDetector(),
+      // All
+      new ArrowDetector()
+      // Pierce
     ];
   }
   /**
-   * Evaluates raw stroke data and returns recognized patterns.
+   * Evaluates raw stroke data and returns recognized patterns with zone info.
    * @param {Array} strokes - Array of point arrays (one per stroke)
+   * @param {Object} canvasSize - { width, height }
    */
-  recognize(strokes) {
+  recognize(strokes, canvasSize) {
+    const width = canvasSize.width;
+    const height = canvasSize.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const outerRadius = Math.min(width, height) * 0.45;
+    const innerRadius = outerRadius * 0.5;
+    const zoneStrokes = { "core": [] };
+    for (let i = 0; i < 4; i++) zoneStrokes[`complement-${i}`] = [];
+    strokes.forEach((stroke) => {
+      const box = this.calculateBoundingBox(stroke);
+      const zone = this.getZone(box.centerX, box.centerY, centerX, centerY, innerRadius);
+      if (zoneStrokes[zone]) zoneStrokes[zone].push(stroke);
+    });
     const results = [];
-    strokes.forEach((stroke, index) => {
-      let bestMatch = null;
+    Object.entries(zoneStrokes).forEach(([zone, strokesInZone]) => {
+      if (strokesInZone.length === 0) return;
+      const allPoints = strokesInZone.flat();
+      let bestCombinedMatch = null;
       this.detectors.forEach((detector) => {
-        const match = detector.detect(stroke);
-        if (match && (!bestMatch || match.score > bestMatch.score)) {
-          bestMatch = match;
+        const match = detector.detect(allPoints);
+        if (match && (!bestCombinedMatch || match.score > bestCombinedMatch.score)) {
+          bestCombinedMatch = match;
         }
       });
-      if (bestMatch) {
+      if (bestCombinedMatch && bestCombinedMatch.score > 0.4) {
         results.push({
-          strokeIndex: index,
-          ...bestMatch
+          zone,
+          ...bestCombinedMatch,
+          strokes: strokesInZone
+          // Keep reference to original strokes for visual feedback
         });
       } else {
-        results.push({
-          strokeIndex: index,
-          type: "unknown",
-          score: 0,
-          metadata: {
-            boundingBox: this.calculateBoundingBox(stroke)
+        strokesInZone.forEach((stroke) => {
+          let bestMatch = null;
+          this.detectors.forEach((detector) => {
+            const match = detector.detect(stroke);
+            if (match && (!bestMatch || match.score > bestMatch.score)) {
+              bestMatch = match;
+            }
+          });
+          if (bestMatch) {
+            results.push({ zone, ...bestMatch, strokes: [stroke] });
+          } else {
+            results.push({
+              zone,
+              type: "unknown",
+              score: 0,
+              metadata: { boundingBox: this.calculateBoundingBox(stroke) },
+              strokes: [stroke]
+            });
           }
         });
       }
     });
     return results;
+  }
+  getZone(x, y, centerX, centerY, innerRadius) {
+    const dist = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+    if (dist <= innerRadius) return "core";
+    let angle = Math.atan2(y - centerY, x - centerX) + Math.PI / 4;
+    if (angle < 0) angle += 2 * Math.PI;
+    const slice = Math.floor(angle / (Math.PI / 2)) % 4;
+    return `complement-${slice}`;
   }
   calculateBoundingBox(points) {
     if (points.length === 0) return null;
@@ -495,87 +810,202 @@ class RecognitionEngine {
       minY = Math.min(minY, p.y);
       maxY = Math.max(maxY, p.y);
     });
-    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+      centerX: (minX + maxX) / 2,
+      centerY: (minY + maxY) / 2
+    };
   }
 }
 const recognitionEngine = new RecognitionEngine();
 class Spell {
-  constructor({ name, type, element, mpCost, damage, effects = [] }) {
+  constructor({ name, type, element, mpCost, damage, effects = [], composition = null }) {
     this.name = name;
     this.type = type;
     this.element = element;
     this.mpCost = mpCost;
     this.damage = damage;
     this.effects = effects;
+    this.composition = composition;
   }
 }
 class SpellService {
   constructor(recognitionEngine2) {
     this.recognitionEngine = recognitionEngine2;
-    this.mappings = {
-      "circle": { element: "Water", baseDamage: 10, baseCost: 10, name: "Water Ball" },
-      "square": { element: "Earth", baseDamage: 15, baseCost: 15, name: "Stone Blast" },
-      "plus": { effect: "multi-target", nameModifier: "Burst" }
+    this.cores = {
+      "fire": { element: "Fire", baseDamage: 20, baseCost: 10, name: "Fire" },
+      "water": { element: "Water", baseDamage: 12, baseCost: 8, name: "Water" },
+      "square": { element: "Earth", baseDamage: 15, baseCost: 12, name: "Earth" },
+      "circle": { element: "Light", baseDamage: 8, baseCost: 15, name: "Light", effect: "defense" },
+      "sleep": { element: "Neutral", baseDamage: 0, baseCost: 20, name: "Neutral", effect: "sleep" },
+      "poison": { element: "Poison", baseDamage: 4, baseCost: 10, name: "Poison", effect: "poison" }
+    };
+    this.complements = {
+      "plus": { type: "boost", costMod: 1.25, effectMod: 1.25, nameModifier: "Greater" },
+      "dash": { type: "reduce", costMod: 0.75, effectMod: 0.75, nameModifier: "Minor" },
+      "infinity": { type: "all", costMod: 1.5, effectMod: 1, nameModifier: "Echoing" },
+      "arrow": { type: "pierce", costMod: 1.2, effectMod: 1, nameModifier: "Piercing" }
     };
   }
   /**
-   * Converts recognized patterns into a Spell object.
+   * Converts recognized patterns into a Spell object using Magic Circle logic.
    */
-  createSpellFromStrokes(strokes) {
-    const recognized = this.recognitionEngine.recognize(strokes);
+  createSpellFromStrokes(strokes, canvasSize) {
+    const recognized = this.recognitionEngine.recognize(strokes, canvasSize);
+    this.lastRecognized = recognized;
+    recognized.forEach((r) => {
+      console.log(`[SpellService] Recognized: ${r.type} (score: ${r.score.toFixed(2)}) in zone: ${r.zone}`);
+    });
     if (recognized.length === 0) {
-      return new Spell({
-        name: "Fizzle",
-        type: "none",
-        element: "None",
-        mpCost: 1,
-        damage: 0
-      });
+      return this.fizzle("Emptiness");
     }
-    let mainPattern = null;
-    const effects = [];
-    let totalIntensity = 0;
+    const coreItems = recognized.filter((r) => r.zone === "core" && r.type !== "unknown");
+    if (coreItems.length === 0) return this.fizzle("No Core");
+    if (coreItems.length > 1) return this.fizzle("Unstable Core (Multiple Symbols)");
+    const coreType = coreItems[0].type;
+    const coreConfig = this.cores[coreType];
+    if (!coreConfig) return this.fizzle(`Unknown Core: ${coreType}`);
+    const slices = { 0: null, 1: null, 2: null, 3: null };
+    let failed = false;
     recognized.forEach((item) => {
-      const config = this.mappings[item.type];
-      if (config) {
-        if (config.element && !mainPattern) {
-          mainPattern = { ...item, config };
-        } else if (config.effect) {
-          effects.push(config.effect);
+      if (item.zone.startsWith("complement-")) {
+        const sliceId = parseInt(item.zone.split("-")[1]);
+        if (item.type === "unknown") return;
+        const compConfig = this.complements[item.type];
+        if (!compConfig) return;
+        if (slices[sliceId] === null) {
+          slices[sliceId] = { type: item.type, count: 1, config: compConfig };
+        } else if (slices[sliceId].type === item.type) {
+          slices[sliceId].count++;
+        } else {
+          failed = true;
         }
       }
-      if (item.metadata && item.metadata.boundingBox) {
-        const size = Math.max(item.metadata.boundingBox.width, item.metadata.boundingBox.height);
-        totalIntensity += size / 200;
+    });
+    if (failed) return this.fizzle("Ambitious Failure");
+    let damage = coreConfig.baseDamage;
+    let mpCost = coreConfig.baseCost;
+    let name = coreConfig.name;
+    const effects = coreConfig.effect ? [coreConfig.effect] : [];
+    const modifiers = {};
+    Object.values(slices).forEach((slice) => {
+      if (!slice) return;
+      modifiers[slice.config.type] = (modifiers[slice.config.type] || 0) + slice.count;
+      for (let i = 0; i < slice.count; i++) {
+        mpCost *= slice.config.costMod;
+        if (slice.config.effectMod) {
+          damage *= slice.config.effectMod;
+        }
+      }
+      if (slice.config.type === "all") {
+        effects.push("multi-target");
+      } else if (slice.config.type === "pierce") {
+        effects.push("pierce");
       }
     });
-    if (!mainPattern) {
-      return new Spell({
-        name: "Basic Spark",
-        type: "spark",
-        element: "Neutral",
-        mpCost: 5,
-        damage: Math.round(5 * totalIntensity)
-      });
-    }
-    const baseDamage = mainPattern.config.baseDamage;
-    const baseCost = mainPattern.config.baseCost;
-    let intensity = Math.min(2, totalIntensity);
-    let damage = Math.round(baseDamage * intensity);
-    let mpCost = Math.round(baseCost * intensity);
-    let name = mainPattern.config.name;
-    if (effects.includes("multi-target")) {
-      name = `${name} ${this.mappings["plus"].nameModifier}`;
-      damage = Math.round(damage * 0.7);
-      mpCost = Math.round(mpCost * 1.5);
+    let prefixes = [];
+    if (modifiers["all"]) prefixes.push("Multi");
+    if (modifiers["pierce"]) prefixes.push("Piercing");
+    if (modifiers["boost"] === 1) prefixes.push("Super");
+    else if (modifiers["boost"] === 2) prefixes.push("Mega");
+    else if (modifiers["boost"] >= 3) prefixes.push("Ultra");
+    if (modifiers["reduce"] === 1) prefixes.push("Mini");
+    else if (modifiers["reduce"] >= 2) prefixes.push("Tiny");
+    if (prefixes.length > 0) {
+      name = `${prefixes.join(" ")} ${name}`;
     }
     return new Spell({
       name,
-      type: mainPattern.type,
-      element: mainPattern.config.element,
-      mpCost: Math.min(100, mpCost),
-      damage,
-      effects
+      type: coreType,
+      element: coreConfig.element,
+      mpCost: Math.round(mpCost),
+      damage: Math.round(damage),
+      effects,
+      composition: {
+        core: coreConfig.name,
+        modifiers
+      }
+    });
+  }
+  fizzle(reason) {
+    return new Spell({
+      name: `Failure to Cast (${reason})`,
+      type: "none",
+      element: "None",
+      mpCost: 1,
+      damage: 0
+    });
+  }
+}
+class GuideView extends View {
+  constructor(props) {
+    super(props);
+  }
+  render() {
+    return `
+            <div class="guide-view" style="
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                padding-top: max(20px, env(safe-area-inset-top));
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+                font-family: sans-serif;
+                box-sizing: border-box;
+                min-height: 100vh;
+                background: #fdfdfd;
+            ">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #673ab7; padding-bottom: 10px;">
+                    <button id="back-btn" style="padding: 8px 15px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 4px;">&larr; Back</button>
+                    <h1 style="margin: 0; font-size: 1.5em; color: #673ab7;">Magic Guide</h1>
+                </div>
+
+                <section>
+                    <h3>The Magic Circle</h3>
+                    <p>Each spell has a <strong>Core</strong> and up to 4 <strong>Complements</strong>.</p>
+                    <p><strong>Rule:</strong> Exactly ONE gesture in the Core. Mixing different symbols in one Complement section causes failure.</p>
+                </section>
+
+                <section>
+                    <h3>Core Symbols (Elements)</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <tr style="background: #ede7f6; text-align: left;">
+                            <th style="padding: 8px; border: 1px solid #ddd;">Symbol</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">Element</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">DMG</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">MP</th>
+                        </tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">^</td><td style="padding: 8px; border: 1px solid #ddd;">Fire</td><td style="padding: 8px; border: 1px solid #ddd;">20</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">S</td><td style="padding: 8px; border: 1px solid #ddd;">Water</td><td style="padding: 8px; border: 1px solid #ddd;">12</td><td style="padding: 8px; border: 1px solid #ddd;">8</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Square</td><td style="padding: 8px; border: 1px solid #ddd;">Earth</td><td style="padding: 8px; border: 1px solid #ddd;">15</td><td style="padding: 8px; border: 1px solid #ddd;">12</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Circle</td><td style="padding: 8px; border: 1px solid #ddd;">Light</td><td style="padding: 8px; border: 1px solid #ddd;">8</td><td style="padding: 8px; border: 1px solid #ddd;">15</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Z</td><td style="padding: 8px; border: 1px solid #ddd;">Neutral</td><td style="padding: 8px; border: 1px solid #ddd;">0</td><td style="padding: 8px; border: 1px solid #ddd;">20</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">X</td><td style="padding: 8px; border: 1px solid #ddd;">Poison</td><td style="padding: 8px; border: 1px solid #ddd;">4</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
+                    </table>
+                </section>
+
+                <section style="margin-top: 20px;">
+                    <h3>Complement Symbols (Modifiers)</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <tr style="background: #e0f2f1; text-align: left;">
+                            <th style="padding: 8px; border: 1px solid #ddd;">Symbol</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">Effect</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">MP Cost</th>
+                        </tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">+</td><td style="padding: 8px; border: 1px solid #ddd;">+25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">+25%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">-</td><td style="padding: 8px; border: 1px solid #ddd;">-25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">-25%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">&infin;</td><td style="padding: 8px; border: 1px solid #ddd;">Multi-target</td><td style="padding: 8px; border: 1px solid #ddd;">+50%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd;">&gt;</td><td style="padding: 8px; border: 1px solid #ddd;">Piercing</td><td style="padding: 8px; border: 1px solid #ddd;">+20%</td></tr>
+                    </table>
+                </section>
+            </div>
+        `;
+  }
+  onMount() {
+    this.element.querySelector("#back-btn").addEventListener("click", () => {
+      if (this.props.onBack) this.props.onBack();
     });
   }
 }
@@ -583,14 +1013,33 @@ class MainView extends View {
   constructor() {
     super();
     this.spellService = new SpellService(recognitionEngine);
+    this.showGuide = false;
     this.currentSpell = null;
     this.infoComp = new InfoComponent({ spell: null });
     this.canvasComp = new CanvasComponent({ drawingEngine });
   }
   render() {
+    if (this.showGuide) {
+      return `<div id="guide-container"></div>`;
+    }
     return `
-            <div class="main-view" style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif;">
-                <h1 style="text-align: center;">Magic Adventure Simulator</h1>
+            <div class="main-view" style="
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                padding-top: max(20px, env(safe-area-inset-top));
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+                font-family: sans-serif;
+                box-sizing: border-box;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                background: #fafafa;
+            ">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h1 style="margin: 0; font-size: 1.5em;">Magic Simulator</h1>
+                    <button id="open-guide-btn" style="padding: 8px 15px; cursor: pointer; background: #673ab7; color: #fff; border: none; border-radius: 4px;">Guide</button>
+                </div>
                 <div id="info-section"></div>
                 <div id="canvas-section"></div>
                 <div style="margin-top: 20px; text-align: center;">
@@ -601,17 +1050,38 @@ class MainView extends View {
         `;
   }
   onMount() {
+    if (this.showGuide) {
+      const guide = new GuideView({
+        onBack: () => {
+          this.showGuide = false;
+          this.update();
+        }
+      });
+      guide.mount(this.element);
+      return;
+    }
     this.infoComp.mount(this.element.querySelector("#info-section"));
     this.canvasComp.mount(this.element.querySelector("#canvas-section"));
     this.element.querySelector("#launch-btn").addEventListener("click", () => this.launchSpell());
     this.element.querySelector("#clear-btn").addEventListener("click", () => this.canvasComp.clear());
+    this.element.querySelector("#open-guide-btn").addEventListener("click", () => {
+      this.showGuide = true;
+      this.update();
+    });
   }
   launchSpell() {
     const strokes = drawingEngine.getStrokes();
     if (strokes.length === 0) return;
-    this.currentSpell = this.spellService.createSpellFromStrokes(strokes);
+    const canvasSize = {
+      width: this.canvasComp.canvas.width,
+      height: this.canvasComp.canvas.height
+    };
+    this.currentSpell = this.spellService.createSpellFromStrokes(strokes, canvasSize);
     this.infoComp.update({ spell: this.currentSpell });
-    this.canvasComp.clear();
+    this.canvasComp.highlightRecognized(this.spellService.lastRecognized);
+    setTimeout(() => {
+      this.canvasComp.clear();
+    }, 1e3);
   }
 }
 const main = new MainView();

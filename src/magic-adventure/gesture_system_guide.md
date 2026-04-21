@@ -9,7 +9,7 @@ The drawing area is divided into two main zones:
 ### 1. The Core (Inner Circle)
 - **Visual**: A central circle with a red semi-transparent background.
 - **Function**: Determines the base element and nature of the spell.
-- **Rule**: Exactly ONE gesture must be drawn here (can be multi-stroke).
+- **Rule**: Exactly ONE gesture must be drawn here (can be multi-stroke). If more than one gesture is detected, the spell fails.
 
 ### 2. The Complements (Outer Ring)
 - **Visual**: Four colored sections surrounding the core.
@@ -19,14 +19,14 @@ The drawing area is divided into two main zones:
 ## 📜 Symbol Library & Math
 
 ### Core Symbols (Elements)
-| Symbol | Element | Base Damage | Base MP Cost | Special Effect |
+| Symbol | Element | Base Damage | Base MP Cost | Initial Name |
 | :--- | :--- | :--- | :--- | :--- |
-| `^` / `V` | **Fire** | 20 | 10 | Burning |
-| `S` | **Water** | 12 | 8 | Fluid |
-| `Square` | **Earth** | 15 | 12 | Impact |
-| `Circle` | **Light** | 8 | 15 | Defense |
-| `Z` | **Neutral** | 0 | 20 | Sleep |
-| `X` | **Poison** | 4 | 10 | Poison DoT |
+| `^` | **Fire** | 20 | 10 | Fire |
+| `S` | **Water** | 12 | 8 | Water |
+| `Square` | **Earth** | 15 | 12 | Earth |
+| `Circle` | **Light** | 8 | 15 | Light |
+| `Z` | **Neutral** | 0 | 20 | Neutral |
+| `X` | **Poison** | 4 | 10 | Poison |
 
 ### Complementary Symbols (Modifiers)
 | Symbol | Type | Effect Modifier | MP Cost Modifier |
@@ -38,10 +38,10 @@ The drawing area is divided into two main zones:
 
 ## 🧪 Composition Examples
 
-- **Fire** + `+` = **Greater Fireball** (25 Damage, 13 MP)
-- **Fire** + `+` + `+` = **Greater Greater Fireball** (31 Damage, 16 MP)
-- **Water** + `∞` = **Echoing Aqua Wave** (12 Damage, 12 MP)
-- **Poison** + `-` = **Minor Venom Cloud** (3 Damage, 8 MP)
+- **Fire** + `+` = **Super Fire** (25 Damage, 13 MP)
+- **Fire** + `+` + `+` = **Mega Fire** (31 Damage, 16 MP)
+- **Water** + `∞` = **Multi Water** (12 Damage, 12 MP)
+- **Poison** + `-` = **Mini Poison** (3 Damage, 8 MP)
 
 ## 🛠 Strategic Progression
-As players increase their maximum MP, they can cast more complex compositions. A novice might only cast a basic **Fireball** (10 MP), while a master could cast a **Piercing Greater Echoing Fireball** with three `+` modifiers, creating a devastating but very expensive area attack.
+As players increase their maximum MP, they can cast more complex compositions. A novice might only cast a basic **Fire** (10 MP), while a master could cast a **Piercing Mega Multi Fire** with two `+` modifiers, creating a devastating but very expensive area attack.
