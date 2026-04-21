@@ -25,7 +25,7 @@ export class GuideView extends View {
 
                 <section>
                     <h3>The Magic Circle</h3>
-                    <p>Each spell has a <strong>Core</strong> and up to 4 <strong>Complements</strong>.</p>
+                    <p>Each spell has a <strong>Core</strong> and up to 4 <strong>Complements</strong> (the outer slices).</p>
                     <p><strong>Rule:</strong> Exactly ONE gesture in the Core. Mixing different symbols in one Complement section causes failure.</p>
                 </section>
 
@@ -38,13 +38,14 @@ export class GuideView extends View {
                             <th style="padding: 8px; border: 1px solid #ddd;">DMG</th>
                             <th style="padding: 8px; border: 1px solid #ddd;">MP</th>
                         </tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">^</td><td style="padding: 8px; border: 1px solid #ddd;">Fire</td><td style="padding: 8px; border: 1px solid #ddd;">20</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">S</td><td style="padding: 8px; border: 1px solid #ddd;">Water</td><td style="padding: 8px; border: 1px solid #ddd;">12</td><td style="padding: 8px; border: 1px solid #ddd;">8</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Square</td><td style="padding: 8px; border: 1px solid #ddd;">Earth</td><td style="padding: 8px; border: 1px solid #ddd;">15</td><td style="padding: 8px; border: 1px solid #ddd;">12</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Circle</td><td style="padding: 8px; border: 1px solid #ddd;">Light</td><td style="padding: 8px; border: 1px solid #ddd;">8</td><td style="padding: 8px; border: 1px solid #ddd;">15</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Z</td><td style="padding: 8px; border: 1px solid #ddd;">Neutral</td><td style="padding: 8px; border: 1px solid #ddd;">0</td><td style="padding: 8px; border: 1px solid #ddd;">20</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">X</td><td style="padding: 8px; border: 1px solid #ddd;">Poison</td><td style="padding: 8px; border: 1px solid #ddd;">4</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&gt;</td><td style="padding: 8px; border: 1px solid #ddd;">Fire</td><td style="padding: 8px; border: 1px solid #ddd;">20</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&lt;</td><td style="padding: 8px; border: 1px solid #ddd;">Water</td><td style="padding: 8px; border: 1px solid #ddd;">12</td><td style="padding: 8px; border: 1px solid #ddd;">8</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">v</td><td style="padding: 8px; border: 1px solid #ddd;">Earth</td><td style="padding: 8px; border: 1px solid #ddd;">15</td><td style="padding: 8px; border: 1px solid #ddd;">12</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">^</td><td style="padding: 8px; border: 1px solid #ddd;">Light</td><td style="padding: 8px; border: 1px solid #ddd;">8</td><td style="padding: 8px; border: 1px solid #ddd;">15</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">Z</td><td style="padding: 8px; border: 1px solid #ddd;">Neutral</td><td style="padding: 8px; border: 1px solid #ddd;">0</td><td style="padding: 8px; border: 1px solid #ddd;">20</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">X</td><td style="padding: 8px; border: 1px solid #ddd;">Poison</td><td style="padding: 8px; border: 1px solid #ddd;">4</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
                     </table>
+                    <p style="font-size: 0.8em; color: #666; margin-top: 5px;">* Arrows are drawn as two strokes or one continuous movement (caret shape).</p>
                 </section>
 
                 <section style="margin-top: 20px;">
@@ -55,11 +56,12 @@ export class GuideView extends View {
                             <th style="padding: 8px; border: 1px solid #ddd;">Effect</th>
                             <th style="padding: 8px; border: 1px solid #ddd;">MP Cost</th>
                         </tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">+</td><td style="padding: 8px; border: 1px solid #ddd;">+25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">+25%</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">-</td><td style="padding: 8px; border: 1px solid #ddd;">-25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">-25%</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">&infin;</td><td style="padding: 8px; border: 1px solid #ddd;">Multi-target</td><td style="padding: 8px; border: 1px solid #ddd;">+50%</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">&gt;</td><td style="padding: 8px; border: 1px solid #ddd;">Piercing</td><td style="padding: 8px; border: 1px solid #ddd;">+20%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">+</td><td style="padding: 8px; border: 1px solid #ddd;">+25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">+25%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #ddd;">-25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">-25%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&infin;</td><td style="padding: 8px; border: 1px solid #ddd;">Multi-target</td><td style="padding: 8px; border: 1px solid #ddd;">+50%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&gt;</td><td style="padding: 8px; border: 1px solid #ddd;">Piercing</td><td style="padding: 8px; border: 1px solid #ddd;">+20%</td></tr>
                     </table>
+                    <p style="font-size: 0.8em; color: #666; margin-top: 5px;">* Multiple identical symbols in different slices stack their effects!</p>
                 </section>
             </div>
         `;

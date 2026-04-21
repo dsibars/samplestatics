@@ -4,19 +4,27 @@ export class SpellService {
     constructor(recognitionEngine) {
         this.recognitionEngine = recognitionEngine;
         this.cores = {
+            'caret_right': { element: 'Fire', baseDamage: 20, baseCost: 10, name: 'Fire' },
+            'caret_left': { element: 'Water', baseDamage: 12, baseCost: 8, name: 'Water' },
+            'caret_down': { element: 'Earth', baseDamage: 15, baseCost: 12, name: 'Earth' },
+            'caret_up': { element: 'Light', baseDamage: 8, baseCost: 15, name: 'Light', effect: 'defense' },
+            'sleep': { element: 'Neutral', baseDamage: 0, baseCost: 20, name: 'Neutral', effect: 'sleep' },
+            'poison': { element: 'Poison', baseDamage: 4, baseCost: 10, name: 'Poison', effect: 'poison' },
+
+            // Legacy support
             'fire': { element: 'Fire', baseDamage: 20, baseCost: 10, name: 'Fire' },
             'water': { element: 'Water', baseDamage: 12, baseCost: 8, name: 'Water' },
             'square': { element: 'Earth', baseDamage: 15, baseCost: 12, name: 'Earth' },
-            'circle': { element: 'Light', baseDamage: 8, baseCost: 15, name: 'Light', effect: 'defense' },
-            'sleep': { element: 'Neutral', baseDamage: 0, baseCost: 20, name: 'Neutral', effect: 'sleep' },
-            'poison': { element: 'Poison', baseDamage: 4, baseCost: 10, name: 'Poison', effect: 'poison' }
+            'circle': { element: 'Light', baseDamage: 8, baseCost: 15, name: 'Light', effect: 'defense' }
         };
 
         this.complements = {
             'plus': { type: 'boost', costMod: 1.25, effectMod: 1.25, nameModifier: 'Greater' },
             'dash': { type: 'reduce', costMod: 0.75, effectMod: 0.75, nameModifier: 'Minor' },
             'infinity': { type: 'all', costMod: 1.5, effectMod: 1.0, nameModifier: 'Echoing' },
-            'arrow': { type: 'pierce', costMod: 1.2, effectMod: 1.0, nameModifier: 'Piercing' }
+            'arrow': { type: 'pierce', costMod: 1.2, effectMod: 1.0, nameModifier: 'Piercing' },
+            // Also map caret directions to complements if drawn in complement zone
+            'caret_right': { type: 'pierce', costMod: 1.2, effectMod: 1.0, nameModifier: 'Piercing' }
         };
     }
 
@@ -26,7 +34,7 @@ export class SpellService {
     createSpellFromStrokes(strokes, canvasSize) {
         const recognized = this.recognitionEngine.recognize(strokes, canvasSize);
         this.lastRecognized = recognized; // For visual feedback
-        // LOG FOR DEBUGGING
+
         recognized.forEach(r => {
             console.log(`[SpellService] Recognized: ${r.type} (score: ${r.score.toFixed(2)}) in zone: ${r.zone}`);
         });
@@ -51,16 +59,23 @@ export class SpellService {
         recognized.forEach(item => {
             if (item.zone.startsWith('complement-')) {
                 const sliceId = parseInt(item.zone.split('-')[1]);
-                if (item.type === 'unknown') return;
+                if (item.type === 'unknown') {
+                    failed = true;
+                    return;
+                }
 
                 const compConfig = this.complements[item.type];
-                if (!compConfig) return;
+                if (!compConfig) {
+                    failed = true;
+                    return;
+                }
 
                 if (slices[sliceId] === null) {
                     slices[sliceId] = { type: item.type, count: 1, config: compConfig };
                 } else if (slices[sliceId].type === item.type) {
                     slices[sliceId].count++;
                 } else {
+                    // Mixing different types in the same slice
                     failed = true;
                 }
             }
@@ -86,9 +101,9 @@ export class SpellService {
                 }
             }
 
-            if (slice.config.type === 'all') {
+            if (slice.config.type === 'all' && !effects.includes('multi-target')) {
                 effects.push('multi-target');
-            } else if (slice.config.type === 'pierce') {
+            } else if (slice.config.type === 'pierce' && !effects.includes('pierce')) {
                 effects.push('pierce');
             }
         });
