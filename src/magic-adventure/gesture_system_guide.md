@@ -38,10 +38,10 @@ The drawing area is divided into two main zones:
 
 ## 🧪 Composition Examples
 
-- **Fire** + `+` = **Greater Fireball** (25 Damage, 13 MP)
-- **Fire** + `+` + `+` = **Greater Greater Fireball** (31 Damage, 16 MP)
-- **Water** + `∞` = **Echoing Aqua Wave** (12 Damage, 12 MP)
-- **Poison** + `-` = **Minor Venom Cloud** (3 Damage, 8 MP)
+- **Fire** + `+` = **Super Fire** (25 Damage, 13 MP)
+- **Fire** + `+` + `+` = **Mega Fire** (31 Damage, 16 MP)
+- **Water** + `∞` = **Multi Water** (12 Damage, 12 MP)
+- **Poison** + `-` = **Mini Poison** (3 Damage, 8 MP)
 
 ## 🛠 Strategic Progression
-As players increase their maximum MP, they can cast more complex compositions. A novice might only cast a basic **Fireball** (10 MP), while a master could cast a **Piercing Greater Echoing Fireball** with three `+` modifiers, creating a devastating but very expensive area attack.
+As players increase their maximum MP, they can cast more complex compositions. A novice might only cast a basic **Fire** (10 MP), while a master could cast a **Piercing Mega Multi Fire** with two `+` modifiers, creating a devastating but very expensive area attack.
