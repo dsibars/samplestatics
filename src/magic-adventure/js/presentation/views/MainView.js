@@ -60,8 +60,12 @@ export class MainView extends View {
         this.currentSpell = this.spellService.createSpellFromStrokes(strokes, canvasSize);
         this.infoComp.update({ spell: this.currentSpell });
 
+        // Highlight recognized strokes
+        this.canvasComp.highlightRecognized(this.spellService.lastRecognized);
+
         // Wait a bit to show results then clear? User said "clear the draw part to be ready to test another spell"
-        // Let's clear immediately for now as per requirement.
-        this.canvasComp.clear();
+        setTimeout(() => {
+            this.canvasComp.clear();
+        }, 1000);
     }
 }

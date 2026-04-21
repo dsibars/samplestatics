@@ -9,7 +9,7 @@ The drawing area is divided into two main zones:
 ### 1. The Core (Inner Circle)
 - **Visual**: A central circle with a red semi-transparent background.
 - **Function**: Determines the base element and nature of the spell.
-- **Rule**: Exactly ONE gesture must be drawn here (can be multi-stroke).
+- **Rule**: Exactly ONE gesture must be drawn here (can be multi-stroke). If more than one gesture is detected, the spell fails.
 
 ### 2. The Complements (Outer Ring)
 - **Visual**: Four colored sections surrounding the core.
@@ -19,14 +19,14 @@ The drawing area is divided into two main zones:
 ## 📜 Symbol Library & Math
 
 ### Core Symbols (Elements)
-| Symbol | Element | Base Damage | Base MP Cost | Special Effect |
+| Symbol | Element | Base Damage | Base MP Cost | Initial Name |
 | :--- | :--- | :--- | :--- | :--- |
-| `^` / `V` | **Fire** | 20 | 10 | Burning |
-| `S` | **Water** | 12 | 8 | Fluid |
-| `Square` | **Earth** | 15 | 12 | Impact |
-| `Circle` | **Light** | 8 | 15 | Defense |
-| `Z` | **Neutral** | 0 | 20 | Sleep |
-| `X` | **Poison** | 4 | 10 | Poison DoT |
+| `^` | **Fire** | 20 | 10 | Fire |
+| `S` | **Water** | 12 | 8 | Water |
+| `Square` | **Earth** | 15 | 12 | Earth |
+| `Circle` | **Light** | 8 | 15 | Light |
+| `Z` | **Neutral** | 0 | 20 | Neutral |
+| `X` | **Poison** | 4 | 10 | Poison |
 
 ### Complementary Symbols (Modifiers)
 | Symbol | Type | Effect Modifier | MP Cost Modifier |

@@ -70,9 +70,52 @@ export class CanvasComponent extends Component {
     }
 
     clear() {
+        if (this.clearTimer) clearTimeout(this.clearTimer);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.drawMagicCircle();
         this.props.drawingEngine.clear();
+    }
+
+    highlightRecognized(recognizedItems) {
+        if (!this.ctx) return;
+
+        const typeColors = {
+            'fire': '#ff5722',
+            'water': '#2196f3',
+            'square': '#795548',
+            'circle': '#ffeb3b',
+            'sleep': '#9c27b0',
+            'poison': '#4caf50',
+            'plus': '#ffc107',
+            'dash': '#607d8b',
+            'infinity': '#00bcd4',
+            'arrow': '#e91e63'
+        };
+
+        recognizedItems.forEach(item => {
+            if (item.type === 'unknown' || !item.strokes) return;
+
+            const color = typeColors[item.type] || '#000';
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = 5;
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = color;
+
+            item.strokes.forEach(stroke => {
+                if (stroke.length < 1) return;
+                this.ctx.beginPath();
+                this.ctx.moveTo(stroke[0].x, stroke[0].y);
+                for (let i = 1; i < stroke.length; i++) {
+                    this.ctx.lineTo(stroke[i].x, stroke[i].y);
+                }
+                this.ctx.stroke();
+            });
+        });
+
+        // Reset context styles
+        this.ctx.lineWidth = 3;
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowColor = 'transparent';
     }
 
     drawMagicCircle() {

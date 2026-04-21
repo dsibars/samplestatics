@@ -44,8 +44,8 @@ test('PlusDetector should recognize a plus', () => {
     const detector = new PlusDetector();
     // A simple plus shape: vertical line and horizontal line
     const points = [
-        { x: 50, y: 0 }, { x: 50, y: 100 }, // vertical
-        { x: 0, y: 50 }, { x: 100, y: 50 }  // horizontal
+        { x: 50, y: 0 }, { x: 50, y: 25 }, { x: 50, y: 50 }, { x: 50, y: 75 }, { x: 50, y: 100 }, // vertical
+        { x: 0, y: 50 }, { x: 25, y: 50 }, { x: 75, y: 50 }, { x: 100, y: 50 }  // horizontal
     ].map(p => ({ ...p, timestamp: Date.now(), drawId: 1 }));
 
     const result = detector.detect(points);

@@ -72,7 +72,8 @@ export class RecognitionEngine {
             if (bestCombinedMatch && bestCombinedMatch.score > 0.4) {
                 results.push({
                     zone,
-                    ...bestCombinedMatch
+                    ...bestCombinedMatch,
+                    strokes: strokesInZone // Keep reference to original strokes for visual feedback
                 });
             } else {
                 // Fallback: Individual recognition
@@ -86,13 +87,14 @@ export class RecognitionEngine {
                     });
 
                     if (bestMatch) {
-                        results.push({ zone, ...bestMatch });
+                        results.push({ zone, ...bestMatch, strokes: [stroke] });
                     } else {
                         results.push({
                             zone,
                             type: 'unknown',
                             score: 0,
-                            metadata: { boundingBox: this.calculateBoundingBox(stroke) }
+                            metadata: { boundingBox: this.calculateBoundingBox(stroke) },
+                            strokes: [stroke]
                         });
                     }
                 });

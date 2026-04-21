@@ -4,12 +4,12 @@ export class SpellService {
     constructor(recognitionEngine) {
         this.recognitionEngine = recognitionEngine;
         this.cores = {
-            'fire': { element: 'Fire', baseDamage: 20, baseCost: 10, name: 'Fireball' },
-            'water': { element: 'Water', baseDamage: 12, baseCost: 8, name: 'Aqua Wave' },
-            'square': { element: 'Earth', baseDamage: 15, baseCost: 12, name: 'Boulder Strike' },
-            'circle': { element: 'Light', baseDamage: 8, baseCost: 15, name: 'Holy Shield', effect: 'defense' },
-            'sleep': { element: 'Neutral', baseDamage: 0, baseCost: 20, name: 'Deep Sleep', effect: 'sleep' },
-            'poison': { element: 'Poison', baseDamage: 4, baseCost: 10, name: 'Venom Cloud', effect: 'poison' }
+            'fire': { element: 'Fire', baseDamage: 20, baseCost: 10, name: 'Fire' },
+            'water': { element: 'Water', baseDamage: 12, baseCost: 8, name: 'Water' },
+            'square': { element: 'Earth', baseDamage: 15, baseCost: 12, name: 'Earth' },
+            'circle': { element: 'Light', baseDamage: 8, baseCost: 15, name: 'Light', effect: 'defense' },
+            'sleep': { element: 'Neutral', baseDamage: 0, baseCost: 20, name: 'Neutral', effect: 'sleep' },
+            'poison': { element: 'Poison', baseDamage: 4, baseCost: 10, name: 'Poison', effect: 'poison' }
         };
 
         this.complements = {
@@ -25,6 +25,7 @@ export class SpellService {
      */
     createSpellFromStrokes(strokes, canvasSize) {
         const recognized = this.recognitionEngine.recognize(strokes, canvasSize);
+        this.lastRecognized = recognized; // For visual feedback
         // LOG FOR DEBUGGING
         recognized.forEach(r => {
             console.log(`[SpellService] Recognized: ${r.type} (score: ${r.score.toFixed(2)}) in zone: ${r.zone}`);
@@ -37,11 +38,10 @@ export class SpellService {
         const coreItems = recognized.filter(r => r.zone === 'core' && r.type !== 'unknown');
         if (coreItems.length === 0) return this.fizzle('No Core');
 
-        const uniqueCoreTypes = [...new Set(coreItems.map(r => r.type))];
+        // Exactly ONE core symbol
+        if (coreItems.length > 1) return this.fizzle('Unstable Core (Multiple Symbols)');
 
-        if (uniqueCoreTypes.length > 1) return this.fizzle('Unstable Core');
-
-        const coreType = uniqueCoreTypes[0];
+        const coreType = coreItems[0].type;
         const coreConfig = this.cores[coreType];
         if (!coreConfig) return this.fizzle(`Unknown Core: ${coreType}`);
 
@@ -91,9 +91,23 @@ export class SpellService {
             } else if (slice.config.type === 'pierce') {
                 effects.push('pierce');
             }
-
-            name = `${slice.config.nameModifier} ${name}`;
         });
+
+        // Dynamic Naming based on user feedback
+        let prefixes = [];
+        if (modifiers['all']) prefixes.push('Multi');
+        if (modifiers['pierce']) prefixes.push('Piercing');
+
+        if (modifiers['boost'] === 1) prefixes.push('Super');
+        else if (modifiers['boost'] === 2) prefixes.push('Mega');
+        else if (modifiers['boost'] >= 3) prefixes.push('Ultra');
+
+        if (modifiers['reduce'] === 1) prefixes.push('Mini');
+        else if (modifiers['reduce'] >= 2) prefixes.push('Tiny');
+
+        if (prefixes.length > 0) {
+            name = `${prefixes.join(' ')} ${name}`;
+        }
 
         return new Spell({
             name,
@@ -111,7 +125,7 @@ export class SpellService {
 
     fizzle(reason) {
         return new Spell({
-            name: `Fizzle (${reason})`,
+            name: `Failure to Cast (${reason})`,
             type: 'none',
             element: 'None',
             mpCost: 1,
