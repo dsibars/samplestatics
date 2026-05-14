@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="RPG Village - Build and Manage Your Hero's Home">
+    <title>RPG Village</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+  <script type="module" crossorigin>(function polyfill() {
+  const relList = document.createElement("link").relList;
+  if (relList && relList.supports && relList.supports("modulepreload")) {
+    return;
+  }
+  for (const link of document.querySelectorAll('link[rel="modulepreload"]')) {
+    processPreload(link);
+  }
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== "childList") {
+        continue;
+      }
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === "LINK" && node.rel === "modulepreload")
+          processPreload(node);
+      }
+    }
+  }).observe(document, { childList: true, subtree: true });
+  function getFetchOpts(link) {
+    const fetchOpts = {};
+    if (link.integrity) fetchOpts.integrity = link.integrity;
+    if (link.referrerPolicy) fetchOpts.referrerPolicy = link.referrerPolicy;
+    if (link.crossOrigin === "use-credentials")
+      fetchOpts.credentials = "include";
+    else if (link.crossOrigin === "anonymous") fetchOpts.credentials = "omit";
+    else fetchOpts.credentials = "same-origin";
+    return fetchOpts;
+  }
+  function processPreload(link) {
+    if (link.ep)
+      return;
+    link.ep = true;
+    const fetchOpts = getFetchOpts(link);
+    fetch(link.href, fetchOpts);
+  }
+})();
+class UIController {
+  constructor() {
+    this.elements = {
+      goldCount: document.getElementById("gold-count"),
+      villagerCount: document.getElementById("villager-count"),
+      btnStart: document.getElementById("btn-start"),
+      navItems: document.querySelectorAll(".nav-item")
+    };
+    this.setupEventListeners();
+  }
+  setupEventListeners() {
+    this.elements.navItems.forEach((item) => {
+      item.addEventListener("click", () => {
+        this.setActiveNav(item);
+      });
+    });
+  }
+  setActiveNav(item) {
+    this.elements.navItems.forEach((i) => i.classList.remove("active"));
+    item.classList.add("active");
+    const view = item.getAttribute("data-view");
+    console.log(`Switching to view: ${view}`);
+  }
+  updateStats(state) {
+    if (this.elements.goldCount) {
+      this.elements.goldCount.textContent = Math.floor(state.gold);
+    }
+    if (this.elements.villagerCount) {
+      this.elements.villagerCount.textContent = state.villagers;
+    }
+  }
+  onInitialize(callback) {
+    if (this.elements.btnStart) {
+      this.elements.btnStart.addEventListener("click", callback);
+    }
+  }
+}
+class Result {
+  constructor(success, data = null, error = null, context = {}) {
+    this.success = success;
+    this.data = data;
+    this.error = error;
+    this.context = context;
+  }
+  static ok(data = null) {
+    return new Result(true, data);
+  }
+  static fail(error, context = {}) {
+    return new Result(false, null, error, context);
+  }
+}
+const SKILLS_DATA = {
+  basic_attack: {
+    id: "basic_attack",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 1,
+    mpCost: 0,
+    tier: 1,
+    unlockCost: 0,
+    targetType: "single_enemy"
+  },
+  double_attack: {
+    id: "double_attack",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.7,
+    mpCost: 10,
+    tier: 2,
+    unlockCost: 2,
+    dependency: "basic_attack",
+    targetType: "single_enemy"
+  },
+  triple_attack: {
+    id: "triple_attack",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.6,
+    mpCost: 20,
+    tier: 3,
+    unlockCost: 5,
+    dependency: "double_attack",
+    targetType: "single_enemy"
+  },
+  whirlwind: {
+    id: "whirlwind",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.6,
+    mpCost: 15,
+    tier: 2,
+    unlockCost: 3,
+    dependency: "basic_attack",
+    targetType: "all_enemies"
+  },
+  blade_dance: {
+    id: "blade_dance",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.4,
+    mpCost: 35,
+    tier: 3,
+    unlockCost: 7,
+    dependency: "whirlwind",
+    targetType: "all_enemies"
+  },
+  small_fire_ball: {
+    id: "small_fire_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "fire",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  medium_fire_ball: {
+    id: "medium_fire_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.8,
+    mpCost: 25,
+    element: "fire",
+    tier: 2,
+    unlockCost: 3,
+    dependency: "small_fire_ball",
+    targetType: "single_enemy"
+  },
+  meteor: {
+    id: "meteor",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 2.2,
+    mpCost: 50,
+    element: "fire",
+    tier: 3,
+    unlockCost: 10,
+    dependency: "medium_fire_ball",
+    targetType: "single_enemy",
+    splash: 0.3
+  },
+  small_water_ball: {
+    id: "small_water_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "water",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  blizzard: {
+    id: "blizzard",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1,
+    mpCost: 30,
+    element: "water",
+    tier: 2,
+    unlockCost: 5,
+    dependency: "small_water_ball",
+    targetType: "all_enemies"
+  },
+  tsunami: {
+    id: "tsunami",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.6,
+    mpCost: 60,
+    element: "water",
+    tier: 3,
+    unlockCost: 10,
+    dependency: "blizzard",
+    targetType: "all_enemies"
+  },
+  small_wind_ball: {
+    id: "small_wind_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "wind",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  medium_wind_ball: {
+    id: "medium_wind_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.8,
+    mpCost: 25,
+    element: "wind",
+    tier: 2,
+    unlockCost: 3,
+    dependency: "small_wind_ball",
+    targetType: "single_enemy"
+  },
+  big_wind_ball: {
+    id: "big_wind_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 2.5,
+    mpCost: 45,
+    element: "wind",
+    tier: 3,
+    unlockCost: 8,
+    dependency: "medium_wind_ball",
+    targetType: "single_enemy"
+  },
+  small_storm_ball: {
+    id: "small_storm_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.2,
+    mpCost: 10,
+    element: "storm",
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_enemy"
+  },
+  chain_lightning: {
+    id: "chain_lightning",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 1.5,
+    mpCost: 40,
+    element: "storm",
+    tier: 2,
+    unlockCost: 6,
+    dependency: "small_storm_ball",
+    targetType: "single_enemy",
+    jump: 0.8
+  },
+  big_storm_ball: {
+    id: "big_storm_ball",
+    category: "magic",
+    stat: "magicPower",
+    baseMultiplier: 2.5,
+    mpCost: 45,
+    element: "storm",
+    tier: 3,
+    unlockCost: 8,
+    dependency: "chain_lightning",
+    targetType: "single_enemy"
+  },
+  poison_dart: {
+    id: "poison_dart",
+    category: "tricker",
+    stat: "strength",
+    baseMultiplier: 0.8,
+    mpCost: 5,
+    tier: 1,
+    unlockCost: 2,
+    targetType: "single_enemy"
+  },
+  steal: {
+    id: "steal",
+    category: "tricker",
+    stat: "speed",
+    baseMultiplier: 0,
+    mpCost: 10,
+    tier: 2,
+    unlockCost: 4,
+    dependency: "poison_dart",
+    targetType: "single_enemy"
+  },
+  haste: {
+    id: "haste",
+    category: "support",
+    stat: "speed",
+    mpCost: 15,
+    tier: 2,
+    unlockCost: 4,
+    targetType: "single_ally"
+  },
+  small_heal: {
+    id: "small_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.2,
+    mpCost: 8,
+    tier: 1,
+    unlockCost: 1,
+    targetType: "single_ally"
+  },
+  medium_heal: {
+    id: "medium_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.5,
+    mpCost: 20,
+    tier: 2,
+    dependency: "small_heal",
+    unlockCost: 3,
+    targetType: "single_ally"
+  },
+  high_heal: {
+    id: "high_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.85,
+    mpCost: 40,
+    tier: 3,
+    unlockCost: 7,
+    dependency: "medium_heal",
+    targetType: "single_ally"
+  },
+  small_group_heal: {
+    id: "small_group_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.1,
+    mpCost: 15,
+    tier: 1,
+    unlockCost: 2,
+    targetType: "all_allies"
+  },
+  medium_group_heal: {
+    id: "medium_group_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.35,
+    mpCost: 35,
+    tier: 2,
+    unlockCost: 5,
+    dependency: "small_group_heal",
+    targetType: "all_allies"
+  },
+  high_group_heal: {
+    id: "high_group_heal",
+    category: "support",
+    stat: "magicPower",
+    power: 0.65,
+    mpCost: 65,
+    tier: 3,
+    unlockCost: 10,
+    dependency: "medium_group_heal",
+    targetType: "all_allies"
+  }
+};
+const CONSUMABLES_DATA = {
+  tiny_hp_potion: { id: "tiny_hp_potion", type: "HEAL_HP", amount: 0.3 },
+  tiny_mp_potion: { id: "tiny_mp_potion", type: "HEAL_MP", amount: 0.3 },
+  teleport_scroll: { id: "teleport_scroll", type: "ESCAPE", amount: 1 }
+};
+const WEAPON_FAMILIES = {
+  dagger: { id: "dagger", spdBonus: 2, evaBonus: 5, dmgMult: 0.8 },
+  broadsword: { id: "broadsword", spdBonus: 0, evaBonus: 0, dmgMult: 1 },
+  battle_axe: { id: "battle_axe", spdBonus: -2, evaBonus: 0, dmgMult: 1.5 },
+  wand: { id: "wand", spdBonus: 0, evaBonus: 0, dmgMult: 0.4, magBonus: 5, mpCostReduction: 0.1 }
+};
+const MATERIAL_TIERS = {
+  wooden: { id: "wooden", levelReq: 1, mult: 1 },
+  iron: { id: "iron", levelReq: 2, mult: 1.5 },
+  steel: { id: "steel", levelReq: 3, mult: 2.2 },
+  gold: { id: "gold", levelReq: 4, mult: 3.5 },
+  mythril: { id: "mythril", levelReq: 5, mult: 5 }
+};
+const ARMOR_ARCHETYPES = {
+  plate: { id: "plate", defMult: 2, hpMult: 1.2, spdPenalty: -3, evaPenalty: -10 },
+  leather: { id: "leather", defMult: 1, evaBonus: 10, spdPenalty: 0 },
+  robes: { id: "robes", defMult: 0.5, mpMult: 1.5, magMult: 1.2, spdPenalty: 0 }
+};
+class Hero {
+  constructor(data) {
+    this.id = data.id || crypto.randomUUID();
+    this.name = data.name;
+    this.origin = data.origin || "origin_warrior";
+    this.level = data.level || 1;
+    this.exp = data.exp || 0;
+    this.statPoints = data.statPoints || 0;
+    this.skillPoints = data.skillPoints || 0;
+    this.baseMaxHp = data.baseMaxHp || 10;
+    this.baseMaxMp = data.baseMaxMp || 5;
+    this.baseStrength = data.baseStrength || 1;
+    this.baseSpeed = data.baseSpeed || 1;
+    this.baseDefense = data.baseDefense || 1;
+    this.baseMagicPower = data.baseMagicPower || 1;
+    this.hp = data.hp ?? this.baseMaxHp;
+    this.mp = data.mp ?? this.baseMaxMp;
+    this.status = data.status || "resting";
+    this.skills = data.skills || { basic_attack: 0 };
+    this.statusEffects = data.statusEffects || [];
+    this.phoenixUsed = data.phoenixUsed || false;
+    this.equipment = data.equipment || {
+      head: null,
+      body: null,
+      legs: null,
+      leftHand: null,
+      rightHand: null,
+      accessory: null
+    };
+    this.recalculateStats();
+  }
+  getTraitMultipliers() {
+    const mults = {
+      maxHp: 1,
+      maxMp: 1,
+      strength: 1,
+      speed: 1,
+      defense: 1,
+      magicPower: 1,
+      critChance: 0,
+      accuracy: 1,
+      goldBonus: 1,
+      mpRecovery: 1
+    };
+    switch (this.origin) {
+      case "origin_clown":
+        mults.critChance += 15;
+        mults.accuracy -= 0.05;
+        break;
+      case "origin_warrior":
+        mults.defense *= 1.1;
+        mults.maxHp *= 1.05;
+        break;
+      case "origin_thief":
+        mults.speed *= 1.1;
+        mults.goldBonus *= 1.1;
+        break;
+      case "origin_farmer":
+        mults.maxHp *= 1.15;
+        break;
+      case "origin_monk":
+        mults.maxMp *= 1.15;
+        mults.mpRecovery *= 1.2;
+        break;
+      case "origin_cook":
+        mults.maxHp *= 1.05;
+        break;
+      case "origin_guard":
+        mults.defense *= 1.15;
+        break;
+      case "origin_poet":
+        mults.maxMp *= 1.1;
+        mults.magicPower *= 1.1;
+        break;
+    }
+    return mults;
+  }
+  recalculateStats(villageUpgrades = {}) {
+    const traitMults = this.getTraitMultipliers();
+    let equipBonus = {
+      maxHp: 0,
+      maxMp: 0,
+      strength: 0,
+      speed: 0,
+      defense: 0,
+      magicPower: 0,
+      evasion: 0,
+      critChance: 0,
+      accuracy: 0,
+      mpCostReduction: 0,
+      vampirism: 0,
+      hasPhoenix: false
+    };
+    Object.values(this.equipment).forEach((item) => {
+      if (!item) return;
+      if (item.type === "weapon") {
+        const family = WEAPON_FAMILIES[item.family];
+        const tier = MATERIAL_TIERS[item.material];
+        if (family && tier) {
+          const upgradeMult = Math.pow(1.1, item.level || 0);
+          const itemPower = 2 * tier.mult * upgradeMult;
+          equipBonus.strength += itemPower * family.dmgMult;
+          equipBonus.speed += family.spdBonus;
+          equipBonus.evasion += family.evaBonus || 0;
+          if (family.magBonus) equipBonus.magicPower += family.magBonus * tier.mult * upgradeMult;
+          if (family.mpCostReduction) equipBonus.mpCostReduction += family.mpCostReduction;
+        }
+      } else if (item.type === "armor") {
+        const arch = ARMOR_ARCHETYPES[item.archetype];
+        const tier = MATERIAL_TIERS[item.material];
+        if (arch && tier) {
+          const upgradeMult = Math.pow(1.1, item.level || 0);
+          const itemPower = 5 * tier.mult * upgradeMult;
+          equipBonus.defense += itemPower * arch.defMult;
+          equipBonus.maxHp += itemPower * (arch.hpMult || 0);
+          equipBonus.maxMp += itemPower * (arch.mpMult || 0);
+          equipBonus.magicPower += itemPower * (arch.magMult || 0);
+          equipBonus.speed += arch.spdPenalty || 0;
+          equipBonus.evasion += arch.evaBonus || arch.evaPenalty || 0;
+        }
+      }
+      if (item.affixes) {
+        item.affixes.forEach((aff) => {
+          switch (aff) {
+            case "vampire":
+              equipBonus.vampirism += 0.05;
+              break;
+            case "sage":
+              equipBonus.mpCostReduction += 0.1;
+              break;
+            case "titan":
+              equipBonus.maxHp += this.baseMaxHp * 0.2;
+              equipBonus.speed -= 2;
+              break;
+            case "assassin":
+              equipBonus.critChance += 10;
+              equipBonus.accuracy += 20;
+              break;
+            case "phoenix":
+              equipBonus.hasPhoenix = true;
+              break;
+          }
+        });
+      }
+    });
+    const hpBoost = (villageUpgrades.hp_boost || 0) * 10;
+    const atkBoost = villageUpgrades.attack_boost || 0;
+    const defBoost = villageUpgrades.defense_boost || 0;
+    let hasteMult = 1;
+    if (this.statusEffects.some((e) => e.type === "haste")) hasteMult = 1.5;
+    this.maxHp = Math.floor((this.baseMaxHp + hpBoost + equipBonus.maxHp) * traitMults.maxHp);
+    this.maxMp = Math.floor((this.baseMaxMp + equipBonus.maxMp) * traitMults.maxMp);
+    this.strength = Math.floor((this.baseStrength + atkBoost + equipBonus.strength) * traitMults.strength);
+    this.speed = Math.floor((this.baseSpeed + equipBonus.speed) * traitMults.speed * hasteMult);
+    this.defense = Math.floor((this.baseDefense + defBoost + equipBonus.defense) * traitMults.defense);
+    this.magicPower = Math.floor((this.baseMagicPower + equipBonus.magicPower) * traitMults.magicPower);
+    this.evasion = equipBonus.evasion;
+    this.mpCostReduction = equipBonus.mpCostReduction;
+    this.vampirism = equipBonus.vampirism;
+    this.critChanceBonus = equipBonus.critChance;
+    this.accuracyBonus = equipBonus.accuracy;
+    this.hasPhoenix = equipBonus.hasPhoenix;
+    this.hp = Math.min(this.hp, this.maxHp);
+    this.mp = Math.min(this.mp, this.maxMp);
+  }
+  addExperience(amount) {
+    this.exp += amount;
+    let levelsGained = 0;
+    while (true) {
+      const nextLevelExp = this.level * 20;
+      if (this.exp >= nextLevelExp) {
+        this.exp -= nextLevelExp;
+        this.levelUp();
+        levelsGained++;
+      } else {
+        break;
+      }
+    }
+    return Result.ok(levelsGained);
+  }
+  levelUp() {
+    this.level++;
+    this.statPoints += this.level % 5 === 0 ? 3 : 2;
+    this.skillPoints += 1;
+    this.baseMaxHp += 5;
+    this.baseMaxMp += 2;
+    this.recalculateStats();
+    this.hp = this.maxHp;
+    this.mp = this.maxMp;
+  }
+  increaseStat(statId) {
+    if (this.statPoints <= 0) return Result.fail("error_no_stat_points");
+    const statMap = {
+      baseMaxHp: 3,
+      baseMaxMp: 2,
+      baseStrength: 1,
+      baseSpeed: 1,
+      baseDefense: 1,
+      baseMagicPower: 1
+    };
+    const gain = statMap[statId];
+    if (gain === void 0) return Result.fail("error_invalid_stat");
+    this[statId] += gain;
+    this.statPoints--;
+    this.recalculateStats();
+    return Result.ok(this[statId]);
+  }
+  learnSkill(skillId, unlockCost) {
+    if (this.skillPoints < unlockCost) return Result.fail("error_no_skill_points");
+    if (this.skills[skillId] !== void 0) return Result.fail("error_skill_already_unlocked");
+    this.skills[skillId] = 0;
+    this.skillPoints -= unlockCost;
+    return Result.ok(this.skills[skillId]);
+  }
+  upgradeSkill(skillId, upgradeCost) {
+    if (this.skills[skillId] === void 0) return Result.fail("error_skill_locked");
+    if (this.skillPoints < upgradeCost) return Result.fail("error_no_skill_points");
+    this.skills[skillId]++;
+    this.skillPoints -= upgradeCost;
+    return Result.ok(this.skills[skillId]);
+  }
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      origin: this.origin,
+      level: this.level,
+      exp: this.exp,
+      statPoints: this.statPoints,
+      skillPoints: this.skillPoints,
+      baseMaxHp: this.baseMaxHp,
+      baseMaxMp: this.baseMaxMp,
+      baseStrength: this.baseStrength,
+      baseSpeed: this.baseSpeed,
+      baseDefense: this.baseDefense,
+      baseMagicPower: this.baseMagicPower,
+      hp: this.hp,
+      mp: this.mp,
+      status: this.status,
+      skills: JSON.parse(JSON.stringify(this.skills)),
+      statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
+      phoenixUsed: this.phoenixUsed,
+      equipment: JSON.parse(JSON.stringify(this.equipment))
+    };
+  }
+}
+class Persistence {
+  constructor(prefix = "rpg_village_v1_") {
+    this.prefix = prefix;
+  }
+  _key(key) {
+    return `${this.prefix}${key}`;
+  }
+  save(key, data) {
+    try {
+      const serialized = JSON.stringify(data);
+      localStorage.setItem(this._key(key), serialized);
+      return true;
+    } catch (e) {
+      console.error(`Engine Persistence: Failed to save ${key}`, e);
+      return false;
+    }
+  }
+  load(key, defaultValue = null) {
+    try {
+      const serialized = localStorage.getItem(this._key(key));
+      if (serialized === null) return defaultValue;
+      return JSON.parse(serialized);
+    } catch (e) {
+      console.error(`Engine Persistence: Failed to load ${key}`, e);
+      return defaultValue;
+    }
+  }
+  remove(key) {
+    localStorage.removeItem(this._key(key));
+  }
+  clear() {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith(this.prefix)) {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+}
+const persistence = new Persistence();
+class HeroService {
+  constructor(inventoryService) {
+    this.STORAGE_KEY = "heroes_data";
+    this.inventory = inventoryService;
+    this.heroes = this._load();
+  }
+  _load() {
+    const data = persistence.load(this.STORAGE_KEY, []);
+    return data.map((h) => {
+      const hero = new Hero(h);
+      hero.recalculateStats({});
+      return hero;
+    });
+  }
+  saveAll() {
+    persistence.save(this.STORAGE_KEY, this.heroes.map((h) => h.toJSON()));
+  }
+  get(id) {
+    return this.heroes.find((h) => h.id === id) || null;
+  }
+  list(status = null) {
+    if (status) {
+      return this.heroes.filter((h) => h.status === status);
+    }
+    return [...this.heroes];
+  }
+  add(heroData) {
+    const newHero = new Hero(heroData);
+    newHero.recalculateStats({});
+    this.heroes.push(newHero);
+    this.saveAll();
+    return Result.ok(newHero);
+  }
+  remove(id) {
+    const index = this.heroes.findIndex((h) => h.id === id);
+    if (index !== -1) {
+      const removed = this.heroes.splice(index, 1);
+      this.saveAll();
+      return Result.ok(removed[0]);
+    }
+    return Result.fail("error_hero_not_found");
+  }
+  setStatus(id, status) {
+    const hero = this.get(id);
+    if (!hero) return Result.fail("error_hero_not_found");
+    hero.status = status;
+    this.saveAll();
+    return Result.ok(hero);
+  }
+  increaseHeroStat(heroId, statId) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.increaseStat(statId);
+    if (result.success) {
+      hero.recalculateStats({});
+      this.saveAll();
+    }
+    return result;
+  }
+  learnHeroSkill(heroId, skillId, unlockCost) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.learnSkill(skillId, unlockCost);
+    if (result.success) this.saveAll();
+    return result;
+  }
+  upgradeHeroSkill(heroId, skillId, upgradeCost) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.upgradeSkill(skillId, upgradeCost);
+    if (result.success) this.saveAll();
+    return result;
+  }
+  // --- Equipment ---
+  equipItem(heroId, slot, equipmentId) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    if (!this.inventory) return Result.fail("error_inventory_not_linked");
+    const item = this.inventory.getEquipment(equipmentId);
+    if (!item) return Result.fail("error_item_not_found");
+    if (item.type === "weapon") {
+      if (slot !== "leftHand" && slot !== "rightHand") return Result.fail("error_invalid_slot");
+    } else if (item.type === "armor") {
+      if (slot !== item.slot) return Result.fail("error_invalid_slot");
+    } else {
+      return Result.fail("error_invalid_item_type");
+    }
+    if (hero.equipment[slot]) {
+      this.unequipItem(heroId, slot);
+    }
+    hero.equipment[slot] = item.toJSON();
+    this.inventory.removeEquipment(equipmentId);
+    hero.recalculateStats({});
+    this.saveAll();
+    return Result.ok(hero);
+  }
+  unequipItem(heroId, slot) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    if (!this.inventory) return Result.fail("error_inventory_not_linked");
+    const itemData = hero.equipment[slot];
+    if (!itemData) return Result.fail("error_slot_empty");
+    hero.equipment[slot] = null;
+    this.inventory.addEquipment(itemData);
+    hero.recalculateStats({});
+    this.saveAll();
+    return Result.ok(hero);
+  }
+}
+class CombatCalculator {
+  /**
+   * Extracts the effective stat from an entity
+   */
+  static getFinalStat(entity, statName) {
+    let baseVal = entity[statName] || 0;
+    return Math.max(1, baseVal);
+  }
+  /**
+   * Calculates the damage multiplier based on Attack vs Defense ratio (R)
+   */
+  static calculateDamageMultiplier(attackValue, defenseValue) {
+    if (defenseValue <= 0) defenseValue = 1;
+    const R = attackValue / defenseValue;
+    if (R >= 10) return R / 10;
+    if (R >= 5) return 1;
+    if (R >= 4) return 0.9 + (R - 4) * 0.1;
+    if (R >= 2) return 0.75 + (R - 2) * 0.075;
+    if (R >= 1) return 0.5 + (R - 1) * 0.25;
+    return R * 0.5;
+  }
+  /**
+   * Calculates elemental efficiency
+   */
+  static getElementMultiplier(skillElement, targetElement) {
+    if (!skillElement || !targetElement || targetElement === "neutral") return 1;
+    if (skillElement === targetElement) return 1;
+    const relationships = {
+      fire: "wind",
+      wind: "storm",
+      storm: "water",
+      water: "fire"
+    };
+    if (relationships[skillElement] === targetElement) return 1.5;
+    if (relationships[targetElement] === skillElement) return 0.5;
+    return 1;
+  }
+  /**
+   * Calculates evasion chance (0-100)
+   */
+  static calculateEvasionChance(attacker, defender) {
+    let sAttacker = this.getFinalStat(attacker, "speed");
+    let sDefender = this.getFinalStat(defender, "speed");
+    if (attacker.accuracyBonus) {
+      sAttacker *= 1 + attacker.accuracyBonus / 100;
+    }
+    const R = sDefender / sAttacker;
+    if (R <= 1) {
+      return Math.max(0, (R - 0.5) * 20);
+    } else {
+      return 10 + R * 10;
+    }
+  }
+  /**
+   * Main calculation entry point
+   * @returns {Object} { amount, evasionChance, isMiss, elementMult, isCrit }
+   */
+  static calculate(attacker, defender, skillData, skillLevel = 0, partyTraits = {}) {
+    const evasionChance = this.calculateEvasionChance(attacker, defender);
+    let critChance = attacker.critChanceBonus || 0;
+    const isMiss = Math.random() * 100 < evasionChance;
+    const isCrit = !isMiss && Math.random() * 100 < critChance;
+    if (isMiss) {
+      return { amount: 0, evasionChance, isMiss: true, elementMult: 1, isCrit: false };
+    }
+    const multiplier = 1 + 5e-3 * (skillData.tier || 1) * skillLevel;
+    let baseStatValue = this.getFinalStat(attacker, skillData.stat);
+    if (skillData.stat === "magicPower" && partyTraits.magicPowerBoost) {
+      baseStatValue *= 1 + partyTraits.magicPowerBoost;
+    }
+    if (skillData.category === "support") {
+      const power = skillData.power || 0.1;
+      const finalPercentage = power * multiplier;
+      return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1, isCrit: false };
+    } else {
+      const damageMultiplier = skillData.baseMultiplier || 1;
+      let rawDamage = baseStatValue * damageMultiplier * multiplier;
+      if (isCrit) rawDamage *= 1.5;
+      const targetDefense = this.getFinalStat(defender, "defense");
+      const defMult = this.calculateDamageMultiplier(rawDamage, targetDefense);
+      const elementMult = this.getElementMultiplier(skillData.element, defender.element);
+      let finalDamage = Math.max(1, Math.floor(rawDamage * defMult * elementMult));
+      if (skillData.category === "physical" && partyTraits.physicalDamageReduction) {
+        finalDamage = Math.floor(finalDamage * (1 - partyTraits.physicalDamageReduction));
+      }
+      return { amount: finalDamage, evasionChance, isMiss: false, elementMult, isCrit };
+    }
+  }
+}
+class CombatAI {
+  /**
+   * Decides the best action for the actor based on the combat context.
+   * @param {Object} context { actor: actor, allies: [], enemies: [], type: "smart"|"random" }
+   * @returns {Object} { skillId, targetIndex }
+   */
+  static decideAction(context) {
+    const { actor, allies, enemies, type } = context;
+    const availableSkills = Object.keys(actor.skills || {}).filter((sId) => {
+      const data = SKILLS_DATA[sId];
+      return data && actor.mp >= data.mpCost;
+    });
+    const injuredAllies = allies.filter((a) => a.hp > 0 && a.hp / a.maxHp <= 0.7);
+    if (injuredAllies.length > 0 && type === "smart") {
+      const healSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category === "support" && s.power > 0 && (s.targetType === "single_ally" || s.targetType === "all_allies")).sort((a, b) => (b.power || 0) - (a.power || 0));
+      if (healSkills.length > 0) {
+        const groupHeal = healSkills.find((s) => s.targetType === "all_allies");
+        if (groupHeal && injuredAllies.length >= 2) {
+          return { skillId: groupHeal.id, targetIndex: null };
+        }
+        const singleHeal = healSkills.find((s) => s.targetType === "single_ally") || groupHeal;
+        if (singleHeal) {
+          const sortedInjured = [...injuredAllies].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+          const bestTarget = sortedInjured[0];
+          const targetIndex2 = allies.indexOf(bestTarget);
+          return {
+            skillId: singleHeal.id,
+            targetIndex: singleHeal.targetType === "single_ally" ? targetIndex2 : null
+          };
+        }
+      }
+    }
+    const attackSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category !== "support").sort((a, b) => (b.baseMultiplier || 0) - (a.baseMultiplier || 0));
+    let chosenSkill = attackSkills[0] || SKILLS_DATA["basic_attack"];
+    let targetIndex = 0;
+    const aliveEnemies = enemies.map((e, idx) => ({ e, idx })).filter((item) => item.e.hp > 0);
+    const aoeSkill = attackSkills.find((s) => s.targetType === "all_enemies");
+    if (aoeSkill && aliveEnemies.length > 1 && type === "smart") {
+      chosenSkill = aoeSkill;
+    }
+    if (aliveEnemies.length > 0) {
+      if (type === "smart") {
+        aliveEnemies.sort((a, b) => a.e.hp - b.e.hp);
+        targetIndex = aliveEnemies[0].idx;
+      } else {
+        targetIndex = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)].idx;
+      }
+    }
+    return {
+      skillId: chosenSkill.id,
+      targetIndex: chosenSkill.targetType === "single_enemy" || chosenSkill.targetType === "single_ally" ? targetIndex : null
+    };
+  }
+}
+class BattleService {
+  constructor(inventoryService) {
+    this.inventory = inventoryService;
+    this.reset();
+  }
+  reset() {
+    this.heroes = [];
+    this.enemies = [];
+    this.turnOrder = [];
+    this.currentTurnIndex = 0;
+    this.isOver = false;
+    this.winner = null;
+    this.log = [];
+    this.autoBattle = false;
+    this.itemUsedThisTurn = false;
+  }
+  startBattle(heroes, enemies, autoBattle = false) {
+    this.reset();
+    this.heroes = heroes;
+    this.enemies = enemies;
+    this.autoBattle = autoBattle;
+    this._determineTurnOrder();
+    this.partyTraits = this._calculatePartyTraits();
+    return Result.ok({
+      turnOrder: this.turnOrder.map((e) => ({ id: e.id, name: e.name, type: e.constructor.name })),
+      partyTraits: this.partyTraits
+    });
+  }
+  _calculatePartyTraits() {
+    const traits = {
+      hpRegen: 0,
+      physicalDamageReduction: 0,
+      magicPowerBoost: 0,
+      goldBonus: 1
+    };
+    this.heroes.forEach((hero) => {
+      if (hero.hp > 0) {
+        switch (hero.origin) {
+          case "origin_cook":
+            traits.hpRegen += 0.05;
+            break;
+          case "origin_guard":
+            traits.physicalDamageReduction += 0.1;
+            break;
+          case "origin_poet":
+            traits.magicPowerBoost += 0.1;
+            break;
+          case "origin_thief":
+            traits.goldBonus += 0.1;
+            break;
+        }
+      }
+    });
+    return traits;
+  }
+  _determineTurnOrder() {
+    this.turnOrder = [...this.heroes, ...this.enemies].filter((e) => e.hp > 0).sort((a, b) => b.speed - a.speed);
+  }
+  nextTurn() {
+    if (this.isOver) return Result.fail("error_battle_over");
+    const currentEntity = this.turnOrder[this.currentTurnIndex];
+    if (currentEntity.hp <= 0) {
+      return this._advanceTurn();
+    }
+    const statusResults = this._processStatusEffects(currentEntity);
+    if (this.heroes.includes(currentEntity) && this.partyTraits.hpRegen > 0 && currentEntity.hp > 0) {
+      const regenAmount = Math.floor(currentEntity.maxHp * this.partyTraits.hpRegen);
+      if (regenAmount > 0) {
+        currentEntity.hp = Math.min(currentEntity.maxHp, currentEntity.hp + regenAmount);
+        statusResults.push({ type: "TRAIT_REGEN", amount: regenAmount, targetId: currentEntity.id });
+      }
+    }
+    if (currentEntity.hp <= 0) {
+      return Result.ok({ statusEvents: statusResults, entityDefeated: true });
+    }
+    if (this.enemies.includes(currentEntity) || this.autoBattle) {
+      return this.performAutoAction(currentEntity, statusResults);
+    }
+    return Result.ok({
+      actionRequired: true,
+      entity: { id: currentEntity.id, name: currentEntity.name },
+      statusEvents: statusResults
+    });
+  }
+  _processStatusEffects(entity) {
+    if (!entity.statusEffects || entity.statusEffects.length === 0) return [];
+    const events = [];
+    for (let i = entity.statusEffects.length - 1; i >= 0; i--) {
+      const eff = entity.statusEffects[i];
+      let damage = 0;
+      if (eff.type === "poison" || eff.type === "burn") {
+        damage = Math.floor(entity.maxHp * (eff.power || 0.05));
+        entity.hp = Math.max(0, entity.hp - damage);
+        events.push({ type: "STATUS_TICK", effectType: eff.type, damage, targetId: entity.id });
+      }
+      eff.duration--;
+      if (eff.duration <= 0) {
+        entity.statusEffects.splice(i, 1);
+        events.push({ type: "STATUS_EXPIRED", effectType: eff.type, targetId: entity.id });
+        if (entity.recalculateStats) entity.recalculateStats({});
+      }
+    }
+    return events;
+  }
+  performAutoAction(entity, statusResults = []) {
+    const context = {
+      actor: entity,
+      allies: this.heroes.includes(entity) ? this.heroes : this.enemies,
+      enemies: this.heroes.includes(entity) ? this.enemies : this.heroes,
+      type: "smart"
+    };
+    const decision = CombatAI.decideAction(context);
+    return this.executeAction(entity, decision.skillId, decision.targetIndex, statusResults);
+  }
+  executeAction(actor, skillId, targetIndex = null, statusResults = []) {
+    var _a;
+    if (this.isOver) return Result.fail("error_battle_over");
+    const skillData = SKILLS_DATA[skillId];
+    if (!skillData) return Result.fail("error_invalid_skill");
+    if (actor.mp < skillData.mpCost) return Result.fail("error_not_enough_mp");
+    actor.mp -= skillData.mpCost;
+    const skillLevel = actor.skills && actor.skills[skillId] || 0;
+    const isActorHero = this.heroes.includes(actor);
+    const allies = isActorHero ? this.heroes : this.enemies;
+    const enemies = isActorHero ? this.enemies : this.heroes;
+    let baseTargets = [];
+    if (skillData.targetType === "all_allies") {
+      baseTargets = allies.filter((a) => a.hp > 0);
+    } else if (skillData.targetType === "single_ally") {
+      baseTargets = [targetIndex !== null ? allies[targetIndex] : actor];
+    } else if (skillData.targetType === "all_enemies") {
+      baseTargets = enemies.filter((e) => e.hp > 0);
+    } else if (skillData.targetType === "single_enemy") {
+      if (targetIndex !== null && ((_a = enemies[targetIndex]) == null ? void 0 : _a.hp) > 0) {
+        baseTargets = [enemies[targetIndex]];
+      } else {
+        const alive = enemies.filter((e) => e.hp > 0);
+        baseTargets = alive.length > 0 ? [alive[0]] : [];
+      }
+    } else if (skillData.targetType === "self") {
+      baseTargets = [actor];
+    }
+    if (baseTargets.length === 0) return Result.fail("error_no_targets");
+    let targetsWithMultipliers = baseTargets.map((t) => ({ target: t, mult: 1 }));
+    const mainTarget = baseTargets[0];
+    if (skillData.splash && mainTarget) {
+      const others = enemies.filter((e) => e.hp > 0 && e !== mainTarget);
+      others.forEach((o) => targetsWithMultipliers.push({ target: o, mult: skillData.splash }));
+    }
+    if (skillData.jump && mainTarget) {
+      const others = enemies.filter((e) => e.hp > 0 && e !== mainTarget);
+      let currentMult = skillData.jump;
+      others.forEach((o) => {
+        targetsWithMultipliers.push({ target: o, mult: currentMult });
+        currentMult *= skillData.jump;
+      });
+    }
+    const actionEvents = [];
+    targetsWithMultipliers.forEach(({ target, mult }) => {
+      const result = CombatCalculator.calculate(actor, target, skillData, skillLevel, this.partyTraits);
+      const event = {
+        type: skillData.category === "support" ? "HEAL" : "DAMAGE",
+        actorId: actor.id,
+        targetId: target.id,
+        skillId,
+        isMiss: result.isMiss,
+        amount: 0,
+        isCrit: result.isCrit,
+        elementMult: result.elementMult
+      };
+      if (!result.isMiss) {
+        if (skillData.category === "support") {
+          const healAmount = Math.floor(target.maxHp * result.amount * mult);
+          target.hp = Math.min(target.maxHp, target.hp + healAmount);
+          event.amount = healAmount;
+        } else {
+          const damage = Math.max(1, Math.floor(result.amount * mult));
+          target.hp = Math.max(0, target.hp - damage);
+          event.amount = damage;
+          if (target.hp <= 0) event.targetDefeated = true;
+          if (skillId === "poison_dart" && Math.random() < 0.5) {
+            this._applyStatusEffect(target, { type: "poison", duration: 3, power: 0.05 });
+            event.statusApplied = "poison";
+          }
+        }
+      }
+      actionEvents.push(event);
+      this.log.push(event);
+    });
+    const battleEnd = this._checkBattleEnd();
+    if (battleEnd.success && this.isOver) {
+      return Result.ok({ statusEvents: statusResults, actionEvents, battleOver: true, winner: this.winner });
+    }
+    return this._advanceTurn({ statusEvents: statusResults, actionEvents });
+  }
+  _applyStatusEffect(target, effect) {
+    if (!target.statusEffects) target.statusEffects = [];
+    const existing = target.statusEffects.find((e) => e.type === effect.type);
+    if (existing) {
+      existing.duration = Math.max(existing.duration, effect.duration);
+    } else {
+      target.statusEffects.push(effect);
+    }
+    if (target.recalculateStats) target.recalculateStats({});
+  }
+  useConsumable(actor, consumableId, targetId = null) {
+    if (this.isOver) return Result.fail("error_battle_over");
+    if (this.itemUsedThisTurn) return Result.fail("error_item_already_used");
+    const useResult = this.inventory.useConsumable(consumableId);
+    if (!useResult.success) return useResult;
+    const data = CONSUMABLES_DATA[consumableId];
+    if (!data) return Result.fail("error_invalid_consumable");
+    const target = [...this.heroes, ...this.enemies].find((e) => e.id === targetId) || actor;
+    let amount = 0;
+    let type = data.type;
+    if (type === "HEAL_HP") {
+      amount = Math.floor(target.maxHp * data.amount);
+      target.hp = Math.min(target.maxHp, target.hp + amount);
+    } else if (type === "HEAL_MP") {
+      amount = Math.floor(target.maxMp * data.amount);
+      target.mp = Math.min(target.maxMp, target.mp + amount);
+    } else if (type === "ESCAPE") {
+      this.isOver = true;
+      this.winner = "escape";
+    }
+    const event = {
+      type: "USE_CONSUMABLE",
+      actorId: actor.id,
+      targetId: target.id,
+      consumableId,
+      healType: type,
+      amount
+    };
+    this.log.push(event);
+    this.itemUsedThisTurn = true;
+    return Result.ok({ event });
+  }
+  _advanceTurn(data = {}) {
+    this.currentTurnIndex++;
+    this.itemUsedThisTurn = false;
+    if (this.currentTurnIndex >= this.turnOrder.length) {
+      this._determineTurnOrder();
+      this.currentTurnIndex = 0;
+    }
+    const nextEntity = this.turnOrder[this.currentTurnIndex];
+    return Result.ok({ ...data, nextEntityId: nextEntity == null ? void 0 : nextEntity.id });
+  }
+  _checkBattleEnd() {
+    const allHeroesDead = this.heroes.every((h) => h.hp <= 0);
+    const allEnemiesDead = this.enemies.every((e) => e.hp <= 0);
+    if (allHeroesDead) {
+      this.isOver = true;
+      this.winner = "enemies";
+    } else if (allEnemiesDead) {
+      this.isOver = true;
+      this.winner = "heroes";
+    }
+    return Result.ok({ isOver: this.isOver, winner: this.winner });
+  }
+}
+class Equipment {
+  constructor(data) {
+    this.id = data.id || crypto.randomUUID();
+    this.type = data.type;
+    this.material = data.material;
+    this.level = data.level || 0;
+    this.affixes = data.affixes || [];
+    this.family = data.family || null;
+    this.archetype = data.archetype || null;
+    this.slot = data.slot || null;
+  }
+  increaseLevel() {
+    this.level++;
+    return this.level;
+  }
+  addAffix(affix) {
+    if (!this.affixes.includes(affix)) {
+      this.affixes.push(affix);
+      return true;
+    }
+    return false;
+  }
+  toJSON() {
+    return {
+      id: this.id,
+      type: this.type,
+      material: this.material,
+      level: this.level,
+      affixes: [...this.affixes],
+      family: this.family,
+      archetype: this.archetype,
+      slot: this.slot
+    };
+  }
+}
+class InventoryService {
+  constructor() {
+    this.STORAGE_KEY = "inventory_data";
+    this.data = this._load();
+  }
+  _load() {
+    const defaultData = {
+      consumables: {},
+      equipment: []
+    };
+    const loaded = persistence.load(this.STORAGE_KEY, defaultData);
+    loaded.equipment = (loaded.equipment || []).map((e) => new Equipment(e));
+    return loaded;
+  }
+  save() {
+    const toSave = {
+      consumables: this.data.consumables,
+      equipment: this.data.equipment.map((e) => e.toJSON())
+    };
+    persistence.save(this.STORAGE_KEY, toSave);
+  }
+  // --- Consumables ---
+  getConsumableCount(id) {
+    return this.data.consumables[id] || 0;
+  }
+  addConsumable(id, count = 1) {
+    this.data.consumables[id] = (this.data.consumables[id] || 0) + count;
+    this.save();
+    return Result.ok(this.data.consumables[id]);
+  }
+  useConsumable(id) {
+    if (this.data.consumables[id] > 0) {
+      this.data.consumables[id]--;
+      this.save();
+      return Result.ok(this.data.consumables[id]);
+    }
+    return Result.fail("error_not_enough_consumables");
+  }
+  // --- Equipment ---
+  listEquipment() {
+    return [...this.data.equipment];
+  }
+  getEquipment(id) {
+    return this.data.equipment.find((e) => e.id === id) || null;
+  }
+  addEquipment(item) {
+    const instance = item instanceof Equipment ? item : new Equipment(item);
+    this.data.equipment.push(instance);
+    this.save();
+    return Result.ok(instance);
+  }
+  removeEquipment(id) {
+    const index = this.data.equipment.findIndex((e) => e.id === id);
+    if (index !== -1) {
+      const removed = this.data.equipment.splice(index, 1);
+      this.save();
+      return Result.ok(removed[0]);
+    }
+    return Result.fail("error_item_not_found");
+  }
+}
+const en = {
+  // UI General
+  btn_back: "BACK",
+  btn_confirm: "CONFIRM",
+  btn_cancel: "CANCEL",
+  // Origins
+  origin_warrior: "Warrior",
+  origin_thief: "Thief",
+  origin_clown: "Clown",
+  origin_farmer: "Farmer",
+  origin_monk: "Monk",
+  origin_cook: "Cook",
+  origin_guard: "Guard",
+  origin_poet: "Poet",
+  // Skills
+  basic_attack: "Attack",
+  double_attack: "Double Attack",
+  triple_attack: "Triple Attack",
+  whirlwind: "Whirlwind",
+  small_fire_ball: "Fire Ball",
+  small_heal: "Heal",
+  haste: "Haste",
+  // Battle
+  victory: "VICTORY!",
+  defeat: "DEFEAT",
+  damage: "Damage",
+  miss: "Miss!",
+  crit: "CRITICAL!"
+};
+const es = {
+  // UI General
+  btn_back: "VOLVER",
+  btn_confirm: "CONFIRMAR",
+  btn_cancel: "CANCELAR",
+  // Origins
+  origin_warrior: "Guerrero",
+  origin_thief: "Ladrón",
+  origin_clown: "Payaso",
+  origin_farmer: "Granjero",
+  origin_monk: "Monje",
+  origin_cook: "Cocinero",
+  origin_guard: "Guardia",
+  origin_poet: "Poeta",
+  // Skills
+  basic_attack: "Atacar",
+  double_attack: "Doble Ataque",
+  triple_attack: "Triple Ataque",
+  whirlwind: "Torbellino",
+  small_fire_ball: "Bola de Fuego",
+  small_heal: "Curar",
+  haste: "Prisa",
+  // Battle
+  victory: "¡VICTORIA!",
+  defeat: "DERROTA",
+  damage: "Daño",
+  miss: "¡Fallo!",
+  crit: "¡CRÍTICO!"
+};
+const ca = {
+  // UI General
+  btn_back: "TORNAR",
+  btn_confirm: "CONFIRMAR",
+  btn_cancel: "CANCEL·LAR",
+  // Origins
+  origin_warrior: "Guerrer",
+  origin_thief: "Lladre",
+  origin_clown: "Pallasso",
+  origin_farmer: "Granjer",
+  origin_monk: "Monjo",
+  origin_cook: "Cuiner",
+  origin_guard: "Guàrdia",
+  origin_poet: "Poeta",
+  // Skills
+  basic_attack: "Atacar",
+  double_attack: "Doble Atac",
+  triple_attack: "Triple Atac",
+  whirlwind: "Torbellí",
+  small_fire_ball: "Bola de Foc",
+  small_heal: "Curar",
+  haste: "Pressa",
+  // Battle
+  victory: "VICTÒRIA!",
+  defeat: "DERROTA",
+  damage: "Dany",
+  miss: "Falla!",
+  crit: "CRÍTIC!"
+};
+const eu = {
+  // UI General
+  btn_back: "BUELTATU",
+  btn_confirm: "BAIEZTATU",
+  btn_cancel: "UZTU",
+  // Origins
+  origin_warrior: "Gudaria",
+  origin_thief: "Lapurra",
+  origin_clown: "Pailazoa",
+  origin_farmer: "Baserritarra",
+  origin_monk: "Monjea",
+  origin_cook: "Sukaldaria",
+  origin_guard: "Guardia",
+  origin_poet: "Poeta",
+  // Skills
+  basic_attack: "Erasotu",
+  double_attack: "Eraso Bikoitza",
+  triple_attack: "Eraso Hirukoitza",
+  whirlwind: "Zirimola",
+  small_fire_ball: "Su Bola",
+  small_heal: "Sendatu",
+  haste: "Bizkortu",
+  // Battle
+  victory: "GARAIPENA!",
+  defeat: "GALDUTA",
+  damage: "Kaltea",
+  miss: "Huts egin du!",
+  crit: "KRITIKOA!"
+};
+class I18nService {
+  constructor() {
+    this.translations = { en, es, ca, eu };
+    this.currentLang = "en";
+  }
+  setLanguage(lang) {
+    if (this.translations[lang]) {
+      this.currentLang = lang;
+      return true;
+    }
+    return false;
+  }
+  t(key, params = {}) {
+    const langData = this.translations[this.currentLang];
+    let text = langData[key] || this.translations["en"][key] || key;
+    Object.keys(params).forEach((p) => {
+      text = text.replace(`{${p}}`, params[p]);
+    });
+    return text;
+  }
+}
+const i18n = new I18nService();
+class GameEngine {
+  constructor() {
+    this.STORAGE_KEY = "village_state";
+    this.inventoryService = new InventoryService();
+    this.heroService = new HeroService(this.inventoryService);
+    this.battleService = new BattleService(this.inventoryService);
+    this.i18n = i18n;
+    this.state = this._loadState();
+  }
+  _loadState() {
+    const defaultState = {
+      gold: 100,
+      food: 50,
+      wood: 0,
+      stone: 0,
+      iron: 0,
+      population: 0,
+      infrastructure: {
+        housing: 1,
+        farm: 1,
+        blacksmith: 0,
+        training_grounds: 0
+      },
+      lang: "en",
+      day: 1,
+      lastUpdate: Date.now()
+    };
+    const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+    this.i18n.setLanguage(loaded.lang);
+    return loaded;
+  }
+  _saveState() {
+    persistence.save(this.STORAGE_KEY, this.state);
+  }
+  update() {
+    const now = Date.now();
+    (now - this.state.lastUpdate) / 1e3;
+    this.state.lastUpdate = now;
+    this._saveState();
+    return {
+      village: this.state,
+      heroes: this.heroService.list()
+    };
+  }
+  // --- Hero Facade ---
+  addHero(heroData) {
+    return this.heroService.add(heroData);
+  }
+  getHeroes() {
+    return this.heroService.list();
+  }
+  // --- Combat Facade ---
+  startBattle(enemies) {
+    const activeHeroes = this.heroService.list("active");
+    return this.battleService.startBattle(activeHeroes, enemies);
+  }
+  setLanguage(lang) {
+    if (this.i18n.setLanguage(lang)) {
+      this.state.lang = lang;
+      this._saveState();
+      return true;
+    }
+    return false;
+  }
+}
+class EngineAdapter {
+  constructor(engine, ui) {
+    this.engine = engine;
+    this.ui = ui;
+    this.rafId = null;
+  }
+  init() {
+    this.ui.onInitialize(() => {
+      console.log("Village initialization requested via Adapter");
+      this.engine.addVillager();
+    });
+    this.startLoop();
+  }
+  startLoop() {
+    const loop = () => {
+      const newState = this.engine.update();
+      this.ui.updateStats(newState);
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  }
+  stopLoop() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
+  }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("RPG Village Initializing...");
+  const engine = new GameEngine();
+  const ui = new UIController();
+  const adapter = new EngineAdapter(engine, ui);
+  adapter.init();
+  console.log("RPG Village Ready!");
+});</script>
+  <style rel="stylesheet" crossorigin>:root {
+    /* Color Palette - Premium Dark Theme */
+    --bg-primary: #0a0b10;
+    --bg-secondary: #161821;
+    --bg-accent: #1e2230;
+    
+    --text-primary: #f8f9fa;
+    --text-secondary: #adb5bd;
+    --text-muted: #6c757d;
+    
+    --accent-color: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-glow: rgba(99, 102, 241, 0.3);
+    
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    
+    /* Spacing & Borders */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 16px;
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    
+    /* Shadows & Effects */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --glass-bg: rgba(22, 24, 33, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Inter', 'Outfit', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+#app-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 70px; /* Space for nav */
+}
+
+/* Header Styles */
+.game-header {
+    background-color: var(--bg-secondary);
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-md);
+}
+
+.game-header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--text-primary), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.stats-bar {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.stat-item {
+    background: var(--bg-accent);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    border: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.stat-item .label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.stat-item .value {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+/* Village Canvas (Main Area) */
+.village-canvas {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-lg);
+    background: radial-gradient(circle at center, var(--bg-accent) 0%, var(--bg-primary) 100%);
+}
+
+.placeholder-content {
+    text-align: center;
+    max-width: 400px;
+    padding: var(--spacing-xl);
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.placeholder-content h2 {
+    margin-bottom: var(--spacing-md);
+    font-family: 'Outfit', sans-serif;
+}
+
+.placeholder-content p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px 0 var(--accent-glow);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-2px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Navigation */
+.main-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: var(--bg-secondary);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 1px solid var(--glass-border);
+    padding: 0 var(--spacing-md);
+    z-index: 100;
+}
+
+.nav-item {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: var(--spacing-sm);
+    cursor: pointer;
+    transition: color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.nav-item:hover {
+    color: var(--text-secondary);
+}
+
+.nav-item.active {
+    color: var(--accent-color);
+}
+
+.nav-item.active::after {
+    content: '';
+    width: 4px;
+    height: 4px;
+    background: var(--accent-color);
+    border-radius: 50%;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.view {
+    animation: fadeIn 0.4s ease-out forwards;
+}</style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Main Application View -->
+        <main id="home-view" class="view">
+    <header class="game-header">
+        <h1>RPG Village</h1>
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="label">Gold:</span>
+                <span id="gold-count" class="value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Villagers:</span>
+                <span id="villager-count" class="value">0</span>
+            </div>
+        </div>
+    </header>
+
+    <section class="village-canvas">
+        <div class="placeholder-content">
+            <h2>Welcome to your Village</h2>
+            <p>Start building and managing your village.</p>
+            <button id="btn-start" class="btn-primary">Initialize Village</button>
+        </div>
+    </section>
+
+    <nav class="main-nav">
+        <button class="nav-item active" data-view="home">Village</button>
+        <button class="nav-item" data-view="buildings">Buildings</button>
+        <button class="nav-item" data-view="heroes">Heroes</button>
+        <button class="nav-item" data-view="settings">Settings</button>
+    </nav>
+</main>
+
+    </div>
+
+    <!-- Application Entry Point -->
+</body>
+</html>

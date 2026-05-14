@@ -1,0 +1,30 @@
+<main id="home-view" class="view">
+    <header class="game-header">
+        <h1>RPG Village</h1>
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="label">Gold:</span>
+                <span id="gold-count" class="value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Villagers:</span>
+                <span id="villager-count" class="value">0</span>
+            </div>
+        </div>
+    </header>
+
+    <section class="village-canvas">
+        <div class="placeholder-content">
+            <h2>Welcome to your Village</h2>
+            <p>Start building and managing your village.</p>
+            <button id="btn-start" class="btn-primary">Initialize Village</button>
+        </div>
+    </section>
+
+    <nav class="main-nav">
+        <button class="nav-item active" data-view="home">Village</button>
+        <button class="nav-item" data-view="buildings">Buildings</button>
+        <button class="nav-item" data-view="heroes">Heroes</button>
+        <button class="nav-item" data-view="settings">Settings</button>
+    </nav>
+</main>
