@@ -3,6 +3,31 @@ export const eu = {
     btn_back: "BUELTATU",
     btn_confirm: "BAIEZTATU",
     btn_cancel: "UZTU",
+    btn_next_day: "HURRENGO EGUNA",
+
+    // Village
+    village_gold: "Urrea",
+    village_population: "Biztanleria",
+    village_day: "Eguna",
+    village_housing: "Etxebizitzak",
+    village_warehouse: "Biltegia",
+    village_farm: "Baserria",
+    village_blacksmith: "Aroztegia",
+    village_training_grounds: "Entrenamendu Zelaia",
+    village_explorer_guild: "Esploratzaileen Gremioa",
+
+    // Resources & Inventory
+    material_wood: "Egurre",
+    material_stone: "Harria",
+    material_iron_ore: "Burdin Minerala",
+    material_steel_ingot: "Altzairuzko Ingotea",
+    material_mythril: "Mythril",
+    food_raw_grain: "Gia",
+    food_meat: "Haragia",
+    food_bread: "Ogia",
+    food_stew: "Egu egina",
+    inv_storage: "Biltegiratzea",
+    inv_full: "¡Biltegia Betea!",
 
     // Origins
     origin_warrior: "Gudaria",
@@ -14,6 +39,17 @@ export const eu = {
     origin_guard: "Guardia",
     origin_poet: "Poeta",
 
+    // Hero Status & Slots
+    status_active: "Aktiboa",
+    status_resting: "Atseden hartzen",
+    status_training: "Entrenatzen",
+    slot_head: "Burua",
+    slot_body: "Gorputza",
+    slot_legs: "Hankak",
+    slot_leftHand: "Ezkerreko Eskua",
+    slot_rightHand: "Eskuineko Eskua",
+    slot_accessory: "Osagarria",
+
     // Skills
     basic_attack: "Erasotu",
     double_attack: "Eraso Bikoitza",
@@ -23,10 +59,61 @@ export const eu = {
     small_heal: "Sendatu",
     haste: "Bizkortu",
 
+    // Enemies
+    slime_green: "Limo Berdea",
+    slime_fire: "Su Limoa",
+    wild_boar: "Basurdea",
+    goblin_scout: "Goblin Esploratzailea",
+    goblin_grunt: "Goblin Gudaria",
+    giant_spider: "Armiarma Erraldoia",
+    skeleton_warrior: "Eskeleto Gudaria",
+    skeleton_archer: "Eskeleto Arkularia",
+    wraith_minor: "Espektro Txikia",
+    zombie_shambler: "Zombie Ibiltaria",
+    orc_grunt: "Orko Gudaria",
+    orc_shaman: "Orko Xamana",
+    rock_golem: "Harrizko Golema",
+    harpy_scout: "Harpia Esploratzailea",
+    goblin_king: "Goblin Erregea",
+    lich_apprentice: "Lich Ikaslea",
+    mountain_troll: "Mendi Trolla",
+
+    // Regions
+    reg_greenfields: "Zelaia Berdeak",
+    reg_tiny_cave: "Haitzulo Txikia",
+    reg_calmed_beach: "Hondatza Lasaia",
+    reg_whispering_forest: "Baso Sosolaria",
+    reg_stony_foothills: "Muino Harrizkoak",
+    reg_murky_swamp: "Aintzira Iluna",
+    reg_forgotten_ruins: "Aztarna Ahaztuak",
+    reg_iron_peaks: "Burdin Gailurrak",
+    reg_crystal_hollow: "Kristal Zuloa",
+    reg_great_desert: "Basamortu Handia",
+    reg_obsidian_crater: "Obsidiana Kraterra",
+    reg_ancient_library: "Liburutegi Zaharra",
+    reg_frostbite_tundra: "Tundra Izoztua",
+    reg_sky_fortress: "Zeru Gotorlekua",
+    reg_dragon_maw: "Herensugearen Ahoa",
+
+    // Expeditions
+    exp_stage: "Etapa",
+    exp_intermission: "Atsedenaldia",
+    exp_retire: "Erretiratu",
+    exp_continue: "Jarraitu",
+    exp_completed: "Osatua",
+    exp_available: "Eskuragarri",
+    exp_locked: "Blokeatua",
+    exp_tutorial_cave: "Tutorialeko Haitzuloa",
+    exp_wild_orchard: "Basoko Baratzan",
+    exp_rescue_mission: "Gatibu Hartutako Guardia",
+    exp_forgotten_tomb: "Hilobi Ahaztua",
+    exp_orc_stronghold: "Orko Gotorlekua",
+    exp_ancient_archives: "Golemaren Ganberak",
+
     // Battle
-    victory: "GARAIPENA!",
+    victory: "¡GARAIPENA!",
     defeat: "GALDUTA",
     damage: "Kaltea",
-    miss: "Huts egin du!",
-    crit: "KRITIKOA!"
+    miss: "¡Huts egin du!",
+    crit: "¡KRITIKOA!"
 };

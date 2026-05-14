@@ -3,6 +3,31 @@ export const en = {
     btn_back: "BACK",
     btn_confirm: "CONFIRM",
     btn_cancel: "CANCEL",
+    btn_next_day: "NEXT DAY",
+
+    // Village
+    village_gold: "Gold",
+    village_population: "Population",
+    village_day: "Day",
+    village_housing: "Housing",
+    village_warehouse: "Warehouse",
+    village_farm: "Farm",
+    village_blacksmith: "Blacksmith",
+    village_training_grounds: "Training Grounds",
+    village_explorer_guild: "Explorer Guild",
+
+    // Resources & Inventory
+    material_wood: "Wood",
+    material_stone: "Stone",
+    material_iron_ore: "Iron Ore",
+    material_steel_ingot: "Steel Ingot",
+    material_mythril: "Mythril",
+    food_raw_grain: "Grain",
+    food_meat: "Meat",
+    food_bread: "Bread",
+    food_stew: "Hearty Stew",
+    inv_storage: "Storage",
+    inv_full: "Storage Full!",
 
     // Origins
     origin_warrior: "Warrior",
@@ -14,6 +39,17 @@ export const en = {
     origin_guard: "Guard",
     origin_poet: "Poet",
 
+    // Hero Status & Slots
+    status_active: "Active",
+    status_resting: "Resting",
+    status_training: "Training",
+    slot_head: "Head",
+    slot_body: "Body",
+    slot_legs: "Legs",
+    slot_leftHand: "Left Hand",
+    slot_rightHand: "Right Hand",
+    slot_accessory: "Accessory",
+
     // Skills
     basic_attack: "Attack",
     double_attack: "Double Attack",
@@ -22,6 +58,57 @@ export const en = {
     small_fire_ball: "Fire Ball",
     small_heal: "Heal",
     haste: "Haste",
+
+    // Enemies
+    slime_green: "Green Slime",
+    slime_fire: "Fire Slime",
+    wild_boar: "Wild Boar",
+    goblin_scout: "Goblin Scout",
+    goblin_grunt: "Goblin Grunt",
+    giant_spider: "Giant Spider",
+    skeleton_warrior: "Skeleton Warrior",
+    skeleton_archer: "Skeleton Archer",
+    wraith_minor: "Minor Wraith",
+    zombie_shambler: "Zombie Shambler",
+    orc_grunt: "Orc Grunt",
+    orc_shaman: "Orc Shaman",
+    rock_golem: "Rock Golem",
+    harpy_scout: "Harpy Scout",
+    goblin_king: "Goblin King",
+    lich_apprentice: "Lich Apprentice",
+    mountain_troll: "Mountain Troll",
+
+    // Regions
+    reg_greenfields: "Greenfields",
+    reg_tiny_cave: "Tiny Cave",
+    reg_calmed_beach: "Calmed Beach",
+    reg_whispering_forest: "Whispering Forest",
+    reg_stony_foothills: "Stony Foothills",
+    reg_murky_swamp: "Murky Swamp",
+    reg_forgotten_ruins: "Forgotten Ruins",
+    reg_iron_peaks: "Iron Peaks",
+    reg_crystal_hollow: "Crystal Hollow",
+    reg_great_desert: "Great Desert",
+    reg_obsidian_crater: "Obsidian Crater",
+    reg_ancient_library: "Ancient Library",
+    reg_frostbite_tundra: "Frostbite Tundra",
+    reg_sky_fortress: "Sky Fortress",
+    reg_dragon_maw: "The Dragon's Maw",
+
+    // Expeditions
+    exp_stage: "Stage",
+    exp_intermission: "Intermission",
+    exp_retire: "Retire",
+    exp_continue: "Continue",
+    exp_completed: "Completed",
+    exp_available: "Available",
+    exp_locked: "Locked",
+    exp_tutorial_cave: "Tutorial Cave",
+    exp_wild_orchard: "The Wild Orchard",
+    exp_rescue_mission: "The Captured Guard",
+    exp_forgotten_tomb: "The Forgotten Tomb",
+    exp_orc_stronghold: "Orc Stronghold",
+    exp_ancient_archives: "The Golem Chambers",
 
     // Battle
     victory: "VICTORY!",

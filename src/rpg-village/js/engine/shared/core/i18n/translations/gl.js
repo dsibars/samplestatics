@@ -3,6 +3,31 @@ export const gl = {
     btn_back: "VOLVER",
     btn_confirm: "CONFIRMAR",
     btn_cancel: "CANCELAR",
+    btn_next_day: "SEGUINTE DÍA",
+
+    // Village
+    village_gold: "Ouro",
+    village_population: "Poboación",
+    village_day: "Día",
+    village_housing: "Vivendas",
+    village_warehouse: "Almacén",
+    village_farm: "Granxa",
+    village_blacksmith: "Ferraría",
+    village_training_grounds: "Campo de Adestramento",
+    village_explorer_guild: "Gremio de Exploradores",
+
+    // Resources & Inventory
+    material_wood: "Madeira",
+    material_stone: "Pedra",
+    material_iron_ore: "Mineral de Ferro",
+    material_steel_ingot: "Lingote de Aceiro",
+    material_mythril: "Mithril",
+    food_raw_grain: "Gran",
+    food_meat: "Carne",
+    food_bread: "Pan",
+    food_stew: "Estofado Nutritivo",
+    inv_storage: "Almacenamento",
+    inv_full: "¡Almacén Cheo!",
 
     // Origins
     origin_warrior: "Guerreiro",
@@ -14,19 +39,81 @@ export const gl = {
     origin_guard: "Garda",
     origin_poet: "Poeta",
 
+    // Hero Status & Slots
+    status_active: "Activo",
+    status_resting: "Descansando",
+    status_training: "Adestrando",
+    slot_head: "Cabeza",
+    slot_body: "Corpo",
+    slot_legs: "Pernas",
+    slot_leftHand: "Man Esquerda",
+    slot_rightHand: "Man Dereita",
+    slot_accessory: "Accesorio",
+
     // Skills
     basic_attack: "Atacar",
-    double_attack: "Dobre Ataque",
-    triple_attack: "Triplo Ataque",
+    double_attack: "Ataque Dobre",
+    triple_attack: "Ataque Triplo",
     whirlwind: "Torbelliño",
     small_fire_ball: "Bóla de Fogo",
     small_heal: "Curar",
     haste: "Presa",
 
+    // Enemies
+    slime_green: "Limo Verde",
+    slime_fire: "Limo de Fogo",
+    wild_boar: "Xabaril",
+    goblin_scout: "Explorador Goblin",
+    goblin_grunt: "Soldado Goblin",
+    giant_spider: "Araña Xigante",
+    skeleton_warrior: "Esqueleto Guerreiro",
+    skeleton_archer: "Esqueleto Arqueiro",
+    wraith_minor: "Espectro Menor",
+    zombie_shambler: "Zombi Errante",
+    orc_grunt: "Soldado Orco",
+    orc_shaman: "Chamán Orco",
+    rock_golem: "Gólem de Pedra",
+    harpy_scout: "Exploradora Harpía",
+    goblin_king: "Rei Goblin",
+    lich_apprentice: "Aprendiz de Lich",
+    mountain_troll: "Troll de Montaña",
+
+    // Regions
+    reg_greenfields: "Pradeiras Verdes",
+    reg_tiny_cave: "Cova Pequena",
+    reg_calmed_beach: "Praia Tranquila",
+    reg_whispering_forest: "Bosque Susurrante",
+    reg_stony_foothills: "Colinas Pedregosas",
+    reg_murky_swamp: "Pantano Turbio",
+    reg_forgotten_ruins: "Ruínas Esquecidas",
+    reg_iron_peaks: "Picos de Ferro",
+    reg_crystal_hollow: "Burato de Cristal",
+    reg_great_desert: "Gran Deserto",
+    reg_obsidian_crater: "Cráter de Obsidiana",
+    reg_ancient_library: "Biblioteca Antiga",
+    reg_frostbite_tundra: "Tundra Xélida",
+    reg_sky_fortress: "Fortaleza Celeste",
+    reg_dragon_maw: "A Fauce do Dragón",
+
+    // Expeditions
+    exp_stage: "Etapa",
+    exp_intermission: "Intermedio",
+    exp_retire: "Retirarse",
+    exp_continue: "Continuar",
+    exp_completed: "Completado",
+    exp_available: "Dispoñible",
+    exp_locked: "Bloqueado",
+    exp_tutorial_cave: "Cova do Tutorial",
+    exp_wild_orchard: "A Horta Silvestre",
+    exp_rescue_mission: "O Garda Capturado",
+    exp_forgotten_tomb: "A Tumba Esquecida",
+    exp_orc_stronghold: "Fortaleza Orca",
+    exp_ancient_archives: "As Cámaras do Gólem",
+
     // Battle
-    victory: "VICTORIA!",
+    victory: "¡VICTORIA!",
     defeat: "DERROTA",
     damage: "Dano",
-    miss: "Fallo!",
-    crit: "CRÍTICO!"
+    miss: "¡Fallo!",
+    crit: "¡CRÍTICO!"
 };

@@ -3,6 +3,31 @@ export const ca = {
     btn_back: "TORNAR",
     btn_confirm: "CONFIRMAR",
     btn_cancel: "CANCEL·LAR",
+    btn_next_day: "SEGÜENT DIA",
+
+    // Village
+    village_gold: "Or",
+    village_population: "Població",
+    village_day: "Dia",
+    village_housing: "Habitatges",
+    village_warehouse: "Magatzem",
+    village_farm: "Granja",
+    village_blacksmith: "Ferreria",
+    village_training_grounds: "Camp d'Entrenament",
+    village_explorer_guild: "Gremi d'Exploradors",
+
+    // Resources & Inventory
+    material_wood: "Fusta",
+    material_stone: "Pedra",
+    material_iron_ore: "Mineral de Ferro",
+    material_steel_ingot: "Lingot d'Acer",
+    material_mythril: "Mithril",
+    food_raw_grain: "Gran",
+    food_meat: "Carn",
+    food_bread: "Pa",
+    food_stew: "Estofat Nutritiu",
+    inv_storage: "Emmagatzematge",
+    inv_full: "¡Magatzem Ple!",
 
     // Origins
     origin_warrior: "Guerrer",
@@ -14,19 +39,81 @@ export const ca = {
     origin_guard: "Guàrdia",
     origin_poet: "Poeta",
 
+    // Hero Status & Slots
+    status_active: "Actiu",
+    status_resting: "Descansant",
+    status_training: "Entrenant",
+    slot_head: "Cap",
+    slot_body: "Cos",
+    slot_legs: "Cames",
+    slot_leftHand: "Mà Esquerra",
+    slot_rightHand: "Mà Dreta",
+    slot_accessory: "Accessori",
+
     // Skills
     basic_attack: "Atacar",
-    double_attack: "Doble Atac",
-    triple_attack: "Triple Atac",
+    double_attack: "Atac Doble",
+    triple_attack: "Atac Triple",
     whirlwind: "Torbellí",
     small_fire_ball: "Bola de Foc",
     small_heal: "Curar",
     haste: "Pressa",
 
+    // Enemies
+    slime_green: "Llim Verd",
+    slime_fire: "Llim de Foc",
+    wild_boar: "Senglar",
+    goblin_scout: "Explorador Goblin",
+    goblin_grunt: "Soldat Goblin",
+    giant_spider: "Aranya Gegant",
+    skeleton_warrior: "Esquelet Guerrer",
+    skeleton_archer: "Esquelet Arquer",
+    wraith_minor: "Espectre Menor",
+    zombie_shambler: "Zombi Errant",
+    orc_grunt: "Soldat Orc",
+    orc_shaman: "Xaman Orc",
+    rock_golem: "Gòlem de Pedra",
+    harpy_scout: "Exploradora Harpía",
+    goblin_king: "Rei Goblin",
+    lich_apprentice: "Aprenent de Lich",
+    mountain_troll: "Troll de Muntanya",
+
+    // Regions
+    reg_greenfields: "Prats Verds",
+    reg_tiny_cave: "Cova Petita",
+    reg_calmed_beach: "Platja Tranquil·la",
+    reg_whispering_forest: "Bosc Susurrant",
+    reg_stony_foothills: "Turons Pedregosos",
+    reg_murky_swamp: "Pantà Terbol",
+    reg_forgotten_ruins: "Ruïnes Oblidades",
+    reg_iron_peaks: "Pics de Ferro",
+    reg_crystal_hollow: "Forat de Cristall",
+    reg_great_desert: "Gran Desert",
+    reg_obsidian_crater: "Cràter d'Obsidiana",
+    reg_ancient_library: "Biblioteca Antiga",
+    reg_frostbite_tundra: "Tundra Gèlida",
+    reg_sky_fortress: "Fortalesa Celeste",
+    reg_dragon_maw: "La Fau de Drac",
+
+    // Expeditions
+    exp_stage: "Etapa",
+    exp_intermission: "Intermedi",
+    exp_retire: "Retirar-se",
+    exp_continue: "Continuar",
+    exp_completed: "Completat",
+    exp_available: "Disponible",
+    exp_locked: "Bloquejat",
+    exp_tutorial_cave: "Cova del Tutorial",
+    exp_wild_orchard: "L'Hort Silvestre",
+    exp_rescue_mission: "El Guàrdia Capturat",
+    exp_forgotten_tomb: "La Tomba Oblidada",
+    exp_orc_stronghold: "Fortalesa Orca",
+    exp_ancient_archives: "Les Cambres del Gòlem",
+
     // Battle
-    victory: "VICTÒRIA!",
+    victory: "¡VICTÒRIA!",
     defeat: "DERROTA",
     damage: "Dany",
-    miss: "Falla!",
-    crit: "CRÍTIC!"
+    miss: "¡Falla!",
+    crit: "¡CRÍTIC!"
 };
