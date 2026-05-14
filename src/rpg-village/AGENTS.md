@@ -32,6 +32,9 @@ Welcome, Agent. This document defines the architectural principles, documentatio
 ### Explore (WIP)
 - **Campaigns**: [Expeditions](./docs/explore/expeditions.md) | [Location Data](./docs/explore/expeditions_data.md)
 
+### Future
+- **Ideas & Brainstorming**: [Roadmap & Drafts](./docs/drafts/roadmap.md)
+
 ## 4. Directory Structure
 - `src/rpg-village/`
   - `docs/`: Master design and mechanics. Structured by domain.
