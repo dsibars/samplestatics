@@ -115,5 +115,39 @@ export const eu = {
     defeat: "GALDUTA",
     damage: "Kaltea",
     miss: "¡Huts egin du!",
-    crit: "¡KRITIKOA!"
+    crit: "¡KRITIKOA!",
+
+    // UI Skeleton & Navigation
+    nav_village: "Herria",
+    nav_buildings: "Eraikinak",
+    nav_heroes: "Heroiak",
+    nav_inventory: "Inbentarioa",
+    nav_explore: "Arakatu",
+
+    // Domain: Village
+    ui_village_status: "Herriaren Egoera",
+    ui_construction: "Eraikuntza",
+    ui_no_projects: "Ez dago proiektu aktiborik.",
+    ui_visual_rep: "[Herriaren Irudikapen Visuala]",
+
+    // Domain: Buildings
+    ui_available_buildings: "Eraikin Eskuragarriak",
+    ui_select_building: "Hautatu eraikin bat xehetasunak ikusteko.",
+
+    // Domain: Heroes
+    ui_your_heroes: "Zure Heroiak",
+    ui_recruit: "Kontratatu",
+    ui_select_hero: "Hautatu heroi bat estatistikak eta ekipamendua ikusteko.",
+
+    // Domain: Inventory
+    ui_all: "Guztiak",
+    ui_materials: "Materialak",
+    ui_consumables: "Kontsumigarriak",
+    ui_equipment: "Ekipamendua",
+
+    // Domain: Explore
+    ui_world_map: "Munduko Mapa",
+    ui_active_expeditions: "Espedizio Aktiboak",
+    ui_start_expedition: "Espedizioa Hasi",
+    ui_no_active_expeditions: "Ez dago espedizio aktiborik."
 };

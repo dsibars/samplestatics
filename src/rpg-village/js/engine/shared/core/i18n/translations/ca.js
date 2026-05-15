@@ -115,5 +115,39 @@ export const ca = {
     defeat: "DERROTA",
     damage: "Dany",
     miss: "¡Falla!",
-    crit: "¡CRÍTIC!"
+    crit: "¡CRÍTIC!",
+
+    // UI Skeleton & Navigation
+    nav_village: "Aldea",
+    nav_buildings: "Edificis",
+    nav_heroes: "Herois",
+    nav_inventory: "Inventari",
+    nav_explore: "Explorar",
+
+    // Domain: Village
+    ui_village_status: "Estat de l'Aldea",
+    ui_construction: "Construcció",
+    ui_no_projects: "No hi ha projectes actius.",
+    ui_visual_rep: "[Representació Visual de l'Aldea]",
+
+    // Domain: Buildings
+    ui_available_buildings: "Edificis Disponibles",
+    ui_select_building: "Selecciona un edifici per veure detalls.",
+
+    // Domain: Heroes
+    ui_your_heroes: "Els teus Herois",
+    ui_recruit: "Reclutar",
+    ui_select_hero: "Selecciona un heroi per veure stats i equip.",
+
+    // Domain: Inventory
+    ui_all: "Tot",
+    ui_materials: "Materials",
+    ui_consumables: "Consumibles",
+    ui_equipment: "Equip",
+
+    // Domain: Explore
+    ui_world_map: "Mapa del Món",
+    ui_active_expeditions: "Expedicions Actives",
+    ui_start_expedition: "Iniciar Expedició",
+    ui_no_active_expeditions: "No hi ha expedicions actives."
 };

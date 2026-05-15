@@ -10,8 +10,10 @@ const appName = process.env.APP || 'daily-routine-exercise';
 function htmlPartials() {
   return {
     name: 'html-partials',
+    enforce: 'pre',
     transformIndexHtml(html) {
-      return html.replace(/<include src="([^"]+)"\s*\/>/g, (match, filePath) => {
+      // Matches <include src="..." /> OR <include src="..."></include>
+      return html.replace(/<include src="([^"]+)"\s*(?:\/>|><\/include>)/g, (match, filePath) => {
         // Resolve relative to the app's root directory
         const absolutePath = path.resolve(__dirname, 'src', appName, filePath);
         if (fs.existsSync(absolutePath)) {

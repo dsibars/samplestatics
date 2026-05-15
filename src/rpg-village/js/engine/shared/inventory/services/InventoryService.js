@@ -50,6 +50,13 @@ export class InventoryService {
         persistence.save(this.STORAGE_KEY, toSave);
     }
 
+    getState() {
+        return {
+            ...this.data,
+            totalUsed: this.getTotalStorageUsed()
+        };
+    }
+
     /**
      * Calculates the total storage used by all stackable items and equipment.
      */

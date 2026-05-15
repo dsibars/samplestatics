@@ -33,6 +33,14 @@ export class VillageService {
         };
         const loaded = persistence.load(this.STORAGE_KEY, defaultState);
         
+        // Migrate old state if population was a simple number
+        if (typeof loaded.population === 'number') {
+            loaded.population = {
+                total: loaded.population,
+                assigned: 0
+            };
+        }
+
         // Migrate old state if max was stored
         if (loaded.population && loaded.population.max !== undefined) {
             delete loaded.population.max;

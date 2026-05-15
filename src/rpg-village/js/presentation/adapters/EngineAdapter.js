@@ -23,7 +23,7 @@ export class EngineAdapter {
     startLoop() {
         const loop = () => {
             const newState = this.engine.update();
-            this.ui.updateStats(newState);
+            this.ui.update(newState);
             this.rafId = requestAnimationFrame(loop);
         };
         this.rafId = requestAnimationFrame(loop);

@@ -115,5 +115,39 @@ export const en = {
     defeat: "DEFEAT",
     damage: "Damage",
     miss: "Miss!",
-    crit: "CRITICAL!"
+    crit: "CRITICAL!",
+
+    // UI Skeleton & Navigation
+    nav_village: "Village",
+    nav_buildings: "Buildings",
+    nav_heroes: "Heroes",
+    nav_inventory: "Inventory",
+    nav_explore: "Explore",
+
+    // Domain: Village
+    ui_village_status: "Village Status",
+    ui_construction: "Construction",
+    ui_no_projects: "No active projects.",
+    ui_visual_rep: "[Village Visual Representation]",
+
+    // Domain: Buildings
+    ui_available_buildings: "Available Buildings",
+    ui_select_building: "Select a building to see details.",
+
+    // Domain: Heroes
+    ui_your_heroes: "Your Heroes",
+    ui_recruit: "Recruit",
+    ui_select_hero: "Select a hero to view stats and equipment.",
+
+    // Domain: Inventory
+    ui_all: "All",
+    ui_materials: "Materials",
+    ui_consumables: "Consumables",
+    ui_equipment: "Equipment",
+
+    // Domain: Explore
+    ui_world_map: "World Map",
+    ui_active_expeditions: "Active Expeditions",
+    ui_start_expedition: "Start Expedition",
+    ui_no_active_expeditions: "No active expeditions."
 };

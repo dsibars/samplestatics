@@ -16,9 +16,65 @@
 </head>
 <body>
     <div id="app-container">
-        <!-- Main Application View -->
-        <include src="pages/home.html" />
+        <!-- Global Header: Persistence across views -->
+        <header class="game-header">
+            <div class="brand">
+                <h1>RPG Village</h1>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item" title="Gold">
+                    <span class="icon">💰</span>
+                    <span id="gold-count" class="value">0</span>
+                </div>
+                <div class="stat-item" title="Villagers">
+                    <span class="icon">👤</span>
+                    <span id="villager-count" class="value">0</span>
+                </div>
+                <div class="stat-item" title="Materials">
+                    <span class="icon">🪵</span>
+                    <span id="wood-count" class="value">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area: Views are injected here -->
+        <main id="main-content">
+            <div class="loader-overlay" id="main-loader">
+                <div class="spinner"></div>
+            </div>
+        </main>
+
+        <!-- Global Navigation -->
+        <nav class="main-nav">
+            <button class="nav-item active" data-view="village">
+                <span class="nav-icon">🏡</span>
+                <span class="nav-label" data-i18n="nav_village">Village</span>
+            </button>
+            <button class="nav-item" data-view="buildings">
+                <span class="nav-icon">⚒️</span>
+                <span class="nav-label" data-i18n="nav_buildings">Buildings</span>
+            </button>
+            <button class="nav-item" data-view="heroes">
+                <span class="nav-icon">⚔️</span>
+                <span class="nav-label" data-i18n="nav_heroes">Heroes</span>
+            </button>
+            <button class="nav-item" data-view="inventory">
+                <span class="nav-icon">🎒</span>
+                <span class="nav-label" data-i18n="nav_inventory">Inventory</span>
+            </button>
+            <button class="nav-item" data-view="explore">
+                <span class="nav-icon">🗺️</span>
+                <span class="nav-label" data-i18n="nav_explore">Explore</span>
+            </button>
+        </nav>
     </div>
+
+    <!-- View Templates (Inlined at build-time) -->
+    <template id="tpl-village"><include src="pages/village.html"></include></template>
+    <template id="tpl-buildings"><include src="pages/buildings.html"></include></template>
+    <template id="tpl-heroes"><include src="pages/heroes.html"></include></template>
+    <template id="tpl-inventory"><include src="pages/inventory.html"></include></template>
+    <template id="tpl-explore"><include src="pages/explore.html"></include></template>
 
     <!-- Application Entry Point -->
     <script type="module" src="./js/main.js"></script>

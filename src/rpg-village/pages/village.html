@@ -1,0 +1,35 @@
+<section id="village-view" class="domain-view">
+    <div class="dashboard-grid">
+        <!-- Village Status Widget -->
+        <div class="card widget status-widget">
+            <h3 data-i18n="ui_village_status">Village Status</h3>
+            <div class="status-content">
+                <div class="status-item">
+                    <span class="label" data-i18n="village_population">Population</span>:
+                    <span id="village-pop" class="value">--</span>
+                </div>
+                <div class="status-item">
+                    <span class="label" data-i18n="village_day">Day</span>:
+                    <span id="village-day" class="value">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Construction Queue Widget -->
+        <div class="card widget construction-widget">
+            <h3 data-i18n="ui_construction">Construction</h3>
+            <div id="construction-list" class="empty-state" data-i18n="ui_no_projects">
+                No active projects.
+            </div>
+        </div>
+
+        <!-- Village Canvas (Visual Center) -->
+        <div class="card widget canvas-widget">
+            <div class="village-visual-placeholder">
+                <div class="visual-placeholder-text" data-i18n="ui_visual_rep">
+                    [Village Visual Representation]
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

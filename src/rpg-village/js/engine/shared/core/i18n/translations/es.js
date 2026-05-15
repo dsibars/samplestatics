@@ -115,5 +115,39 @@ export const es = {
     defeat: "DERROTA",
     damage: "Daño",
     miss: "¡Fallo!",
-    crit: "¡CRÍTICO!"
+    crit: "¡CRÍTICO!",
+
+    // UI Skeleton & Navigation
+    nav_village: "Aldea",
+    nav_buildings: "Edificios",
+    nav_heroes: "Héroes",
+    nav_inventory: "Inventario",
+    nav_explore: "Explorar",
+
+    // Domain: Village
+    ui_village_status: "Estado de la Aldea",
+    ui_construction: "Construcción",
+    ui_no_projects: "No hay proyectos activos.",
+    ui_visual_rep: "[Representación Visual de la Aldea]",
+
+    // Domain: Buildings
+    ui_available_buildings: "Edificios Disponibles",
+    ui_select_building: "Selecciona un edificio para ver detalles.",
+
+    // Domain: Heroes
+    ui_your_heroes: "Tus Héroes",
+    ui_recruit: "Reclutar",
+    ui_select_hero: "Selecciona un héroe para ver stats y equipo.",
+
+    // Domain: Inventory
+    ui_all: "Todo",
+    ui_materials: "Materiales",
+    ui_consumables: "Consumibles",
+    ui_equipment: "Equipo",
+
+    // Domain: Explore
+    ui_world_map: "Mapa del Mundo",
+    ui_active_expeditions: "Expediciones Activas",
+    ui_start_expedition: "Iniciar Expedición",
+    ui_no_active_expeditions: "No hay expediciones activas."
 };

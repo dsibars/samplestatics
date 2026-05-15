@@ -28,9 +28,11 @@ export class GameEngine {
         this.i18n = i18n;
         
         // Ensure starter items exist if it's a new game
-        const villageState = this.villageService.getState();
-        if (this.inventoryService.getConsumableCount('food_raw_grain') === 0 && villageState.day === 1) {
+        // Ensure starter items exist for the skeleton/visual phase
+        if (this.inventoryService.getConsumableCount('food_raw_grain') === 0) {
             this.inventoryService.addConsumable('food_raw_grain', 50);
+        }
+        if (this.inventoryService.getConsumableCount('material_wood') === 0) {
             this.inventoryService.addConsumable('material_wood', 10);
         }
 
@@ -42,6 +44,7 @@ export class GameEngine {
         
         return {
             village: this.villageService.getState(),
+            inventory: this.inventoryService.getState(), // Assuming getState() exists
             heroes: this.heroService.list(),
             expeditions: this.expeditionService.getExpeditions(),
             activeExpedition: this.expeditionService.state.activeExpedition
