@@ -15,8 +15,13 @@ export class InventoryService {
 
     _load() {
         const defaultData = {
-            materials: {},
-            food: {},
+            materials: {
+                material_wood: 20,
+                material_stone: 10
+            },
+            food: {
+                food_raw_grain: 30
+            },
             consumables: {},
             equipment: []
         };

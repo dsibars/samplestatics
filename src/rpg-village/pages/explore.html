@@ -1,17 +1,106 @@
 <section id="explore-view" class="domain-view">
-    <div class="explore-layout">
-        <div class="explore-map">
-            <!-- Map visualization placeholder -->
-            <div class="map-placeholder">
-                <div class="visual-placeholder-text" data-i18n="ui_world_map">World Map</div>
-            </div>
-        </div>
-        <div class="expeditions-panel">
-            <h3 data-i18n="ui_active_expeditions">Active Expeditions</h3>
-            <div id="active-expeditions" class="expedition-list">
-                <div class="empty-state" data-i18n="ui_no_active_expeditions">No active expeditions.</div>
-            </div>
-            <button id="btn-new-expedition" class="btn-primary" data-i18n="ui_start_expedition">Start Expedition</button>
-        </div>
+    <div class="explore-header">
+        <h2 data-i18n="nav_explore">Explore</h2>
+        <div id="explore-status-banner"></div>
     </div>
+
+    <div class="master-detail-layout">
+        <!-- Master Pane: Regions & Expeditions -->
+        <aside class="master-pane card">
+            <div class="pane-header">
+                <h3 data-i18n="ui_world_map">World Map</h3>
+            </div>
+            <div id="regions-list-container" class="list-container">
+                <!-- Regions and their nodes injected here -->
+            </div>
+        </aside>
+
+        <!-- Detail Pane: Node info & Start -->
+        <main class="detail-pane card glass-pane">
+            <div id="expedition-detail-content">
+                <div class="empty-detail">
+                    <p data-i18n="ui_select_expedition">Select an expedition node on the map.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <template id="tpl-region-group">
+        <div class="region-group">
+            <h4 class="region-title"></h4>
+            <div class="region-nodes"></div>
+        </div>
+    </template>
+
+    <template id="tpl-expedition-node">
+        <div class="list-item expedition-card" data-id="">
+            <div class="list-item-header">
+                <span class="list-item-title"></span>
+                <span class="list-item-badge"></span>
+            </div>
+        </div>
+    </template>
 </section>
+
+<style>
+    .explore-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+    }
+    .region-group {
+        margin-bottom: 15px;
+    }
+    .region-title {
+        color: var(--primary-color);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+    }
+    .expedition-card.active {
+        background: rgba(var(--primary-color-rgb), 0.2);
+        border-color: var(--primary-color);
+    }
+    .hero-selector {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .hero-checkbox-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    .hero-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255,255,255,0.05);
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+    }
+    .hero-checkbox-item:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    .hero-checkbox-item input {
+        cursor: pointer;
+    }
+    .status-banner {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        font-weight: bold;
+    }
+    .status-banner.none {
+        display: none;
+    }
+    .btn-start-exp {
+        width: 100%;
+        margin-top: 15px;
+    }
+</style>

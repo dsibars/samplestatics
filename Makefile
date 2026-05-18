@@ -18,9 +18,9 @@ test-all:
 	@echo "All tests passed!"
 
 # --- Legacy Targets (Isolated) ---
-dsi-build:
+local-build:
 	@if [ ! -d "src/$(APP)" ]; then echo "Error: App '$(APP)' not found in src/"; exit 1; fi
-	@echo "Building APP: $(APP) (legacy mode)..."
+	@echo "Building APP: $(APP) (local mode)..."
 	@echo "Installing dependencies..."
 	@. $(HOME)/.nvm/nvm.sh && npm install
 	
@@ -39,13 +39,13 @@ dsi-build:
 	fi
 	@echo "Build complete for $(APP)!"
 
-dsi-build-all:
+local-build-all:
 	@for app in $$(ls src/); do \
 		if [ -d "src/$$app" ]; then \
-			$(MAKE) dsi-build APP=$$app; \
+			$(MAKE) local-build APP=$$app; \
 		fi \
 	done
-	@echo "Successfully built all apps (legacy)!"
+	@echo "Successfully built all apps (local)!"
 
 # --- Optimized Targets (Agnostic & Clean) ---
 build:

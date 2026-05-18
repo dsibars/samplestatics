@@ -8,6 +8,7 @@ import { BuildingsView } from './presentation/ui/buildings/BuildingsView.js';
 import { HeroesView } from './presentation/ui/heroes/HeroesView.js';
 import { InventoryView } from './presentation/ui/inventory/InventoryView.js';
 import { ExploreView } from './presentation/ui/explore/ExploreView.js';
+import { SettingsView } from './presentation/ui/settings/SettingsView.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('RPG Village Initializing...');
@@ -26,9 +27,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.registerView('heroes', new HeroesView());
     ui.registerView('inventory', new InventoryView());
     ui.registerView('explore', new ExploreView());
+    ui.registerView('settings', new SettingsView());
 
     // Set initial view
     ui.switchView('village');
+
+    // Show Intro if it's a new game
+    if (engine.isNewGame) {
+        ui.showIntroDialog();
+    }
 
     // 3. Initialize Adapter (The Orchestrator)
     const adapter = new EngineAdapter(engine, ui);

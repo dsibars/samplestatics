@@ -1,35 +1,133 @@
 <section id="village-view" class="domain-view">
     <div class="dashboard-grid">
-        <!-- Village Status Widget -->
-        <div class="card widget status-widget">
-            <h3 data-i18n="ui_village_status">Village Status</h3>
-            <div class="status-content">
-                <div class="status-item">
-                    <span class="label" data-i18n="village_population">Population</span>:
-                    <span id="village-pop" class="value">--</span>
+        <!-- Left Column: Status & Queue -->
+        <div class="side-panel">
+            <!-- Village Status Widget -->
+            <div class="card widget status-widget">
+                <h3 data-i18n="ui_village_status">Village Status</h3>
+                <div class="status-content">
+                    <div class="status-item-detailed">
+                        <div class="status-row">
+                            <span class="label" data-i18n="village_gold">Gold</span>
+                            <span id="village-gold" class="value">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="status-item-detailed">
+                        <div class="status-row">
+                            <span class="label" data-i18n="village_population">Population</span>
+                            <span id="village-pop" class="value">--</span>
+                        </div>
+                        <div class="sub-label">
+                            <span data-i18n="ui_available">Available</span>: <span id="village-pop-avail" class="accent-text">--</span>
+                        </div>
+                    </div>
+
+                    <div class="status-item-detailed">
+                        <div class="status-row">
+                            <span class="label" data-i18n="inv_storage">Storage</span>
+                            <span id="village-storage-text" class="value">-- / --</span>
+                        </div>
+                        <div class="progress-container">
+                            <div id="village-storage-bar" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="status-item">
-                    <span class="label" data-i18n="village_day">Day</span>:
-                    <span id="village-day" class="value">--</span>
+            </div>
+
+            <!-- Construction Queue Widget -->
+            <div class="card widget construction-widget">
+                <h3 data-i18n="ui_construction">Construction</h3>
+                <div id="construction-list-container">
+                    <div id="construction-list" class="empty-state" data-i18n="ui_no_projects">
+                        No active projects.
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Construction Queue Widget -->
-        <div class="card widget construction-widget">
-            <h3 data-i18n="ui_construction">Construction</h3>
-            <div id="construction-list" class="empty-state" data-i18n="ui_no_projects">
-                No active projects.
+        <!-- Right Column: Visual Center & Global Actions -->
+        <div class="main-panel">
+            <div id="daily-report-container"></div>
+            
+            <div class="card canvas-card">
+                <div class="village-visual-placeholder">
+                    <div class="visual-placeholder-text" data-i18n="ui_visual_rep">
+                        [Village Visual Representation]
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Village Canvas (Visual Center) -->
-        <div class="card widget canvas-widget">
-            <div class="village-visual-placeholder">
-                <div class="visual-placeholder-text" data-i18n="ui_visual_rep">
-                    [Village Visual Representation]
+            <!-- Day Cycle Controller (The "Big Button" Area) -->
+            <div class="card action-card">
+                <div class="day-cycle-info">
+                    <span class="day-label" data-i18n="village_day">Day</span>
+                    <span id="village-day" class="day-value">--</span>
+                </div>
+                
+                <div class="action-bar-centered">
+                    <button id="btn-next-day" class="btn btn-primary btn-lg shine-effect">
+                        <span class="icon">☀️</span>
+                        <span data-i18n="btn_next_day">Next Day</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+<style>
+    .status-item-detailed {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .status-row .label { color: var(--text-muted); font-size: 0.9rem; }
+    .status-row .value { font-weight: 700; color: var(--text-primary); }
+    .accent-text { color: var(--accent-color); font-weight: 700; }
+    
+    .action-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: var(--spacing-md);
+        background: linear-gradient(to right, var(--bg-accent), var(--bg-secondary));
+    }
+    
+    .day-cycle-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 20px;
+        border-right: 1px solid var(--glass-border);
+    }
+    
+    .day-label { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); }
+    .day-value { font-size: 2rem; font-weight: 900; color: var(--accent-color); }
+    
+    .action-bar-centered {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+    }
+
+    .side-panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
+    .main-panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
+    
+    .daily-report-widget { border-left: 4px solid var(--accent-color); }
+    .report-content { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .report-section { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; }
+    .report-section.success { border-left: 3px solid #4CAF50; }
+    .report-section.danger { border-left: 3px solid #f44336; color: #f44336; }
+    .report-icon { font-size: 1.2rem; }
+
+    @media (max-width: 767px) {
+        .action-card { flex-direction: column; gap: var(--spacing-md); text-align: center; }
+        .day-cycle-info { border-right: none; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; width: 100%; }
+    }
+</style>

@@ -1,13 +1,45 @@
 <section id="inventory-view" class="domain-view">
-    <div class="inventory-layout">
-        <div class="inventory-categories">
-            <button class="cat-item active" data-cat="all" data-i18n="ui_all">All</button>
-            <button class="cat-item" data-cat="materials" data-i18n="ui_materials">Materials</button>
-            <button class="cat-item" data-cat="consumables" data-i18n="ui_consumables">Consumables</button>
-            <button class="cat-item" data-cat="equipment" data-i18n="ui_equipment">Equipment</button>
+    <div class="card storage-summary">
+        <div class="list-item-header">
+            <h3 data-i18n="inv_storage">Storage</h3>
+            <span id="inv-storage-text" class="value">-- / --</span>
         </div>
-        <div id="inventory-grid" class="item-grid">
-            <!-- Items injected here -->
+        <div class="progress-container">
+            <div id="inv-storage-bar" class="progress-bar" style="width: 0%"></div>
         </div>
     </div>
+
+    <div class="inventory-sections">
+        <!-- Materials Section -->
+        <div class="card">
+            <h3 data-i18n="ui_materials">Materials</h3>
+            <div id="materials-grid" class="resource-grid">
+                <!-- Material items will be injected here -->
+            </div>
+        </div>
+
+        <!-- Food Section -->
+        <div class="card">
+            <h3 data-i18n="food_bread">Food</h3> <!-- Using bread as a generic title or ui_food if available -->
+            <div id="food-grid" class="resource-grid">
+                <!-- Food items will be injected here -->
+            </div>
+        </div>
+
+        <!-- Consumables & Equipment Section -->
+        <div class="card">
+            <h3 data-i18n="ui_equipment">Equipment</h3>
+            <div id="equipment-list" class="list-container">
+                <div class="empty-state" data-i18n="ui_no_items">No items found.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template for a resource item -->
+    <template id="tpl-resource-item">
+        <div class="resource-item">
+            <span class="label"></span>
+            <span class="value"></span>
+        </div>
+    </template>
 </section>

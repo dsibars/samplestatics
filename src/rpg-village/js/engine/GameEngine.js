@@ -27,27 +27,57 @@ export class GameEngine {
         );
         this.i18n = i18n;
         
-        // Ensure starter items exist if it's a new game
-        // Ensure starter items exist for the skeleton/visual phase
-        if (this.inventoryService.getConsumableCount('food_raw_grain') === 0) {
-            this.inventoryService.addConsumable('food_raw_grain', 50);
-        }
-        if (this.inventoryService.getConsumableCount('material_wood') === 0) {
-            this.inventoryService.addConsumable('material_wood', 10);
+        this.i18n = i18n;
+        
+        // New Game Experience
+        const hasHeroes = persistence.load('heroes_data', null) !== null;
+        const hasVillage = persistence.load('village_state', null) !== null;
+        
+        this.isNewGame = !hasHeroes || !hasVillage;
+        console.log('Engine: checkNewGame?', this.isNewGame, { hasHeroes, hasVillage });
+        
+        if (this.isNewGame) {
+            this.initNewGame();
         }
 
-        this.i18n.setLanguage(persistence.load('village_state', { lang: 'en' }).lang);
+        this.i18n.setLanguage(persistence.load('settings_lang', 'en'));
+    }
+
+
+    initNewGame() {
+        console.log('Engine: Initializing New Game state...');
+        
+        // Add starting hero if not exists
+        const currentHeroes = this.heroService.list();
+        if (currentHeroes.length === 0) {
+            this.heroService.add({
+                name: "Arthur",
+                origin: "warrior",
+                level: 1
+            });
+        }
     }
 
     update() {
         const now = Date.now();
+        const activeExpedition = this.expeditionService.state.activeExpedition;
         
+        const heroesDto = this.heroService.list().map(hero => {
+            const dto = hero.toJSON();
+            const activityInfo = this.expeditionService.getHeroActivity(hero.id);
+            dto.activity = activityInfo.type;
+            if (activityInfo.type === 'expedition') {
+                dto.activityTargetId = activityInfo.expeditionId;
+            }
+            return dto;
+        });
+
         return {
             village: this.villageService.getState(),
-            inventory: this.inventoryService.getState(), // Assuming getState() exists
-            heroes: this.heroService.list(),
+            inventory: this.inventoryService.getState(),
+            heroes: heroesDto,
             expeditions: this.expeditionService.getExpeditions(),
-            activeExpedition: this.expeditionService.state.activeExpedition
+            activeExpedition: activeExpedition
         };
     }
 
@@ -68,9 +98,7 @@ export class GameEngine {
 
     setLanguage(lang) {
         if (this.i18n.setLanguage(lang)) {
-            const state = persistence.load('village_state', {});
-            state.lang = lang;
-            persistence.save('village_state', state);
+            persistence.save('settings_lang', lang);
             return true;
         }
         return false;
@@ -78,6 +106,30 @@ export class GameEngine {
 
     // --- Time & Construction ---
     nextDay() {
-        return this.villageService.nextDay();
+        const villageReport = this.villageService.nextDay();
+        const expeditionResult = this.expeditionService.processDay();
+        
+        const dailyReport = {
+            ...villageReport,
+            expedition: expeditionResult.success ? expeditionResult.data : null
+        };
+        
+        this.villageService.setDailyReport(dailyReport);
+        return dailyReport;
+    }
+
+    startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
+        return this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
+    }
+
+    // --- Explore Facade ---
+    assignExpedition(expeditionId, heroIds) {
+        return this.expeditionService.assignExpedition(expeditionId, heroIds);
+    }
+    unassignHero(heroId) {
+        return this.expeditionService.unassignHero(heroId);
+    }
+    retireExpedition() {
+        return this.expeditionService.retire();
     }
 }

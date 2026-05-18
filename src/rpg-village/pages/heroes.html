@@ -1,18 +1,132 @@
 <section id="heroes-view" class="domain-view">
     <div class="master-detail-layout">
-        <div class="master-pane">
-            <div class="section-header">
+        <!-- Master Pane -->
+        <aside class="master-pane card">
+            <div class="pane-header">
                 <h3 data-i18n="ui_your_heroes">Your Heroes</h3>
-                <button class="btn-secondary btn-sm" id="btn-recruit" data-i18n="ui_recruit">Recruit</button>
+                <button class="btn btn-sm btn-primary" data-i18n="ui_recruit">Recruit</button>
             </div>
-            <div id="heroes-list" class="entity-list">
-                <!-- Heroes list -->
+            <div id="heroes-list-container" class="list-container">
+                <!-- Hero cards injected here -->
             </div>
-        </div>
-        <div class="detail-pane">
-            <div id="hero-details" class="empty-detail" data-i18n="ui_select_hero">
-                Select a hero to view stats and equipment.
+        </aside>
+
+        <!-- Detail Pane -->
+        <main class="detail-pane card glass-pane">
+            <div id="hero-detail-content">
+                <div class="empty-detail">
+                    <p data-i18n="ui_select_hero">Select a hero to view stats and equipment.</p>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
+
+    <!-- Template for hero card -->
+    <template id="tpl-hero-card">
+        <div class="list-item hero-card" data-id="">
+            <div class="list-item-header">
+                <span class="list-item-title"></span>
+                <span class="list-item-level"></span>
+            </div>
+        </div>
+    </template>
 </section>
+
+<style>
+    .pane-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+    }
+    .pane-header h3 { margin-bottom: 0; }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .stat-row {
+        background: rgba(255,255,255,0.05);
+        padding: 10px 15px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .hero-level-text {
+        font-size: 0.8em;
+        color: var(--text-secondary);
+        font-weight: normal;
+    }
+    
+    .hero-info-section {
+        margin-top: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .hero-origin-desc {
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+        font-size: 0.95em;
+    }
+    
+    .hero-status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0,0,0,0.2);
+        padding: 10px;
+        border-radius: var(--radius-sm);
+    }
+    
+    .status-badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    .status-badge.idle { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+    .status-badge.busy { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+    
+    .hero-sections-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .hero-section h3 {
+        font-size: 1.1em;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 5px;
+    }
+    
+    .equip-slot, .skill-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px dashed rgba(255,255,255,0.05);
+    }
+    
+    .equip-slot:last-child, .skill-item:last-child {
+        border-bottom: none;
+    }
+    
+    .slot-name, .skill-name {
+        color: var(--text-secondary);
+        font-size: 0.9em;
+    }
+    
+    .slot-item, .skill-level {
+        font-weight: 500;
+        font-size: 0.9em;
+    }
+</style>

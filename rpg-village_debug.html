@@ -50,40 +50,187 @@
   }
 })();
 class UIController {
-  constructor() {
+  constructor(i18n2) {
+    this.i18n = i18n2;
     this.elements = {
+      mainContent: document.getElementById("main-content"),
+      loader: document.getElementById("main-loader"),
       goldCount: document.getElementById("gold-count"),
       villagerCount: document.getElementById("villager-count"),
-      btnStart: document.getElementById("btn-start"),
+      woodCount: document.getElementById("wood-count"),
       navItems: document.querySelectorAll(".nav-item")
     };
+    this.views = /* @__PURE__ */ new Map();
+    this.activeView = null;
+    this.activeDomain = null;
     this.setupEventListeners();
+    this.translateView(document.body);
+  }
+  /**
+   * Registers a view controller for a specific domain.
+   */
+  registerView(domain, viewController) {
+    viewController.ui = this;
+    this.views.set(domain, viewController);
   }
   setupEventListeners() {
     this.elements.navItems.forEach((item) => {
       item.addEventListener("click", () => {
-        this.setActiveNav(item);
+        const domain = item.getAttribute("data-view");
+        this.switchView(domain);
       });
     });
   }
-  setActiveNav(item) {
-    this.elements.navItems.forEach((i) => i.classList.remove("active"));
-    item.classList.add("active");
-    const view = item.getAttribute("data-view");
-    console.log(`Switching to view: ${view}`);
-  }
-  updateStats(state) {
-    if (this.elements.goldCount) {
-      this.elements.goldCount.textContent = Math.floor(state.gold);
+  /**
+   * Transitions to a new domain view.
+   */
+  async switchView(domain) {
+    if (this.activeDomain === domain) return;
+    console.log(`Switching to domain: ${domain}`);
+    this.elements.navItems.forEach((item) => {
+      if (item.getAttribute("data-view") === domain) {
+        item.classList.add("active");
+      } else {
+        item.classList.remove("active");
+      }
+    });
+    this.elements.loader.style.display = "flex";
+    try {
+      const template = document.getElementById(`tpl-${domain}`);
+      if (!template) throw new Error(`Template not found: tpl-${domain}`);
+      const content = template.content.cloneNode(true);
+      this.elements.mainContent.innerHTML = "";
+      this.elements.mainContent.appendChild(content);
+      this.translateView(this.elements.mainContent);
+      this.activeDomain = domain;
+      this.activeView = this.views.get(domain);
+      if (this.activeView) {
+        this.activeView.mount(this.elements.mainContent.querySelector(".domain-view"), this);
+      }
+    } catch (error) {
+      console.error(error);
+      this.elements.mainContent.innerHTML = `<div class="error-state">Error loading view: ${domain}</div>`;
+    } finally {
+      setTimeout(() => {
+        this.elements.loader.style.display = "none";
+      }, 50);
     }
-    if (this.elements.villagerCount) {
-      this.elements.villagerCount.textContent = state.villagers;
+  }
+  /**
+   * Scans a container for elements with data-i18n and translates them.
+   */
+  translateView(container) {
+    if (!this.i18n) return;
+    const elements = container.querySelectorAll("[data-i18n]");
+    elements.forEach((el) => this.translateElement(el));
+  }
+  /**
+   * Translates a single element based on its data-i18n attribute.
+   */
+  translateElement(element) {
+    const key = element.getAttribute("data-i18n");
+    if (key) {
+      element.textContent = this.t(key);
     }
   }
+  /**
+   * Helper to get translated string.
+   */
+  t(key) {
+    return this.i18n ? this.i18n.t(key) : key;
+  }
+  /**
+   * Changes the current language and re-translates the entire UI.
+   */
+  setLanguage(lang) {
+    if (this.i18n.setLanguage(lang)) {
+      this.translateView(document.body);
+      return true;
+    }
+    return false;
+  }
+  /**
+   * Updates the global shell stats and the active view.
+   */
+  update(state) {
+    var _a, _b;
+    if (state.village) {
+      if (this.elements.goldCount) this.elements.goldCount.textContent = Math.floor(state.village.gold || 0);
+      if (this.elements.villagerCount) {
+        this.elements.villagerCount.textContent = ((_a = state.village.population) == null ? void 0 : _a.total) || 0;
+      }
+      if (this.elements.woodCount && state.inventory) {
+        this.elements.woodCount.textContent = ((_b = state.inventory.materials) == null ? void 0 : _b.material_wood) || 0;
+      }
+    }
+    if (this.activeView) {
+      this.activeView.update(state);
+    }
+  }
+  // Compatibility method for current main.js
   onInitialize(callback) {
-    if (this.elements.btnStart) {
-      this.elements.btnStart.addEventListener("click", callback);
-    }
+    this.initCallback = callback;
+  }
+  /**
+   * Displays the introductory narrative modal.
+   */
+  showIntroDialog() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+            <div class="intro-modal">
+                <h2 data-i18n="intro_title">${this.t("intro_title")}</h2>
+                <p data-i18n="intro_lore">${this.t("intro_lore")}</p>
+                <button class="btn btn-primary btn-lg" id="btn-start-journey">
+                    <span data-i18n="intro_btn">${this.t("intro_btn")}</span>
+                </button>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const btn = overlay.querySelector("#btn-start-journey");
+    btn.addEventListener("click", () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.5s ease";
+      setTimeout(() => {
+        overlay.remove();
+      }, 500);
+    });
+  }
+  /**
+   * Displays a generic confirmation dialog.
+   */
+  showConfirmDialog({ title, message, onConfirm }) {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+            <div class="modal-body">
+                <div class="modal-header">
+                    <h3 data-i18n="${title}">${this.t(title)}</h3>
+                </div>
+                <div class="modal-text">
+                    <p data-i18n="${message}">${this.t(message)}</p>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="modal-btn-cancel">
+                        <span data-i18n="ui_btn_cancel">${this.t("ui_btn_cancel")}</span>
+                    </button>
+                    <button class="btn btn-danger" id="modal-btn-confirm">
+                        <span data-i18n="ui_btn_confirm">${this.t("ui_btn_confirm")}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.3s ease";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    overlay.querySelector("#modal-btn-cancel").addEventListener("click", close);
+    overlay.querySelector("#modal-btn-confirm").addEventListener("click", () => {
+      close();
+      if (onConfirm) onConfirm();
+    });
   }
 }
 class Result {
@@ -580,11 +727,14 @@ class Hero {
     this.hp = Math.min(this.hp, this.maxHp);
     this.mp = Math.min(this.mp, this.maxMp);
   }
+  getExpToNextLevel() {
+    return this.level * 20;
+  }
   addExperience(amount) {
     this.exp += amount;
     let levelsGained = 0;
     while (true) {
-      const nextLevelExp = this.level * 20;
+      const nextLevelExp = this.getExpToNextLevel();
       if (this.exp >= nextLevelExp) {
         this.exp -= nextLevelExp;
         this.levelUp();
@@ -643,6 +793,7 @@ class Hero {
       origin: this.origin,
       level: this.level,
       exp: this.exp,
+      expToNextLevel: this.getExpToNextLevel(),
       statPoints: this.statPoints,
       skillPoints: this.skillPoints,
       baseMaxHp: this.baseMaxHp,
@@ -651,6 +802,8 @@ class Hero {
       baseSpeed: this.baseSpeed,
       baseDefense: this.baseDefense,
       baseMagicPower: this.baseMagicPower,
+      maxHp: this.maxHp,
+      maxMp: this.maxMp,
       hp: this.hp,
       mp: this.mp,
       status: this.status,
@@ -680,7 +833,9 @@ class Persistence {
   }
   load(key, defaultValue = null) {
     try {
-      const serialized = localStorage.getItem(this._key(key));
+      const fullKey = this._key(key);
+      const serialized = localStorage.getItem(fullKey);
+      console.log(`Persistence: Loading ${fullKey}`, serialized ? "FOUND" : "NOT FOUND");
       if (serialized === null) return defaultValue;
       return JSON.parse(serialized);
     } catch (e) {
@@ -692,8 +847,10 @@ class Persistence {
     localStorage.removeItem(this._key(key));
   }
   clear() {
+    console.warn(`Persistence: CLEARING ALL DATA with prefix ${this.prefix}`);
     Object.keys(localStorage).forEach((key) => {
       if (key.startsWith(this.prefix)) {
+        console.log(`Persistence: Removing ${key}`);
         localStorage.removeItem(key);
       }
     });
@@ -1254,36 +1411,106 @@ class InventoryService {
   }
   _load() {
     const defaultData = {
+      materials: {
+        material_wood: 20,
+        material_stone: 10
+      },
+      food: {
+        food_raw_grain: 30
+      },
       consumables: {},
       equipment: []
     };
     const loaded = persistence.load(this.STORAGE_KEY, defaultData);
+    if (loaded.consumables && Object.keys(loaded.consumables).length > 0) {
+      for (const id in loaded.consumables) {
+        if (id.startsWith("material_")) {
+          loaded.materials[id] = (loaded.materials[id] || 0) + loaded.consumables[id];
+          delete loaded.consumables[id];
+        } else if (id.startsWith("food_")) {
+          loaded.food[id] = (loaded.food[id] || 0) + loaded.consumables[id];
+          delete loaded.consumables[id];
+        }
+      }
+    }
     loaded.equipment = (loaded.equipment || []).map((e) => new Equipment(e));
     return loaded;
   }
   save() {
     const toSave = {
+      materials: this.data.materials,
+      food: this.data.food,
       consumables: this.data.consumables,
       equipment: this.data.equipment.map((e) => e.toJSON())
     };
     persistence.save(this.STORAGE_KEY, toSave);
   }
-  // --- Consumables ---
-  getConsumableCount(id) {
+  getState() {
+    return {
+      ...this.data,
+      totalUsed: this.getTotalStorageUsed()
+    };
+  }
+  /**
+   * Calculates the total storage used by all stackable items and equipment.
+   */
+  getTotalStorageUsed() {
+    const matTotal = Object.values(this.data.materials).reduce((a, b) => a + b, 0);
+    const foodTotal = Object.values(this.data.food).reduce((a, b) => a + b, 0);
+    const consumableTotal = Object.values(this.data.consumables).reduce((a, b) => a + b, 0);
+    const equipmentTotal = this.data.equipment.length;
+    return matTotal + foodTotal + consumableTotal + equipmentTotal;
+  }
+  // --- Stackable Items (Materials, Food, Consumables) ---
+  getItemCount(id) {
+    if (id.startsWith("material_")) return this.data.materials[id] || 0;
+    if (id.startsWith("food_")) return this.data.food[id] || 0;
     return this.data.consumables[id] || 0;
   }
-  addConsumable(id, count = 1) {
-    this.data.consumables[id] = (this.data.consumables[id] || 0) + count;
-    this.save();
-    return Result.ok(this.data.consumables[id]);
-  }
-  useConsumable(id) {
-    if (this.data.consumables[id] > 0) {
-      this.data.consumables[id]--;
-      this.save();
-      return Result.ok(this.data.consumables[id]);
+  /**
+   * Adds an item to the inventory, respecting the maxStorage limit.
+   */
+  addItem(id, count = 1, maxStorage = Infinity) {
+    const currentUsed = this.getTotalStorageUsed();
+    if (currentUsed + count > maxStorage) {
+      const allowed = Math.max(0, maxStorage - currentUsed);
+      if (allowed <= 0) return Result.fail("error_storage_full");
+      count = Math.min(count, allowed);
     }
-    return Result.fail("error_not_enough_consumables");
+    if (id.startsWith("material_")) {
+      this.data.materials[id] = (this.data.materials[id] || 0) + count;
+    } else if (id.startsWith("food_")) {
+      this.data.food[id] = (this.data.food[id] || 0) + count;
+    } else {
+      this.data.consumables[id] = (this.data.consumables[id] || 0) + count;
+    }
+    this.save();
+    return Result.ok(this.getItemCount(id));
+  }
+  useItem(id, count = 1) {
+    const current = this.getItemCount(id);
+    if (current >= count) {
+      if (id.startsWith("material_")) {
+        this.data.materials[id] -= count;
+      } else if (id.startsWith("food_")) {
+        this.data.food[id] -= count;
+      } else {
+        this.data.consumables[id] -= count;
+      }
+      this.save();
+      return Result.ok(this.getItemCount(id));
+    }
+    return Result.fail("error_not_enough_items");
+  }
+  // Compatibility aliases for older code
+  getConsumableCount(id) {
+    return this.getItemCount(id);
+  }
+  addConsumable(id, count = 1) {
+    return this.addItem(id, count);
+  }
+  useConsumable(id, count = 1) {
+    return this.useItem(id, count);
   }
   // --- Equipment ---
   listEquipment() {
@@ -1292,7 +1519,10 @@ class InventoryService {
   getEquipment(id) {
     return this.data.equipment.find((e) => e.id === id) || null;
   }
-  addEquipment(item) {
+  addEquipment(item, maxStorage = Infinity) {
+    if (this.getTotalStorageUsed() + 1 > maxStorage) {
+      return Result.fail("error_storage_full");
+    }
     const instance = item instanceof Equipment ? item : new Equipment(item);
     this.data.equipment.push(instance);
     this.save();
@@ -1308,20 +1538,496 @@ class InventoryService {
     return Result.fail("error_item_not_found");
   }
 }
+class VillageService {
+  constructor(inventoryService) {
+    this.inventoryService = inventoryService;
+    this.STORAGE_KEY = "village_state";
+    this.state = this._load();
+  }
+  _load() {
+    const defaultState = {
+      gold: 100,
+      population: {
+        total: 2,
+        // 2 Builders
+        assigned: 0
+      },
+      infrastructure: {
+        housing: 1,
+        farm: 0,
+        // No farm initially
+        warehouse: 1,
+        blacksmith: 0,
+        training_grounds: 0,
+        explorer_guild: 0
+      },
+      constructionQueue: [],
+      day: 1,
+      lastUpdate: Date.now()
+    };
+    const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+    if (typeof loaded.population === "number") {
+      loaded.population = {
+        total: loaded.population,
+        assigned: 0
+      };
+    }
+    if (loaded.population && loaded.population.max !== void 0) {
+      delete loaded.population.max;
+    }
+    return loaded;
+  }
+  save() {
+    persistence.save(this.STORAGE_KEY, this.state);
+  }
+  getState() {
+    return {
+      ...this.state,
+      population: {
+        ...this.state.population,
+        max: this.getMaxPopulation()
+      },
+      maxStorage: this.getMaxStorage()
+    };
+  }
+  // --- Building Effects ---
+  getMaxPopulation() {
+    const level = this.state.infrastructure.housing || 0;
+    if (level === 0) return 0;
+    if (level === 1) return 10;
+    if (level === 2) return 20;
+    return 20 + (level - 2) * 10;
+  }
+  getMaxStorage() {
+    const level = this.state.infrastructure.warehouse || 0;
+    if (level === 0) return 100;
+    if (level === 1) return 200;
+    if (level === 2) return 500;
+    return 500 + (level - 2) * 500;
+  }
+  // --- Time & Growth ---
+  nextDay() {
+    const report = {
+      day: this.state.day,
+      consumed: 0,
+      completed: [],
+      growth: 0,
+      starvation: false
+    };
+    const totalPop = this.state.population.total;
+    const foodConsumed = totalPop;
+    const useResult = this.inventoryService.useConsumable("food_raw_grain", foodConsumed);
+    report.consumed = foodConsumed;
+    if (!useResult.success) {
+      report.starvation = true;
+    }
+    const completed = [];
+    this.state.constructionQueue.forEach((project) => {
+      project.daysRemaining--;
+      if (project.daysRemaining <= 0) {
+        this.state.infrastructure[project.buildingId] = project.targetLevel;
+        completed.push(project.buildingId);
+        this.state.population.assigned--;
+      }
+    });
+    this.state.constructionQueue = this.state.constructionQueue.filter((p) => p.daysRemaining > 0);
+    report.completed = completed;
+    const maxPop = this.getMaxPopulation();
+    if (!report.starvation && this.state.population.total < maxPop) {
+      if (Math.random() < 0.2) {
+        this.state.population.total++;
+        report.growth = 1;
+      }
+    }
+    this.state.day++;
+    this.state.lastUpdate = Date.now();
+    this.save();
+    report.day = this.state.day;
+    return report;
+  }
+  setDailyReport(report) {
+    this.state.lastDailyReport = report;
+    this.save();
+  }
+  // --- Construction ---
+  startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
+    if (this.state.constructionQueue.some((p) => p.buildingId === buildingId)) {
+      return Result.fail("error_already_in_queue");
+    }
+    if (this.state.gold < costGold) return Result.fail("error_not_enough_gold");
+    if (this.state.population.total - this.state.population.assigned <= 0) {
+      return Result.fail("error_no_available_labor");
+    }
+    for (const [matId, amount] of Object.entries(costMaterials)) {
+      if (this.inventoryService.getConsumableCount(matId) < amount) {
+        return Result.fail("error_not_enough_materials");
+      }
+    }
+    this.state.gold -= costGold;
+    for (const [matId, amount] of Object.entries(costMaterials)) {
+      this.inventoryService.useConsumable(matId, amount);
+    }
+    this.state.population.assigned++;
+    this.state.constructionQueue.push({
+      buildingId,
+      targetLevel,
+      daysRemaining: duration,
+      assignedVillagerId: null
+      // Future: link to specific villager
+    });
+    this.save();
+    return Result.ok();
+  }
+  /**
+   * Helper to add items to inventory respecting village storage limits.
+   */
+  addItemToInventory(id, count = 1) {
+    return this.inventoryService.addItem(id, count, this.getMaxStorage());
+  }
+  addGold(amount) {
+    this.state.gold += amount;
+    this.save();
+  }
+  addVillagers(amount) {
+    this.state.population.total += amount;
+    this.save();
+  }
+}
+class Enemy {
+  constructor(data) {
+    this.id = data.id || crypto.randomUUID();
+    this.name = data.name;
+    this.type = data.type || "slime";
+    this.level = data.level || 1;
+    this.maxHp = data.maxHp || 10;
+    this.hp = data.hp ?? this.maxHp;
+    this.maxMp = data.maxMp || 5;
+    this.mp = data.mp ?? this.maxMp;
+    this.strength = data.strength || 1;
+    this.speed = data.speed || 1;
+    this.defense = data.defense || 1;
+    this.magicPower = data.magicPower || 1;
+    this.element = data.element || "neutral";
+    this.skills = data.skills || { basic_attack: 0 };
+    this.isBoss = data.isBoss || false;
+    this.statusEffects = [];
+  }
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      type: this.type,
+      level: this.level,
+      maxHp: this.maxHp,
+      hp: this.hp,
+      maxMp: this.maxMp,
+      mp: this.mp,
+      strength: this.strength,
+      speed: this.speed,
+      defense: this.defense,
+      magicPower: this.magicPower,
+      element: this.element,
+      skills: this.skills,
+      isBoss: this.isBoss
+    };
+  }
+}
+class ExpeditionService {
+  constructor(battleService, heroService, villageService, inventoryService) {
+    this.battleService = battleService;
+    this.heroService = heroService;
+    this.villageService = villageService;
+    this.inventoryService = inventoryService;
+    this.STORAGE_KEY = "expedition_state";
+    this.state = this._load();
+  }
+  _load() {
+    const defaultState = {
+      completedIds: [],
+      activeExpedition: null,
+      regions: {
+        reg_greenfields: {
+          clears: 0,
+          unlocked: true,
+          availableNodes: [
+            {
+              id: "exp_tutorial_cave",
+              name: "Tutorial Cave",
+              regionId: "reg_greenfields",
+              isStory: true,
+              reward: { gold: 100, items: { material_wood: 20, material_stone: 10 } },
+              stages: [
+                { type: "battle", enemies: ["slime_green", "slime_green"] },
+                { type: "battle", enemies: ["slime_fire"], isBoss: true }
+              ]
+            }
+          ]
+        }
+      }
+    };
+    return persistence.load(this.STORAGE_KEY, defaultState);
+  }
+  save() {
+    persistence.save(this.STORAGE_KEY, this.state);
+  }
+  /**
+   * Returns the list of all expeditions across all unlocked regions.
+   */
+  getExpeditions() {
+    const all = [];
+    for (const [regionId, regionState] of Object.entries(this.state.regions)) {
+      if (regionState.unlocked) {
+        regionState.availableNodes.forEach((node) => {
+          all.push({ ...node, status: "available" });
+        });
+      }
+    }
+    return all;
+  }
+  /**
+   * Get Region definition data
+   */
+  _getRegionData(regionId) {
+    const REGIONS = {
+      reg_greenfields: { name: "Greenfields", branching: "low", minStages: 1, maxStages: 2, enemies: ["slime_green", "wild_boar"] },
+      reg_tiny_cave: { name: "Tiny Cave", branching: "medium", minStages: 2, maxStages: 2, enemies: ["bat_small", "spider_minor"] },
+      reg_calmed_beach: { name: "Calmed Beach", branching: "low", minStages: 3, maxStages: 3, enemies: ["crab_shell", "water_spirit_minor"] }
+    };
+    return REGIONS[regionId] || REGIONS["reg_greenfields"];
+  }
+  _generateNextNodes(regionId) {
+    const region = this.state.regions[regionId];
+    if (!region) return;
+    if (regionId === "reg_greenfields" && region.clears === 5 && !this.state.completedIds.includes("exp_rescue_mission")) {
+      region.availableNodes.push({
+        id: "exp_rescue_mission",
+        name: "The Captured Guard",
+        regionId: "reg_greenfields",
+        isStory: true,
+        reward: { gold: 300, special: { type: "hero", value: "Sir Valen" } },
+        stages: [
+          { type: "battle", enemies: ["goblin_scout", "goblin_scout"] },
+          { type: "battle", enemies: ["goblin_grunt", "goblin_grunt", "goblin_grunt"] },
+          { type: "battle", enemies: ["goblin_grunt", "goblin_grunt", "goblin_brute"], isBoss: true }
+        ]
+      });
+    }
+    const rData = this._getRegionData(regionId);
+    let branchCount = 1;
+    if (rData.branching === "medium" && Math.random() < 0.3) branchCount = 2;
+    if (rData.branching === "high") branchCount = Math.random() < 0.5 ? 2 : Math.random() < 0.1 ? 3 : 1;
+    for (let i = 0; i < branchCount; i++) {
+      region.availableNodes.push(this._createProceduralNode(regionId, rData, region.clears));
+    }
+  }
+  _createProceduralNode(regionId, rData, clears) {
+    const id = "proc_" + crypto.randomUUID().split("-")[0];
+    const stagesCount = Math.max(rData.minStages, Math.min(rData.maxStages, rData.minStages + Math.floor(clears / 5)));
+    const stages = [];
+    for (let i = 0; i < stagesCount; i++) {
+      const isBoss = i === stagesCount - 1;
+      const enemyCount = isBoss ? 1 : Math.floor(Math.random() * 3) + 1;
+      const encounter = [];
+      for (let e = 0; e < enemyCount; e++) {
+        encounter.push(rData.enemies[Math.floor(Math.random() * rData.enemies.length)]);
+      }
+      stages.push({ type: "battle", enemies: encounter, isBoss });
+    }
+    return {
+      id,
+      name: `${rData.name} Path`,
+      regionId,
+      isStory: false,
+      reward: { gold: 50 + clears * 10 },
+      stages
+    };
+  }
+  /**
+   * Determines if a hero is currently on an expedition.
+   * Future-proofed for when multiple expeditions run concurrently.
+   */
+  getHeroActivity(heroId) {
+    if (this.state.activeExpedition && this.state.activeExpedition.heroIds.includes(heroId)) {
+      return {
+        type: "expedition",
+        expeditionId: this.state.activeExpedition.id
+      };
+    }
+    return { type: "idle" };
+  }
+  /**
+   * Assigns heroes to an expedition.
+   * Can only add/modify if currentStage === 0.
+   */
+  assignExpedition(expId, heroIds) {
+    if (this.state.activeExpedition) {
+      if (this.state.activeExpedition.id !== expId) {
+        return Result.fail("error_other_expedition_active");
+      }
+      if (this.state.activeExpedition.currentStage > 0) {
+        return Result.fail("error_expedition_locked");
+      }
+    }
+    const exp = this.getExpeditions().find((e) => e.id === expId);
+    if (!exp || exp.status !== "available") return Result.fail("error_expedition_unavailable");
+    const heroes = heroIds.map((id) => this.heroService.get(id)).filter((h) => h);
+    if (heroes.length === 0) {
+      this.state.activeExpedition = null;
+      this.save();
+      return Result.ok();
+    }
+    this.state.activeExpedition = {
+      id: expId,
+      currentStage: 0,
+      heroIds: heroes.map((h) => h.id),
+      status: "assigned"
+    };
+    this.save();
+    return Result.ok(this.state.activeExpedition);
+  }
+  /**
+   * Unassigns a single hero. If the expedition becomes empty, it resets.
+   */
+  unassignHero(heroId) {
+    if (!this.state.activeExpedition) return Result.fail("error_no_active_expedition");
+    this.state.activeExpedition.heroIds = this.state.activeExpedition.heroIds.filter((id) => id !== heroId);
+    if (this.state.activeExpedition.heroIds.length === 0) {
+      this.state.activeExpedition = null;
+    }
+    this.save();
+    return Result.ok();
+  }
+  /**
+   * Retires the entire expedition, resetting it to stage 0.
+   */
+  retire() {
+    this.state.activeExpedition = null;
+    this.save();
+    return Result.ok();
+  }
+  /**
+   * Processes one stage of the active expedition during the day advance.
+   */
+  processDay() {
+    if (!this.state.activeExpedition || this.state.activeExpedition.heroIds.length === 0) {
+      return Result.ok();
+    }
+    const exp = this.getExpeditions().find((e) => e.id === this.state.activeExpedition.id);
+    if (!exp) return Result.fail("error_expedition_not_found");
+    const stage = exp.stages[this.state.activeExpedition.currentStage];
+    if (stage.type === "battle") {
+      const success = Math.random() < 0.9;
+      if (success) {
+        this.state.activeExpedition.currentStage++;
+        if (this.state.activeExpedition.currentStage >= exp.stages.length) {
+          return this._finishExpedition(exp);
+        } else {
+          this.save();
+          return Result.ok({ status: "progress", expId: exp.id, expName: exp.name });
+        }
+      } else {
+        this.state.activeExpedition = null;
+        this.save();
+        return Result.ok({ status: "failed", expId: exp.id, expName: exp.name });
+      }
+    }
+    return Result.fail("error_unknown_stage_type");
+  }
+  _finishExpedition(exp) {
+    this.state.completedIds.push(exp.id);
+    this.state.activeExpedition = null;
+    const region = this.state.regions[exp.regionId];
+    if (region) {
+      region.clears++;
+      region.availableNodes = region.availableNodes.filter((n) => n.id !== exp.id);
+      this._generateNextNodes(exp.regionId);
+    }
+    if (exp.reward.gold) this.villageService.addGold(exp.reward.gold);
+    if (exp.reward.items) {
+      Object.entries(exp.reward.items).forEach(([id, qty]) => {
+        this.villageService.addItemToInventory(id, qty);
+      });
+    }
+    if (exp.reward.special) {
+      const s = exp.reward.special;
+      if (s.type === "hero") {
+        this.heroService.add({ name: s.value, origin: "origin_guard" });
+      } else if (s.type === "villagers") {
+        this.villageService.addVillagers(s.value);
+      }
+    }
+    this.save();
+    return Result.ok({ status: "completed", expId: exp.id, expName: exp.name, reward: exp.reward });
+  }
+  _createEnemy(templateId, isBoss) {
+    const templates = {
+      slime_green: { name: "Green Slime", type: "beast", maxHp: 15, strength: 2, speed: 1 },
+      slime_fire: { name: "Fire Slime", type: "beast", maxHp: 20, strength: 3, speed: 2, element: "fire" },
+      wild_boar: { name: "Wild Boar", type: "beast", maxHp: 25, strength: 4, speed: 3 },
+      goblin_scout: { name: "Goblin Scout", type: "humanoid", maxHp: 22, strength: 4, speed: 5 },
+      goblin_grunt: { name: "Goblin Grunt", type: "humanoid", maxHp: 30, strength: 5, speed: 2 },
+      goblin_brute: { name: "Goblin Brute", type: "humanoid", maxHp: 50, strength: 6, speed: 1 },
+      goblin_king: { name: "Goblin King", type: "humanoid", maxHp: 120, strength: 10, speed: 4, isBoss: true }
+    };
+    const t = templates[templateId] || templates["slime_green"];
+    return new Enemy({ ...t, id: crypto.randomUUID(), isBoss });
+  }
+}
 const en = {
   // UI General
   btn_back: "BACK",
   btn_confirm: "CONFIRM",
   btn_cancel: "CANCEL",
+  btn_next_day: "NEXT DAY",
+  // Village
+  village_gold: "Gold",
+  village_population: "Population",
+  village_day: "Day",
+  village_housing: "Housing",
+  village_warehouse: "Warehouse",
+  village_farm: "Farm",
+  village_blacksmith: "Blacksmith",
+  village_training_grounds: "Training Grounds",
+  village_explorer_guild: "Explorer Guild",
+  // Resources & Inventory
+  material_wood: "Wood",
+  material_stone: "Stone",
+  material_iron_ore: "Iron Ore",
+  material_steel_ingot: "Steel Ingot",
+  material_mythril: "Mythril",
+  food_raw_grain: "Grain",
+  food_meat: "Meat",
+  food_bread: "Bread",
+  food_stew: "Hearty Stew",
+  inv_storage: "Storage",
+  inv_full: "Storage Full!",
   // Origins
   origin_warrior: "Warrior",
+  origin_warrior_desc: "+10% Defense, +5% Max HP",
   origin_thief: "Thief",
+  origin_thief_desc: "+10% Speed | Party: +10% Gold Gain",
   origin_clown: "Clown",
+  origin_clown_desc: "+15% Crit Chance, -5% Accuracy",
   origin_farmer: "Farmer",
+  origin_farmer_desc: "+15% Max HP",
   origin_monk: "Monk",
+  origin_monk_desc: "+15% Max MP, +20% MP Recovery",
   origin_cook: "Cook",
+  origin_cook_desc: "+5% Max HP | Party: +5% HP Regen per turn",
   origin_guard: "Guard",
+  origin_guard_desc: "+15% Defense | Party: +10% Phys. DR",
   origin_poet: "Poet",
+  origin_poet_desc: "+10% Max MP, +10% MagicPower | Party: +10% Magic Power Boost",
+  // Hero Status & Slots
+  status_active: "Active",
+  status_resting: "Resting",
+  status_training: "Training",
+  slot_head: "Head",
+  slot_body: "Body",
+  slot_legs: "Legs",
+  slot_leftHand: "Left Hand",
+  slot_rightHand: "Right Hand",
+  slot_accessory: "Accessory",
   // Skills
   basic_attack: "Attack",
   double_attack: "Double Attack",
@@ -1330,18 +2036,171 @@ const en = {
   small_fire_ball: "Fire Ball",
   small_heal: "Heal",
   haste: "Haste",
+  // Enemies
+  slime_green: "Green Slime",
+  slime_fire: "Fire Slime",
+  wild_boar: "Wild Boar",
+  goblin_scout: "Goblin Scout",
+  goblin_grunt: "Goblin Grunt",
+  giant_spider: "Giant Spider",
+  skeleton_warrior: "Skeleton Warrior",
+  skeleton_archer: "Skeleton Archer",
+  wraith_minor: "Minor Wraith",
+  zombie_shambler: "Zombie Shambler",
+  orc_grunt: "Orc Grunt",
+  orc_shaman: "Orc Shaman",
+  rock_golem: "Rock Golem",
+  harpy_scout: "Harpy Scout",
+  goblin_king: "Goblin King",
+  lich_apprentice: "Lich Apprentice",
+  mountain_troll: "Mountain Troll",
+  // Regions
+  reg_greenfields: "Greenfields",
+  reg_tiny_cave: "Tiny Cave",
+  reg_calmed_beach: "Calmed Beach",
+  reg_whispering_forest: "Whispering Forest",
+  reg_stony_foothills: "Stony Foothills",
+  reg_murky_swamp: "Murky Swamp",
+  reg_forgotten_ruins: "Forgotten Ruins",
+  reg_iron_peaks: "Iron Peaks",
+  reg_crystal_hollow: "Crystal Hollow",
+  reg_great_desert: "Great Desert",
+  reg_obsidian_crater: "Obsidian Crater",
+  reg_ancient_library: "Ancient Library",
+  reg_frostbite_tundra: "Frostbite Tundra",
+  reg_sky_fortress: "Sky Fortress",
+  reg_dragon_maw: "The Dragon's Maw",
+  // Expeditions
+  exp_stage: "Stage",
+  exp_intermission: "Intermission",
+  exp_retire: "Retire",
+  exp_continue: "Continue",
+  exp_completed: "Completed",
+  exp_available: "Available",
+  exp_locked: "Locked",
+  exp_tutorial_cave: "Tutorial Cave",
+  exp_wild_orchard: "The Wild Orchard",
+  exp_rescue_mission: "The Captured Guard",
+  exp_forgotten_tomb: "The Forgotten Tomb",
+  exp_orc_stronghold: "Orc Stronghold",
+  exp_ancient_archives: "The Golem Chambers",
   // Battle
   victory: "VICTORY!",
   defeat: "DEFEAT",
   damage: "Damage",
   miss: "Miss!",
-  crit: "CRITICAL!"
+  crit: "CRITICAL!",
+  // UI Skeleton & Navigation
+  nav_village: "Village",
+  nav_buildings: "Buildings",
+  nav_heroes: "Heroes",
+  nav_inventory: "Inventory",
+  nav_explore: "Explore",
+  nav_settings: "Settings",
+  // Domain: Village
+  ui_village_status: "Village Status",
+  ui_construction: "Construction",
+  ui_no_projects: "No active projects.",
+  ui_visual_rep: "[Village Visual Representation]",
+  ui_available: "Available",
+  // Domain: Buildings
+  ui_available_buildings: "Available Buildings",
+  ui_select_building: "Select a building to see details.",
+  ui_loading: "Loading...",
+  // Domain: Heroes
+  ui_your_heroes: "Your Heroes",
+  ui_recruit: "Recruit",
+  ui_select_hero: "Select a hero to view stats and equipment.",
+  ui_experience: "Experience",
+  ui_skills: "Skills",
+  ui_equipment: "Equipment",
+  ui_activity: "Activity",
+  ui_activity_idle: "Idle",
+  ui_activity_expedition: "On Expedition",
+  ui_level: "Level",
+  ui_empty_slot: "Empty",
+  // Domain: Inventory
+  ui_all: "All",
+  ui_materials: "Materials",
+  ui_consumables: "Consumables",
+  ui_equipment: "Equipment",
+  ui_no_items: "No items found.",
+  // Domain: Explore
+  ui_world_map: "World Map",
+  ui_active_expeditions: "Active Expeditions",
+  ui_start_expedition: "Start Expedition",
+  ui_no_active_expeditions: "No active expeditions.",
+  // Domain: Settings
+  ui_settings_title: "Game Settings",
+  ui_settings_language: "Interface Language",
+  settings_language_label: "Choose your language:",
+  ui_settings_danger_zone: "Danger Zone",
+  ui_settings_wipe_description: "Permanently delete all your progress and start over.",
+  ui_settings_wipe_data: "Wipe All Data",
+  ui_settings_wipe_confirm: "Are you absolutely sure? This will delete all your progress permanently.",
+  ui_settings_wipe_success: "All data has been cleared. The game will now reload.",
+  // Intro Narrative
+  intro_title: "A New Beginning",
+  intro_lore: "In a world consumed by the flames of eternal war, a small group of survivors has fled the chaos. Led by a brave hero, they seek a remote valley to build a sanctuary of peace. The journey has been long, and resources are scarce, but hope remains.",
+  intro_btn: "Start Journey",
+  ui_btn_cancel: "Cancel",
+  ui_btn_confirm: "Confirm Wipe",
+  // Daily Report
+  ui_daily_report_title: "Daily Report - Day {day}",
+  ui_report_food: "{amount} Food Consumed",
+  ui_report_starvation: "WARNING: Village is starving!",
+  ui_report_growth: "{amount} Villager joined the village!",
+  ui_report_built: "Completed:",
+  ui_report_exp_progress: "Expedition {name} advanced a stage.",
+  ui_report_exp_completed: "Expedition {name} completed! Found: {rewards}",
+  ui_report_exp_failed: "Expedition {name} retreated.",
+  // Explore View fixes
+  ui_assigned_expedition: "Assigned Expedition",
+  ui_waiting_combat: "Waiting for the next day to begin combat.",
+  ui_progress_combat: "Expedition is currently underway. Progress occurs when advancing the day.",
+  ui_unassign_retire: "Unassign All / Retire",
+  ui_another_active: "Another expedition is currently active. You cannot assign heroes here.",
+  ui_roster_locked: "Expedition is locked. Currently assigned:",
+  ui_no_idle_heroes: "No idle heroes available.",
+  ui_assign_heroes: "Assign Heroes",
+  ui_update_assignment: "Update Assignment",
+  ui_select_one_hero: "Please select at least one hero.",
+  ui_exp_story: "Story",
+  ui_exp_exploration: "Exploration",
+  ui_exp_stages: "Stages",
+  ui_exp_base_reward: "Base Reward",
+  ui_select_heroes: "Select Heroes",
+  ui_under_construction: "Under Construction",
+  error_already_in_queue: "Building is already under construction."
 };
 const es = {
   // UI General
   btn_back: "VOLVER",
   btn_confirm: "CONFIRMAR",
   btn_cancel: "CANCELAR",
+  btn_next_day: "SIGUIENTE DÍA",
+  // Village
+  village_gold: "Oro",
+  village_population: "Población",
+  village_day: "Día",
+  village_housing: "Viviendas",
+  village_warehouse: "Almacén",
+  village_farm: "Granja",
+  village_blacksmith: "Herrería",
+  village_training_grounds: "Campo de Entrenamiento",
+  village_explorer_guild: "Gremio de Exploradores",
+  // Resources & Inventory
+  material_wood: "Madera",
+  material_stone: "Piedra",
+  material_iron_ore: "Mineral de Hierro",
+  material_steel_ingot: "Lingote de Acero",
+  material_mythril: "Mithril",
+  food_raw_grain: "Grano",
+  food_meat: "Carne",
+  food_bread: "Pan",
+  food_stew: "Estofado Nutritivo",
+  inv_storage: "Almacenamiento",
+  inv_full: "¡Almacén Lleno!",
   // Origins
   origin_warrior: "Guerrero",
   origin_thief: "Ladrón",
@@ -1351,26 +2210,178 @@ const es = {
   origin_cook: "Cocinero",
   origin_guard: "Guardia",
   origin_poet: "Poeta",
+  // Hero Status & Slots
+  status_active: "Activo",
+  status_resting: "Descansando",
+  status_training: "Entrenando",
+  slot_head: "Cabeza",
+  slot_body: "Cuerpo",
+  slot_legs: "Piernas",
+  slot_leftHand: "Mano Izquierda",
+  slot_rightHand: "Mano Derecha",
+  slot_accessory: "Accesorio",
   // Skills
   basic_attack: "Atacar",
-  double_attack: "Doble Ataque",
-  triple_attack: "Triple Ataque",
+  double_attack: "Ataque Doble",
+  triple_attack: "Ataque Triple",
   whirlwind: "Torbellino",
   small_fire_ball: "Bola de Fuego",
   small_heal: "Curar",
   haste: "Prisa",
+  // Enemies
+  slime_green: "Limo Verde",
+  slime_fire: "Limo de Fuego",
+  wild_boar: "Jabalí",
+  goblin_scout: "Explorador Goblin",
+  goblin_grunt: "Soldado Goblin",
+  giant_spider: "Araña Gigante",
+  skeleton_warrior: "Esqueleto Guerrero",
+  skeleton_archer: "Esqueleto Arquero",
+  wraith_minor: "Espectro Menor",
+  zombie_shambler: "Zombie Errante",
+  orc_grunt: "Soldado Orco",
+  orc_shaman: "Chamán Orco",
+  rock_golem: "Gólem de Piedra",
+  harpy_scout: "Exploradora Harpía",
+  goblin_king: "Rey Goblin",
+  lich_apprentice: "Aprendiz de Lich",
+  mountain_troll: "Troll de Montaña",
+  // Regions
+  reg_greenfields: "Praderas Verdes",
+  reg_tiny_cave: "Cueva Pequeña",
+  reg_calmed_beach: "Playa Tranquila",
+  reg_whispering_forest: "Bosque Susurrante",
+  reg_stony_foothills: "Colinas Pedregosas",
+  reg_murky_swamp: "Pantano Turbio",
+  reg_forgotten_ruins: "Ruinas Olvidadas",
+  reg_iron_peaks: "Picos de Hierro",
+  reg_crystal_hollow: "Hueco de Cristal",
+  reg_great_desert: "Gran Desierto",
+  reg_obsidian_crater: "Cráter de Obsidiana",
+  reg_ancient_library: "Biblioteca Antigua",
+  reg_frostbite_tundra: "Tundra Gélida",
+  reg_sky_fortress: "Fortaleza Celeste",
+  reg_dragon_maw: "La Fauce del Dragón",
+  // Expeditions
+  exp_stage: "Etapa",
+  exp_intermission: "Intermedio",
+  exp_retire: "Retirarse",
+  exp_continue: "Continuar",
+  exp_completed: "Completado",
+  exp_available: "Disponible",
+  exp_locked: "Bloqueado",
+  exp_tutorial_cave: "Cueva del Tutorial",
+  exp_wild_orchard: "El Huerto Silvestre",
+  exp_rescue_mission: "El Guardia Capturado",
+  exp_forgotten_tomb: "La Tumba Olvidada",
+  exp_orc_stronghold: "Fortaleza Orca",
+  exp_ancient_archives: "Las Cámaras del Gólem",
   // Battle
   victory: "¡VICTORIA!",
   defeat: "DERROTA",
   damage: "Daño",
   miss: "¡Fallo!",
-  crit: "¡CRÍTICO!"
+  crit: "¡CRÍTICO!",
+  // UI Skeleton & Navigation
+  nav_village: "Aldea",
+  nav_buildings: "Edificios",
+  nav_heroes: "Héroes",
+  nav_inventory: "Inventario",
+  nav_explore: "Explorar",
+  nav_settings: "Ajustes",
+  // Domain: Village
+  ui_village_status: "Estado de la Aldea",
+  ui_construction: "Construcción",
+  ui_no_projects: "No hay proyectos activos.",
+  ui_visual_rep: "[Representación Visual de la Aldea]",
+  // Domain: Buildings
+  ui_available_buildings: "Edificios Disponibles",
+  ui_select_building: "Selecciona un edificio para ver detalles.",
+  // Domain: Heroes
+  ui_your_heroes: "Tus Héroes",
+  ui_recruit: "Reclutar",
+  ui_select_hero: "Selecciona un héroe para ver stats y equipo.",
+  // Domain: Inventory
+  ui_all: "Todo",
+  ui_materials: "Materiales",
+  ui_consumables: "Consumibles",
+  ui_equipment: "Equipo",
+  // Domain: Explore
+  ui_world_map: "Mapa del Mundo",
+  ui_active_expeditions: "Expediciones Activas",
+  ui_start_expedition: "Iniciar Expedición",
+  ui_no_active_expeditions: "No hay expediciones activas.",
+  // Domain: Settings
+  ui_settings_title: "Ajustes del Juego",
+  ui_settings_language: "Idioma de la Interfaz",
+  settings_language_label: "Elige tu idioma:",
+  ui_settings_danger_zone: "Zona de Peligro",
+  ui_settings_wipe_description: "Borra permanentemente todo tu progreso y empieza de nuevo.",
+  ui_settings_wipe_data: "Borrar Todos los Datos",
+  ui_settings_wipe_confirm: "¿Estás absolutamente seguro? Esto borrará todo tu progreso permanentemente.",
+  ui_settings_wipe_success: "Todos los datos han sido borrados. El juego se reiniciará ahora.",
+  // Intro Narrative
+  intro_title: "Un Nuevo Comienzo",
+  intro_lore: "En un mundo consumido por las llamas de una guerra eterna, un pequeño grupo de supervivientes ha huido del caos. Guiados por un valiente héroe, buscan un valle remoto para construir un santuario de paz. El viaje ha sido largo y los recursos son escasos, pero la esperanza aún perdura.",
+  intro_btn: "Comenzar Viaje",
+  ui_btn_cancel: "Cancelar",
+  ui_btn_confirm: "Confirmar Borrado",
+  // Daily Report
+  ui_daily_report_title: "Reporte Diario - Día {day}",
+  ui_report_food: "{amount} Comida Consumida",
+  ui_report_starvation: "¡ADVERTENCIA: La aldea se muere de hambre!",
+  ui_report_growth: "¡{amount} Aldeano se ha unido a la aldea!",
+  ui_report_built: "Completado:",
+  ui_report_exp_progress: "La expedición {name} avanzó una etapa.",
+  ui_report_exp_completed: "¡Expedición {name} completada! Encontrado: {rewards}",
+  ui_report_exp_failed: "La expedición {name} se retiró.",
+  // Explore View fixes
+  ui_assigned_expedition: "Expedición Asignada",
+  ui_waiting_combat: "Esperando al siguiente día para comenzar el combate.",
+  ui_progress_combat: "La expedición está en curso. El progreso ocurre al avanzar el día.",
+  ui_unassign_retire: "Desasignar Todos / Retirarse",
+  ui_another_active: "Otra expedición está activa actualmente. No puedes asignar héroes aquí.",
+  ui_roster_locked: "Expedición bloqueada. Actualmente asignados:",
+  ui_no_idle_heroes: "No hay héroes inactivos disponibles.",
+  ui_assign_heroes: "Asignar Héroes",
+  ui_update_assignment: "Actualizar Asignación",
+  ui_select_one_hero: "Por favor, selecciona al menos un héroe.",
+  ui_exp_story: "Historia",
+  ui_exp_exploration: "Exploración",
+  ui_exp_stages: "Etapas",
+  ui_exp_base_reward: "Recompensa Base",
+  ui_select_heroes: "Seleccionar Héroes",
+  ui_under_construction: "En Construcción",
+  error_already_in_queue: "El edificio ya está en construcción."
 };
 const ca = {
   // UI General
   btn_back: "TORNAR",
   btn_confirm: "CONFIRMAR",
   btn_cancel: "CANCEL·LAR",
+  btn_next_day: "SEGÜENT DIA",
+  // Village
+  village_gold: "Or",
+  village_population: "Població",
+  village_day: "Dia",
+  village_housing: "Habitatges",
+  village_warehouse: "Magatzem",
+  village_farm: "Granja",
+  village_blacksmith: "Ferreria",
+  village_training_grounds: "Camp d'Entrenament",
+  village_explorer_guild: "Gremi d'Exploradors",
+  // Resources & Inventory
+  material_wood: "Fusta",
+  material_stone: "Pedra",
+  material_iron_ore: "Mineral de Ferro",
+  material_steel_ingot: "Lingot d'Acer",
+  material_mythril: "Mithril",
+  food_raw_grain: "Gran",
+  food_meat: "Carn",
+  food_bread: "Pa",
+  food_stew: "Estofat Nutritiu",
+  inv_storage: "Emmagatzematge",
+  inv_full: "¡Magatzem Ple!",
   // Origins
   origin_warrior: "Guerrer",
   origin_thief: "Lladre",
@@ -1380,26 +2391,162 @@ const ca = {
   origin_cook: "Cuiner",
   origin_guard: "Guàrdia",
   origin_poet: "Poeta",
+  // Hero Status & Slots
+  status_active: "Actiu",
+  status_resting: "Descansant",
+  status_training: "Entrenant",
+  slot_head: "Cap",
+  slot_body: "Cos",
+  slot_legs: "Cames",
+  slot_leftHand: "Mà Esquerra",
+  slot_rightHand: "Mà Dreta",
+  slot_accessory: "Accessori",
   // Skills
   basic_attack: "Atacar",
-  double_attack: "Doble Atac",
-  triple_attack: "Triple Atac",
+  double_attack: "Atac Doble",
+  triple_attack: "Atac Triple",
   whirlwind: "Torbellí",
   small_fire_ball: "Bola de Foc",
   small_heal: "Curar",
   haste: "Pressa",
+  // Enemies
+  slime_green: "Llim Verd",
+  slime_fire: "Llim de Foc",
+  wild_boar: "Senglar",
+  goblin_scout: "Explorador Goblin",
+  goblin_grunt: "Soldat Goblin",
+  giant_spider: "Aranya Gegant",
+  skeleton_warrior: "Esquelet Guerrer",
+  skeleton_archer: "Esquelet Arquer",
+  wraith_minor: "Espectre Menor",
+  zombie_shambler: "Zombi Errant",
+  orc_grunt: "Soldat Orc",
+  orc_shaman: "Xaman Orc",
+  rock_golem: "Gòlem de Pedra",
+  harpy_scout: "Exploradora Harpía",
+  goblin_king: "Rei Goblin",
+  lich_apprentice: "Aprenent de Lich",
+  mountain_troll: "Troll de Muntanya",
+  // Regions
+  reg_greenfields: "Prats Verds",
+  reg_tiny_cave: "Cova Petita",
+  reg_calmed_beach: "Platja Tranquil·la",
+  reg_whispering_forest: "Bosc Susurrant",
+  reg_stony_foothills: "Turons Pedregosos",
+  reg_murky_swamp: "Pantà Terbol",
+  reg_forgotten_ruins: "Ruïnes Oblidades",
+  reg_iron_peaks: "Pics de Ferro",
+  reg_crystal_hollow: "Forat de Cristall",
+  reg_great_desert: "Gran Desert",
+  reg_obsidian_crater: "Cràter d'Obsidiana",
+  reg_ancient_library: "Biblioteca Antiga",
+  reg_frostbite_tundra: "Tundra Gèlida",
+  reg_sky_fortress: "Fortalesa Celeste",
+  reg_dragon_maw: "La Fau de Drac",
+  // Expeditions
+  exp_stage: "Etapa",
+  exp_intermission: "Intermedi",
+  exp_retire: "Retirar-se",
+  exp_continue: "Continuar",
+  exp_completed: "Completat",
+  exp_available: "Disponible",
+  exp_locked: "Bloquejat",
+  exp_tutorial_cave: "Cova del Tutorial",
+  exp_wild_orchard: "L'Hort Silvestre",
+  exp_rescue_mission: "El Guàrdia Capturat",
+  exp_forgotten_tomb: "La Tomba Oblidada",
+  exp_orc_stronghold: "Fortalesa Orca",
+  exp_ancient_archives: "Les Cambres del Gòlem",
   // Battle
-  victory: "VICTÒRIA!",
+  victory: "¡VICTÒRIA!",
   defeat: "DERROTA",
   damage: "Dany",
-  miss: "Falla!",
-  crit: "CRÍTIC!"
+  miss: "¡Falla!",
+  crit: "¡CRÍTIC!",
+  // UI Skeleton & Navigation
+  nav_village: "Aldea",
+  nav_buildings: "Edificis",
+  nav_heroes: "Herois",
+  nav_inventory: "Inventari",
+  nav_explore: "Explorar",
+  // Domain: Village
+  ui_village_status: "Estat de l'Aldea",
+  ui_construction: "Construcció",
+  ui_no_projects: "No hi ha projectes actius.",
+  ui_visual_rep: "[Representació Visual de l'Aldea]",
+  // Domain: Buildings
+  ui_available_buildings: "Edificis Disponibles",
+  ui_select_building: "Selecciona un edifici per veure detalls.",
+  // Domain: Heroes
+  ui_your_heroes: "Els teus Herois",
+  ui_recruit: "Reclutar",
+  ui_select_hero: "Selecciona un heroi per veure stats i equip.",
+  // Domain: Inventory
+  ui_all: "Tot",
+  ui_materials: "Materials",
+  ui_consumables: "Consumibles",
+  ui_equipment: "Equip",
+  // Domain: Explore
+  ui_world_map: "Mapa del Món",
+  ui_active_expeditions: "Expedicions Actives",
+  ui_start_expedition: "Iniciar Expedició",
+  ui_no_active_expeditions: "No hi ha expedicions actives.",
+  // Daily Report
+  ui_daily_report_title: "Informe Diari - Dia {day}",
+  ui_report_food: "{amount} Menjar Consumit",
+  ui_report_starvation: "AVÍS: El poble es mor de fam!",
+  ui_report_growth: "{amount} Vilatà s'ha unit al poble!",
+  ui_report_built: "Completat:",
+  ui_report_exp_progress: "L'expedició {name} ha avançat una etapa.",
+  ui_report_exp_completed: "Expedició {name} completada! Trobat: {rewards}",
+  ui_report_exp_failed: "L'expedició {name} s'ha retirat.",
+  // Explore View fixes
+  ui_assigned_expedition: "Expedició Assignada",
+  ui_waiting_combat: "Esperant el següent dia per començar el combat.",
+  ui_progress_combat: "L'expedició està en curs. El progrés ocorre en avançar el dia.",
+  ui_unassign_retire: "Desassignar Tots / Retirar-se",
+  ui_another_active: "Una altra expedició està activa actualment. No pots assignar herois aquí.",
+  ui_roster_locked: "Expedició bloquejada. Actualment assignats:",
+  ui_no_idle_heroes: "No hi ha herois inactius disponibles.",
+  ui_assign_heroes: "Assignar Herois",
+  ui_update_assignment: "Actualitzar Assignació",
+  ui_select_one_hero: "Si us plau, selecciona almenys un heroi.",
+  ui_exp_story: "Història",
+  ui_exp_exploration: "Exploració",
+  ui_exp_stages: "Etapes",
+  ui_exp_base_reward: "Recompensa Base",
+  ui_select_heroes: "Seleccionar Herois",
+  ui_under_construction: "En Construcció",
+  error_already_in_queue: "L'edifici ja està en construcció."
 };
 const eu = {
   // UI General
   btn_back: "BUELTATU",
   btn_confirm: "BAIEZTATU",
   btn_cancel: "UZTU",
+  btn_next_day: "HURRENGO EGUNA",
+  // Village
+  village_gold: "Urrea",
+  village_population: "Biztanleria",
+  village_day: "Eguna",
+  village_housing: "Etxebizitzak",
+  village_warehouse: "Biltegia",
+  village_farm: "Baserria",
+  village_blacksmith: "Aroztegia",
+  village_training_grounds: "Entrenamendu Zelaia",
+  village_explorer_guild: "Esploratzaileen Gremioa",
+  // Resources & Inventory
+  material_wood: "Egurre",
+  material_stone: "Harria",
+  material_iron_ore: "Burdin Minerala",
+  material_steel_ingot: "Altzairuzko Ingotea",
+  material_mythril: "Mythril",
+  food_raw_grain: "Gia",
+  food_meat: "Haragia",
+  food_bread: "Ogia",
+  food_stew: "Egu egina",
+  inv_storage: "Biltegiratzea",
+  inv_full: "¡Biltegia Betea!",
   // Origins
   origin_warrior: "Gudaria",
   origin_thief: "Lapurra",
@@ -1409,6 +2556,16 @@ const eu = {
   origin_cook: "Sukaldaria",
   origin_guard: "Guardia",
   origin_poet: "Poeta",
+  // Hero Status & Slots
+  status_active: "Aktiboa",
+  status_resting: "Atseden hartzen",
+  status_training: "Entrenatzen",
+  slot_head: "Burua",
+  slot_body: "Gorputza",
+  slot_legs: "Hankak",
+  slot_leftHand: "Ezkerreko Eskua",
+  slot_rightHand: "Eskuineko Eskua",
+  slot_accessory: "Osagarria",
   // Skills
   basic_attack: "Erasotu",
   double_attack: "Eraso Bikoitza",
@@ -1417,21 +2574,290 @@ const eu = {
   small_fire_ball: "Su Bola",
   small_heal: "Sendatu",
   haste: "Bizkortu",
+  // Enemies
+  slime_green: "Limo Berdea",
+  slime_fire: "Su Limoa",
+  wild_boar: "Basurdea",
+  goblin_scout: "Goblin Esploratzailea",
+  goblin_grunt: "Goblin Gudaria",
+  giant_spider: "Armiarma Erraldoia",
+  skeleton_warrior: "Eskeleto Gudaria",
+  skeleton_archer: "Eskeleto Arkularia",
+  wraith_minor: "Espektro Txikia",
+  zombie_shambler: "Zombie Ibiltaria",
+  orc_grunt: "Orko Gudaria",
+  orc_shaman: "Orko Xamana",
+  rock_golem: "Harrizko Golema",
+  harpy_scout: "Harpia Esploratzailea",
+  goblin_king: "Goblin Erregea",
+  lich_apprentice: "Lich Ikaslea",
+  mountain_troll: "Mendi Trolla",
+  // Regions
+  reg_greenfields: "Zelaia Berdeak",
+  reg_tiny_cave: "Haitzulo Txikia",
+  reg_calmed_beach: "Hondatza Lasaia",
+  reg_whispering_forest: "Baso Sosolaria",
+  reg_stony_foothills: "Muino Harrizkoak",
+  reg_murky_swamp: "Aintzira Iluna",
+  reg_forgotten_ruins: "Aztarna Ahaztuak",
+  reg_iron_peaks: "Burdin Gailurrak",
+  reg_crystal_hollow: "Kristal Zuloa",
+  reg_great_desert: "Basamortu Handia",
+  reg_obsidian_crater: "Obsidiana Kraterra",
+  reg_ancient_library: "Liburutegi Zaharra",
+  reg_frostbite_tundra: "Tundra Izoztua",
+  reg_sky_fortress: "Zeru Gotorlekua",
+  reg_dragon_maw: "Herensugearen Ahoa",
+  // Expeditions
+  exp_stage: "Etapa",
+  exp_intermission: "Atsedenaldia",
+  exp_retire: "Erretiratu",
+  exp_continue: "Jarraitu",
+  exp_completed: "Osatua",
+  exp_available: "Eskuragarri",
+  exp_locked: "Blokeatua",
+  exp_tutorial_cave: "Tutorialeko Haitzuloa",
+  exp_wild_orchard: "Basoko Baratzan",
+  exp_rescue_mission: "Gatibu Hartutako Guardia",
+  exp_forgotten_tomb: "Hilobi Ahaztua",
+  exp_orc_stronghold: "Orko Gotorlekua",
+  exp_ancient_archives: "Golemaren Ganberak",
   // Battle
-  victory: "GARAIPENA!",
+  victory: "¡GARAIPENA!",
   defeat: "GALDUTA",
   damage: "Kaltea",
-  miss: "Huts egin du!",
-  crit: "KRITIKOA!"
+  miss: "¡Huts egin du!",
+  crit: "¡KRITIKOA!",
+  // UI Skeleton & Navigation
+  nav_village: "Herria",
+  nav_buildings: "Eraikinak",
+  nav_heroes: "Heroiak",
+  nav_inventory: "Inbentarioa",
+  nav_explore: "Arakatu",
+  // Domain: Village
+  ui_village_status: "Herriaren Egoera",
+  ui_construction: "Eraikuntza",
+  ui_no_projects: "Ez dago proiektu aktiborik.",
+  ui_visual_rep: "[Herriaren Irudikapen Visuala]",
+  // Domain: Buildings
+  ui_available_buildings: "Eraikin Eskuragarriak",
+  ui_select_building: "Hautatu eraikin bat xehetasunak ikusteko.",
+  // Domain: Heroes
+  ui_your_heroes: "Zure Heroiak",
+  ui_recruit: "Kontratatu",
+  ui_select_hero: "Hautatu heroi bat estatistikak eta ekipamendua ikusteko.",
+  // Domain: Inventory
+  ui_all: "Guztiak",
+  ui_materials: "Materialak",
+  ui_consumables: "Kontsumigarriak",
+  ui_equipment: "Ekipamendua",
+  // Domain: Explore
+  ui_world_map: "Munduko Mapa",
+  ui_active_expeditions: "Espedizio Aktiboak",
+  ui_start_expedition: "Espedizioa Hasi",
+  ui_no_active_expeditions: "Ez dago espedizio aktiborik.",
+  // Daily Report
+  ui_daily_report_title: "Eguneroko Txostena - {day}. Eguna",
+  ui_report_food: "{amount} Janari Kontsumituta",
+  ui_report_starvation: "KONTUZ: Herria gosez hiltzen ari da!",
+  ui_report_growth: "{amount} Herritar batu da herrira!",
+  ui_report_built: "Osatua:",
+  ui_report_exp_progress: "{name} espedizioak etapa bat aurrera egin du.",
+  ui_report_exp_completed: "{name} espedizioa osatu da! Aurkitua: {rewards}",
+  ui_report_exp_failed: "{name} espedizioak atzera egin du.",
+  // Explore View fixes
+  ui_assigned_expedition: "Esleitutako Espedizioa",
+  ui_waiting_combat: "Hurrengo egunera arte itxaroten borroka hasteko.",
+  ui_progress_combat: "Espedizioa abian da. Aurrerapena eguna igarotzean gertatzen da.",
+  ui_unassign_retire: "Guztiak Kendu / Erretiratu",
+  ui_another_active: "Beste espedizio bat aktibo dago une honetan. Ezin dituzu heroiak esleitu hemen.",
+  ui_roster_locked: "Espedizioa blokeatuta. Une honetan esleituta:",
+  ui_no_idle_heroes: "Ez dago heroirik eskuragarri.",
+  ui_assign_heroes: "Heroiak Esleitu",
+  ui_update_assignment: "Esleipena Eguneratu",
+  ui_select_one_hero: "Mesedez, aukeratu gutxienez heroi bat.",
+  ui_exp_story: "Istorioa",
+  ui_exp_exploration: "Esplorazioa",
+  ui_exp_stages: "Etapak",
+  ui_exp_base_reward: "Oinarrizko Saria",
+  ui_select_heroes: "Heroiak Aukeratu",
+  ui_under_construction: "Eraikitzen",
+  error_already_in_queue: "Eraikina jada eraikitzen ari da."
+};
+const gl = {
+  // UI General
+  btn_back: "VOLVER",
+  btn_confirm: "CONFIRMAR",
+  btn_cancel: "CANCELAR",
+  btn_next_day: "SEGUINTE DÍA",
+  // Village
+  village_gold: "Ouro",
+  village_population: "Poboación",
+  village_day: "Día",
+  village_housing: "Vivendas",
+  village_warehouse: "Almacén",
+  village_farm: "Granxa",
+  village_blacksmith: "Ferraría",
+  village_training_grounds: "Campo de Adestramento",
+  village_explorer_guild: "Gremio de Exploradores",
+  // Resources & Inventory
+  material_wood: "Madeira",
+  material_stone: "Pedra",
+  material_iron_ore: "Mineral de Ferro",
+  material_steel_ingot: "Lingote de Aceiro",
+  material_mythril: "Mithril",
+  food_raw_grain: "Gran",
+  food_meat: "Carne",
+  food_bread: "Pan",
+  food_stew: "Estofado Nutritivo",
+  inv_storage: "Almacenamento",
+  inv_full: "¡Almacén Cheo!",
+  // Origins
+  origin_warrior: "Guerreiro",
+  origin_thief: "Ladrón",
+  origin_clown: "Pallaso",
+  origin_farmer: "Granxeiro",
+  origin_monk: "Monxe",
+  origin_cook: "Cociñeiro",
+  origin_guard: "Garda",
+  origin_poet: "Poeta",
+  // Hero Status & Slots
+  status_active: "Activo",
+  status_resting: "Descansando",
+  status_training: "Adestrando",
+  slot_head: "Cabeza",
+  slot_body: "Corpo",
+  slot_legs: "Pernas",
+  slot_leftHand: "Man Esquerda",
+  slot_rightHand: "Man Dereita",
+  slot_accessory: "Accesorio",
+  // Skills
+  basic_attack: "Atacar",
+  double_attack: "Ataque Dobre",
+  triple_attack: "Ataque Triplo",
+  whirlwind: "Torbelliño",
+  small_fire_ball: "Bóla de Fogo",
+  small_heal: "Curar",
+  haste: "Presa",
+  // Enemies
+  slime_green: "Limo Verde",
+  slime_fire: "Limo de Fogo",
+  wild_boar: "Xabaril",
+  goblin_scout: "Explorador Goblin",
+  goblin_grunt: "Soldado Goblin",
+  giant_spider: "Araña Xigante",
+  skeleton_warrior: "Esqueleto Guerreiro",
+  skeleton_archer: "Esqueleto Arqueiro",
+  wraith_minor: "Espectro Menor",
+  zombie_shambler: "Zombi Errante",
+  orc_grunt: "Soldado Orco",
+  orc_shaman: "Chamán Orco",
+  rock_golem: "Gólem de Pedra",
+  harpy_scout: "Exploradora Harpía",
+  goblin_king: "Rei Goblin",
+  lich_apprentice: "Aprendiz de Lich",
+  mountain_troll: "Troll de Montaña",
+  // Regions
+  reg_greenfields: "Pradeiras Verdes",
+  reg_tiny_cave: "Cova Pequena",
+  reg_calmed_beach: "Praia Tranquila",
+  reg_whispering_forest: "Bosque Susurrante",
+  reg_stony_foothills: "Colinas Pedregosas",
+  reg_murky_swamp: "Pantano Turbio",
+  reg_forgotten_ruins: "Ruínas Esquecidas",
+  reg_iron_peaks: "Picos de Ferro",
+  reg_crystal_hollow: "Burato de Cristal",
+  reg_great_desert: "Gran Deserto",
+  reg_obsidian_crater: "Cráter de Obsidiana",
+  reg_ancient_library: "Biblioteca Antiga",
+  reg_frostbite_tundra: "Tundra Xélida",
+  reg_sky_fortress: "Fortaleza Celeste",
+  reg_dragon_maw: "A Fauce do Dragón",
+  // Expeditions
+  exp_stage: "Etapa",
+  exp_intermission: "Intermedio",
+  exp_retire: "Retirarse",
+  exp_continue: "Continuar",
+  exp_completed: "Completado",
+  exp_available: "Dispoñible",
+  exp_locked: "Bloqueado",
+  exp_tutorial_cave: "Cova do Tutorial",
+  exp_wild_orchard: "A Horta Silvestre",
+  exp_rescue_mission: "O Garda Capturado",
+  exp_forgotten_tomb: "A Tumba Esquecida",
+  exp_orc_stronghold: "Fortaleza Orca",
+  exp_ancient_archives: "As Cámaras do Gólem",
+  // Battle
+  victory: "¡VICTORIA!",
+  defeat: "DERROTA",
+  damage: "Dano",
+  miss: "¡Fallo!",
+  crit: "¡CRÍTICO!",
+  // UI Skeleton & Navigation
+  nav_village: "Aldea",
+  nav_buildings: "Edificios",
+  nav_heroes: "Héroes",
+  nav_inventory: "Inventario",
+  nav_explore: "Explorar",
+  // Domain: Village
+  ui_village_status: "Estado da Aldea",
+  ui_construction: "Construción",
+  ui_no_projects: "Non hai proxectos activos.",
+  ui_visual_rep: "[Representación Visual da Aldea]",
+  // Domain: Buildings
+  ui_available_buildings: "Edificios Dispoñibles",
+  ui_select_building: "Selecciona un edificio para ver detalles.",
+  // Domain: Heroes
+  ui_your_heroes: "Os teus Héroes",
+  ui_recruit: "Reclutar",
+  ui_select_hero: "Selecciona un héroe para ver stats e equipo.",
+  // Domain: Inventory
+  ui_all: "Todo",
+  ui_materials: "Materiais",
+  ui_consumables: "Consumibles",
+  ui_equipment: "Equipo",
+  // Domain: Explore
+  ui_world_map: "Mapa do Mundo",
+  ui_active_expeditions: "Expedicións Activas",
+  ui_start_expedition: "Iniciar Expedición",
+  ui_no_active_expeditions: "Non hai expedicións activas.",
+  // Daily Report
+  ui_daily_report_title: "Informe Diario - Día {day}",
+  ui_report_food: "{amount} Comida Consumida",
+  ui_report_starvation: "AVISO: A aldea morre de fame!",
+  ui_report_growth: "{amount} Aldeán uniuse á aldea!",
+  ui_report_built: "Completado:",
+  ui_report_exp_progress: "A expedición {name} avanzou unha etapa.",
+  ui_report_exp_completed: "Expedición {name} completada! Atopado: {rewards}",
+  ui_report_exp_failed: "A expedición {name} retirouse.",
+  // Explore View fixes
+  ui_assigned_expedition: "Expedición Asignada",
+  ui_waiting_combat: "Agardando ao seguinte día para comezar o combate.",
+  ui_progress_combat: "A expedición está en curso. O progreso ocorre ao avanzar o día.",
+  ui_unassign_retire: "Desasignar Todos / Retirarse",
+  ui_another_active: "Outra expedición está activa actualmente. Non podes asignar heroes aquí.",
+  ui_roster_locked: "Expedición bloqueada. Actualmente asignados:",
+  ui_no_idle_heroes: "Non hai heroes inactivos dispoñibles.",
+  ui_assign_heroes: "Asignar Heroes",
+  ui_update_assignment: "Actualizar Asignación",
+  ui_select_one_hero: "Por favor, selecciona polo menos un heroe.",
+  ui_exp_story: "Historia",
+  ui_exp_exploration: "Exploración",
+  ui_exp_stages: "Etapas",
+  ui_exp_base_reward: "Recompensa Base",
+  ui_select_heroes: "Seleccionar Heroes",
+  ui_under_construction: "En Construción",
+  error_already_in_queue: "O edificio xa está en construción."
 };
 class I18nService {
   constructor() {
-    this.translations = { en, es, ca, eu };
-    this.currentLang = "en";
+    this.translations = { en, es, ca, eu, gl };
+    this.currentLang = persistence.load("settings_lang", "en");
   }
   setLanguage(lang) {
     if (this.translations[lang]) {
       this.currentLang = lang;
+      persistence.save("settings_lang", lang);
       return true;
     }
     return false;
@@ -1450,44 +2876,54 @@ class GameEngine {
   constructor() {
     this.STORAGE_KEY = "village_state";
     this.inventoryService = new InventoryService();
+    this.villageService = new VillageService(this.inventoryService);
     this.heroService = new HeroService(this.inventoryService);
     this.battleService = new BattleService(this.inventoryService);
+    this.expeditionService = new ExpeditionService(
+      this.battleService,
+      this.heroService,
+      this.villageService,
+      this.inventoryService
+    );
     this.i18n = i18n;
-    this.state = this._loadState();
+    this.i18n = i18n;
+    const hasHeroes = persistence.load("heroes_data", null) !== null;
+    const hasVillage = persistence.load("village_state", null) !== null;
+    this.isNewGame = !hasHeroes || !hasVillage;
+    console.log("Engine: checkNewGame?", this.isNewGame, { hasHeroes, hasVillage });
+    if (this.isNewGame) {
+      this.initNewGame();
+    }
+    this.i18n.setLanguage(persistence.load("settings_lang", "en"));
   }
-  _loadState() {
-    const defaultState = {
-      gold: 100,
-      food: 50,
-      wood: 0,
-      stone: 0,
-      iron: 0,
-      population: 0,
-      infrastructure: {
-        housing: 1,
-        farm: 1,
-        blacksmith: 0,
-        training_grounds: 0
-      },
-      lang: "en",
-      day: 1,
-      lastUpdate: Date.now()
-    };
-    const loaded = persistence.load(this.STORAGE_KEY, defaultState);
-    this.i18n.setLanguage(loaded.lang);
-    return loaded;
-  }
-  _saveState() {
-    persistence.save(this.STORAGE_KEY, this.state);
+  initNewGame() {
+    console.log("Engine: Initializing New Game state...");
+    const currentHeroes = this.heroService.list();
+    if (currentHeroes.length === 0) {
+      this.heroService.add({
+        name: "Arthur",
+        origin: "warrior",
+        level: 1
+      });
+    }
   }
   update() {
-    const now = Date.now();
-    (now - this.state.lastUpdate) / 1e3;
-    this.state.lastUpdate = now;
-    this._saveState();
+    const activeExpedition = this.expeditionService.state.activeExpedition;
+    const heroesDto = this.heroService.list().map((hero) => {
+      const dto = hero.toJSON();
+      const activityInfo = this.expeditionService.getHeroActivity(hero.id);
+      dto.activity = activityInfo.type;
+      if (activityInfo.type === "expedition") {
+        dto.activityTargetId = activityInfo.expeditionId;
+      }
+      return dto;
+    });
     return {
-      village: this.state,
-      heroes: this.heroService.list()
+      village: this.villageService.getState(),
+      inventory: this.inventoryService.getState(),
+      heroes: heroesDto,
+      expeditions: this.expeditionService.getExpeditions(),
+      activeExpedition
     };
   }
   // --- Hero Facade ---
@@ -1504,11 +2940,34 @@ class GameEngine {
   }
   setLanguage(lang) {
     if (this.i18n.setLanguage(lang)) {
-      this.state.lang = lang;
-      this._saveState();
+      persistence.save("settings_lang", lang);
       return true;
     }
     return false;
+  }
+  // --- Time & Construction ---
+  nextDay() {
+    const villageReport = this.villageService.nextDay();
+    const expeditionResult = this.expeditionService.processDay();
+    const dailyReport = {
+      ...villageReport,
+      expedition: expeditionResult.success ? expeditionResult.data : null
+    };
+    this.villageService.setDailyReport(dailyReport);
+    return dailyReport;
+  }
+  startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
+    return this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
+  }
+  // --- Explore Facade ---
+  assignExpedition(expeditionId, heroIds) {
+    return this.expeditionService.assignExpedition(expeditionId, heroIds);
+  }
+  unassignHero(heroId) {
+    return this.expeditionService.unassignHero(heroId);
+  }
+  retireExpedition() {
+    return this.expeditionService.retire();
   }
 }
 class EngineAdapter {
@@ -1516,18 +2975,62 @@ class EngineAdapter {
     this.engine = engine;
     this.ui = ui;
     this.rafId = null;
+    this.lastUpdateTime = 0;
+    this.UPDATE_INTERVAL = 100;
   }
   init() {
+    this.ui.views.forEach((view, domain) => {
+      if (domain === "village") {
+        view.on("nextDay", () => {
+          this.engine.nextDay();
+          this.forceUpdate();
+        });
+      }
+      if (domain === "buildings") {
+        view.on("startProject", (data) => {
+          const result = this.engine.startProject(
+            data.buildingId,
+            data.targetLevel,
+            data.costGold,
+            data.costMaterials,
+            data.duration
+          );
+          if (!result.success) {
+            alert(this.engine.i18n.t(result.error));
+          }
+          this.forceUpdate();
+        });
+      }
+      if (domain === "explore") {
+        view.on("assignExpedition", (data) => {
+          const result = this.engine.assignExpedition(data.expId, data.heroIds);
+          if (!result.success) {
+            alert(this.engine.i18n.t(result.error));
+          }
+          this.forceUpdate();
+        });
+        view.on("retireExpedition", () => {
+          this.engine.retireExpedition();
+          this.forceUpdate();
+        });
+      }
+    });
     this.ui.onInitialize(() => {
       console.log("Village initialization requested via Adapter");
-      this.engine.addVillager();
     });
     this.startLoop();
   }
+  forceUpdate() {
+    const newState = this.engine.update();
+    this.ui.update(newState);
+  }
   startLoop() {
-    const loop = () => {
-      const newState = this.engine.update();
-      this.ui.updateStats(newState);
+    const loop = (timestamp) => {
+      if (timestamp - this.lastUpdateTime >= this.UPDATE_INTERVAL) {
+        const newState = this.engine.update();
+        this.ui.update(newState);
+        this.lastUpdateTime = timestamp;
+      }
       this.rafId = requestAnimationFrame(loop);
     };
     this.rafId = requestAnimationFrame(loop);
@@ -1538,10 +3041,828 @@ class EngineAdapter {
     }
   }
 }
+class BaseView {
+  constructor(domain) {
+    this.domain = domain;
+    this.root = null;
+    this.ui = null;
+    this.listeners = {};
+    this.lastRenderedState = null;
+  }
+  /**
+   * Mounts the view to a DOM container.
+   */
+  mount(container, uiReference) {
+    this.root = container;
+    this.ui = uiReference;
+    this.lastRenderedState = null;
+    this.onMount();
+  }
+  /**
+   * Life-cycle hook for initialization.
+   */
+  onMount() {
+  }
+  /**
+   * Updates the view with new state.
+   * Uses smart diffing to prevent unnecessary re-renders.
+   */
+  update(state) {
+    var _a;
+    const domainState = state[this.domain];
+    if (!domainState) return;
+    const stateString = JSON.stringify({
+      domain: domainState,
+      inventory: (_a = state.inventory) == null ? void 0 : _a.totalUsed
+      // Some views depend on global inventory stats
+    });
+    if (this.lastRenderedState === stateString) {
+      return;
+    }
+    this.onUpdate(state);
+    this.lastRenderedState = stateString;
+  }
+  /**
+   * Life-cycle hook for state updates.
+   */
+  onUpdate(state) {
+  }
+  /**
+   * Event Emitter: Register a listener.
+   */
+  on(event, callback) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    this.listeners[event].push(callback);
+  }
+  /**
+   * Event Emitter: Emit an event.
+   */
+  emit(event, data) {
+    if (this.listeners[event]) {
+      this.listeners[event].forEach((cb) => cb(data));
+    }
+  }
+  /**
+   * Helper to find elements within the view root.
+   */
+  $(selector) {
+    return this.root ? this.root.querySelector(selector) : null;
+  }
+  /**
+   * Helper for translations.
+   */
+  t(key) {
+    return this.ui ? this.ui.t(key) : key;
+  }
+}
+class VillageView extends BaseView {
+  constructor() {
+    super("village");
+  }
+  onMount() {
+    this.elements = {
+      day: this.$("#village-day"),
+      gold: this.$("#village-gold"),
+      pop: this.$("#village-pop"),
+      popAvail: this.$("#village-pop-avail"),
+      storageText: this.$("#village-storage-text"),
+      storageBar: this.$("#village-storage-bar"),
+      constructionList: this.$("#construction-list"),
+      btnNextDay: this.$("#btn-next-day")
+    };
+    if (this.elements.btnNextDay) {
+      this.elements.btnNextDay.addEventListener("click", () => {
+        this.elements.btnNextDay.style.transform = "scale(0.95)";
+        setTimeout(() => {
+          this.elements.btnNextDay.style.transform = "";
+        }, 100);
+        this.emit("nextDay");
+      });
+    }
+  }
+  onUpdate(state) {
+    const { village, inventory } = state;
+    if (!village) return;
+    if (this.elements.day) this.elements.day.textContent = village.day;
+    if (this.elements.gold) this.elements.gold.textContent = Math.floor(village.gold);
+    if (this.elements.pop) {
+      this.elements.pop.textContent = `${village.population.total} / ${village.population.max}`;
+    }
+    if (this.elements.popAvail) {
+      const avail = village.population.total - (village.population.assigned || 0);
+      this.elements.popAvail.textContent = avail;
+    }
+    if (inventory && this.elements.storageText) {
+      const used = inventory.totalUsed || 0;
+      const max = village.maxStorage || 100;
+      this.elements.storageText.textContent = `${used} / ${max}`;
+      if (this.elements.storageBar) {
+        const percent = Math.min(100, used / max * 100);
+        this.elements.storageBar.style.width = `${percent}%`;
+        this.elements.storageBar.classList.toggle("warning", percent > 75);
+        this.elements.storageBar.classList.toggle("danger", percent > 90);
+      }
+    }
+    this.renderConstructionQueue(village.constructionQueue);
+    this.renderDailyReport(village.lastDailyReport);
+  }
+  renderDailyReport(report) {
+    const container = this.$("#daily-report-container");
+    if (!container) return;
+    if (!report) {
+      container.style.display = "none";
+      return;
+    }
+    container.style.display = "block";
+    let builtHtml = "";
+    if (report.completed && report.completed.length > 0) {
+      builtHtml = `
+                <div class="report-section">
+                    <span class="report-icon">🔨</span>
+                    <span>${this.t("ui_report_built")} ${report.completed.map((id) => this.t("village_" + id)).join(", ")}</span>
+                </div>
+            `;
+    }
+    let growthHtml = "";
+    if (report.growth > 0) {
+      growthHtml = `
+                <div class="report-section">
+                    <span class="report-icon">👶</span>
+                    <span>${this.t("ui_report_growth").replace("{amount}", report.growth)}</span>
+                </div>
+            `;
+    }
+    let expHtml = "";
+    if (report.expedition) {
+      const exp = report.expedition;
+      const expName = this.t(exp.expId) || exp.expName || "Expedition";
+      if (exp.status === "completed") {
+        let rewardsStr = "";
+        if (exp.reward) {
+          const rewards = [];
+          if (exp.reward.gold) rewards.push(`${exp.reward.gold} ${this.t("village_gold")}`);
+          if (exp.reward.items) {
+            for (const [id, qty] of Object.entries(exp.reward.items)) {
+              rewards.push(`${qty} ${this.t(id) || id}`);
+            }
+          }
+          rewardsStr = rewards.join(", ");
+        }
+        expHtml = `
+                    <div class="report-section success">
+                        <span class="report-icon">✨</span>
+                        <span>${this.t("ui_report_exp_completed").replace("{name}", expName).replace("{rewards}", rewardsStr)}</span>
+                    </div>
+                `;
+      } else if (exp.status === "failed") {
+        expHtml = `
+                    <div class="report-section danger">
+                        <span class="report-icon">💀</span>
+                        <span>${this.t("ui_report_exp_failed").replace("{name}", expName)}</span>
+                    </div>
+                `;
+      } else if (exp.status === "progress") {
+        expHtml = `
+                    <div class="report-section">
+                        <span class="report-icon">⚔️</span>
+                        <span>${this.t("ui_report_exp_progress").replace("{name}", expName)}</span>
+                    </div>
+                `;
+      }
+    }
+    container.innerHTML = `
+            <div class="card widget daily-report-widget">
+                <h3>${this.t("ui_daily_report_title").replace("{day}", report.day - 1)}</h3>
+                <div class="report-content">
+                    <div class="report-section ${report.starvation ? "danger" : ""}">
+                        <span class="report-icon">🍞</span>
+                        <span>${report.starvation ? this.t("ui_report_starvation") : this.t("ui_report_food").replace("{amount}", report.consumed)}</span>
+                    </div>
+                    ${growthHtml}
+                    ${builtHtml}
+                    ${expHtml}
+                </div>
+            </div>
+        `;
+  }
+  renderConstructionQueue(queue) {
+    if (!this.elements.constructionList) return;
+    if (!queue || queue.length === 0) {
+      this.elements.constructionList.innerHTML = `
+                <div class="empty-state" data-i18n="ui_no_projects">
+                    ${this.t("ui_no_projects")}
+                </div>`;
+      return;
+    }
+    this.elements.constructionList.innerHTML = queue.map((project) => `
+            <div class="list-item construction-item">
+                <div class="list-item-header">
+                    <span class="list-item-title">${this.t("village_" + project.buildingId)}</span>
+                    <span class="list-item-level">Lvl ${project.targetLevel}</span>
+                </div>
+                <div class="construction-status">
+                    <span class="days-remaining">⏳ ${project.daysRemaining} Days</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar warning" style="width: ${(project.duration - project.daysRemaining) / project.duration * 100}%"></div>
+                </div>
+            </div>
+        `).join("");
+  }
+}
+class BuildingsView extends BaseView {
+  constructor() {
+    super("village");
+    this.selectedBuildingId = null;
+  }
+  onMount() {
+    this.elements = {
+      list: this.$("#buildings-list-container"),
+      detail: this.$("#building-detail-content"),
+      cardTemplate: this.$("#tpl-building-card")
+    };
+    if (this.elements.list) {
+      this.elements.list.addEventListener("click", (e) => {
+        const card = e.target.closest(".building-card");
+        if (card) {
+          this.handleBuildingSelect(card.dataset.id);
+        }
+      });
+    }
+  }
+  /**
+   * Override update to include selection and inventory in the diff.
+   */
+  update(state) {
+    var _a, _b;
+    const village = state.village;
+    if (!village) return;
+    const stateString = JSON.stringify({
+      infrastructure: village.infrastructure,
+      constructionQueue: village.constructionQueue,
+      wood: (_b = (_a = state.inventory) == null ? void 0 : _a.materials) == null ? void 0 : _b.material_wood,
+      selection: this.selectedBuildingId
+    });
+    if (this.lastRenderedState === stateString) {
+      return;
+    }
+    this.onUpdate(state);
+    this.lastRenderedState = stateString;
+  }
+  onUpdate(state) {
+    const { village } = state;
+    if (!village) return;
+    this.renderBuildingsList(village);
+    this.renderDetail(village, state);
+  }
+  handleBuildingSelect(id) {
+    this.selectedBuildingId = id;
+  }
+  renderBuildingsList(village) {
+    if (!this.elements.list) return;
+    const buildings = Object.keys(village.infrastructure);
+    this.elements.list.innerHTML = "";
+    buildings.forEach((id) => {
+      const level = village.infrastructure[id];
+      const isConstructing = village.constructionQueue.find((p) => p.buildingId === id);
+      const card = this.elements.cardTemplate.content.cloneNode(true).querySelector(".building-card");
+      card.dataset.id = id;
+      card.querySelector(".list-item-title").textContent = this.t("village_" + id);
+      card.querySelector(".list-item-level").textContent = `LVL ${level}`;
+      if (id === this.selectedBuildingId) {
+        card.classList.add("active");
+      }
+      if (isConstructing) {
+        const progress = card.querySelector(".progress-container");
+        progress.classList.remove("hidden");
+        const percent = (isConstructing.duration - isConstructing.daysRemaining) / isConstructing.duration * 100;
+        progress.querySelector(".progress-bar").style.width = `${percent}%`;
+      }
+      this.elements.list.appendChild(card);
+    });
+  }
+  renderDetail(village, state) {
+    var _a, _b;
+    if (!this.elements.detail) return;
+    if (!this.selectedBuildingId) {
+      this.elements.detail.innerHTML = `
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">⚒️</div>
+                    <p data-i18n="ui_select_building">${this.t("ui_select_building")}</p>
+                </div>
+            `;
+      return;
+    }
+    const id = this.selectedBuildingId;
+    const currentLevel = village.infrastructure[id];
+    const nextLevel = currentLevel + 1;
+    const costGold = nextLevel * 50;
+    const costWood = nextLevel * 20;
+    const duration = nextLevel * 2;
+    const hasGold = village.gold >= costGold;
+    const woodCount = ((_b = (_a = state.inventory) == null ? void 0 : _a.materials) == null ? void 0 : _b.material_wood) || 0;
+    const hasWood = woodCount >= costWood;
+    const activeProject = village.constructionQueue.find((p) => p.buildingId === id);
+    this.elements.detail.innerHTML = `
+            <div class="building-profile">
+                <header class="building-profile-header">
+                    <div class="profile-title-group">
+                        <span class="profile-badge">INFRASTRUCTURE</span>
+                        <h2>${this.t("village_" + id)}</h2>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="label">CURRENT LEVEL</span>
+                        <span class="value">${currentLevel}</span>
+                    </div>
+                </header>
+
+                <div class="upgrade-section">
+                    <h3>Next Upgrade: Level ${nextLevel}</h3>
+                    <p class="description">Expanding this structure will increase the village's capacity and unlock new potential.</p>
+                    
+                    <div class="cost-grid">
+                        <div class="cost-item ${!hasGold ? "insufficient" : ""}">
+                            <span class="label">GOLD</span>
+                            <span class="value">💰 ${costGold}</span>
+                        </div>
+                        <div class="cost-item ${!hasWood ? "insufficient" : ""}">
+                            <span class="label">WOOD</span>
+                            <span class="value">🪵 ${costWood}</span>
+                        </div>
+                        <div class="cost-item">
+                            <span class="label">TIME</span>
+                            <span class="value">⏳ ${duration} Days</span>
+                        </div>
+                    </div>
+
+                    <div class="action-footer">
+                        ${activeProject ? `
+                            <button class="btn btn-secondary btn-lg" disabled>
+                                ⏳ ${this.t("ui_under_construction") || "Under Construction"} (${activeProject.daysRemaining}d)
+                            </button>
+                        ` : `
+                            <button class="btn btn-primary btn-lg upgrade-btn" ${!hasGold || !hasWood ? "disabled" : ""}>
+                                <span class="icon">⚒️</span>
+                                ${this.t("btn_confirm")}
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+    const btn = this.elements.detail.querySelector(".upgrade-btn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        this.emit("startProject", {
+          buildingId: id,
+          targetLevel: nextLevel,
+          costGold,
+          costMaterials: { material_wood: costWood },
+          duration
+        });
+      });
+    }
+  }
+}
+class HeroesView extends BaseView {
+  constructor() {
+    super("heroes");
+    this.selectedHeroId = null;
+  }
+  onMount() {
+    this.elements = {
+      list: this.$("#heroes-list-container"),
+      detail: this.$("#hero-detail-content"),
+      cardTemplate: this.$("#tpl-hero-card")
+    };
+    if (this.elements.list) {
+      this.elements.list.addEventListener("click", (e) => {
+        const card = e.target.closest(".list-item");
+        if (card) {
+          this.selectedHeroId = card.dataset.id;
+          this.ui.update(this.lastRawState);
+        }
+      });
+    }
+  }
+  update(state) {
+    this.lastRawState = state;
+    const heroes = state.heroes;
+    if (!heroes) return;
+    const stateString = JSON.stringify({
+      heroes: heroes.map((h) => ({ id: h.id, level: h.level })),
+      selection: this.selectedHeroId
+    });
+    if (this.lastRenderedState === stateString) return;
+    this.onUpdate(state);
+    this.lastRenderedState = stateString;
+  }
+  onUpdate(state) {
+    this.renderHeroesList(state.heroes);
+    this.renderHeroDetail(state);
+  }
+  renderHeroesList(heroes) {
+    if (!this.elements.list || !this.elements.cardTemplate) return;
+    this.elements.list.innerHTML = "";
+    heroes.forEach((hero) => {
+      const card = this.elements.cardTemplate.content.cloneNode(true).querySelector(".list-item");
+      card.dataset.id = hero.id;
+      card.querySelector(".list-item-title").textContent = hero.name;
+      card.querySelector(".list-item-level").textContent = `LVL ${hero.level}`;
+      if (hero.id === this.selectedHeroId) {
+        card.classList.add("active");
+      }
+      this.elements.list.appendChild(card);
+    });
+  }
+  renderHeroDetail(state) {
+    if (!this.elements.detail) return;
+    const hero = state.heroes.find((h) => h.id === this.selectedHeroId);
+    if (!hero) {
+      this.elements.detail.innerHTML = `
+                <div class="empty-detail">
+                    <p data-i18n="ui_select_hero">${this.t("ui_select_hero")}</p>
+                </div>`;
+      return;
+    }
+    const isIdle = hero.activity === "idle";
+    const activityText = isIdle ? this.t("ui_activity_idle") : this.t("ui_activity_expedition");
+    const equipSlots = ["head", "body", "legs", "leftHand", "rightHand", "accessory"];
+    let equipHtml = equipSlots.map((slot) => `
+            <div class="equip-slot">
+                <span class="slot-name">${this.t("slot_" + slot)}</span>
+                <span class="slot-item">${hero.equipment[slot] ? hero.equipment[slot].name : this.t("ui_empty_slot")}</span>
+            </div>
+        `).join("");
+    let skillsHtml = Object.keys(hero.skills).map((skillId) => `
+            <div class="skill-item">
+                <span class="skill-name">${this.t(skillId)}</span>
+                <span class="skill-level">Lvl ${hero.skills[skillId]}</span>
+            </div>
+        `).join("");
+    this.elements.detail.innerHTML = `
+            <div class="hero-profile">
+                <header class="building-profile-header">
+                    <div class="profile-title-group">
+                        <span class="profile-badge">${this.t(hero.origin)}</span>
+                        <h2>${hero.name} <span class="hero-level-text">(${this.t("ui_level")} ${hero.level})</span></h2>
+                    </div>
+                </header>
+                <div class="hero-info-section">
+                    <p class="hero-origin-desc"><em>${this.t(hero.origin + "_desc")}</em></p>
+                    <div class="hero-status-row">
+                        <span><strong>${this.t("ui_activity")}:</strong> <span class="status-badge ${isIdle ? "idle" : "busy"}">${activityText}</span></span>
+                        <span><strong>${this.t("ui_experience")}:</strong> ${hero.exp} / ${hero.expToNextLevel}</span>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-row"><span>HP</span> <span>${hero.hp} / ${hero.maxHp}</span></div>
+                    <div class="stat-row"><span>MP</span> <span>${hero.mp} / ${hero.maxMp}</span></div>
+                    <div class="stat-row"><span>STR</span> <span>${hero.strength}</span></div>
+                    <div class="stat-row"><span>SPD</span> <span>${hero.speed}</span></div>
+                </div>
+                <div class="hero-sections-grid">
+                    <div class="hero-section">
+                        <h3>${this.t("ui_equipment")}</h3>
+                        <div class="equipment-list">
+                            ${equipHtml}
+                        </div>
+                    </div>
+                    <div class="hero-section">
+                        <h3>${this.t("ui_skills")}</h3>
+                        <div class="skills-list">
+                            ${skillsHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+  }
+}
+class InventoryView extends BaseView {
+  constructor() {
+    super("inventory");
+  }
+  onMount() {
+    this.elements = {
+      storageText: this.$("#inv-storage-text"),
+      storageBar: this.$("#inv-storage-bar"),
+      materialsGrid: this.$("#materials-grid"),
+      foodGrid: this.$("#food-grid"),
+      equipmentList: this.$("#equipment-list"),
+      itemTemplate: this.$("#tpl-resource-item")
+    };
+  }
+  onUpdate(state) {
+    const { inventory, village } = state;
+    if (!inventory || !village) return;
+    const used = inventory.totalUsed || 0;
+    const max = village.maxStorage || 100;
+    if (this.elements.storageText) this.elements.storageText.textContent = `${used} / ${max}`;
+    if (this.elements.storageBar) {
+      const percent = Math.min(100, used / max * 100);
+      this.elements.storageBar.style.width = `${percent}%`;
+      this.elements.storageBar.classList.toggle("warning", percent > 70);
+      this.elements.storageBar.classList.toggle("danger", percent > 90);
+    }
+    this.renderGrid(this.elements.materialsGrid, inventory.materials);
+    this.renderGrid(this.elements.foodGrid, inventory.food);
+    this.renderEquipment(inventory.equipment);
+  }
+  renderGrid(container, items) {
+    if (!container || !items) return;
+    container.innerHTML = "";
+    const keys = Object.keys(items);
+    if (keys.length === 0) {
+      container.innerHTML = `<div class="empty-state">No items</div>`;
+      return;
+    }
+    keys.forEach((id) => {
+      const count = items[id];
+      if (count <= 0) return;
+      const item = this.elements.itemTemplate.content.cloneNode(true).querySelector(".resource-item");
+      item.querySelector(".label").textContent = this.t(id);
+      item.querySelector(".value").textContent = count;
+      container.appendChild(item);
+    });
+  }
+  renderEquipment(equipment) {
+    if (!this.elements.equipmentList) return;
+    if (!equipment || equipment.length === 0) {
+      this.elements.equipmentList.innerHTML = `<div class="empty-state" data-i18n="ui_no_items">${this.t("ui_no_items")}</div>`;
+      return;
+    }
+    this.elements.equipmentList.innerHTML = equipment.map((item) => `
+            <div class="list-item">
+                <div class="list-item-header">
+                    <span class="list-item-title">${item.name || "Unknown Item"}</span>
+                    <span class="list-item-level">${item.rarity || "Common"}</span>
+                </div>
+            </div>
+        `).join("");
+  }
+}
+class ExploreView extends BaseView {
+  constructor() {
+    super("explore");
+    this.selectedExpId = null;
+    this.selectedHeroIds = /* @__PURE__ */ new Set();
+  }
+  onMount() {
+    this.elements = {
+      listContainer: this.$("#regions-list-container"),
+      detailContent: this.$("#expedition-detail-content"),
+      statusBanner: this.$("#explore-status-banner"),
+      tplRegion: this.$("#tpl-region-group"),
+      tplNode: this.$("#tpl-expedition-node")
+    };
+    if (this.elements.listContainer) {
+      this.elements.listContainer.addEventListener("click", (e) => {
+        const card = e.target.closest(".expedition-card");
+        if (card) {
+          this.selectedExpId = card.dataset.id;
+          this.ui.update(this.lastRawState);
+        }
+      });
+    }
+  }
+  update(state) {
+    var _a;
+    this.lastRawState = state;
+    if (!state.expeditions) return;
+    const stateString = JSON.stringify({
+      expeditions: state.expeditions.map((e) => ({ id: e.id, status: e.status, stages: e.stages.length })),
+      activeExpedition: state.activeExpedition,
+      selectedExpId: this.selectedExpId,
+      selectedHeroes: Array.from(this.selectedHeroIds),
+      idleHeroes: (_a = state.heroes) == null ? void 0 : _a.filter((h) => h.activity === "idle").map((h) => ({ id: h.id, hp: h.hp }))
+    });
+    if (this.lastRenderedState === stateString) return;
+    this.onUpdate(state);
+    this.lastRenderedState = stateString;
+  }
+  onUpdate(state) {
+    this.renderRegionsList(state.expeditions);
+    this.renderStatus(state.activeExpedition);
+    this.renderExpeditionDetail(state);
+  }
+  renderStatus(activeExpedition) {
+    if (!this.elements.statusBanner) return;
+    if (activeExpedition) {
+      this.elements.statusBanner.className = "status-banner";
+      this.elements.statusBanner.innerHTML = `<span data-i18n="ui_active_expeditions">${this.t("ui_active_expeditions")}</span>: In Progress`;
+    } else {
+      this.elements.statusBanner.className = "status-banner none";
+    }
+  }
+  renderRegionsList(expeditions) {
+    if (!this.elements.listContainer || !this.elements.tplRegion || !this.elements.tplNode) return;
+    const byRegion = {};
+    expeditions.forEach((exp) => {
+      if (!byRegion[exp.regionId]) byRegion[exp.regionId] = [];
+      byRegion[exp.regionId].push(exp);
+    });
+    this.elements.listContainer.innerHTML = "";
+    for (const [regionId, exps] of Object.entries(byRegion)) {
+      const regionEl = this.elements.tplRegion.content.cloneNode(true).querySelector(".region-group");
+      regionEl.querySelector(".region-title").textContent = this.t(regionId) || regionId;
+      const nodesContainer = regionEl.querySelector(".region-nodes");
+      exps.forEach((exp) => {
+        const nodeEl = this.elements.tplNode.content.cloneNode(true).querySelector(".expedition-card");
+        nodeEl.dataset.id = exp.id;
+        nodeEl.querySelector(".list-item-title").textContent = exp.name;
+        nodeEl.querySelector(".list-item-badge").textContent = exp.stages.length + " Stages";
+        if (exp.id === this.selectedExpId) {
+          nodeEl.classList.add("active");
+        }
+        nodesContainer.appendChild(nodeEl);
+      });
+      this.elements.listContainer.appendChild(regionEl);
+    }
+  }
+  renderExpeditionDetail(state) {
+    if (!this.elements.detailContent) return;
+    const exp = state.expeditions.find((e) => e.id === this.selectedExpId);
+    if (!exp && state.activeExpedition) {
+      this.selectedExpId = state.activeExpedition.id;
+      return this.update(this.lastRawState);
+    }
+    if (!exp) {
+      this.elements.detailContent.innerHTML = `
+                <div class="empty-detail">
+                    <p data-i18n="ui_select_expedition">Select an expedition node on the map.</p>
+                </div>`;
+      return;
+    }
+    const isActiveNode = state.activeExpedition && state.activeExpedition.id === exp.id;
+    const isAnotherActive = state.activeExpedition && state.activeExpedition.id !== exp.id;
+    const isLocked = isActiveNode && state.activeExpedition.currentStage > 0;
+    let dashboardHtml = "";
+    if (isActiveNode) {
+      const isStageZero = state.activeExpedition.currentStage === 0;
+      dashboardHtml = `
+                <div class="active-expedition-dashboard" style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
+                    <h3 style="margin-top: 0; color: var(--primary-color);">${this.t("ui_assigned_expedition")}</h3>
+                    <p class="description">${isStageZero ? this.t("ui_waiting_combat") : this.t("ui_progress_combat")}</p>
+                    <div class="exp-progress">
+                        <h4>${this.t("exp_stage")} ${state.activeExpedition.currentStage} / ${exp.stages.length}</h4>
+                        <div class="progress-bar-container" style="background: rgba(255,255,255,0.1); height: 10px; border-radius: 5px; margin: 10px 0;">
+                            <div class="progress-bar" style="background: var(--primary-color); height: 100%; border-radius: 5px; width: ${state.activeExpedition.currentStage / exp.stages.length * 100}%"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-retire" style="width: 100%; margin-top: 10px;">${this.t("ui_unassign_retire")}</button>
+                </div>
+            `;
+    } else if (isAnotherActive) {
+      dashboardHtml = `
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    ${this.t("ui_another_active")}
+                </div>
+            `;
+    }
+    const idleHeroes = state.heroes.filter((h) => h.activity === "idle");
+    const assignedHeroes = isActiveNode ? state.heroes.filter((h) => state.activeExpedition.heroIds.includes(h.id)) : [];
+    let heroListHtml = "";
+    if (isLocked) {
+      heroListHtml = `<p>${this.t("ui_roster_locked")}</p>
+                <ul>${assignedHeroes.map((h) => `<li>${h.name} (Lvl ${h.level})</li>`).join("")}</ul>`;
+    } else {
+      const availableHeroes = [...assignedHeroes, ...idleHeroes];
+      if (availableHeroes.length === 0) {
+        heroListHtml = `<p>${this.t("ui_no_idle_heroes")}</p>`;
+      } else {
+        heroListHtml = `<div class="hero-checkbox-list">
+                    ${availableHeroes.map((h) => {
+          const isAssigned = isActiveNode && state.activeExpedition.heroIds.includes(h.id);
+          const isChecked = this.selectedHeroIds.has(h.id) || isAssigned && !this.selectedHeroIds.size;
+          if (isChecked) this.selectedHeroIds.add(h.id);
+          return `
+                        <label class="hero-checkbox-item">
+                            <input type="checkbox" value="${h.id}" class="exp-hero-check" ${isChecked ? "checked" : ""}>
+                            <div class="hero-info">
+                                <strong>${h.name}</strong> (Lvl ${h.level})
+                                <br><small>HP: ${h.hp}/${h.maxHp}</small>
+                            </div>
+                        </label>
+                        `;
+        }).join("")}
+                </div>`;
+      }
+    }
+    this.elements.detailContent.innerHTML = `
+            ${dashboardHtml}
+            <div class="expedition-profile">
+                <header class="building-profile-header">
+                    <div class="profile-title-group">
+                        <span class="profile-badge">${exp.isStory ? this.t("ui_exp_story") : this.t("ui_exp_exploration")}</span>
+                        <h2>${this.t(exp.id) || exp.name}</h2>
+                    </div>
+                </header>
+                <div class="exp-stats">
+                    <p><strong>${this.t("ui_exp_stages")}:</strong> ${exp.stages.length}</p>
+                    <p><strong>${this.t("ui_exp_base_reward")}:</strong> ${exp.reward.gold || 0} ${this.t("village_gold")}</p>
+                </div>
+                
+                <div class="hero-selector">
+                    <h3>${this.t("ui_select_heroes")}</h3>
+                    ${heroListHtml}
+                    ${!isLocked ? `
+                        <button class="btn btn-primary btn-start-exp" ${isAnotherActive || idleHeroes.length === 0 && assignedHeroes.length === 0 ? "disabled" : ""}>
+                            ${isActiveNode ? this.t("ui_update_assignment") : this.t("ui_assign_heroes")}
+                        </button>
+                    ` : ""}
+                </div>
+            </div>
+        `;
+    if (isActiveNode) {
+      const retireBtn = this.elements.detailContent.querySelector(".btn-retire");
+      if (retireBtn) {
+        retireBtn.addEventListener("click", () => {
+          this.emit("retireExpedition");
+          this.selectedHeroIds.clear();
+        });
+      }
+    }
+    const checkboxes = this.elements.detailContent.querySelectorAll(".exp-hero-check");
+    checkboxes.forEach((cb) => {
+      cb.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          this.selectedHeroIds.add(e.target.value);
+        } else {
+          this.selectedHeroIds.delete(e.target.value);
+        }
+        this.ui.update(this.lastRawState);
+      });
+    });
+    const startBtn = this.elements.detailContent.querySelector(".btn-start-exp");
+    if (startBtn) {
+      startBtn.addEventListener("click", () => {
+        if (this.selectedHeroIds.size === 0 && !isActiveNode) {
+          alert(this.t("ui_select_one_hero"));
+          return;
+        }
+        this.emit("assignExpedition", {
+          expId: exp.id,
+          heroIds: Array.from(this.selectedHeroIds)
+        });
+      });
+    }
+  }
+}
+class SettingsView extends BaseView {
+  constructor() {
+    super("settings");
+  }
+  onMount() {
+    this.elements = {
+      langSelect: this.$("#lang-select"),
+      btnWipe: this.$("#btn-wipe-data")
+    };
+    if (this.elements.langSelect) {
+      this.elements.langSelect.value = this.ui.i18n.currentLang;
+      this.elements.langSelect.addEventListener("change", (e) => {
+        const newLang = e.target.value;
+        console.log(`Settings: Changing language to ${newLang}`);
+        this.ui.setLanguage(newLang);
+      });
+    }
+    if (this.elements.btnWipe) {
+      this.elements.btnWipe.addEventListener("click", () => {
+        console.log("SettingsView: Wipe button clicked");
+        this.ui.showConfirmDialog({
+          title: "ui_settings_wipe_data",
+          message: "ui_settings_wipe_confirm",
+          onConfirm: () => {
+            console.warn("SettingsView: USER CONFIRMED WIPE. Executing persistence.clear()...");
+            persistence.clear();
+            console.log("SettingsView: Wipe complete. Reloading page...");
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
+          }
+        });
+      });
+    }
+  }
+  onUpdate(state) {
+  }
+}
 document.addEventListener("DOMContentLoaded", () => {
   console.log("RPG Village Initializing...");
   const engine = new GameEngine();
-  const ui = new UIController();
+  window.engine = engine;
+  const ui = new UIController(engine.i18n);
+  window.ui = ui;
+  ui.registerView("village", new VillageView());
+  ui.registerView("buildings", new BuildingsView());
+  ui.registerView("heroes", new HeroesView());
+  ui.registerView("inventory", new InventoryView());
+  ui.registerView("explore", new ExploreView());
+  ui.registerView("settings", new SettingsView());
+  ui.switchView("village");
+  if (engine.isNewGame) {
+    ui.showIntroDialog();
+  }
   const adapter = new EngineAdapter(engine, ui);
   adapter.init();
   console.log("RPG Village Ready!");
@@ -1558,28 +3879,28 @@ document.addEventListener("DOMContentLoaded", () => {
     
     --accent-color: #6366f1;
     --accent-hover: #4f46e5;
-    --accent-glow: rgba(99, 102, 241, 0.3);
+    --accent-glow: rgba(99, 102, 241, 0.4);
     
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
     
     /* Spacing & Borders */
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 16px;
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 32px;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --spacing-xs: 6px;
+    --spacing-sm: 10px;
+    --spacing-md: 20px;
+    --spacing-lg: 30px;
+    --spacing-xl: 40px;
     
     /* Shadows & Effects */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --glass-bg: rgba(22, 24, 33, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-lg: 0 12px 24px rgba(0,0,0,0.5);
+    --glass-bg: rgba(30, 34, 48, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -1590,10 +3911,10 @@ document.addEventListener("DOMContentLoaded", () => {
 }
 
 body {
-    font-family: 'Inter', 'Outfit', sans-serif;
+    font-family: 'Inter', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    line-height: 1.5;
+    line-height: 1.6;
     overflow: hidden;
     width: 100vw;
     height: 100vh;
@@ -1606,111 +3927,54 @@ body {
     flex-direction: column;
 }
 
-.view {
+#main-content {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 70px; /* Space for nav */
+    overflow-y: auto;
+    position: relative;
+    padding-bottom: 90px; /* Space for nav */
 }
 
 /* Header Styles */
 .game-header {
     background-color: var(--bg-secondary);
-    padding: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-lg);
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--glass-border);
     box-shadow: var(--shadow-md);
+    z-index: 110;
 }
 
 .game-header h1 {
     font-family: 'Outfit', sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--text-primary), var(--accent-color));
+    background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
 }
 
 .stats-bar {
     display: flex;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
 }
 
 .stat-item {
     background: var(--bg-accent);
-    padding: var(--spacing-xs) var(--spacing-md);
+    padding: 6px 14px;
     border-radius: var(--radius-lg);
     font-size: 0.9rem;
     border: 1px solid var(--glass-border);
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+    box-shadow: var(--shadow-sm);
 }
 
-.stat-item .label {
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.stat-item .value {
-    color: var(--accent-color);
-    font-weight: 700;
-}
-
-/* Village Canvas (Main Area) */
-.village-canvas {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: var(--spacing-lg);
-    background: radial-gradient(circle at center, var(--bg-accent) 0%, var(--bg-primary) 100%);
-}
-
-.placeholder-content {
-    text-align: center;
-    max-width: 400px;
-    padding: var(--spacing-xl);
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-}
-
-.placeholder-content h2 {
-    margin-bottom: var(--spacing-md);
-    font-family: 'Outfit', sans-serif;
-}
-
-.placeholder-content p {
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-xl);
-}
-
-/* Buttons */
-.btn-primary {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    padding: var(--spacing-md) var(--spacing-xl);
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 14px 0 var(--accent-glow);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent-hover);
-    transform: translateY(-2px);
-}
-
-.btn-primary:active {
-    transform: translateY(0);
-}
+.stat-item .icon { font-size: 1.1rem; }
+.stat-item .value { color: var(--accent-color); font-weight: 800; }
 
 /* Navigation */
 .main-nav {
@@ -1718,14 +3982,15 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 70px;
-    background: var(--bg-secondary);
+    height: 80px;
+    background: rgba(22, 24, 33, 0.95);
     display: flex;
     justify-content: space-around;
     align-items: center;
     border-top: 1px solid var(--glass-border);
-    padding: 0 var(--spacing-md);
+    padding: 0 var(--spacing-sm);
     z-index: 100;
+    backdrop-filter: blur(20px);
 }
 
 .nav-item {
@@ -1733,76 +3998,983 @@ body {
     border: none;
     color: var(--text-muted);
     font-weight: 600;
-    padding: var(--spacing-sm);
     cursor: pointer;
-    transition: color 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
+    flex: 1;
 }
 
-.nav-item:hover {
-    color: var(--text-secondary);
+.nav-icon { font-size: 1.4rem; transition: transform 0.3s ease; }
+.nav-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+
+.nav-item:hover { color: var(--text-secondary); }
+.nav-item.active { color: var(--accent-color); }
+.nav-item.active .nav-icon { transform: translateY(-5px) scale(1.2); }
+
+/* Buttons */
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
 }
 
-.nav-item.active {
-    color: var(--accent-color);
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+    color: white;
+    box-shadow: 0 4px 15px var(--accent-glow);
 }
 
-.nav-item.active::after {
+.btn-primary::after {
     content: '';
-    width: 4px;
-    height: 4px;
-    background: var(--accent-color);
-    border-radius: 50%;
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: 0.5s;
 }
 
-/* Animations */
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px var(--accent-glow);
+}
+
+.btn-primary:hover::after { left: 100%; }
+
+.btn-secondary {
+    background: var(--bg-accent);
+    color: var(--text-primary);
+}
+
+.btn:active:not(:disabled) { 
+    transform: translateY(0) scale(0.95) !important; 
+    box-shadow: none !important;
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.btn-lg { padding: 16px 32px; font-size: 1.1rem; }
+.btn-sm { padding: 6px 14px; font-size: 0.85rem; }
+
+/* Cards & Layout */
+.card {
+    background: var(--glass-bg);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+}
+
+.card h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card h3::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--glass-border);
+}
+
+/* Progress Bars */
+.progress-container {
+    width: 100%;
+    height: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 8px 0;
+    border: 1px solid var(--glass-border);
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color), #818cf8);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 5px;
+}
+
+/* List Items */
+.list-item {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.list-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--accent-color);
+    transform: translateX(5px);
+}
+
+.list-item:active {
+    transform: scale(0.98) !important;
+}
+
+.list-item.active {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-color);
+    box-shadow: inset 0 0 10px var(--accent-glow);
+}
+
+.list-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Other styles remain the same... */
+.list-item-title { font-weight: 700; color: var(--text-primary); }
+.list-item-level {
+    font-size: 0.75rem;
+    background: var(--accent-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 800;
+}
+
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 15px;
+}
+
+.resource-item {
+    background: rgba(255,255,255,0.02);
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+}
+
+.resource-item .label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+.resource-item .value { display: block; font-size: 1.3rem; font-weight: 800; color: var(--accent-color); }
+
+.action-bar { margin-top: var(--spacing-lg); display: flex; justify-content: center; }
+.dashboard-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-md); padding: var(--spacing-md); }
+
+@media (min-width: 768px) {
+    .dashboard-grid { grid-template-columns: 350px 1fr; }
+    .canvas-widget { grid-column: 2; grid-row: 1 / 3; }
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.view {
-    animation: fadeIn 0.4s ease-out forwards;
+.domain-view { animation: fadeIn 0.4s ease-out; }
+
+/* Settings Specific */
+.btn-danger {
+    background: linear-gradient(135deg, var(--danger) 0%, #b91c1c 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.danger-zone {
+    border-color: var(--danger) !important;
+    background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.settings-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.settings-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.select-control {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg-accent);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+
+.select-control:focus {
+    border-color: var(--accent-color);
+}
+
+/* Modal & Intro */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.5s ease;
+}
+
+.intro-modal {
+    max-width: 500px;
+    width: 90%;
+    background: var(--bg-secondary);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.intro-modal h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2rem;
+    margin-bottom: var(--spacing-md);
+    background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.intro-modal p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    line-height: 1.8;
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Generic Modal */
+.modal-body {
+    background: var(--bg-secondary);
+    max-width: 450px;
+    width: 90%;
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.modal-header h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+    font-size: 1.5rem;
+}
+
+.modal-text {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+    line-height: 1.6;
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+}
+
+.modal-actions .btn {
+    min-width: 100px;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(50px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }</style>
 </head>
 <body>
     <div id="app-container">
-        <!-- Main Application View -->
-        <main id="home-view" class="view">
-    <header class="game-header">
-        <h1>RPG Village</h1>
-        <div class="stats-bar">
-            <div class="stat-item">
-                <span class="label">Gold:</span>
-                <span id="gold-count" class="value">0</span>
+        <!-- Global Header: Persistence across views -->
+        <header class="game-header">
+            <div class="brand">
+                <h1>RPG Village</h1>
             </div>
-            <div class="stat-item">
-                <span class="label">Villagers:</span>
-                <span id="villager-count" class="value">0</span>
+            <div class="stats-bar">
+                <div class="stat-item" title="Gold">
+                    <span class="icon">💰</span>
+                    <span id="gold-count" class="value">0</span>
+                </div>
+                <div class="stat-item" title="Villagers">
+                    <span class="icon">👤</span>
+                    <span id="villager-count" class="value">0</span>
+                </div>
+                <div class="stat-item" title="Materials">
+                    <span class="icon">🪵</span>
+                    <span id="wood-count" class="value">0</span>
+                </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <section class="village-canvas">
-        <div class="placeholder-content">
-            <h2>Welcome to your Village</h2>
-            <p>Start building and managing your village.</p>
-            <button id="btn-start" class="btn-primary">Initialize Village</button>
-        </div>
-    </section>
+        <!-- Main Content Area: Views are injected here -->
+        <main id="main-content">
+            <div class="loader-overlay" id="main-loader">
+                <div class="spinner"></div>
+            </div>
+        </main>
 
-    <nav class="main-nav">
-        <button class="nav-item active" data-view="home">Village</button>
-        <button class="nav-item" data-view="buildings">Buildings</button>
-        <button class="nav-item" data-view="heroes">Heroes</button>
-        <button class="nav-item" data-view="settings">Settings</button>
-    </nav>
-</main>
-
+        <!-- Global Navigation -->
+        <nav class="main-nav">
+            <button class="nav-item active" data-view="village">
+                <span class="nav-icon">🏡</span>
+                <span class="nav-label" data-i18n="nav_village">Village</span>
+            </button>
+            <button class="nav-item" data-view="buildings">
+                <span class="nav-icon">⚒️</span>
+                <span class="nav-label" data-i18n="nav_buildings">Buildings</span>
+            </button>
+            <button class="nav-item" data-view="heroes">
+                <span class="nav-icon">⚔️</span>
+                <span class="nav-label" data-i18n="nav_heroes">Heroes</span>
+            </button>
+            <button class="nav-item" data-view="inventory">
+                <span class="nav-icon">🎒</span>
+                <span class="nav-label" data-i18n="nav_inventory">Inventory</span>
+            </button>
+            <button class="nav-item" data-view="explore">
+                <span class="nav-icon">🗺️</span>
+                <span class="nav-label" data-i18n="nav_explore">Explore</span>
+            </button>
+            <button class="nav-item" data-view="settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label" data-i18n="nav_settings">Settings</span>
+            </button>
+        </nav>
     </div>
+
+    <!-- View Templates (Inlined at build-time) -->
+    <template id="tpl-village"><section id="village-view" class="domain-view">
+    <div class="dashboard-grid">
+        <!-- Left Column: Status & Queue -->
+        <div class="side-panel">
+            <!-- Village Status Widget -->
+            <div class="card widget status-widget">
+                <h3 data-i18n="ui_village_status">Village Status</h3>
+                <div class="status-content">
+                    <div class="status-item-detailed">
+                        <div class="status-row">
+                            <span class="label" data-i18n="village_gold">Gold</span>
+                            <span id="village-gold" class="value">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="status-item-detailed">
+                        <div class="status-row">
+                            <span class="label" data-i18n="village_population">Population</span>
+                            <span id="village-pop" class="value">--</span>
+                        </div>
+                        <div class="sub-label">
+                            <span data-i18n="ui_available">Available</span>: <span id="village-pop-avail" class="accent-text">--</span>
+                        </div>
+                    </div>
+
+                    <div class="status-item-detailed">
+                        <div class="status-row">
+                            <span class="label" data-i18n="inv_storage">Storage</span>
+                            <span id="village-storage-text" class="value">-- / --</span>
+                        </div>
+                        <div class="progress-container">
+                            <div id="village-storage-bar" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Construction Queue Widget -->
+            <div class="card widget construction-widget">
+                <h3 data-i18n="ui_construction">Construction</h3>
+                <div id="construction-list-container">
+                    <div id="construction-list" class="empty-state" data-i18n="ui_no_projects">
+                        No active projects.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Visual Center & Global Actions -->
+        <div class="main-panel">
+            <div id="daily-report-container"></div>
+            
+            <div class="card canvas-card">
+                <div class="village-visual-placeholder">
+                    <div class="visual-placeholder-text" data-i18n="ui_visual_rep">
+                        [Village Visual Representation]
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day Cycle Controller (The "Big Button" Area) -->
+            <div class="card action-card">
+                <div class="day-cycle-info">
+                    <span class="day-label" data-i18n="village_day">Day</span>
+                    <span id="village-day" class="day-value">--</span>
+                </div>
+                
+                <div class="action-bar-centered">
+                    <button id="btn-next-day" class="btn btn-primary btn-lg shine-effect">
+                        <span class="icon">☀️</span>
+                        <span data-i18n="btn_next_day">Next Day</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .status-item-detailed {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .status-row .label { color: var(--text-muted); font-size: 0.9rem; }
+    .status-row .value { font-weight: 700; color: var(--text-primary); }
+    .accent-text { color: var(--accent-color); font-weight: 700; }
+    
+    .action-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: var(--spacing-md);
+        background: linear-gradient(to right, var(--bg-accent), var(--bg-secondary));
+    }
+    
+    .day-cycle-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 20px;
+        border-right: 1px solid var(--glass-border);
+    }
+    
+    .day-label { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); }
+    .day-value { font-size: 2rem; font-weight: 900; color: var(--accent-color); }
+    
+    .action-bar-centered {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+    }
+
+    .side-panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
+    .main-panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
+    
+    .daily-report-widget { border-left: 4px solid var(--accent-color); }
+    .report-content { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .report-section { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; }
+    .report-section.success { border-left: 3px solid #4CAF50; }
+    .report-section.danger { border-left: 3px solid #f44336; color: #f44336; }
+    .report-icon { font-size: 1.2rem; }
+
+    @media (max-width: 767px) {
+        .action-card { flex-direction: column; gap: var(--spacing-md); text-align: center; }
+        .day-cycle-info { border-right: none; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; width: 100%; }
+    }
+</style>
+</template>
+    <template id="tpl-buildings"><section id="buildings-view" class="domain-view">
+    <div class="master-detail-layout">
+        <!-- Master Pane: List of Buildings -->
+        <aside class="master-pane card">
+            <h3 data-i18n="ui_available_buildings">Buildings</h3>
+            <div id="buildings-list-container" class="list-container">
+                <!-- Building cards will be injected here -->
+            </div>
+        </aside>
+
+        <!-- Detail Pane: Building Information & Actions -->
+        <main class="detail-pane card glass-pane">
+            <div id="building-detail-content">
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">⚒️</div>
+                    <p data-i18n="ui_select_building">Select a building to view construction options.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Template for a building card (injected via JS) -->
+    <template id="tpl-building-card">
+        <div class="list-item building-card" data-id="">
+            <div class="list-item-header">
+                <span class="list-item-title"></span>
+                <span class="list-item-level"></span>
+            </div>
+            <div class="progress-container hidden">
+                <div class="progress-bar warning" style="width: 0%"></div>
+            </div>
+        </div>
+    </template>
+</section>
+
+<style>
+    .glass-pane {
+        background: rgba(22, 24, 33, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .detail-icon-bg {
+        font-size: 4rem;
+        opacity: 0.1;
+        margin-bottom: 20px;
+    }
+
+    .empty-detail {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    /* Building Profile Styles */
+    .building-profile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .profile-title-group h2 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2rem;
+        color: var(--text-primary);
+    }
+
+    .profile-badge {
+        background: var(--accent-color);
+        color: white;
+        padding: 4px 12px;
+        border-radius: var(--radius-lg);
+        font-size: 0.9rem;
+        font-weight: 800;
+    }
+
+    .upgrade-section {
+        background: rgba(0,0,0,0.2);
+        padding: 20px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--glass-border);
+    }
+
+    .cost-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .cost-item {
+        background: var(--bg-accent);
+        padding: 10px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .cost-item.insufficient {
+        border: 1px solid var(--danger);
+        color: var(--danger);
+    }
+
+    .cost-item .label { font-size: 0.8rem; opacity: 0.7; }
+    .cost-item .value { font-weight: 700; }
+
+    .action-footer {
+        margin-top: 30px;
+        display: flex;
+        justify-content: flex-end;
+    }
+</style>
+</template>
+    <template id="tpl-heroes"><section id="heroes-view" class="domain-view">
+    <div class="master-detail-layout">
+        <!-- Master Pane -->
+        <aside class="master-pane card">
+            <div class="pane-header">
+                <h3 data-i18n="ui_your_heroes">Your Heroes</h3>
+                <button class="btn btn-sm btn-primary" data-i18n="ui_recruit">Recruit</button>
+            </div>
+            <div id="heroes-list-container" class="list-container">
+                <!-- Hero cards injected here -->
+            </div>
+        </aside>
+
+        <!-- Detail Pane -->
+        <main class="detail-pane card glass-pane">
+            <div id="hero-detail-content">
+                <div class="empty-detail">
+                    <p data-i18n="ui_select_hero">Select a hero to view stats and equipment.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Template for hero card -->
+    <template id="tpl-hero-card">
+        <div class="list-item hero-card" data-id="">
+            <div class="list-item-header">
+                <span class="list-item-title"></span>
+                <span class="list-item-level"></span>
+            </div>
+        </div>
+    </template>
+</section>
+
+<style>
+    .pane-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+    }
+    .pane-header h3 { margin-bottom: 0; }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .stat-row {
+        background: rgba(255,255,255,0.05);
+        padding: 10px 15px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .hero-level-text {
+        font-size: 0.8em;
+        color: var(--text-secondary);
+        font-weight: normal;
+    }
+    
+    .hero-info-section {
+        margin-top: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .hero-origin-desc {
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+        font-size: 0.95em;
+    }
+    
+    .hero-status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0,0,0,0.2);
+        padding: 10px;
+        border-radius: var(--radius-sm);
+    }
+    
+    .status-badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    .status-badge.idle { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+    .status-badge.busy { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+    
+    .hero-sections-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .hero-section h3 {
+        font-size: 1.1em;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 5px;
+    }
+    
+    .equip-slot, .skill-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px dashed rgba(255,255,255,0.05);
+    }
+    
+    .equip-slot:last-child, .skill-item:last-child {
+        border-bottom: none;
+    }
+    
+    .slot-name, .skill-name {
+        color: var(--text-secondary);
+        font-size: 0.9em;
+    }
+    
+    .slot-item, .skill-level {
+        font-weight: 500;
+        font-size: 0.9em;
+    }
+</style>
+</template>
+    <template id="tpl-inventory"><section id="inventory-view" class="domain-view">
+    <div class="card storage-summary">
+        <div class="list-item-header">
+            <h3 data-i18n="inv_storage">Storage</h3>
+            <span id="inv-storage-text" class="value">-- / --</span>
+        </div>
+        <div class="progress-container">
+            <div id="inv-storage-bar" class="progress-bar" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div class="inventory-sections">
+        <!-- Materials Section -->
+        <div class="card">
+            <h3 data-i18n="ui_materials">Materials</h3>
+            <div id="materials-grid" class="resource-grid">
+                <!-- Material items will be injected here -->
+            </div>
+        </div>
+
+        <!-- Food Section -->
+        <div class="card">
+            <h3 data-i18n="food_bread">Food</h3> <!-- Using bread as a generic title or ui_food if available -->
+            <div id="food-grid" class="resource-grid">
+                <!-- Food items will be injected here -->
+            </div>
+        </div>
+
+        <!-- Consumables & Equipment Section -->
+        <div class="card">
+            <h3 data-i18n="ui_equipment">Equipment</h3>
+            <div id="equipment-list" class="list-container">
+                <div class="empty-state" data-i18n="ui_no_items">No items found.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template for a resource item -->
+    <template id="tpl-resource-item">
+        <div class="resource-item">
+            <span class="label"></span>
+            <span class="value"></span>
+        </div>
+    </template>
+</section>
+</template>
+    <template id="tpl-explore"><section id="explore-view" class="domain-view">
+    <div class="explore-header">
+        <h2 data-i18n="nav_explore">Explore</h2>
+        <div id="explore-status-banner"></div>
+    </div>
+
+    <div class="master-detail-layout">
+        <!-- Master Pane: Regions & Expeditions -->
+        <aside class="master-pane card">
+            <div class="pane-header">
+                <h3 data-i18n="ui_world_map">World Map</h3>
+            </div>
+            <div id="regions-list-container" class="list-container">
+                <!-- Regions and their nodes injected here -->
+            </div>
+        </aside>
+
+        <!-- Detail Pane: Node info & Start -->
+        <main class="detail-pane card glass-pane">
+            <div id="expedition-detail-content">
+                <div class="empty-detail">
+                    <p data-i18n="ui_select_expedition">Select an expedition node on the map.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <template id="tpl-region-group">
+        <div class="region-group">
+            <h4 class="region-title"></h4>
+            <div class="region-nodes"></div>
+        </div>
+    </template>
+
+    <template id="tpl-expedition-node">
+        <div class="list-item expedition-card" data-id="">
+            <div class="list-item-header">
+                <span class="list-item-title"></span>
+                <span class="list-item-badge"></span>
+            </div>
+        </div>
+    </template>
+</section>
+
+<style>
+    .explore-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+    }
+    .region-group {
+        margin-bottom: 15px;
+    }
+    .region-title {
+        color: var(--primary-color);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+    }
+    .expedition-card.active {
+        background: rgba(var(--primary-color-rgb), 0.2);
+        border-color: var(--primary-color);
+    }
+    .hero-selector {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .hero-checkbox-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    .hero-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255,255,255,0.05);
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+    }
+    .hero-checkbox-item:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    .hero-checkbox-item input {
+        cursor: pointer;
+    }
+    .status-banner {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        font-weight: bold;
+    }
+    .status-banner.none {
+        display: none;
+    }
+    .btn-start-exp {
+        width: 100%;
+        margin-top: 15px;
+    }
+</style>
+</template>
+    <template id="tpl-settings"><section class="domain-view settings-view">
+    <div class="view-header">
+        <h2 data-i18n="ui_settings_title">Game Settings</h2>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="settings-content">
+            <!-- Preferences -->
+            <div class="card settings-group">
+                <h3 data-i18n="ui_settings_language">Interface Language</h3>
+                <div class="settings-body">
+                    <label for="lang-select" class="settings-label" data-i18n="settings_language_label">Choose your language:</label>
+                    <select id="lang-select" class="select-control">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="ca">Català</option>
+                        <option value="eu">Euskara</option>
+                        <option value="gl">Galego</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="card danger-zone settings-group">
+                <h3 data-i18n="ui_settings_danger_zone">Danger Zone</h3>
+                <div class="settings-body">
+                    <p class="settings-label" data-i18n="ui_settings_wipe_description">Permanently delete all your progress and start over.</p>
+                    <button id="btn-wipe-data" class="btn btn-danger btn-lg">
+                        <span class="icon">🗑️</span>
+                        <span data-i18n="ui_settings_wipe_data">Wipe All Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-widget">
+            <div class="card">
+                <h3>About</h3>
+                <div class="about-content">
+                    <p><strong>RPG Village</strong></p>
+                    <p>Version: 1.0.0-beta</p>
+                    <p>Built with ❤️ and Specs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</template>
 
     <!-- Application Entry Point -->
 </body>

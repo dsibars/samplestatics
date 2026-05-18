@@ -7,23 +7,73 @@ export class EngineAdapter {
         this.engine = engine;
         this.ui = ui;
         this.rafId = null;
+        this.lastUpdateTime = 0;
+        this.UPDATE_INTERVAL = 100; // Update UI every 100ms (10 FPS is enough for state, animations are handled by CSS)
     }
 
     init() {
-        // Handle UI actions
+        // Wire up view events
+        this.ui.views.forEach((view, domain) => {
+            if (domain === 'village') {
+                view.on('nextDay', () => {
+                    this.engine.nextDay();
+                    this.forceUpdate();
+                });
+            }
+
+            if (domain === 'buildings') {
+                view.on('startProject', (data) => {
+                    const result = this.engine.startProject(
+                        data.buildingId,
+                        data.targetLevel,
+                        data.costGold,
+                        data.costMaterials,
+                        data.duration
+                    );
+                    if (!result.success) {
+                        alert(this.engine.i18n.t(result.error));
+                    }
+                    this.forceUpdate();
+                });
+            }
+            
+            if (domain === 'explore') {
+                view.on('assignExpedition', (data) => {
+                    const result = this.engine.assignExpedition(data.expId, data.heroIds);
+                    if (!result.success) {
+                        alert(this.engine.i18n.t(result.error));
+                    }
+                    this.forceUpdate();
+                });
+                view.on('retireExpedition', () => {
+                    this.engine.retireExpedition();
+                    this.forceUpdate();
+                });
+            }
+        });
+
+        // Handle UI actions (legacy)
         this.ui.onInitialize(() => {
             console.log('Village initialization requested via Adapter');
-            this.engine.addVillager();
         });
 
         // Start the game loop
         this.startLoop();
     }
 
+    forceUpdate() {
+        const newState = this.engine.update();
+        this.ui.update(newState);
+    }
+
     startLoop() {
-        const loop = () => {
-            const newState = this.engine.update();
-            this.ui.update(newState);
+        const loop = (timestamp) => {
+            // Throttled update to prevent UI thrashing
+            if (timestamp - this.lastUpdateTime >= this.UPDATE_INTERVAL) {
+                const newState = this.engine.update();
+                this.ui.update(newState);
+                this.lastUpdateTime = timestamp;
+            }
             this.rafId = requestAnimationFrame(loop);
         };
         this.rafId = requestAnimationFrame(loop);

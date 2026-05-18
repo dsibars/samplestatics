@@ -16,16 +16,16 @@ export class VillageService {
         const defaultState = {
             gold: 100,
             population: {
-                total: 5,
+                total: 2, // 2 Builders
                 assigned: 0,
-                // max is calculated dynamically based on buildings
             },
             infrastructure: {
                 housing: 1,
-                farm: 1,
+                farm: 0, // No farm initially
                 warehouse: 1,
                 blacksmith: 0,
-                training_grounds: 0
+                training_grounds: 0,
+                explorer_guild: 0
             },
             constructionQueue: [],
             day: 1,
@@ -142,9 +142,18 @@ export class VillageService {
         return report;
     }
 
+    setDailyReport(report) {
+        this.state.lastDailyReport = report;
+        this.save();
+    }
+
     // --- Construction ---
 
     startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
+        if (this.state.constructionQueue.some(p => p.buildingId === buildingId)) {
+            return Result.fail('error_already_in_queue');
+        }
+        
         if (this.state.gold < costGold) return Result.fail('error_not_enough_gold');
         
         // Check labor

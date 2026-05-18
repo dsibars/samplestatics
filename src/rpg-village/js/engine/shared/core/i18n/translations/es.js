@@ -123,6 +123,7 @@ export const es = {
     nav_heroes: "Héroes",
     nav_inventory: "Inventario",
     nav_explore: "Explorar",
+    nav_settings: "Ajustes",
 
     // Domain: Village
     ui_village_status: "Estado de la Aldea",
@@ -149,5 +150,51 @@ export const es = {
     ui_world_map: "Mapa del Mundo",
     ui_active_expeditions: "Expediciones Activas",
     ui_start_expedition: "Iniciar Expedición",
-    ui_no_active_expeditions: "No hay expediciones activas."
+    ui_no_active_expeditions: "No hay expediciones activas.",
+
+    // Domain: Settings
+    ui_settings_title: "Ajustes del Juego",
+    ui_settings_language: "Idioma de la Interfaz",
+    settings_language_label: "Elige tu idioma:",
+    ui_settings_danger_zone: "Zona de Peligro",
+    ui_settings_wipe_description: "Borra permanentemente todo tu progreso y empieza de nuevo.",
+    ui_settings_wipe_data: "Borrar Todos los Datos",
+    ui_settings_wipe_confirm: "¿Estás absolutamente seguro? Esto borrará todo tu progreso permanentemente.",
+    ui_settings_wipe_success: "Todos los datos han sido borrados. El juego se reiniciará ahora.",
+    
+    // Intro Narrative
+    intro_title: "Un Nuevo Comienzo",
+    intro_lore: "En un mundo consumido por las llamas de una guerra eterna, un pequeño grupo de supervivientes ha huido del caos. Guiados por un valiente héroe, buscan un valle remoto para construir un santuario de paz. El viaje ha sido largo y los recursos son escasos, pero la esperanza aún perdura.",
+    intro_btn: "Comenzar Viaje",
+    ui_btn_cancel: "Cancelar",
+    ui_btn_confirm: "Confirmar Borrado",
+
+    // Daily Report
+    ui_daily_report_title: "Reporte Diario - Día {day}",
+    ui_report_food: "{amount} Comida Consumida",
+    ui_report_starvation: "¡ADVERTENCIA: La aldea se muere de hambre!",
+    ui_report_growth: "¡{amount} Aldeano se ha unido a la aldea!",
+    ui_report_built: "Completado:",
+    ui_report_exp_progress: "La expedición {name} avanzó una etapa.",
+    ui_report_exp_completed: "¡Expedición {name} completada! Encontrado: {rewards}",
+    ui_report_exp_failed: "La expedición {name} se retiró.",
+
+    // Explore View fixes
+    ui_assigned_expedition: "Expedición Asignada",
+    ui_waiting_combat: "Esperando al siguiente día para comenzar el combate.",
+    ui_progress_combat: "La expedición está en curso. El progreso ocurre al avanzar el día.",
+    ui_unassign_retire: "Desasignar Todos / Retirarse",
+    ui_another_active: "Otra expedición está activa actualmente. No puedes asignar héroes aquí.",
+    ui_roster_locked: "Expedición bloqueada. Actualmente asignados:",
+    ui_no_idle_heroes: "No hay héroes inactivos disponibles.",
+    ui_assign_heroes: "Asignar Héroes",
+    ui_update_assignment: "Actualizar Asignación",
+    ui_select_one_hero: "Por favor, selecciona al menos un héroe.",
+    ui_exp_story: "Historia",
+    ui_exp_exploration: "Exploración",
+    ui_exp_stages: "Etapas",
+    ui_exp_base_reward: "Recompensa Base",
+    ui_select_heroes: "Seleccionar Héroes",
+    ui_under_construction: "En Construcción",
+    error_already_in_queue: "El edificio ya está en construcción."
 };

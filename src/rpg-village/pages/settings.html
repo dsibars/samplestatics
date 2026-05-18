@@ -1,0 +1,47 @@
+<section class="domain-view settings-view">
+    <div class="view-header">
+        <h2 data-i18n="ui_settings_title">Game Settings</h2>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="settings-content">
+            <!-- Preferences -->
+            <div class="card settings-group">
+                <h3 data-i18n="ui_settings_language">Interface Language</h3>
+                <div class="settings-body">
+                    <label for="lang-select" class="settings-label" data-i18n="settings_language_label">Choose your language:</label>
+                    <select id="lang-select" class="select-control">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="ca">Català</option>
+                        <option value="eu">Euskara</option>
+                        <option value="gl">Galego</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="card danger-zone settings-group">
+                <h3 data-i18n="ui_settings_danger_zone">Danger Zone</h3>
+                <div class="settings-body">
+                    <p class="settings-label" data-i18n="ui_settings_wipe_description">Permanently delete all your progress and start over.</p>
+                    <button id="btn-wipe-data" class="btn btn-danger btn-lg">
+                        <span class="icon">🗑️</span>
+                        <span data-i18n="ui_settings_wipe_data">Wipe All Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-widget">
+            <div class="card">
+                <h3>About</h3>
+                <div class="about-content">
+                    <p><strong>RPG Village</strong></p>
+                    <p>Version: 1.0.0-beta</p>
+                    <p>Built with ❤️ and Specs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

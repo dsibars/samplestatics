@@ -2641,7 +2641,7 @@ class CombatTurnAutoAgent {
     });
     const injuredAllies = allies.filter((a) => a.hp > 0 && a.hp / a.maxHp <= 0.7);
     if (injuredAllies.length > 0) {
-      const healSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category === "support" && (s.targetType === "single_ally" || s.targetType === "all_allies")).sort((a, b) => (b.power || 0) - (a.power || 0));
+      const healSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category === "support" && s.power > 0 && (s.targetType === "single_ally" || s.targetType === "all_allies")).sort((a, b) => (b.power || 0) - (a.power || 0));
       if (healSkills.length > 0) {
         const groupHeal = healSkills.find((s) => s.targetType === "all_allies");
         if (groupHeal && injuredAllies.length >= 2) {
@@ -2655,6 +2655,19 @@ class CombatTurnAutoAgent {
           return {
             skillId: singleHeal.id,
             targetIndex: singleHeal.targetType === "single_ally" ? targetIndex2 : null
+          };
+        }
+      }
+    }
+    const supportSkills = availableSkills.map((sId) => SKILLS_DATA[sId]).filter((s) => s.category === "support" && (!s.power || s.power <= 0));
+    if (supportSkills.length > 0) {
+      const hasteSkill = supportSkills.find((s) => s.id === "haste");
+      if (hasteSkill) {
+        const targetWithoutHaste = allies.find((a) => a.hp > 0 && !a.statusEffects.some((e) => e.type === "haste"));
+        if (targetWithoutHaste) {
+          return {
+            skillId: hasteSkill.id,
+            targetIndex: hasteSkill.targetType === "single_ally" ? allies.indexOf(targetWithoutHaste) : null
           };
         }
       }
@@ -2798,7 +2811,7 @@ class CombatManager {
       const context = {
         target: hero,
         allies: this.heroes,
-        enemies: this.enemies.filter((e) => e.hp > 0),
+        enemies: this.enemies,
         type: "smart"
       };
       const decision = CombatTurnAutoAgent.decideAction(context);
@@ -2815,13 +2828,13 @@ class CombatManager {
   checkCombatEnd() {
     if (this.enemies.every((e) => e.hp <= 0)) {
       this.isCombatOver = true;
-      setTimeout(() => this.game.endCombat("win", this.partyTraits.goldBonus), 1e3);
+      setTimeout(() => this.game.endCombat("win", this.partyTraits.goldBonus), 500);
       return true;
     }
     const allHeroesDead = this.heroes.every((h) => h.hp <= 0);
     if (allHeroesDead) {
       this.isCombatOver = true;
-      setTimeout(() => this.game.endCombat("lose"), 1e3);
+      setTimeout(() => this.game.endCombat("lose"), 500);
       return true;
     }
     return false;
@@ -2979,7 +2992,7 @@ class CombatManager {
         }
       }
     });
-    if (this.enemies.every((e) => e.hp <= 0)) delay += 1e3;
+    if (this.enemies.every((e) => e.hp <= 0)) delay += 500;
     setTimeout(() => this.advanceTurn(), delay);
   }
   applyStatusEffect(target, effect) {
@@ -3014,8 +3027,8 @@ class CombatManager {
     if (this.isCombatOver) return;
     const context = {
       target: enemy,
-      allies: this.enemies.filter((e) => e.hp > 0),
-      enemies: this.heroes.filter((h) => h.hp > 0),
+      allies: this.enemies,
+      enemies: this.heroes,
       type: "random"
     };
     const decision = CombatTurnAutoAgent.decideAction(context);
@@ -3103,6 +3116,7 @@ class RPGGame {
     this.screenFlash = { color: "#ff0000", life: 0 };
     this.lastActionTime = 0;
     this.canvas.addEventListener("click", (e) => this.handleCanvasClick(e));
+    this.victoryTimer = null;
   }
   resizeCanvas() {
     const container = this.canvas.parentElement;
@@ -3311,6 +3325,12 @@ class RPGGame {
       const levelUpMessages = levelUps.map(
         (lu) => `<p style="color: #0af; font-weight: bold;">${t("log_level_up").replace("{hero}", lu.name).replace("{level}", lu.level)}</p>`
       ).join("");
+      if (this.autoBattle) {
+        setTimeout(() => {
+          if (window.nextCombat) window.nextCombat();
+        }, 500);
+        return;
+      }
       document.getElementById("victory-rewards").innerHTML = `
                 <p>💰 +${goldEarned.toFixed(2).replace(/\.00$/, "")} ${t("gold")}</p>
                 <p>✨ +${expEarned.toFixed(2).replace(/\.00$/, "")} ${t("exp_for_heroes")}</p>
@@ -3318,6 +3338,7 @@ class RPGGame {
                 ${levelUpMessages}
             `;
       document.getElementById("win-overlay").style.display = "flex";
+      this.startVictoryTimer();
       if (this.currentCombat && this.currentCombat.oneShotJumpPossible) {
         setTimeout(() => {
           if (confirm(t("oneshot_jump_confirm"))) {
@@ -3498,7 +3519,7 @@ class RPGGame {
     }
   }
   handleCanvasClick(e) {
-    if (!this.currentCombat || this.currentCombat.isCombatOver) return;
+    if (!this.currentCombat || this.currentCombat.isCombatOver || this.autoBattle) return;
     const rect = this.canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -3536,9 +3557,21 @@ class RPGGame {
         disabled: hero.mp < skill.mpCost,
         onclick: () => {
           if (skill.targetType === "single_enemy") {
-            this.renderTargetSelection(hero, skillId, "enemies");
+            const aliveEnemies = this.enemies.filter((e) => e.hp > 0);
+            if (aliveEnemies.length === 1) {
+              panel.style.display = "none";
+              this.currentCombat.heroAction(hero, skillId, this.enemies.indexOf(aliveEnemies[0]));
+            } else {
+              this.renderTargetSelection(hero, skillId, "enemies");
+            }
           } else if (skill.targetType === "single_ally") {
-            this.renderTargetSelection(hero, skillId, "allies");
+            const aliveAllies = this.heroes.filter((a) => a.hp > 0);
+            if (aliveAllies.length === 1) {
+              panel.style.display = "none";
+              this.currentCombat.heroAction(hero, skillId, this.heroes.indexOf(aliveAllies[0]));
+            } else {
+              this.renderTargetSelection(hero, skillId, "allies");
+            }
           } else {
             panel.style.display = "none";
             this.currentCombat.heroAction(hero, skillId);
@@ -3575,6 +3608,30 @@ class RPGGame {
       }
     }));
     this.renderDynamicGrid(panel, options, "🎒 " + t("items"), () => this.showActionPanel(hero));
+  }
+  startVictoryTimer() {
+    this.stopVictoryTimer();
+    let seconds = 3;
+    const btn = document.querySelector("#win-overlay .menu-btn");
+    const originalText = t("btn_continue");
+    if (btn) btn.innerText = `${originalText} (${seconds})`;
+    this.victoryTimer = setInterval(() => {
+      seconds--;
+      if (seconds <= 0) {
+        this.stopVictoryTimer();
+        if (window.nextCombat) window.nextCombat();
+      } else {
+        if (btn) btn.innerText = `${originalText} (${seconds})`;
+      }
+    }, 1e3);
+  }
+  stopVictoryTimer() {
+    if (this.victoryTimer) {
+      clearInterval(this.victoryTimer);
+      this.victoryTimer = null;
+    }
+    const btn = document.querySelector("#win-overlay .menu-btn");
+    if (btn) btn.innerText = t("btn_continue");
   }
   renderDynamicGrid(panel, options, title = "", backFn = null) {
     panel.innerHTML = "";
@@ -3719,6 +3776,7 @@ window.nextCombat = () => {
   if (performance.now() - lastNextCombatTime < 500) return;
   if (game && game.popupOpenTime && performance.now() - game.popupOpenTime < 300) return;
   lastNextCombatTime = performance.now();
+  if (game) game.stopVictoryTimer();
   document.getElementById("win-overlay").style.display = "none";
   document.getElementById("combat-log").innerHTML = "";
   if (game) game.nextCombat();
@@ -4533,10 +4591,20 @@ window.toggleAutoBattle = (checked) => {
   Progression.setAutoBattle(checked);
   if (window.game) {
     window.game.autoBattle = checked;
-    if (checked && window.game.currentCombat && !window.game.currentCombat.isCombatOver) {
-      const participant = window.game.currentCombat.turnOrder[window.game.currentCombat.currentTurnIndex];
-      if (participant && window.game.heroes.includes(participant)) {
-        window.game.currentCombat.heroAutoTurn(participant);
+    const combat = window.game.currentCombat;
+    if (combat && !combat.isCombatOver) {
+      combat.targetIndex = null;
+      const participant = combat.turnOrder[combat.currentTurnIndex];
+      const isHeroTurn = participant && window.game.heroes.includes(participant);
+      if (checked) {
+        if (isHeroTurn && participant.hp > 0) {
+          document.getElementById("action-panel").style.display = "none";
+          combat.heroAutoTurn(participant);
+        }
+      } else {
+        if (isHeroTurn && participant.hp > 0 && !combat.isActionInProgress) {
+          window.game.showActionPanel(participant);
+        }
       }
     }
   }

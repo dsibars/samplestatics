@@ -300,33 +300,34 @@ class InfoComponent extends Component {
     const spell = this.props.spell;
     if (!spell) {
       return `
-                <div class="info-panel" style="height: 15vh; background: #f0f0f0; padding: 10px; border: 1px solid #ccc; margin-bottom: 10px;">
-                    <p>Draw a spell below and press Launch!</p>
+                <div class="info-panel" style="height: 15vh; background: #f0f0f0; padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center;">
+                    <p>Draw a <strong>Core</strong> symbol (center) and <strong>Complements</strong> (slices) then press Launch!</p>
                 </div>
             `;
     }
     let statsText = "";
     if (spell.composition) {
       const mods = [];
-      if (spell.composition.modifiers.boost) mods.push(`enhanced x${spell.composition.modifiers.boost}`);
-      if (spell.composition.modifiers.reduce) mods.push(`reduced x${spell.composition.modifiers.reduce}`);
-      if (spell.composition.modifiers.all) mods.push(`multienemy x${spell.composition.modifiers.all}`);
-      if (spell.composition.modifiers.pierce) mods.push(`piercing x${spell.composition.modifiers.pierce}`);
-      statsText = mods.length > 0 ? `Stats: ${mods.join(", ")}` : "Stats: Basic";
+      if (spell.composition.modifiers.boost) mods.push(`Enhanced x${spell.composition.modifiers.boost}`);
+      if (spell.composition.modifiers.reduce) mods.push(`Reduced x${spell.composition.modifiers.reduce}`);
+      if (spell.composition.modifiers.all) mods.push(`Multi-Enemy x${spell.composition.modifiers.all}`);
+      if (spell.composition.modifiers.pierce) mods.push(`Piercing x${spell.composition.modifiers.pierce}`);
+      statsText = mods.length > 0 ? `Modifiers: ${mods.join(", ")}` : "Stats: Basic";
     }
+    const isFailure = spell.type === "none";
     return `
-            <div class="info-panel" style="min-height: 15vh; background: #e0f7fa; padding: 10px; border: 1px solid #00acc1; margin-bottom: 10px;">
-                <h2 style="margin: 0;">${spell.name}</h2>
-                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                    <span><strong>Type:</strong> ${spell.element}</span>
-                    <span><strong>MP Cost:</strong> ${spell.mpCost} MP</span>
-                    <span><strong>Damage:</strong> ${spell.damage}</span>
+            <div class="info-panel" style="min-height: 15vh; background: ${isFailure ? "#ffebee" : "#e0f7fa"}; padding: 10px; border: 1px solid ${isFailure ? "#f44336" : "#00acc1"}; margin-bottom: 10px;">
+                <h2 style="margin: 0; color: ${isFailure ? "#c62828" : "#006064"};">${spell.name}</h2>
+                <div style="display: flex; justify-content: space-between; margin-top: 5px; font-weight: bold;">
+                    <span>Type: ${spell.element}</span>
+                    <span>MP Cost: ${spell.mpCost}</span>
+                    <span>Power: ${spell.damage}</span>
                 </div>
-                <div style="font-size: 0.85em; color: #00796b; margin-top: 8px; border-top: 1px dashed #4db6ac; padding-top: 5px;">
+                <div style="font-size: 0.85em; color: ${isFailure ? "#d32f2f" : "#00796b"}; margin-top: 8px; border-top: 1px dashed ${isFailure ? "#ef9a9a" : "#4db6ac"}; padding-top: 5px;">
                     <strong>${statsText}</strong>
                 </div>
                 <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
-                    Effects: ${spell.effects.length > 0 ? spell.effects.join(", ") : "None"}
+                    Special Effects: ${spell.effects && spell.effects.length > 0 ? spell.effects.join(", ") : "None"}
                 </div>
             </div>
         `;
@@ -539,18 +540,28 @@ class PlusDetector extends PatternDetector {
     const box = this.getBoundingBox(points);
     let horizontalPoints = 0;
     let verticalPoints = 0;
-    const threshold = Math.max(box.width, box.height) * 0.35;
+    const threshold = Math.max(box.width, box.height) * 0.25;
     points.forEach((p) => {
       if (Math.abs(p.y - box.centerY) < threshold) horizontalPoints++;
       if (Math.abs(p.x - box.centerX) < threshold) verticalPoints++;
     });
-    const hScore = horizontalPoints / points.length;
-    const vScore = verticalPoints / points.length;
-    const score = (hScore + vScore) / 2;
-    if (score < 0.2) return null;
-    const centerXDist = Math.abs(box.centerX - (box.x + box.width / 2)) / box.width;
-    if (centerXDist > 0.3) return null;
-    return { score, type: "plus", metadata: { box } };
+    horizontalPoints / points.length;
+    verticalPoints / points.length;
+    let hasTop = false, hasBottom = false, hasLeft = false, hasRight = false;
+    points.forEach((p) => {
+      if (p.y < box.centerY - threshold && Math.abs(p.x - box.centerX) < threshold) hasTop = true;
+      if (p.y > box.centerY + threshold && Math.abs(p.x - box.centerX) < threshold) hasBottom = true;
+      if (p.x < box.centerX - threshold && Math.abs(p.y - box.centerY) < threshold) hasLeft = true;
+      if (p.x > box.centerX + threshold && Math.abs(p.y - box.centerY) < threshold) hasRight = true;
+    });
+    const cardinalScore = (hasTop ? 0.25 : 0) + (hasBottom ? 0.25 : 0) + (hasLeft ? 0.25 : 0) + (hasRight ? 0.25 : 0);
+    const aspectRatio = Math.min(box.width, box.height) / Math.max(box.width, box.height);
+    if (cardinalScore < 0.75) return null;
+    return {
+      score: cardinalScore * 0.8 + aspectRatio * 0.2,
+      type: "plus",
+      metadata: { box }
+    };
   }
 }
 class WaterDetector extends PatternDetector {
@@ -558,7 +569,7 @@ class WaterDetector extends PatternDetector {
     super("water");
   }
   detect(points) {
-    if (points.length < 5) return null;
+    if (points.length < 15) return null;
     const box = this.getBoundingBox(points);
     if (box.width < box.height * 0.5) return null;
     let turns = 0;
@@ -570,9 +581,10 @@ class WaterDetector extends PatternDetector {
         lastDir = dir;
       }
     }
-    if (turns < 1) return null;
+    if (turns < 2) return null;
     return {
-      score: Math.min(1, turns / 3),
+      score: 0.5,
+      // Low score to favor caret
       type: "water",
       metadata: { boundingBox: box }
     };
@@ -592,22 +604,13 @@ class FireDetector extends PatternDetector {
       }
     });
     const peakRelativeY = (peakY - box.y) / box.height;
-    if (peakRelativeY > 0.4) return null;
+    if (peakRelativeY > 0.3) return null;
     const startRelY = (points[0].y - box.y) / box.height;
     const endRelY = (points[points.length - 1].y - box.y) / box.height;
-    if (startRelY < 0.2 && endRelY < 0.2) return null;
-    let directionChanges = 0;
-    let lastDir = 0;
-    for (let i = 1; i < points.length; i++) {
-      const dir = Math.sign(points[i].y - points[i - 1].y);
-      if (dir !== 0 && dir !== lastDir) {
-        directionChanges++;
-        lastDir = dir;
-      }
-    }
-    if (directionChanges < 1) return null;
+    if (startRelY < 0.4 || endRelY < 0.4) return null;
     return {
-      score: 0.8,
+      score: 0.5,
+      // Low score to favor caret
       type: "fire",
       metadata: { boundingBox: box }
     };
@@ -618,10 +621,28 @@ class ZDetector extends PatternDetector {
     super("sleep");
   }
   detect(points) {
-    if (points.length < 10) return null;
+    if (points.length < 8) return null;
     const box = this.getBoundingBox(points);
+    if (box.width < 15 || box.height < 15) return null;
+    const start = points[0];
+    const end = points[points.length - 1];
+    const startTop = (start.y - box.y) / box.height < 0.3;
+    const endBottom = (end.y - box.y) / box.height > 0.7;
+    if (!startTop || !endBottom) return null;
+    let xDirectionChanges = 0;
+    let lastXDir = 0;
+    for (let i = 1; i < points.length; i++) {
+      const dir = Math.sign(points[i].x - points[i - 1].x);
+      if (dir !== 0 && dir !== lastXDir) {
+        xDirectionChanges++;
+        lastXDir = dir;
+      }
+    }
+    if (xDirectionChanges < 2) return null;
+    const aspectRatio = box.height / box.width;
+    if (aspectRatio > 2 || aspectRatio < 0.3) return null;
     return {
-      score: 0.7,
+      score: 0.85,
       type: "sleep",
       metadata: { boundingBox: box }
     };
@@ -635,18 +656,23 @@ class XDetector extends PatternDetector {
     if (points.length < 5) return null;
     const box = this.getBoundingBox(points);
     const aspectRatio = Math.min(box.width, box.height) / Math.max(box.width, box.height);
-    if (aspectRatio < 0.6) return null;
-    let diag1Score = 0;
-    let diag2Score = 0;
+    if (aspectRatio < 0.5) return null;
+    let diag1Points = 0;
+    let diag2Points = 0;
+    const threshold = 0.15;
     points.forEach((p) => {
-      const d1 = Math.abs((p.x - box.x) / box.width - (p.y - box.y) / box.height);
-      const d2 = Math.abs((p.x - box.x) / box.width - (1 - (p.y - box.y) / box.height));
-      if (d1 < 0.15) diag1Score++;
-      if (d2 < 0.15) diag2Score++;
+      const normX = (p.x - box.x) / box.width;
+      const normY = (p.y - box.y) / box.height;
+      const d1 = Math.abs(normX - normY);
+      const d2 = Math.abs(normX - (1 - normY));
+      if (d1 < threshold) diag1Points++;
+      if (d2 < threshold) diag2Points++;
     });
-    const score = (diag1Score + diag2Score) / points.length;
-    if (score < 0.6) return null;
-    return { score, type: "poison", metadata: { boundingBox: box } };
+    const score = (diag1Points + diag2Points) / points.length;
+    const d1Ratio = diag1Points / points.length;
+    const d2Ratio = diag2Points / points.length;
+    if (score < 0.6 || d1Ratio < 0.2 || d2Ratio < 0.2) return null;
+    return { score: Math.min(1, score), type: "poison", metadata: { boundingBox: box } };
   }
 }
 class InfinityDetector extends PatternDetector {
@@ -707,15 +733,93 @@ class DashDetector extends PatternDetector {
     };
   }
 }
+class CaretDetector extends PatternDetector {
+  constructor() {
+    super("caret");
+    this.DIRECTIONS = {
+      UP: "caret_up",
+      DOWN: "caret_down",
+      LEFT: "caret_left",
+      RIGHT: "caret_right"
+    };
+  }
+  detect(points) {
+    if (points.length < 5) return null;
+    const box = this.getBoundingBox(points);
+    if (box.width < 10 && box.height < 10) return null;
+    let minX = points[0].x, maxX = points[0].x, minY = points[0].y, maxY = points[0].y;
+    let minXIdx = 0, maxXIdx = 0, minYIdx = 0, maxYIdx = 0;
+    points.forEach((p, i) => {
+      if (p.x < minX) {
+        minX = p.x;
+        minXIdx = i;
+      }
+      if (p.x > maxX) {
+        maxX = p.x;
+        maxXIdx = i;
+      }
+      if (p.y < minY) {
+        minY = p.y;
+        minYIdx = i;
+      }
+      if (p.y > maxY) {
+        maxY = p.y;
+        maxYIdx = i;
+      }
+    });
+    const scores = [
+      { dir: this.DIRECTIONS.UP, peakIdx: minYIdx, score: this.evaluateCaret(points, minYIdx, "y", -1, box) },
+      { dir: this.DIRECTIONS.DOWN, peakIdx: maxYIdx, score: this.evaluateCaret(points, maxYIdx, "y", 1, box) },
+      { dir: this.DIRECTIONS.LEFT, peakIdx: minXIdx, score: this.evaluateCaret(points, minXIdx, "x", -1, box) },
+      { dir: this.DIRECTIONS.RIGHT, peakIdx: maxXIdx, score: this.evaluateCaret(points, maxXIdx, "x", 1, box) }
+    ];
+    const best = scores.reduce((prev, curr) => curr.score > prev.score ? curr : prev);
+    if (best.score > 0.6) {
+      return {
+        score: best.score,
+        type: best.dir,
+        metadata: { direction: best.dir, boundingBox: box }
+      };
+    }
+    return null;
+  }
+  evaluateCaret(points, peakIdx, axis, sign, box) {
+    const minPointsSide = Math.max(2, points.length * 0.2);
+    if (peakIdx < minPointsSide || peakIdx > points.length - 1 - minPointsSide) return 0;
+    const peak = points[peakIdx];
+    const start = points[0];
+    const end = points[points.length - 1];
+    const peakVal = peak[axis];
+    const startVal = start[axis];
+    const endVal = end[axis];
+    const distStart = Math.abs(startVal - peakVal);
+    const distEnd = Math.abs(endVal - peakVal);
+    const boxDim = axis === "y" ? box.height : box.width;
+    if (distStart < boxDim * 0.4 || distEnd < boxDim * 0.4) return 0;
+    let monotonicCount = 0;
+    for (let i = 1; i <= peakIdx; i++) {
+      if (sign === -1) {
+        if (points[i][axis] <= points[i - 1][axis]) monotonicCount++;
+      } else {
+        if (points[i][axis] >= points[i - 1][axis]) monotonicCount++;
+      }
+    }
+    for (let i = peakIdx + 1; i < points.length; i++) {
+      if (sign === -1) {
+        if (points[i][axis] >= points[i - 1][axis]) monotonicCount++;
+      } else {
+        if (points[i][axis] <= points[i - 1][axis]) monotonicCount++;
+      }
+    }
+    const monotonicity = monotonicCount / (points.length - 1);
+    return monotonicity * 0.9;
+  }
+}
 class RecognitionEngine {
   constructor() {
     this.detectors = [
-      new FireDetector(),
-      new WaterDetector(),
-      new SquareDetector(),
-      // Earth
-      new CircleDetector(),
-      // Light/Shield
+      new CaretDetector(),
+      // Covers ^, v, <, >
       new ZDetector(),
       // Sleep
       new XDetector(),
@@ -726,8 +830,16 @@ class RecognitionEngine {
       // Reduce
       new InfinityDetector(),
       // All
-      new ArrowDetector()
-      // Pierce
+      new ArrowDetector(),
+      // Pierce (might conflict with Caret Right, position matters)
+      new SquareDetector(),
+      // Earth (legacy)
+      new CircleDetector(),
+      // Light/Shield (legacy)
+      new FireDetector(),
+      // Legacy Fire
+      new WaterDetector()
+      // Legacy Water
     ];
   }
   /**
@@ -745,6 +857,7 @@ class RecognitionEngine {
     const zoneStrokes = { "core": [] };
     for (let i = 0; i < 4; i++) zoneStrokes[`complement-${i}`] = [];
     strokes.forEach((stroke) => {
+      if (stroke.length === 0) return;
       const box = this.calculateBoundingBox(stroke);
       const zone = this.getZone(box.centerX, box.centerY, centerX, centerY, innerRadius);
       if (zoneStrokes[zone]) zoneStrokes[zone].push(stroke);
@@ -760,12 +873,11 @@ class RecognitionEngine {
           bestCombinedMatch = match;
         }
       });
-      if (bestCombinedMatch && bestCombinedMatch.score > 0.4) {
+      if (bestCombinedMatch && bestCombinedMatch.score > 0.5) {
         results.push({
           zone,
           ...bestCombinedMatch,
           strokes: strokesInZone
-          // Keep reference to original strokes for visual feedback
         });
       } else {
         strokesInZone.forEach((stroke) => {
@@ -776,7 +888,7 @@ class RecognitionEngine {
               bestMatch = match;
             }
           });
-          if (bestMatch) {
+          if (bestMatch && bestMatch.score > 0.4) {
             results.push({ zone, ...bestMatch, strokes: [stroke] });
           } else {
             results.push({
@@ -836,18 +948,25 @@ class SpellService {
   constructor(recognitionEngine2) {
     this.recognitionEngine = recognitionEngine2;
     this.cores = {
+      "caret_right": { element: "Fire", baseDamage: 20, baseCost: 10, name: "Fire" },
+      "caret_left": { element: "Water", baseDamage: 12, baseCost: 8, name: "Water" },
+      "caret_down": { element: "Earth", baseDamage: 15, baseCost: 12, name: "Earth" },
+      "caret_up": { element: "Light", baseDamage: 8, baseCost: 15, name: "Light", effect: "defense" },
+      "sleep": { element: "Neutral", baseDamage: 0, baseCost: 20, name: "Neutral", effect: "sleep" },
+      "poison": { element: "Poison", baseDamage: 4, baseCost: 10, name: "Poison", effect: "poison" },
+      // Legacy support
       "fire": { element: "Fire", baseDamage: 20, baseCost: 10, name: "Fire" },
       "water": { element: "Water", baseDamage: 12, baseCost: 8, name: "Water" },
       "square": { element: "Earth", baseDamage: 15, baseCost: 12, name: "Earth" },
-      "circle": { element: "Light", baseDamage: 8, baseCost: 15, name: "Light", effect: "defense" },
-      "sleep": { element: "Neutral", baseDamage: 0, baseCost: 20, name: "Neutral", effect: "sleep" },
-      "poison": { element: "Poison", baseDamage: 4, baseCost: 10, name: "Poison", effect: "poison" }
+      "circle": { element: "Light", baseDamage: 8, baseCost: 15, name: "Light", effect: "defense" }
     };
     this.complements = {
       "plus": { type: "boost", costMod: 1.25, effectMod: 1.25, nameModifier: "Greater" },
       "dash": { type: "reduce", costMod: 0.75, effectMod: 0.75, nameModifier: "Minor" },
       "infinity": { type: "all", costMod: 1.5, effectMod: 1, nameModifier: "Echoing" },
-      "arrow": { type: "pierce", costMod: 1.2, effectMod: 1, nameModifier: "Piercing" }
+      "arrow": { type: "pierce", costMod: 1.2, effectMod: 1, nameModifier: "Piercing" },
+      // Also map caret directions to complements if drawn in complement zone
+      "caret_right": { type: "pierce", costMod: 1.2, effectMod: 1, nameModifier: "Piercing" }
     };
   }
   /**
@@ -873,9 +992,15 @@ class SpellService {
     recognized.forEach((item) => {
       if (item.zone.startsWith("complement-")) {
         const sliceId = parseInt(item.zone.split("-")[1]);
-        if (item.type === "unknown") return;
+        if (item.type === "unknown") {
+          failed = true;
+          return;
+        }
         const compConfig = this.complements[item.type];
-        if (!compConfig) return;
+        if (!compConfig) {
+          failed = true;
+          return;
+        }
         if (slices[sliceId] === null) {
           slices[sliceId] = { type: item.type, count: 1, config: compConfig };
         } else if (slices[sliceId].type === item.type) {
@@ -900,9 +1025,9 @@ class SpellService {
           damage *= slice.config.effectMod;
         }
       }
-      if (slice.config.type === "all") {
+      if (slice.config.type === "all" && !effects.includes("multi-target")) {
         effects.push("multi-target");
-      } else if (slice.config.type === "pierce") {
+      } else if (slice.config.type === "pierce" && !effects.includes("pierce")) {
         effects.push("pierce");
       }
     });
@@ -964,7 +1089,7 @@ class GuideView extends View {
 
                 <section>
                     <h3>The Magic Circle</h3>
-                    <p>Each spell has a <strong>Core</strong> and up to 4 <strong>Complements</strong>.</p>
+                    <p>Each spell has a <strong>Core</strong> and up to 4 <strong>Complements</strong> (the outer slices).</p>
                     <p><strong>Rule:</strong> Exactly ONE gesture in the Core. Mixing different symbols in one Complement section causes failure.</p>
                 </section>
 
@@ -977,13 +1102,14 @@ class GuideView extends View {
                             <th style="padding: 8px; border: 1px solid #ddd;">DMG</th>
                             <th style="padding: 8px; border: 1px solid #ddd;">MP</th>
                         </tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">^</td><td style="padding: 8px; border: 1px solid #ddd;">Fire</td><td style="padding: 8px; border: 1px solid #ddd;">20</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">S</td><td style="padding: 8px; border: 1px solid #ddd;">Water</td><td style="padding: 8px; border: 1px solid #ddd;">12</td><td style="padding: 8px; border: 1px solid #ddd;">8</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Square</td><td style="padding: 8px; border: 1px solid #ddd;">Earth</td><td style="padding: 8px; border: 1px solid #ddd;">15</td><td style="padding: 8px; border: 1px solid #ddd;">12</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Circle</td><td style="padding: 8px; border: 1px solid #ddd;">Light</td><td style="padding: 8px; border: 1px solid #ddd;">8</td><td style="padding: 8px; border: 1px solid #ddd;">15</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">Z</td><td style="padding: 8px; border: 1px solid #ddd;">Neutral</td><td style="padding: 8px; border: 1px solid #ddd;">0</td><td style="padding: 8px; border: 1px solid #ddd;">20</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">X</td><td style="padding: 8px; border: 1px solid #ddd;">Poison</td><td style="padding: 8px; border: 1px solid #ddd;">4</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&gt;</td><td style="padding: 8px; border: 1px solid #ddd;">Fire</td><td style="padding: 8px; border: 1px solid #ddd;">20</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&lt;</td><td style="padding: 8px; border: 1px solid #ddd;">Water</td><td style="padding: 8px; border: 1px solid #ddd;">12</td><td style="padding: 8px; border: 1px solid #ddd;">8</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">v</td><td style="padding: 8px; border: 1px solid #ddd;">Earth</td><td style="padding: 8px; border: 1px solid #ddd;">15</td><td style="padding: 8px; border: 1px solid #ddd;">12</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">^</td><td style="padding: 8px; border: 1px solid #ddd;">Light</td><td style="padding: 8px; border: 1px solid #ddd;">8</td><td style="padding: 8px; border: 1px solid #ddd;">15</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">Z</td><td style="padding: 8px; border: 1px solid #ddd;">Neutral</td><td style="padding: 8px; border: 1px solid #ddd;">0</td><td style="padding: 8px; border: 1px solid #ddd;">20</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">X</td><td style="padding: 8px; border: 1px solid #ddd;">Poison</td><td style="padding: 8px; border: 1px solid #ddd;">4</td><td style="padding: 8px; border: 1px solid #ddd;">10</td></tr>
                     </table>
+                    <p style="font-size: 0.8em; color: #666; margin-top: 5px;">* Arrows are drawn as two strokes or one continuous movement (caret shape).</p>
                 </section>
 
                 <section style="margin-top: 20px;">
@@ -994,11 +1120,12 @@ class GuideView extends View {
                             <th style="padding: 8px; border: 1px solid #ddd;">Effect</th>
                             <th style="padding: 8px; border: 1px solid #ddd;">MP Cost</th>
                         </tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">+</td><td style="padding: 8px; border: 1px solid #ddd;">+25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">+25%</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">-</td><td style="padding: 8px; border: 1px solid #ddd;">-25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">-25%</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">&infin;</td><td style="padding: 8px; border: 1px solid #ddd;">Multi-target</td><td style="padding: 8px; border: 1px solid #ddd;">+50%</td></tr>
-                        <tr><td style="padding: 8px; border: 1px solid #ddd;">&gt;</td><td style="padding: 8px; border: 1px solid #ddd;">Piercing</td><td style="padding: 8px; border: 1px solid #ddd;">+20%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">+</td><td style="padding: 8px; border: 1px solid #ddd;">+25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">+25%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #ddd;">-25% Power</td><td style="padding: 8px; border: 1px solid #ddd;">-25%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&infin;</td><td style="padding: 8px; border: 1px solid #ddd;">Multi-target</td><td style="padding: 8px; border: 1px solid #ddd;">+50%</td></tr>
+                        <tr><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">&gt;</td><td style="padding: 8px; border: 1px solid #ddd;">Piercing</td><td style="padding: 8px; border: 1px solid #ddd;">+20%</td></tr>
                     </table>
+                    <p style="font-size: 0.8em; color: #666; margin-top: 5px;">* Multiple identical symbols in different slices stack their effects!</p>
                 </section>
             </div>
         `;

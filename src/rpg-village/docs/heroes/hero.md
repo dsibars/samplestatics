@@ -8,7 +8,10 @@ Heroes are the defenders of the village and the primary means of progressing the
 ### Identity
 - `id`: Unique UUID.
 - `name`: String.
-- `status`: Enum (`active`, `resting`, `training`).
+- `level`: Integer, current level.
+- `exp`: Integer, current experience points.
+- `status`: Enum (`active`, `resting`, `training`). Hero's idle status.
+- `activity`: Implicit state. If a hero is on an expedition, they are considered busy.
 - `origin`: The hero's background, which provides unique stat multipliers and party-wide traits.
   - See [origins_data.md](origins_data.md) for the full registry.
 

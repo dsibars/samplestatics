@@ -149,5 +149,34 @@ export const eu = {
     ui_world_map: "Munduko Mapa",
     ui_active_expeditions: "Espedizio Aktiboak",
     ui_start_expedition: "Espedizioa Hasi",
-    ui_no_active_expeditions: "Ez dago espedizio aktiborik."
+    ui_no_active_expeditions: "Ez dago espedizio aktiborik.",
+
+    // Daily Report
+    ui_daily_report_title: "Eguneroko Txostena - {day}. Eguna",
+    ui_report_food: "{amount} Janari Kontsumituta",
+    ui_report_starvation: "KONTUZ: Herria gosez hiltzen ari da!",
+    ui_report_growth: "{amount} Herritar batu da herrira!",
+    ui_report_built: "Osatua:",
+    ui_report_exp_progress: "{name} espedizioak etapa bat aurrera egin du.",
+    ui_report_exp_completed: "{name} espedizioa osatu da! Aurkitua: {rewards}",
+    ui_report_exp_failed: "{name} espedizioak atzera egin du.",
+
+    // Explore View fixes
+    ui_assigned_expedition: "Esleitutako Espedizioa",
+    ui_waiting_combat: "Hurrengo egunera arte itxaroten borroka hasteko.",
+    ui_progress_combat: "Espedizioa abian da. Aurrerapena eguna igarotzean gertatzen da.",
+    ui_unassign_retire: "Guztiak Kendu / Erretiratu",
+    ui_another_active: "Beste espedizio bat aktibo dago une honetan. Ezin dituzu heroiak esleitu hemen.",
+    ui_roster_locked: "Espedizioa blokeatuta. Une honetan esleituta:",
+    ui_no_idle_heroes: "Ez dago heroirik eskuragarri.",
+    ui_assign_heroes: "Heroiak Esleitu",
+    ui_update_assignment: "Esleipena Eguneratu",
+    ui_select_one_hero: "Mesedez, aukeratu gutxienez heroi bat.",
+    ui_exp_story: "Istorioa",
+    ui_exp_exploration: "Esplorazioa",
+    ui_exp_stages: "Etapak",
+    ui_exp_base_reward: "Oinarrizko Saria",
+    ui_select_heroes: "Heroiak Aukeratu",
+    ui_under_construction: "Eraikitzen",
+    error_already_in_queue: "Eraikina jada eraikitzen ari da."
 };

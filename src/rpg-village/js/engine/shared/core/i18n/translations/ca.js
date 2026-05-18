@@ -149,5 +149,34 @@ export const ca = {
     ui_world_map: "Mapa del Món",
     ui_active_expeditions: "Expedicions Actives",
     ui_start_expedition: "Iniciar Expedició",
-    ui_no_active_expeditions: "No hi ha expedicions actives."
+    ui_no_active_expeditions: "No hi ha expedicions actives.",
+
+    // Daily Report
+    ui_daily_report_title: "Informe Diari - Dia {day}",
+    ui_report_food: "{amount} Menjar Consumit",
+    ui_report_starvation: "AVÍS: El poble es mor de fam!",
+    ui_report_growth: "{amount} Vilatà s'ha unit al poble!",
+    ui_report_built: "Completat:",
+    ui_report_exp_progress: "L'expedició {name} ha avançat una etapa.",
+    ui_report_exp_completed: "Expedició {name} completada! Trobat: {rewards}",
+    ui_report_exp_failed: "L'expedició {name} s'ha retirat.",
+
+    // Explore View fixes
+    ui_assigned_expedition: "Expedició Assignada",
+    ui_waiting_combat: "Esperant el següent dia per començar el combat.",
+    ui_progress_combat: "L'expedició està en curs. El progrés ocorre en avançar el dia.",
+    ui_unassign_retire: "Desassignar Tots / Retirar-se",
+    ui_another_active: "Una altra expedició està activa actualment. No pots assignar herois aquí.",
+    ui_roster_locked: "Expedició bloquejada. Actualment assignats:",
+    ui_no_idle_heroes: "No hi ha herois inactius disponibles.",
+    ui_assign_heroes: "Assignar Herois",
+    ui_update_assignment: "Actualitzar Assignació",
+    ui_select_one_hero: "Si us plau, selecciona almenys un heroi.",
+    ui_exp_story: "Història",
+    ui_exp_exploration: "Exploració",
+    ui_exp_stages: "Etapes",
+    ui_exp_base_reward: "Recompensa Base",
+    ui_select_heroes: "Seleccionar Herois",
+    ui_under_construction: "En Construcció",
+    error_already_in_queue: "L'edifici ja està en construcció."
 };

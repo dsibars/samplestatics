@@ -38,16 +38,28 @@ Hand-crafted "Story Missions" are injected into the discovery tree at specific m
 - **Discovery**: When a requirement is met (e.g., 10 clears in a region), the next discovery roll is guaranteed to spawn the Story Node as a branch.
 - **Persistence**: If failed, the Story Node remains available. If completed, it is permanently removed from the "Available" pool.
 
-## Failure & Retries
+## The Assignment & Execution Lifecycle
 
-### Failing an Expedition
-An expedition is failed if all heroes are defeated.
-- **Retreat**: Players can "Retire" during an intermission to keep current rewards and progress.
-- **Defeat**: If defeated in battle, all gathered rewards from the current expedition are lost.
-- **Retry**: Procedural nodes can be retried as long as they are "Available". If a branch is part of a "Collapsing" region (like Crystal Hollow), it may disappear if not cleared in time.
+Expedition progression is tied to the village's day cycle. Battles and exploration take time, and heroes will be unavailable while they work.
 
-### Discovery on Failure
-Failing an expedition **does not** trigger the Discovery Logic. New paths are only revealed upon a successful `completed` status.
+### 1. Assignment Phase
+- **Assigning Heroes**: Heroes can be assigned to an available expedition node.
+- **Lock-in**: While an expedition is in its initial stage (Stage 0), you can assign or unassign heroes freely.
+- **Mid-Expedition Restrictions**: Once an expedition has progressed past the first stage, **no new heroes can be assigned** to it.
+
+### 2. Execution Phase (Day Advance)
+- **Automatic Resolution**: Combat and exploration do not happen instantly upon clicking. They are executed automatically when the game advances to the next day (`GameEngine.nextDay()`).
+- **1 Stage = 1 Day**: A single stage of an expedition is resolved each time a day passes. For example, a 3-stage expedition requires at least 3 days to complete.
+- **Rewards**: Rewards are granted automatically when the final stage is successfully completed.
+
+### 3. Failing & Retiring (Unassigning)
+An expedition is failed if all heroes are defeated during a daily combat resolution.
+- **Retreat (Unassign)**: Players can "Retire" by unassigning all heroes from an active expedition. If unassigned mid-expedition (Stage 1 or higher), the expedition is aborted and its progress resets to Stage 0. The players keep any rewards gained from previous full expeditions, but this specific instance resets.
+- **Defeat**: If defeated in battle, the expedition is immediately aborted and reset.
+- **Retry**: Procedural nodes can be retried as long as they remain in the "Available" pool.
+
+### 4. Discovery on Success
+Failing an expedition **does not** trigger the Discovery Logic. New paths are only revealed when the final stage of an expedition is completed successfully.
 
 ## Data Registries
 - **[Regions Data](regions_data.md)**: Details on the 15 regions and their generation patterns.

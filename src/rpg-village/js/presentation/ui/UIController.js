@@ -26,6 +26,7 @@ export class UIController {
      * Registers a view controller for a specific domain.
      */
     registerView(domain, viewController) {
+        viewController.ui = this;
         this.views.set(domain, viewController);
     }
 
@@ -79,7 +80,7 @@ export class UIController {
             
             if (this.activeView) {
                 // The first child of the fragment is usually our domain-view section
-                this.activeView.mount(this.elements.mainContent.querySelector('.domain-view'));
+                this.activeView.mount(this.elements.mainContent.querySelector('.domain-view'), this);
             }
 
         } catch (error) {
@@ -108,8 +109,15 @@ export class UIController {
     translateElement(element) {
         const key = element.getAttribute('data-i18n');
         if (key) {
-            element.textContent = this.i18n.t(key);
+            element.textContent = this.t(key);
         }
+    }
+
+    /**
+     * Helper to get translated string.
+     */
+    t(key) {
+        return this.i18n ? this.i18n.t(key) : key;
     }
 
     /**
@@ -146,8 +154,76 @@ export class UIController {
 
     // Compatibility method for current main.js
     onInitialize(callback) {
-        // The "Start" button might be moved to the Village view
-        // For now, we'll trigger it when the first village view is mounted if needed
         this.initCallback = callback;
+    }
+
+    /**
+     * Displays the introductory narrative modal.
+     */
+    showIntroDialog() {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        
+        overlay.innerHTML = `
+            <div class="intro-modal">
+                <h2 data-i18n="intro_title">${this.t('intro_title')}</h2>
+                <p data-i18n="intro_lore">${this.t('intro_lore')}</p>
+                <button class="btn btn-primary btn-lg" id="btn-start-journey">
+                    <span data-i18n="intro_btn">${this.t('intro_btn')}</span>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        const btn = overlay.querySelector('#btn-start-journey');
+        btn.addEventListener('click', () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.5s ease';
+            setTimeout(() => {
+                overlay.remove();
+            }, 500);
+        });
+    }
+
+    /**
+     * Displays a generic confirmation dialog.
+     */
+    showConfirmDialog({ title, message, onConfirm }) {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        
+        overlay.innerHTML = `
+            <div class="modal-body">
+                <div class="modal-header">
+                    <h3 data-i18n="${title}">${this.t(title)}</h3>
+                </div>
+                <div class="modal-text">
+                    <p data-i18n="${message}">${this.t(message)}</p>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="modal-btn-cancel">
+                        <span data-i18n="ui_btn_cancel">${this.t('ui_btn_cancel')}</span>
+                    </button>
+                    <button class="btn btn-danger" id="modal-btn-confirm">
+                        <span data-i18n="ui_btn_confirm">${this.t('ui_btn_confirm')}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#modal-btn-cancel').addEventListener('click', close);
+        overlay.querySelector('#modal-btn-confirm').addEventListener('click', () => {
+            close();
+            if (onConfirm) onConfirm();
+        });
     }
 }

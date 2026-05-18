@@ -1,17 +1,121 @@
 <section id="buildings-view" class="domain-view">
     <div class="master-detail-layout">
-        <div class="master-pane">
-            <div class="section-header">
-                <h3 data-i18n="ui_available_buildings">Available Buildings</h3>
+        <!-- Master Pane: List of Buildings -->
+        <aside class="master-pane card">
+            <h3 data-i18n="ui_available_buildings">Buildings</h3>
+            <div id="buildings-list-container" class="list-container">
+                <!-- Building cards will be injected here -->
             </div>
-            <div id="buildings-list" class="entity-list">
-                <!-- Buildings will be injected here -->
+        </aside>
+
+        <!-- Detail Pane: Building Information & Actions -->
+        <main class="detail-pane card glass-pane">
+            <div id="building-detail-content">
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">⚒️</div>
+                    <p data-i18n="ui_select_building">Select a building to view construction options.</p>
+                </div>
             </div>
-        </div>
-        <div class="detail-pane">
-            <div id="building-details" class="empty-detail" data-i18n="ui_select_building">
-                Select a building to see details.
-            </div>
-        </div>
+        </main>
     </div>
+
+    <!-- Template for a building card (injected via JS) -->
+    <template id="tpl-building-card">
+        <div class="list-item building-card" data-id="">
+            <div class="list-item-header">
+                <span class="list-item-title"></span>
+                <span class="list-item-level"></span>
+            </div>
+            <div class="progress-container hidden">
+                <div class="progress-bar warning" style="width: 0%"></div>
+            </div>
+        </div>
+    </template>
 </section>
+
+<style>
+    .glass-pane {
+        background: rgba(22, 24, 33, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .detail-icon-bg {
+        font-size: 4rem;
+        opacity: 0.1;
+        margin-bottom: 20px;
+    }
+
+    .empty-detail {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    /* Building Profile Styles */
+    .building-profile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .profile-title-group h2 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2rem;
+        color: var(--text-primary);
+    }
+
+    .profile-badge {
+        background: var(--accent-color);
+        color: white;
+        padding: 4px 12px;
+        border-radius: var(--radius-lg);
+        font-size: 0.9rem;
+        font-weight: 800;
+    }
+
+    .upgrade-section {
+        background: rgba(0,0,0,0.2);
+        padding: 20px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--glass-border);
+    }
+
+    .cost-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .cost-item {
+        background: var(--bg-accent);
+        padding: 10px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .cost-item.insufficient {
+        border: 1px solid var(--danger);
+        color: var(--danger);
+    }
+
+    .cost-item .label { font-size: 0.8rem; opacity: 0.7; }
+    .cost-item .value { font-weight: 700; }
+
+    .action-footer {
+        margin-top: 30px;
+        display: flex;
+        justify-content: flex-end;
+    }
+</style>

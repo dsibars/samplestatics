@@ -149,5 +149,34 @@ export const gl = {
     ui_world_map: "Mapa do Mundo",
     ui_active_expeditions: "Expedicións Activas",
     ui_start_expedition: "Iniciar Expedición",
-    ui_no_active_expeditions: "Non hai expedicións activas."
+    ui_no_active_expeditions: "Non hai expedicións activas.",
+
+    // Daily Report
+    ui_daily_report_title: "Informe Diario - Día {day}",
+    ui_report_food: "{amount} Comida Consumida",
+    ui_report_starvation: "AVISO: A aldea morre de fame!",
+    ui_report_growth: "{amount} Aldeán uniuse á aldea!",
+    ui_report_built: "Completado:",
+    ui_report_exp_progress: "A expedición {name} avanzou unha etapa.",
+    ui_report_exp_completed: "Expedición {name} completada! Atopado: {rewards}",
+    ui_report_exp_failed: "A expedición {name} retirouse.",
+
+    // Explore View fixes
+    ui_assigned_expedition: "Expedición Asignada",
+    ui_waiting_combat: "Agardando ao seguinte día para comezar o combate.",
+    ui_progress_combat: "A expedición está en curso. O progreso ocorre ao avanzar o día.",
+    ui_unassign_retire: "Desasignar Todos / Retirarse",
+    ui_another_active: "Outra expedición está activa actualmente. Non podes asignar heroes aquí.",
+    ui_roster_locked: "Expedición bloqueada. Actualmente asignados:",
+    ui_no_idle_heroes: "Non hai heroes inactivos dispoñibles.",
+    ui_assign_heroes: "Asignar Heroes",
+    ui_update_assignment: "Actualizar Asignación",
+    ui_select_one_hero: "Por favor, selecciona polo menos un heroe.",
+    ui_exp_story: "Historia",
+    ui_exp_exploration: "Exploración",
+    ui_exp_stages: "Etapas",
+    ui_exp_base_reward: "Recompensa Base",
+    ui_select_heroes: "Seleccionar Heroes",
+    ui_under_construction: "En Construción",
+    error_already_in_queue: "O edificio xa está en construción."
 };

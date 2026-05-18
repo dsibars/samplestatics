@@ -3,6 +3,8 @@
 ## Overview
 The Village is the central hub and the primary state object of the game. It manages population, core finances, physical infrastructure, and global storage.
 
+For details on how a new game begins, see the [Initialization Specification](initialization.md).
+
 ## Data Model (`Village`)
 
 ### Core Stats

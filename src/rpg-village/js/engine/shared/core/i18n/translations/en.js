@@ -31,13 +31,21 @@ export const en = {
 
     // Origins
     origin_warrior: "Warrior",
+    origin_warrior_desc: "+10% Defense, +5% Max HP",
     origin_thief: "Thief",
+    origin_thief_desc: "+10% Speed | Party: +10% Gold Gain",
     origin_clown: "Clown",
+    origin_clown_desc: "+15% Crit Chance, -5% Accuracy",
     origin_farmer: "Farmer",
+    origin_farmer_desc: "+15% Max HP",
     origin_monk: "Monk",
+    origin_monk_desc: "+15% Max MP, +20% MP Recovery",
     origin_cook: "Cook",
+    origin_cook_desc: "+5% Max HP | Party: +5% HP Regen per turn",
     origin_guard: "Guard",
+    origin_guard_desc: "+15% Defense | Party: +10% Phys. DR",
     origin_poet: "Poet",
+    origin_poet_desc: "+10% Max MP, +10% MagicPower | Party: +10% Magic Power Boost",
 
     // Hero Status & Slots
     status_active: "Active",
@@ -123,31 +131,89 @@ export const en = {
     nav_heroes: "Heroes",
     nav_inventory: "Inventory",
     nav_explore: "Explore",
+    nav_settings: "Settings",
 
     // Domain: Village
     ui_village_status: "Village Status",
     ui_construction: "Construction",
     ui_no_projects: "No active projects.",
     ui_visual_rep: "[Village Visual Representation]",
+    ui_available: "Available",
 
     // Domain: Buildings
     ui_available_buildings: "Available Buildings",
     ui_select_building: "Select a building to see details.",
+    ui_loading: "Loading...",
 
     // Domain: Heroes
     ui_your_heroes: "Your Heroes",
     ui_recruit: "Recruit",
     ui_select_hero: "Select a hero to view stats and equipment.",
+    ui_experience: "Experience",
+    ui_skills: "Skills",
+    ui_equipment: "Equipment",
+    ui_activity: "Activity",
+    ui_activity_idle: "Idle",
+    ui_activity_expedition: "On Expedition",
+    ui_level: "Level",
+    ui_empty_slot: "Empty",
 
     // Domain: Inventory
     ui_all: "All",
     ui_materials: "Materials",
     ui_consumables: "Consumables",
     ui_equipment: "Equipment",
+    ui_no_items: "No items found.",
 
     // Domain: Explore
     ui_world_map: "World Map",
     ui_active_expeditions: "Active Expeditions",
     ui_start_expedition: "Start Expedition",
-    ui_no_active_expeditions: "No active expeditions."
+    ui_no_active_expeditions: "No active expeditions.",
+
+    // Domain: Settings
+    ui_settings_title: "Game Settings",
+    ui_settings_language: "Interface Language",
+    settings_language_label: "Choose your language:",
+    ui_settings_danger_zone: "Danger Zone",
+    ui_settings_wipe_description: "Permanently delete all your progress and start over.",
+    ui_settings_wipe_data: "Wipe All Data",
+    ui_settings_wipe_confirm: "Are you absolutely sure? This will delete all your progress permanently.",
+    ui_settings_wipe_success: "All data has been cleared. The game will now reload.",
+    
+    // Intro Narrative
+    intro_title: "A New Beginning",
+    intro_lore: "In a world consumed by the flames of eternal war, a small group of survivors has fled the chaos. Led by a brave hero, they seek a remote valley to build a sanctuary of peace. The journey has been long, and resources are scarce, but hope remains.",
+    intro_btn: "Start Journey",
+    ui_btn_cancel: "Cancel",
+    ui_btn_confirm: "Confirm Wipe",
+
+    // Daily Report
+    ui_daily_report_title: "Daily Report - Day {day}",
+    ui_report_food: "{amount} Food Consumed",
+    ui_report_starvation: "WARNING: Village is starving!",
+    ui_report_growth: "{amount} Villager joined the village!",
+    ui_report_built: "Completed:",
+    ui_report_exp_progress: "Expedition {name} advanced a stage.",
+    ui_report_exp_completed: "Expedition {name} completed! Found: {rewards}",
+    ui_report_exp_failed: "Expedition {name} retreated.",
+
+    // Explore View fixes
+    ui_assigned_expedition: "Assigned Expedition",
+    ui_waiting_combat: "Waiting for the next day to begin combat.",
+    ui_progress_combat: "Expedition is currently underway. Progress occurs when advancing the day.",
+    ui_unassign_retire: "Unassign All / Retire",
+    ui_another_active: "Another expedition is currently active. You cannot assign heroes here.",
+    ui_roster_locked: "Expedition is locked. Currently assigned:",
+    ui_no_idle_heroes: "No idle heroes available.",
+    ui_assign_heroes: "Assign Heroes",
+    ui_update_assignment: "Update Assignment",
+    ui_select_one_hero: "Please select at least one hero.",
+    ui_exp_story: "Story",
+    ui_exp_exploration: "Exploration",
+    ui_exp_stages: "Stages",
+    ui_exp_base_reward: "Base Reward",
+    ui_select_heroes: "Select Heroes",
+    ui_under_construction: "Under Construction",
+    error_already_in_queue: "Building is already under construction."
 };

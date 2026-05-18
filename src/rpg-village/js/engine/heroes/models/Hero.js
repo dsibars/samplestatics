@@ -184,11 +184,15 @@ export class Hero {
         this.mp = Math.min(this.mp, this.maxMp);
     }
 
+    getExpToNextLevel() {
+        return this.level * 20;
+    }
+
     addExperience(amount) {
         this.exp += amount;
         let levelsGained = 0;
         while (true) {
-            const nextLevelExp = this.level * 20;
+            const nextLevelExp = this.getExpToNextLevel();
             if (this.exp >= nextLevelExp) {
                 this.exp -= nextLevelExp;
                 this.levelUp();
@@ -262,6 +266,7 @@ export class Hero {
             origin: this.origin,
             level: this.level,
             exp: this.exp,
+            expToNextLevel: this.getExpToNextLevel(),
             statPoints: this.statPoints,
             skillPoints: this.skillPoints,
             baseMaxHp: this.baseMaxHp,
@@ -270,6 +275,8 @@ export class Hero {
             baseSpeed: this.baseSpeed,
             baseDefense: this.baseDefense,
             baseMagicPower: this.baseMagicPower,
+            maxHp: this.maxHp,
+            maxMp: this.maxMp,
             hp: this.hp,
             mp: this.mp,
             status: this.status,

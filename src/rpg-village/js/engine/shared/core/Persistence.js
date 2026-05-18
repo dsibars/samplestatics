@@ -20,7 +20,9 @@ export class Persistence {
 
     load(key, defaultValue = null) {
         try {
-            const serialized = localStorage.getItem(this._key(key));
+            const fullKey = this._key(key);
+            const serialized = localStorage.getItem(fullKey);
+            console.log(`Persistence: Loading ${fullKey}`, serialized ? 'FOUND' : 'NOT FOUND');
             if (serialized === null) return defaultValue;
             return JSON.parse(serialized);
         } catch (e) {
@@ -34,8 +36,10 @@ export class Persistence {
     }
 
     clear() {
+        console.warn(`Persistence: CLEARING ALL DATA with prefix ${this.prefix}`);
         Object.keys(localStorage).forEach(key => {
             if (key.startsWith(this.prefix)) {
+                console.log(`Persistence: Removing ${key}`);
                 localStorage.removeItem(key);
             }
         });
