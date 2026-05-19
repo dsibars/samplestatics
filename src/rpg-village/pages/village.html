@@ -48,18 +48,8 @@
 
         <!-- Right Column: Visual Center & Global Actions -->
         <div class="main-panel">
-            <div id="daily-report-container"></div>
-            
-            <div class="card canvas-card">
-                <div class="village-visual-placeholder">
-                    <div class="visual-placeholder-text" data-i18n="ui_visual_rep">
-                        [Village Visual Representation]
-                    </div>
-                </div>
-            </div>
-
             <!-- Day Cycle Controller (The "Big Button" Area) -->
-            <div class="card action-card">
+            <div class="card action-card" style="margin-top: 0; margin-bottom: 10px;">
                 <div class="day-cycle-info">
                     <span class="day-label" data-i18n="village_day">Day</span>
                     <span id="village-day" class="day-value">--</span>
@@ -71,6 +61,12 @@
                         <span data-i18n="btn_next_day">Next Day</span>
                     </button>
                 </div>
+            </div>
+
+            <div id="daily-report-container"></div>
+            
+            <div id="village-canvas-container">
+                <!-- Dynamic village tiles will be rendered here -->
             </div>
         </div>
     </div>

@@ -55,8 +55,7 @@ export class ExploreView extends BaseView {
         if (!this.elements.statusBanner) return;
         if (activeExpedition) {
             this.elements.statusBanner.className = 'status-banner';
-            // We can just show a generic "Expedition in Progress" or find its name
-            this.elements.statusBanner.innerHTML = `<span data-i18n="ui_active_expeditions">${this.t('ui_active_expeditions')}</span>: In Progress`;
+            this.elements.statusBanner.innerHTML = `<span data-i18n="ui_active_expeditions">${this.t('ui_active_expeditions')}</span>: ${this.t('status_active')}`;
         } else {
             this.elements.statusBanner.className = 'status-banner none';
         }
@@ -85,7 +84,8 @@ export class ExploreView extends BaseView {
                 const nodeEl = this.elements.tplNode.content.cloneNode(true).querySelector('.expedition-card');
                 nodeEl.dataset.id = exp.id;
                 nodeEl.querySelector('.list-item-title').textContent = exp.name;
-                nodeEl.querySelector('.list-item-badge').textContent = exp.stages.length + ' Stages';
+                const labelStages = this.t('ui_exp_stages') || 'Stages';
+                nodeEl.querySelector('.list-item-badge').textContent = `${exp.stages.length} ${labelStages}`;
                 
                 if (exp.id === this.selectedExpId) {
                     nodeEl.classList.add('active');
@@ -153,8 +153,9 @@ export class ExploreView extends BaseView {
         let heroListHtml = '';
         
         if (isLocked) {
+            const lvlLabel = this.t('ui_level') || 'Level';
             heroListHtml = `<p>${this.t('ui_roster_locked')}</p>
-                <ul>${assignedHeroes.map(h => `<li>${h.name} (Lvl ${h.level})</li>`).join('')}</ul>`;
+                <ul>${assignedHeroes.map(h => `<li>${h.name} (${lvlLabel} ${h.level})</li>`).join('')}</ul>`;
         } else {
             // Can assign new heroes
             const availableHeroes = [...assignedHeroes, ...idleHeroes];
@@ -169,12 +170,15 @@ export class ExploreView extends BaseView {
                         // If they are assigned, add to selectedHeroIds initially so the UI state matches
                         if (isChecked) this.selectedHeroIds.add(h.id);
                         
+                        const isWounded = h.hp <= 0;
                         return `
-                        <label class="hero-checkbox-item">
-                            <input type="checkbox" value="${h.id}" class="exp-hero-check" ${isChecked ? 'checked' : ''}>
-                            <div class="hero-info">
-                                <strong>${h.name}</strong> (Lvl ${h.level})
-                                <br><small>HP: ${h.hp}/${h.maxHp}</small>
+                        <label class="hero-checkbox-item ${isWounded ? 'wounded' : ''}">
+                            <input type="checkbox" value="${h.id}" class="exp-hero-check" ${isChecked ? 'checked' : ''} ${isWounded ? 'disabled' : ''}>
+                            <div class="hero-info" style="${isWounded ? 'opacity: 0.6;' : ''}">
+                                <strong>${h.name}</strong> (${this.t('ui_level') || 'Level'} ${h.level})
+                                <br><small style="color: ${isWounded ? '#ff3b30; font-weight: bold;' : (h.hp < h.maxHp * 0.5 ? '#ff9500; font-weight: bold;' : '#4cd964;')};">
+                                    ${isWounded ? '💀 ' + (this.t('ui_wounded') || 'Wounded') : `HP: ${h.hp}/${h.maxHp}`}
+                                </small>
                             </div>
                         </label>
                         `;

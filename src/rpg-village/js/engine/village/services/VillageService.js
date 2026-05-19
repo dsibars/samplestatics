@@ -137,8 +137,9 @@ export class VillageService {
         // Only grow if not starving and under capacity
         const maxPop = this.getMaxPopulation();
         if (!report.starvation && this.state.population.total < maxPop) {
-            // Simple growth logic: 20% chance per day if capacity exists
-            if (Math.random() < 0.2) {
+            // Getting new villagers is much harder during the first 100 days (1% chance)
+            const growthChance = this.state.day <= 100 ? 0.01 : 0.10;
+            if (Math.random() < growthChance) {
                 this.state.population.total++;
                 report.growth = 1;
             }

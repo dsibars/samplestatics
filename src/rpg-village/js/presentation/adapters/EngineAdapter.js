@@ -65,6 +65,40 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
+                view.on('equipItem', (data) => {
+                    const result = this.engine.equipHeroItem(data.heroId, data.slot, data.itemId);
+                    if (!result.success) {
+                        alert(this.engine.i18n.t(result.error));
+                    }
+                    this.forceUpdate();
+                });
+                view.on('unequipItem', (data) => {
+                    const result = this.engine.unequipHeroItem(data.heroId, data.slot);
+                    if (!result.success) {
+                        alert(this.engine.i18n.t(result.error));
+                    }
+                    this.forceUpdate();
+                });
+            }
+
+            if (domain === 'shop') {
+                view.on('buyItem', (data) => {
+                    const result = this.engine.buyItem(data.itemData, data.costGold);
+                    if (!result.success) {
+                        alert(this.engine.i18n.t(result.error));
+                    }
+                    this.forceUpdate();
+                });
+            }
+
+            if (domain === 'forge') {
+                view.on('refineItem', (data) => {
+                    const result = this.engine.refineEquipment(data.itemId);
+                    if (!result.success) {
+                        alert(this.engine.i18n.t(result.error));
+                    }
+                    this.forceUpdate();
+                });
             }
         });
 

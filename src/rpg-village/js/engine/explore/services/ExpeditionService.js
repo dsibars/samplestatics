@@ -33,7 +33,7 @@ export class ExpeditionService {
                             isStory: true,
                             reward: { gold: 100, items: { material_wood: 20, material_stone: 10 } },
                             stages: [
-                                { type: 'battle', enemies: ['slime_green', 'slime_green'] },
+                                { type: 'battle', enemies: ['slime_green'] },
                                 { type: 'battle', enemies: ['slime_fire'], isBoss: true }
                             ]
                         }
@@ -79,30 +79,47 @@ export class ExpeditionService {
         const region = this.state.regions[regionId];
         if (!region) return;
 
-        // Story triggers
-        if (regionId === 'reg_greenfields' && region.clears === 5 && !this.state.completedIds.includes('exp_rescue_mission')) {
-            region.availableNodes.push({
-                id: 'exp_rescue_mission',
-                name: 'The Captured Guard',
-                regionId: 'reg_greenfields',
-                isStory: true,
-                reward: { gold: 300, special: { type: 'hero', value: 'Sir Valen' } },
-                stages: [
-                    { type: 'battle', enemies: ['goblin_scout', 'goblin_scout'] },
-                    { type: 'battle', enemies: ['goblin_grunt', 'goblin_grunt', 'goblin_grunt'] },
-                    { type: 'battle', enemies: ['goblin_grunt', 'goblin_grunt', 'goblin_brute'], isBoss: true }
-                ]
-            });
-        }
-
-        // Procedural generation
-        const rData = this._getRegionData(regionId);
-        let branchCount = 1;
-        if (rData.branching === 'medium' && Math.random() < 0.3) branchCount = 2;
-        if (rData.branching === 'high') branchCount = Math.random() < 0.5 ? 2 : (Math.random() < 0.1 ? 3 : 1);
-
-        for (let i = 0; i < branchCount; i++) {
-            region.availableNodes.push(this._createProceduralNode(regionId, rData, region.clears));
+        if (regionId === 'reg_greenfields') {
+            // 1. If tutorial cave is cleared, but Captured Guard isn't
+            if (this.state.completedIds.includes('exp_tutorial_cave') && !this.state.completedIds.includes('exp_rescue_mission')) {
+                // Ensure exp_rescue_mission is added
+                if (!region.availableNodes.some(n => n.id === 'exp_rescue_mission')) {
+                    region.availableNodes.push({
+                        id: 'exp_rescue_mission',
+                        name: 'The Captured Guard',
+                        regionId: 'reg_greenfields',
+                        isStory: true,
+                        reward: { gold: 200, items: { material_wood: 15, material_stone: 5 }, special: { type: 'hero', value: 'Sir Valen' } },
+                        stages: [
+                            { type: 'battle', enemies: ['slime_green', 'slime_green'] },
+                            { type: 'battle', enemies: ['slime_fire'], isBoss: true }
+                        ]
+                    });
+                }
+                
+                // Keep exactly 1 procedural node for resource grinding
+                const procCount = region.availableNodes.filter(n => !n.isStory).length;
+                if (procCount === 0) {
+                    region.availableNodes.push(this._createProceduralNode(regionId, this._getRegionData(regionId), region.clears));
+                }
+            } 
+            // 2. If Captured Guard is cleared, generate 3 procedural nodes at once
+            else if (this.state.completedIds.includes('exp_rescue_mission')) {
+                const procCount = region.availableNodes.filter(n => !n.isStory).length;
+                if (procCount < 3) {
+                    const toAdd = 3 - procCount;
+                    for (let i = 0; i < toAdd; i++) {
+                        region.availableNodes.push(this._createProceduralNode(regionId, this._getRegionData(regionId), region.clears));
+                    }
+                }
+            }
+        } else {
+            // Standard procedural nodes generation for other regions
+            const rData = this._getRegionData(regionId);
+            const procCount = region.availableNodes.filter(n => !n.isStory).length;
+            if (procCount < 2) {
+                region.availableNodes.push(this._createProceduralNode(regionId, rData, region.clears));
+            }
         }
     }
 
@@ -120,8 +137,20 @@ export class ExpeditionService {
             for(let e=0; e<enemyCount; e++) {
                 encounter.push(rData.enemies[Math.floor(Math.random() * rData.enemies.length)]);
             }
-            // If it's boss, maybe add a stronger enemy or boss version (mocked for now)
             stages.push({ type: 'battle', enemies: encounter, isBoss });
+        }
+
+        // Add region-specific material items
+        const rewardItems = {};
+        if (regionId === 'reg_greenfields') {
+            rewardItems.material_wood = Math.floor(Math.random() * 4) + 2; // 2 to 5 Wood
+            if (Math.random() < 0.5) rewardItems.material_stone = Math.floor(Math.random() * 2) + 1; // 1 to 2 Stone
+        } else if (regionId === 'reg_tiny_cave') {
+            rewardItems.material_stone = Math.floor(Math.random() * 4) + 2; // 2 to 5 Stone
+            if (Math.random() < 0.4) rewardItems.material_iron_ore = Math.floor(Math.random() * 2) + 1; // 1 to 2 Iron
+        } else if (regionId === 'reg_calmed_beach') {
+            rewardItems.material_stone = Math.floor(Math.random() * 3) + 2;
+            rewardItems.material_wood = Math.floor(Math.random() * 3) + 2;
         }
 
         return {
@@ -129,7 +158,10 @@ export class ExpeditionService {
             name: `${rData.name} Path`,
             regionId,
             isStory: false,
-            reward: { gold: 50 + (clears * 10) },
+            reward: { 
+                gold: 50 + (clears * 10),
+                items: rewardItems
+            },
             stages
         };
     }
@@ -227,7 +259,21 @@ export class ExpeditionService {
 
         if (stage.type === 'battle') {
             const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
-            const enemies = stage.enemies.map(eId => this._createEnemy(eId, stage.isBoss));
+            
+            const enemyCounts = {};
+            stage.enemies.forEach(eId => {
+                enemyCounts[eId] = (enemyCounts[eId] || 0) + 1;
+            });
+            const enemyIndices = {};
+            const enemies = stage.enemies.map(eId => {
+                const enemy = this._createEnemy(eId, stage.isBoss);
+                if (enemyCounts[eId] > 1) {
+                    enemyIndices[eId] = (enemyIndices[eId] || 0) + 1;
+                    const suffix = String.fromCharCode(64 + enemyIndices[eId]); // A, B, C...
+                    enemy.name = `${enemy.name} ${suffix}`;
+                }
+                return enemy;
+            });
 
             // Track initial HP for the log
             const initialHp = {};

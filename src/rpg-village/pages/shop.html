@@ -1,0 +1,158 @@
+<section class="domain-view shop-view">
+    <!-- Locked Overlay -->
+    <div class="lock-overlay" id="shop-lock-overlay" style="display: none;">
+        <div class="lock-card">
+            <span class="lock-icon">🔒</span>
+            <h2 data-i18n="ui_shop_locked">Shop Locked</h2>
+            <p data-i18n="ui_shop_locked_desc" style="margin-top: 10px; color: var(--text-secondary);">Complete the Tutorial Cave expedition to unlock the Shop.</p>
+        </div>
+    </div>
+
+    <!-- Shop Content -->
+    <div class="shop-content-wrapper">
+        <div class="shop-header-pane">
+            <h2 data-i18n="ui_shop_title">Village Shop</h2>
+            <p class="subtitle" style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 4px;">Purchase supplies, weaponry, and protective gear for your heroes.</p>
+        </div>
+        <div class="shop-grid">
+            <!-- Consumables -->
+            <div class="card shop-category">
+                <h3><span class="icon">🧪</span><span data-i18n="ui_consumables">Consumables</span></h3>
+                <div class="shop-item-list" id="shop-consumables-list"></div>
+            </div>
+            <!-- Weapons -->
+            <div class="card shop-category">
+                <h3><span class="icon">⚔️</span><span data-i18n="ui_equipment">Weapons</span></h3>
+                <div class="shop-item-list" id="shop-weapons-list"></div>
+            </div>
+            <!-- Armor -->
+            <div class="card shop-category">
+                <h3><span class="icon">🛡️</span><span data-i18n="ui_equipment">Armor</span></h3>
+                <div class="shop-item-list" id="shop-armor-list"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.shop-view {
+    position: relative;
+    padding: var(--spacing-md);
+    min-height: 100%;
+}
+
+.lock-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 11, 16, 0.92);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+}
+
+.lock-card {
+    background: var(--bg-secondary);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.4s ease-out;
+}
+
+.lock-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--spacing-md);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.shop-header-pane {
+    margin-bottom: var(--spacing-lg);
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+}
+
+@media (min-width: 992px) {
+    .shop-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.shop-category {
+    display: flex;
+    flex-direction: column;
+}
+
+.shop-item-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.shop-item-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    transition: all 0.2s ease;
+}
+
+.shop-item-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--accent-color);
+}
+
+.shop-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shop-item-name {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.shop-item-cost {
+    color: var(--warning);
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.95rem;
+}
+
+.shop-item-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shop-item-stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.btn-buy {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+</style>

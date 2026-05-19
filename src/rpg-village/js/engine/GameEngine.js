@@ -85,7 +85,8 @@ export class GameEngine {
             inventory: this.inventoryService.getState(),
             heroes: heroesDto,
             expeditions: this.expeditionService.getExpeditions(),
-            activeExpedition: activeExpedition
+            activeExpedition: activeExpedition,
+            completedExpeditions: this.expeditionService.state.completedIds || []
         };
     }
 
@@ -104,6 +105,138 @@ export class GameEngine {
             return Result.fail('error_hero_busy');
         }
         return this.heroService.increaseHeroStat(heroId, statId);
+    }
+
+    equipHeroItem(heroId, slot, equipmentId) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.equipItem(heroId, slot, equipmentId);
+    }
+
+    unequipHeroItem(heroId, slot) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.unequipItem(heroId, slot);
+    }
+
+    // --- Shop & Forge Facade ---
+    buyItem(itemData, costGold) {
+        if (this.villageService.state.gold < costGold) {
+            return Result.fail('error_not_enough_gold');
+        }
+
+        const maxStorage = this.villageService.getMaxStorage();
+        if (this.inventoryService.getTotalStorageUsed() + 1 > maxStorage) {
+            return Result.fail('error_storage_full');
+        }
+
+        // Deduct Gold
+        this.villageService.state.gold -= costGold;
+        this.villageService.save();
+
+        // Deliver item
+        if (itemData.type === 'consumable') {
+            this.inventoryService.addItem(itemData.id, 1);
+        } else {
+            this.inventoryService.addEquipment(itemData);
+        }
+
+        return Result.ok();
+    }
+
+    getRefineCost(item) {
+        const L = item.level || 0;
+        const nextLevel = L + 1;
+        const mat = item.material;
+        
+        const cost = {
+            gold: 0,
+            materials: {}
+        };
+        
+        if (mat === 'wooden') {
+            cost.gold = 30 * nextLevel;
+            cost.materials.material_wood = 10 * nextLevel;
+        } else if (mat === 'iron') {
+            cost.gold = 75 * nextLevel;
+            cost.materials.material_wood = 5 * nextLevel;
+            cost.materials.material_stone = 5 * nextLevel;
+            cost.materials.material_iron_ore = 3 * nextLevel;
+        } else if (mat === 'steel') {
+            cost.gold = 150 * nextLevel;
+            cost.materials.material_stone = 10 * nextLevel;
+            cost.materials.material_steel_ingot = 3 * nextLevel;
+        } else if (mat === 'gold') {
+            cost.gold = 300 * nextLevel;
+            cost.materials.material_stone = 15 * nextLevel;
+        } else if (mat === 'mythril') {
+            cost.gold = 500 * nextLevel;
+            cost.materials.material_mythril = 2 * nextLevel;
+        }
+        
+        return cost;
+    }
+
+    refineEquipment(itemId) {
+        let item = this.inventoryService.getEquipment(itemId);
+        let equippedHero = null;
+        let equippedSlot = null;
+
+        if (!item) {
+            // Check all heroes
+            for (const h of this.heroService.list()) {
+                for (const slot of ['head', 'body', 'legs', 'leftHand', 'rightHand', 'accessory']) {
+                    const eq = h.equipment[slot];
+                    if (eq && eq.id === itemId) {
+                        item = eq; // Plain object representation of the equipment
+                        equippedHero = h;
+                        equippedSlot = slot;
+                        break;
+                    }
+                }
+                if (item) break;
+            }
+        }
+
+        if (!item) return Result.fail('error_item_not_found');
+        if (item.level >= 10) return Result.fail('error_refine_max');
+
+        const cost = this.getRefineCost(item);
+
+        // Validate resources
+        if (this.villageService.state.gold < cost.gold) {
+            return Result.fail('error_not_enough_gold');
+        }
+
+        for (const [matId, qty] of Object.entries(cost.materials)) {
+            if (this.inventoryService.getItemCount(matId) < qty) {
+                return Result.fail('error_not_enough_materials');
+            }
+        }
+
+        // Spend resources
+        this.villageService.state.gold -= cost.gold;
+        this.villageService.save();
+
+        for (const [matId, qty] of Object.entries(cost.materials)) {
+            this.inventoryService.useItem(matId, qty);
+        }
+
+        // Increase level
+        if (equippedHero) {
+            item.level = (item.level || 0) + 1;
+            equippedHero.recalculateStats({});
+            this.heroService.saveAll();
+        } else {
+            item.increaseLevel();
+            this.inventoryService.save();
+        }
+
+        return Result.ok(item);
     }
 
     // --- Combat Facade ---

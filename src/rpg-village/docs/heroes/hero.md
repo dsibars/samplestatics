@@ -31,7 +31,9 @@ Heroes are the defenders of the village and the primary means of progressing the
 ## Equipment
 Heroes have 6 equipment slots: `head`, `body`, `legs`, `leftHand`, `rightHand`, and `accessory`. 
 - See [../shared/inventory/equipment.md](../shared/inventory/equipment.md) for details on gear and [../shared/inventory/equipment_data.md](../shared/inventory/equipment_data.md) for values.
+- Equipment can be swapped or unequipped from the Hero Details panel in the Heroes screen. Clicking any equipment slot opens a modal displaying compatible items in the inventory.
 
 ## Expedition State Lock
-While a hero is deployed on an active expedition (their status or activity is not idle), their progression and equipment are locked. They cannot assign unassigned stat points, learn/upgrade skills, or swap equipment until they return to the village (either by completing the expedition or by retreating).
+While a hero is deployed on an active expedition (their status or activity is not idle), their progression and equipment are locked. They cannot assign unassigned stat points, learn/upgrade skills, or swap/unequip equipment until they return to the village (either by completing the expedition or by retreating).
+
 

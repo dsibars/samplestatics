@@ -58,8 +58,13 @@ class UIController {
       goldCount: document.getElementById("gold-count"),
       villagerCount: document.getElementById("villager-count"),
       woodCount: document.getElementById("wood-count"),
-      navItems: document.querySelectorAll(".nav-item")
+      navItems: document.querySelectorAll(".nav-item"),
+      shopNav: document.querySelector('.nav-item[data-view="shop"]'),
+      forgeNav: document.querySelector('.nav-item[data-view="forge"]')
     };
+    this.isShopUnlocked = false;
+    this.isForgeUnlocked = false;
+    this.lastState = null;
     this.views = /* @__PURE__ */ new Map();
     this.activeView = null;
     this.activeDomain = null;
@@ -77,6 +82,8 @@ class UIController {
     this.elements.navItems.forEach((item) => {
       item.addEventListener("click", () => {
         const domain = item.getAttribute("data-view");
+        if (domain === "shop" && !this.isShopUnlocked) return;
+        if (domain === "forge" && !this.isForgeUnlocked) return;
         this.switchView(domain);
       });
     });
@@ -85,6 +92,8 @@ class UIController {
    * Transitions to a new domain view.
    */
   async switchView(domain) {
+    if (domain === "shop" && !this.isShopUnlocked) return;
+    if (domain === "forge" && !this.isForgeUnlocked) return;
     if (this.activeDomain === domain) return;
     console.log(`Switching to domain: ${domain}`);
     this.elements.navItems.forEach((item) => {
@@ -145,15 +154,65 @@ class UIController {
   setLanguage(lang) {
     if (this.i18n.setLanguage(lang)) {
       this.translateView(document.body);
+      if (this.lastState) {
+        this.updateNavLocks(this.lastState);
+      }
       return true;
     }
     return false;
+  }
+  updateNavLocks(state) {
+    var _a, _b;
+    const completed = state.completedExpeditions || [];
+    this.isShopUnlocked = completed.includes("exp_tutorial_cave");
+    const blacksmithLvl = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
+    this.isForgeUnlocked = blacksmithLvl >= 1;
+    if (this.elements.shopNav) {
+      const iconEl = this.elements.shopNav.querySelector(".nav-icon");
+      const labelEl = this.elements.shopNav.querySelector(".nav-label");
+      if (this.isShopUnlocked) {
+        this.elements.shopNav.classList.remove("nav-locked");
+        if (iconEl) iconEl.textContent = "🛒";
+        if (labelEl) {
+          labelEl.textContent = this.t("nav_shop");
+          labelEl.setAttribute("data-i18n", "nav_shop");
+        }
+      } else {
+        this.elements.shopNav.classList.add("nav-locked");
+        if (iconEl) iconEl.textContent = "🔒";
+        if (labelEl) {
+          labelEl.textContent = "???";
+          labelEl.removeAttribute("data-i18n");
+        }
+      }
+    }
+    if (this.elements.forgeNav) {
+      const iconEl = this.elements.forgeNav.querySelector(".nav-icon");
+      const labelEl = this.elements.forgeNav.querySelector(".nav-label");
+      if (this.isForgeUnlocked) {
+        this.elements.forgeNav.classList.remove("nav-locked");
+        if (iconEl) iconEl.textContent = "🔥";
+        if (labelEl) {
+          labelEl.textContent = this.t("nav_forge");
+          labelEl.setAttribute("data-i18n", "nav_forge");
+        }
+      } else {
+        this.elements.forgeNav.classList.add("nav-locked");
+        if (iconEl) iconEl.textContent = "🔒";
+        if (labelEl) {
+          labelEl.textContent = "???";
+          labelEl.removeAttribute("data-i18n");
+        }
+      }
+    }
   }
   /**
    * Updates the global shell stats and the active view.
    */
   update(state) {
     var _a, _b;
+    this.lastState = state;
+    this.updateNavLocks(state);
     if (state.village) {
       if (this.elements.goldCount) this.elements.goldCount.textContent = Math.floor(state.village.gold || 0);
       if (this.elements.villagerCount) {
@@ -302,10 +361,20 @@ class UIController {
         text = this.t("log_regen").replace("{target}", ev.targetName).replace("{amount}", ev.amount);
         color = "#8bc34a";
       } else if (ev.type === "USE_CONSUMABLE") {
-        text = `${ev.actorName} used a consumable on ${ev.targetName}.`;
+        const itemName = this.t(ev.consumableId) || ev.consumableId;
+        const statName = ev.healType === "HEAL_HP" ? "HP" : "MP";
+        text = (this.t("log_use_consumable") || "{attacker} used {item} on {target}, restoring {amount} {stat}.").replace("{attacker}", ev.actorName).replace("{item}", itemName).replace("{target}", ev.targetName).replace("{amount}", ev.amount).replace("{stat}", statName);
         color = "#00bcd4";
       }
-      return `<p style="margin: 5px 0; color: ${color}; opacity: 0; animation: fadeIn 0.3s forwards;">${text}</p>`;
+      let hpSuffix = "";
+      if (ev.targetHp !== void 0 && ev.targetMaxHp !== void 0) {
+        if (ev.targetHp <= 0) {
+          hpSuffix = ` <span style="color: #ff3b30; font-size: 0.85em; font-weight: bold;">(DEAD 💀)</span>`;
+        } else {
+          hpSuffix = ` <span style="color: #8e8e93; font-size: 0.85em;">(HP: ${ev.targetHp}/${ev.targetMaxHp})</span>`;
+        }
+      }
+      return `<p style="margin: 5px 0; color: ${color}; opacity: 0; animation: fadeIn 0.3s forwards;">${text}${hpSuffix}</p>`;
     };
     const timer = setInterval(() => {
       if (eventIndex < events.length) {
@@ -1303,7 +1372,9 @@ class BattleService {
           amount: regenAmount,
           targetId: currentEntity.id,
           targetName: currentEntity.name,
-          targetIsHero: true
+          targetIsHero: true,
+          targetHp: currentEntity.hp,
+          targetMaxHp: currentEntity.maxHp
         };
         statusResults.push(event);
         this.log.push(event);
@@ -1337,7 +1408,9 @@ class BattleService {
           damage,
           targetId: entity.id,
           targetName: entity.name,
-          targetIsHero: isHero
+          targetIsHero: isHero,
+          targetHp: entity.hp,
+          targetMaxHp: entity.maxHp
         };
         events.push(event);
         this.log.push(event);
@@ -1445,6 +1518,8 @@ class BattleService {
           }
         }
       }
+      event.targetHp = target.hp;
+      event.targetMaxHp = target.maxHp;
       actionEvents.push(event);
       this.log.push(event);
     });
@@ -1494,7 +1569,9 @@ class BattleService {
       targetIsHero: this.heroes.includes(target),
       consumableId,
       healType: type,
-      amount
+      amount,
+      targetHp: target.hp,
+      targetMaxHp: target.maxHp
     };
     this.log.push(event);
     this.itemUsedThisTurn = true;
@@ -1797,7 +1874,8 @@ class VillageService {
     report.completed = completed;
     const maxPop = this.getMaxPopulation();
     if (!report.starvation && this.state.population.total < maxPop) {
-      if (Math.random() < 0.2) {
+      const growthChance = this.state.day <= 100 ? 0.01 : 0.1;
+      if (Math.random() < growthChance) {
         this.state.population.total++;
         report.growth = 1;
       }
@@ -1920,7 +1998,7 @@ class ExpeditionService {
               isStory: true,
               reward: { gold: 100, items: { material_wood: 20, material_stone: 10 } },
               stages: [
-                { type: "battle", enemies: ["slime_green", "slime_green"] },
+                { type: "battle", enemies: ["slime_green"] },
                 { type: "battle", enemies: ["slime_fire"], isBoss: true }
               ]
             }
@@ -1961,26 +2039,40 @@ class ExpeditionService {
   _generateNextNodes(regionId) {
     const region = this.state.regions[regionId];
     if (!region) return;
-    if (regionId === "reg_greenfields" && region.clears === 5 && !this.state.completedIds.includes("exp_rescue_mission")) {
-      region.availableNodes.push({
-        id: "exp_rescue_mission",
-        name: "The Captured Guard",
-        regionId: "reg_greenfields",
-        isStory: true,
-        reward: { gold: 300, special: { type: "hero", value: "Sir Valen" } },
-        stages: [
-          { type: "battle", enemies: ["goblin_scout", "goblin_scout"] },
-          { type: "battle", enemies: ["goblin_grunt", "goblin_grunt", "goblin_grunt"] },
-          { type: "battle", enemies: ["goblin_grunt", "goblin_grunt", "goblin_brute"], isBoss: true }
-        ]
-      });
-    }
-    const rData = this._getRegionData(regionId);
-    let branchCount = 1;
-    if (rData.branching === "medium" && Math.random() < 0.3) branchCount = 2;
-    if (rData.branching === "high") branchCount = Math.random() < 0.5 ? 2 : Math.random() < 0.1 ? 3 : 1;
-    for (let i = 0; i < branchCount; i++) {
-      region.availableNodes.push(this._createProceduralNode(regionId, rData, region.clears));
+    if (regionId === "reg_greenfields") {
+      if (this.state.completedIds.includes("exp_tutorial_cave") && !this.state.completedIds.includes("exp_rescue_mission")) {
+        if (!region.availableNodes.some((n) => n.id === "exp_rescue_mission")) {
+          region.availableNodes.push({
+            id: "exp_rescue_mission",
+            name: "The Captured Guard",
+            regionId: "reg_greenfields",
+            isStory: true,
+            reward: { gold: 200, items: { material_wood: 15, material_stone: 5 }, special: { type: "hero", value: "Sir Valen" } },
+            stages: [
+              { type: "battle", enemies: ["slime_green", "slime_green"] },
+              { type: "battle", enemies: ["slime_fire"], isBoss: true }
+            ]
+          });
+        }
+        const procCount = region.availableNodes.filter((n) => !n.isStory).length;
+        if (procCount === 0) {
+          region.availableNodes.push(this._createProceduralNode(regionId, this._getRegionData(regionId), region.clears));
+        }
+      } else if (this.state.completedIds.includes("exp_rescue_mission")) {
+        const procCount = region.availableNodes.filter((n) => !n.isStory).length;
+        if (procCount < 3) {
+          const toAdd = 3 - procCount;
+          for (let i = 0; i < toAdd; i++) {
+            region.availableNodes.push(this._createProceduralNode(regionId, this._getRegionData(regionId), region.clears));
+          }
+        }
+      }
+    } else {
+      const rData = this._getRegionData(regionId);
+      const procCount = region.availableNodes.filter((n) => !n.isStory).length;
+      if (procCount < 2) {
+        region.availableNodes.push(this._createProceduralNode(regionId, rData, region.clears));
+      }
     }
   }
   _createProceduralNode(regionId, rData, clears) {
@@ -1996,12 +2088,26 @@ class ExpeditionService {
       }
       stages.push({ type: "battle", enemies: encounter, isBoss });
     }
+    const rewardItems = {};
+    if (regionId === "reg_greenfields") {
+      rewardItems.material_wood = Math.floor(Math.random() * 4) + 2;
+      if (Math.random() < 0.5) rewardItems.material_stone = Math.floor(Math.random() * 2) + 1;
+    } else if (regionId === "reg_tiny_cave") {
+      rewardItems.material_stone = Math.floor(Math.random() * 4) + 2;
+      if (Math.random() < 0.4) rewardItems.material_iron_ore = Math.floor(Math.random() * 2) + 1;
+    } else if (regionId === "reg_calmed_beach") {
+      rewardItems.material_stone = Math.floor(Math.random() * 3) + 2;
+      rewardItems.material_wood = Math.floor(Math.random() * 3) + 2;
+    }
     return {
       id,
       name: `${rData.name} Path`,
       regionId,
       isStory: false,
-      reward: { gold: 50 + clears * 10 },
+      reward: {
+        gold: 50 + clears * 10,
+        items: rewardItems
+      },
       stages
     };
   }
@@ -2082,7 +2188,20 @@ class ExpeditionService {
     const stage = exp.stages[this.state.activeExpedition.currentStage];
     if (stage.type === "battle") {
       const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
-      const enemies = stage.enemies.map((eId) => this._createEnemy(eId, stage.isBoss));
+      const enemyCounts = {};
+      stage.enemies.forEach((eId) => {
+        enemyCounts[eId] = (enemyCounts[eId] || 0) + 1;
+      });
+      const enemyIndices = {};
+      const enemies = stage.enemies.map((eId) => {
+        const enemy = this._createEnemy(eId, stage.isBoss);
+        if (enemyCounts[eId] > 1) {
+          enemyIndices[eId] = (enemyIndices[eId] || 0) + 1;
+          const suffix = String.fromCharCode(64 + enemyIndices[eId]);
+          enemy.name = `${enemy.name} ${suffix}`;
+        }
+        return enemy;
+      });
       const initialHp = {};
       heroes.forEach((h) => initialHp[h.id] = h.hp);
       const totalEnemyHp = enemies.reduce((sum, e) => sum + e.maxHp, 0);
@@ -2342,6 +2461,7 @@ const en = {
   // Domain: Inventory
   ui_all: "All",
   ui_materials: "Materials",
+  ui_food: "Food",
   ui_consumables: "Consumables",
   ui_equipment: "Equipment",
   ui_no_items: "No items found.",
@@ -2415,7 +2535,79 @@ const en = {
   desc_explorer_guild: "Unlocks advanced expedition maps and new regions to explore.",
   desc_infirmary: "Heals injured heroes daily (+10% heal amount and +1 hero slot limit per level).",
   ui_stat_points_busy: "Unassigned Stat Points: {amount} (Cannot assign on expedition)",
-  error_hero_busy: "Hero is currently on an expedition and cannot perform this action."
+  error_hero_busy: "Hero is currently on an expedition and cannot perform this action.",
+  // Shop & Forge additions
+  nav_shop: "Shop",
+  nav_forge: "Forge",
+  ui_shop_locked: "Shop Locked",
+  ui_shop_locked_desc: "Complete the Tutorial Cave expedition to unlock the Shop.",
+  ui_shop_title: "Village Shop",
+  ui_forge_locked: "Forge Locked",
+  ui_forge_locked_desc: "Build a Blacksmith in the village to unlock the Forge.",
+  ui_buy: "Buy",
+  ui_refine: "Refine",
+  ui_refine_cost: "Upgrade Cost",
+  ui_refine_max: "MAX LEVEL",
+  ui_item_stats: "Item Stats",
+  ui_equipped: "Equipped",
+  ui_unequip: "Unequip",
+  ui_available_gear: "Available Gear",
+  ui_equip: "Equip",
+  ui_no_item_stats: "No stats modification.",
+  error_refine_max: "Equipment is already at maximum level (+10).",
+  tier_wooden: "Wooden",
+  tier_iron: "Iron",
+  tier_steel: "Steel",
+  tier_gold: "Golden",
+  tier_mythril: "Mythril",
+  family_dagger: "Dagger",
+  family_broadsword: "Broadsword",
+  family_battle_axe: "Battle Axe",
+  family_wand: "Wand",
+  archetype_plate: "Plate",
+  archetype_leather: "Leather",
+  archetype_robes: "Mage",
+  slot_name_head: "Helm",
+  slot_name_body: "Armor",
+  slot_name_legs: "Greaves",
+  slot_name_leftHand: "Weapon",
+  slot_name_rightHand: "Shield",
+  slot_name_accessory: "Ring",
+  ui_stats_power: "Power",
+  ui_stats_defense: "Defense",
+  ui_stats_hp: "HP",
+  ui_stats_mp: "MP",
+  ui_stats_magic: "Magic",
+  ui_stats_speed: "Speed",
+  ui_stats_evasion: "Evasion",
+  ui_stats_mpreduce: "MP Cost Reduction",
+  item_tiny_hp_potion: "Tiny HP Potion",
+  item_tiny_hp_potion_desc: "Restores 20 HP.",
+  item_tiny_mp_potion: "Tiny MP Potion",
+  item_tiny_mp_potion_desc: "Restores 10 MP.",
+  item_teleport_scroll: "Teleport Scroll",
+  item_teleport_scroll_desc: "Allows instant return from expedition.",
+  ui_infrastructure: "Infrastructure",
+  ui_current_level: "Current Level",
+  ui_next_upgrade: "Next Upgrade: Level {level}",
+  ui_time: "Time",
+  ui_days: "Days",
+  log_use_consumable: "{attacker} used {item} on {target}, restoring {amount} {stat}.",
+  ui_locked: "Locked",
+  ui_owned: "Owned",
+  ui_wounded: "Wounded",
+  ui_building_effects: "Building Effects",
+  ui_effect_grain: "Daily Grain",
+  ui_effect_pop: "Max Villagers",
+  ui_effect_storage: "Max Storage",
+  ui_effect_forge: "Forge Features",
+  ui_effect_heal: "Passive Healing",
+  ui_select_item: "Select an item to view details.",
+  ui_all: "All",
+  desc_material_wood: "A core building material. Gathered during expeditions or produced by the Farm. Used for constructions.",
+  desc_material_stone: "A sturdy masonry resource. Required for higher tier village constructions and fortifications.",
+  desc_material_iron: "A refined ore. Used for manufacturing advanced iron armaments and upgrade works.",
+  desc_food_raw_grain: "Harvested wheat. Consumed daily by villagers to prevent starvation. Keep stock high!"
 };
 const es = {
   // UI General
@@ -2548,6 +2740,7 @@ const es = {
   // Domain: Inventory
   ui_all: "Todo",
   ui_materials: "Materiales",
+  ui_food: "Comida",
   ui_consumables: "Consumibles",
   ui_equipment: "Equipo",
   // Domain: Explore
@@ -2620,7 +2813,79 @@ const es = {
   desc_explorer_guild: "Desbloquea mapas de expedición avanzados y nuevas regiones para explorar.",
   desc_infirmary: "Cura a los héroes heridos diariamente (+10% de curación y +1 límite de héroes por nivel).",
   ui_stat_points_busy: "Puntos de atributo: {amount} (No se pueden asignar en expedición)",
-  error_hero_busy: "El héroe está actualmente en una expedición y no puede realizar esta acción."
+  error_hero_busy: "El héroe está actualmente en una expedición y no puede realizar esta acción.",
+  // Shop & Forge additions
+  nav_shop: "Tienda",
+  nav_forge: "Forja",
+  ui_shop_locked: "Tienda Bloqueada",
+  ui_shop_locked_desc: "Completa la expedición de la Cueva de Tutorial para desbloquear la Tienda.",
+  ui_shop_title: "Tienda de la Aldea",
+  ui_forge_locked: "Forja Bloqueada",
+  ui_forge_locked_desc: "Construye una Herrería en la aldea para desbloquear la Forja.",
+  ui_buy: "Comprar",
+  ui_refine: "Refinar",
+  ui_refine_cost: "Coste de Mejora",
+  ui_refine_max: "NIVEL MÁXIMO",
+  ui_item_stats: "Estadísticas",
+  ui_equipped: "Equipado",
+  ui_unequip: "Desequipar",
+  ui_available_gear: "Equipo Disponible",
+  ui_equip: "Equipar",
+  ui_no_item_stats: "Sin estadísticas modificadas.",
+  error_refine_max: "El equipo ya está al nivel máximo (+10).",
+  tier_wooden: "Madera",
+  tier_iron: "Hierro",
+  tier_steel: "Acero",
+  tier_gold: "Oro",
+  tier_mythril: "Mithril",
+  family_dagger: "Daga",
+  family_broadsword: "Espada Ancha",
+  family_battle_axe: "Hacha de Batalla",
+  family_wand: "Varita",
+  archetype_plate: "Placas",
+  archetype_leather: "Cuero",
+  archetype_robes: "Mago",
+  slot_name_head: "Casco",
+  slot_name_body: "Armadura",
+  slot_name_legs: "Grebas",
+  slot_name_leftHand: "Arma",
+  slot_name_rightHand: "Escudo",
+  slot_name_accessory: "Anillo",
+  ui_stats_power: "Poder",
+  ui_stats_defense: "Defensa",
+  ui_stats_hp: "HP",
+  ui_stats_mp: "MP",
+  ui_stats_magic: "Magia",
+  ui_stats_speed: "Velocidad",
+  ui_stats_evasion: "Evasión",
+  ui_stats_mpreduce: "Reducción Coste MP",
+  item_tiny_hp_potion: "Poción HP Pequeña",
+  item_tiny_hp_potion_desc: "Restaura 20 HP.",
+  item_tiny_mp_potion: "Poción MP Pequeña",
+  item_tiny_mp_potion_desc: "Restaura 10 MP.",
+  item_teleport_scroll: "Pergamino del Retorno",
+  item_teleport_scroll_desc: "Permite el retorno instantáneo de la expedición.",
+  ui_infrastructure: "Infraestructura",
+  ui_current_level: "Nivel Actual",
+  ui_next_upgrade: "Siguiente Mejora: Nivel {level}",
+  ui_time: "Tiempo",
+  ui_days: "Días",
+  log_use_consumable: "{attacker} usó {item} en {target}, restaurando {amount} {stat}.",
+  ui_locked: "Bloqueado",
+  ui_owned: "Tienes",
+  ui_wounded: "Herido",
+  ui_building_effects: "Efectos del Edificio",
+  ui_effect_grain: "Grano Diario",
+  ui_effect_pop: "Habitantes Máx",
+  ui_effect_storage: "Almacén Máx",
+  ui_effect_forge: "Funciones de Forja",
+  ui_effect_heal: "Curación Pasiva",
+  ui_select_item: "Selecciona un objeto para ver los detalles.",
+  ui_all: "Todo",
+  desc_material_wood: "Un recurso básico de construcción. Obtenido en expediciones o producido por la Granja. Se usa para edificios.",
+  desc_material_stone: "Un recurso de cantería resistente. Requerido para construcciones y fortificaciones avanzadas del pueblo.",
+  desc_material_iron: "Mineral refinado. Utilizado para la fabricación de armamento avanzado y obras de forja.",
+  desc_food_raw_grain: "Trigo cosechado. Consumido diariamente por los aldeanos para evitar la inanición. ¡Mantén existencias!"
 };
 const ca = {
   // UI General
@@ -2752,6 +3017,7 @@ const ca = {
   // Domain: Inventory
   ui_all: "Tot",
   ui_materials: "Materials",
+  ui_food: "Menjar",
   ui_consumables: "Consumibles",
   ui_equipment: "Equip",
   // Domain: Explore
@@ -2808,8 +3074,80 @@ const ca = {
   desc_training_grounds: "Desbloqueja règims d'entrenament, proporcionant millores d'atributs permanents per als herois inactius.",
   desc_explorer_guild: "Desbloqueja mapes d'expedició avançats i noves regions per explorar.",
   desc_infirmary: "Cura els herois ferits diàriament (+10% de curació i +1 límit d'herois per nivell).",
-  ui_stat_points_busy: "Punts d'atribut: {amount} (No es poden assignar en expedició)",
-  error_hero_busy: "L'heroi està actualment en una expedició i no pot fer aquesta acció."
+  ui_stat_points_busy: "Punts d'atribut: {amount} (No se poden assignar en expedició)",
+  error_hero_busy: "L'heroi està actualment en una expedició i no pot fer aquesta acció.",
+  // Shop & Forge additions
+  nav_shop: "Botiga",
+  nav_forge: "Forja",
+  ui_shop_locked: "Botiga Bloquejada",
+  ui_shop_locked_desc: "Completa l'expedició de la Cova del Tutorial per desbloquejar la botiga.",
+  ui_shop_title: "Botiga de l'Aldea",
+  ui_forge_locked: "Forja Bloqueada",
+  ui_forge_locked_desc: "Construeix una Herreria a l'aldea per desbloquejar la Forja.",
+  ui_buy: "Comprar",
+  ui_refine: "Refinar",
+  ui_refine_cost: "Cost de Millora",
+  ui_refine_max: "NIVELL MÀXIM",
+  ui_item_stats: "Estadístiques",
+  ui_equipped: "Equipat",
+  ui_unequip: "Desequipar",
+  ui_available_gear: "Equip Disponible",
+  ui_equip: "Equipar",
+  ui_no_item_stats: "Sense estadístiques modificades.",
+  error_refine_max: "L'equip ja està al nivell màxim (+10).",
+  tier_wooden: "Fusta",
+  tier_iron: "Ferro",
+  tier_steel: "Acer",
+  tier_gold: "Or",
+  tier_mythril: "Mithril",
+  family_dagger: "Daga",
+  family_broadsword: "Espasa Ampla",
+  family_battle_axe: "Destral de Batalla",
+  family_wand: "Varita",
+  archetype_plate: "Plaques",
+  archetype_leather: "Cuir",
+  archetype_robes: "Mag",
+  slot_name_head: "Casquet",
+  slot_name_body: "Armadura",
+  slot_name_legs: "Grebes",
+  slot_name_leftHand: "Arma",
+  slot_name_rightHand: "Escut",
+  slot_name_accessory: "Anell",
+  ui_stats_power: "Poder",
+  ui_stats_defense: "Defensa",
+  ui_stats_hp: "HP",
+  ui_stats_mp: "MP",
+  ui_stats_magic: "Màgia",
+  ui_stats_speed: "Velocitat",
+  ui_stats_evasion: "Evasió",
+  ui_stats_mpreduce: "Reducció Cost MP",
+  item_tiny_hp_potion: "Poció HP Petita",
+  item_tiny_hp_potion_desc: "Restaura 20 HP.",
+  item_tiny_mp_potion: "Poció MP Petita",
+  item_tiny_mp_potion_desc: "Restaura 10 MP.",
+  item_teleport_scroll: "Pergamí de Retorn",
+  item_teleport_scroll_desc: "Permet el retorn instantani de l'expedició.",
+  ui_infrastructure: "Infraestructura",
+  ui_current_level: "Nivell Actual",
+  ui_next_upgrade: "Següent Millora: Nivell {level}",
+  ui_time: "Temps",
+  ui_days: "Dies",
+  log_use_consumable: "¡{attacker} ha utilitzat {item} en {target}, restaurant {amount} {stat}!",
+  ui_locked: "Bloquejat",
+  ui_owned: "Tens",
+  ui_wounded: "Ferit",
+  ui_building_effects: "Efectes de l'Edifici",
+  ui_effect_grain: "Gra Diari",
+  ui_effect_pop: "Habitants Màx",
+  ui_effect_storage: "Magatzem Màx",
+  ui_effect_forge: "Funcions de Forja",
+  ui_effect_heal: "Curació Passiva",
+  ui_select_item: "Selecciona un objecte per veure'n els detalls.",
+  ui_all: "Tot",
+  desc_material_wood: "Un recurs bàsic de construcció. Obtingut en expedicions o produït per la Granja. S'utilitza per a edificis.",
+  desc_material_stone: "Un recurs de picapedrer resistent. Requerit per a construccions i fortificacions avançades del poble.",
+  desc_material_iron: "Mineral refinat. Utilitzat per a la fabricació d'armament avançat i obres de forja.",
+  desc_food_raw_grain: "Blat collit. Consumit diàriament pels aldeans per evitar la inanició. ¡Mantén existències!"
 };
 const eu = {
   // UI General
@@ -2941,6 +3279,7 @@ const eu = {
   // Domain: Inventory
   ui_all: "Guztiak",
   ui_materials: "Materialak",
+  ui_food: "Elikagaia",
   ui_consumables: "Kontsumigarriak",
   ui_equipment: "Ekipamendua",
   // Domain: Explore
@@ -2998,7 +3337,79 @@ const eu = {
   desc_explorer_guild: "Espedizio mapa aurreratuak eta esploratzeko eskualde berriak desblokeatzen ditu.",
   desc_infirmary: "Zauritutako heroiak osatzen ditu egunero (+%10 osatze eta +1 heroi muga mailako).",
   ui_stat_points_busy: "Atributu puntuak: {amount} (Ezin dira espedizioan esleitu)",
-  error_hero_busy: "Heroia espedizio batean dago une honetan eta ezin du ekintza hau burutu."
+  error_hero_busy: "Heroia espedizio batean dago une honetan eta ezin du ekintza hau burutu.",
+  // Shop & Forge additions
+  nav_shop: "Denda",
+  nav_forge: "Sartalde",
+  ui_shop_locked: "Denda Blokeatuta",
+  ui_shop_locked_desc: "Osatu Tutorialeko Haitzuloa espedizioa denda desblokeatzeko.",
+  ui_shop_title: "Herriko Denda",
+  ui_forge_locked: "Forja Blokeatuta",
+  ui_forge_locked_desc: "Eraiki Aroztegi bat herrian forja desblokeatzeko.",
+  ui_buy: "Erosi",
+  ui_refine: "Findu",
+  ui_refine_cost: "Hobekuntza Kostua",
+  ui_refine_max: "GEHIENEKO MAILA",
+  ui_item_stats: "Estatistikak",
+  ui_equipped: "Ekipatua",
+  ui_unequip: "Kendu",
+  ui_available_gear: "Ekipamendu Eskuragarria",
+  ui_equip: "Ekipatu",
+  ui_no_item_stats: "Ez dago estatistika aldatzerik.",
+  error_refine_max: "Ekipamendua dagoeneko gehienezko mailan dago (+10).",
+  tier_wooden: "Zurezko",
+  tier_iron: "Burdinezko",
+  tier_steel: "Altzairuzko",
+  tier_gold: "Urrezko",
+  tier_mythril: "Mithril",
+  family_dagger: "Daga",
+  family_broadsword: "Ezpata Zabala",
+  family_battle_axe: "Gudu Aizkora",
+  family_wand: "Makila",
+  archetype_plate: "Plakak",
+  archetype_leather: "Larrua",
+  archetype_robes: "Magoa",
+  slot_name_head: "Kaskoa",
+  slot_name_body: "Armadura",
+  slot_name_legs: "Greba",
+  slot_name_leftHand: "Arma",
+  slot_name_rightHand: "Babesa",
+  slot_name_accessory: "Eraztuna",
+  ui_stats_power: "Indarra",
+  ui_stats_defense: "Babesa",
+  ui_stats_hp: "HP",
+  ui_stats_mp: "MP",
+  ui_stats_magic: "Magia",
+  ui_stats_speed: "Abiadura",
+  ui_stats_evasion: "Saihestea",
+  ui_stats_mpreduce: "MP Kostu Murrizketa",
+  item_tiny_hp_potion: "HP Edabe Txikia",
+  item_tiny_hp_potion_desc: "20 HP berritzen ditu.",
+  item_tiny_mp_potion: "MP Edabe Txikia",
+  item_tiny_mp_potion_desc: "10 MP berritzen ditu.",
+  item_teleport_scroll: "Itzulerako Pergaminoa",
+  item_teleport_scroll_desc: "Espediziotik berehala itzultzea ahalbidetzen du.",
+  ui_infrastructure: "Azpiegitura",
+  ui_current_level: "Oraingo Maila",
+  ui_next_upgrade: "Hurrengo Hobekuntza: {level} Maila",
+  ui_time: "Denbora",
+  ui_days: "Egun",
+  log_use_consumable: "¡{attacker}-(e)k {item} erabili du {target}-(r)en aurka, {amount} {stat} berrituz!",
+  ui_locked: "Blokeatuta",
+  ui_owned: "Daukazu",
+  ui_wounded: "Zauritua",
+  ui_building_effects: "Eraikinaren Efektuak",
+  ui_effect_grain: "Eguneroko Zerealak",
+  ui_effect_pop: "Biztanle Max",
+  ui_effect_storage: "Biltegi Max",
+  ui_effect_forge: "Burdinolako Funtzioak",
+  ui_effect_heal: "Sendatze Pasiboa",
+  ui_select_item: "Hautatu elementu bat xehetasunak ikusteko.",
+  ui_all: "Guztiak",
+  desc_material_wood: "Eraikuntzarako oinarrizko lehengaia. Espedizioetan bildutakoa edo Baserriak ekoitzia. Eraikuntzetarako erabiltzen da.",
+  desc_material_stone: "Hargintza sendoa. Herriko eraikuntza eta gotorleku aurreratuagoetarako beharrezkoa da.",
+  desc_material_iron: "Mea findua. Burdinazko armamentu aurreratua egiteko eta forja berritzeko lanetarako erabiltzen da.",
+  desc_food_raw_grain: "Biltzen den zereala. Herritarrek egunero jaten dute gosea saihesteko. Mantendu stock handia!"
 };
 const gl = {
   // UI General
@@ -3130,6 +3541,7 @@ const gl = {
   // Domain: Inventory
   ui_all: "Todo",
   ui_materials: "Materiais",
+  ui_food: "Comida",
   ui_consumables: "Consumibles",
   ui_equipment: "Equipo",
   // Domain: Explore
@@ -3187,7 +3599,79 @@ const gl = {
   desc_explorer_guild: "Desbloquea mapas de expedición avanzados e novas rexións para explorar.",
   desc_infirmary: "Cura os heroes feridos diariamente (+10% de curación e +1 límite de heroes por nivel).",
   ui_stat_points_busy: "Puntos de atributo: {amount} (Non se poden asignar en expedición)",
-  error_hero_busy: "O heroe está actualmente nunha expedición e non pode realizar esta acción."
+  error_hero_busy: "O heroe está actualmente nunha expedición e non pode realizar esta acción.",
+  // Shop & Forge additions
+  nav_shop: "Tenda",
+  nav_forge: "Forxa",
+  ui_shop_locked: "Tenda Bloqueada",
+  ui_shop_locked_desc: "Completa a expedición da Cova do Tutorial para desbloquear a tenda.",
+  ui_shop_title: "Tenda da Aldea",
+  ui_forge_locked: "Forxa Bloqueada",
+  ui_forge_locked_desc: "Constrúe unha Ferraría na aldea para desbloquear a Forxa.",
+  ui_buy: "Mercar",
+  ui_refine: "Refinar",
+  ui_refine_cost: "Coste de Mellora",
+  ui_refine_max: "NIVEL MÁXIMO",
+  ui_item_stats: "Estadísticas",
+  ui_equipped: "Equipado",
+  ui_unequip: "Desequipar",
+  ui_available_gear: "Equipo Dispoñible",
+  ui_equip: "Equipar",
+  ui_no_item_stats: "Sen estatísticas modificadas.",
+  error_refine_max: "O equipo xa está ao nivel máximo (+10).",
+  tier_wooden: "Madeira",
+  tier_iron: "Ferro",
+  tier_steel: "Aceiro",
+  tier_gold: "Ouro",
+  tier_mythril: "Mithril",
+  family_dagger: "Daga",
+  family_broadsword: "Espada Ancha",
+  family_battle_axe: "Machada de Batalla",
+  family_wand: "Variña",
+  archetype_plate: "Placas",
+  archetype_leather: "Coiro",
+  archetype_robes: "Mago",
+  slot_name_head: "Elmo",
+  slot_name_body: "Armadura",
+  slot_name_legs: "Grebas",
+  slot_name_leftHand: "Arma",
+  slot_name_rightHand: "Escudo",
+  slot_name_accessory: "Anel",
+  ui_stats_power: "Poder",
+  ui_stats_defense: "Defensa",
+  ui_stats_hp: "HP",
+  ui_stats_mp: "MP",
+  ui_stats_magic: "Maxia",
+  ui_stats_speed: "Velocidade",
+  ui_stats_evasion: "Evasión",
+  ui_stats_mpreduce: "Redución Costo MP",
+  item_tiny_hp_potion: "Poción HP Pequena",
+  item_tiny_hp_potion_desc: "Restaura 20 HP.",
+  item_tiny_mp_potion: "Poción MP Pequena",
+  item_tiny_mp_potion_desc: "Restaura 10 MP.",
+  item_teleport_scroll: "Pergamiño de Retorno",
+  item_teleport_scroll_desc: "Permite o retorno instantáneo da expedición.",
+  ui_infrastructure: "Infraestrutura",
+  ui_current_level: "Nivel Actual",
+  ui_next_upgrade: "Seguinte Mellora: Nivel {level}",
+  ui_time: "Tempo",
+  ui_days: "Días",
+  log_use_consumable: "¡{attacker} usou {item} en {target}, restaurando {amount} {stat}!",
+  ui_locked: "Bloqueado",
+  ui_owned: "Tes",
+  ui_wounded: "Ferido",
+  ui_building_effects: "Efectos do Edificio",
+  ui_effect_grain: "Grán Diario",
+  ui_effect_pop: "Habitantes Máx",
+  ui_effect_storage: "Almacén Máx",
+  ui_effect_forge: "Funcións de Forxa",
+  ui_effect_heal: "Curación Pasiva",
+  ui_select_item: "Selecciona un obxecto para ver os detalles.",
+  ui_all: "Todo",
+  desc_material_wood: "Un recurso básico de construción. Obtido en expedicións ou producido pola Granxa. Úsase para edificios.",
+  desc_material_stone: "Un recurso de cantería resistente. Requirido para construcións e fortificacións avanzadas do pobo.",
+  desc_material_iron: "Mineral refinado. Utilizado para a fabricación de armamento avanzado e obras de forxa.",
+  desc_food_raw_grain: "Trigo colleitado. Consumido diariamente polos aldeáns para evitar la inanición. ¡Mantén existencias!"
 };
 class I18nService {
   constructor() {
@@ -3270,7 +3754,8 @@ class GameEngine {
       inventory: this.inventoryService.getState(),
       heroes: heroesDto,
       expeditions: this.expeditionService.getExpeditions(),
-      activeExpedition
+      activeExpedition,
+      completedExpeditions: this.expeditionService.state.completedIds || []
     };
   }
   // --- Hero Facade ---
@@ -3286,6 +3771,109 @@ class GameEngine {
       return Result.fail("error_hero_busy");
     }
     return this.heroService.increaseHeroStat(heroId, statId);
+  }
+  equipHeroItem(heroId, slot, equipmentId) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.equipItem(heroId, slot, equipmentId);
+  }
+  unequipHeroItem(heroId, slot) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.unequipItem(heroId, slot);
+  }
+  // --- Shop & Forge Facade ---
+  buyItem(itemData, costGold) {
+    if (this.villageService.state.gold < costGold) {
+      return Result.fail("error_not_enough_gold");
+    }
+    const maxStorage = this.villageService.getMaxStorage();
+    if (this.inventoryService.getTotalStorageUsed() + 1 > maxStorage) {
+      return Result.fail("error_storage_full");
+    }
+    this.villageService.state.gold -= costGold;
+    this.villageService.save();
+    if (itemData.type === "consumable") {
+      this.inventoryService.addItem(itemData.id, 1);
+    } else {
+      this.inventoryService.addEquipment(itemData);
+    }
+    return Result.ok();
+  }
+  getRefineCost(item) {
+    const L = item.level || 0;
+    const nextLevel = L + 1;
+    const mat = item.material;
+    const cost = {
+      gold: 0,
+      materials: {}
+    };
+    if (mat === "wooden") {
+      cost.gold = 30 * nextLevel;
+      cost.materials.material_wood = 10 * nextLevel;
+    } else if (mat === "iron") {
+      cost.gold = 75 * nextLevel;
+      cost.materials.material_wood = 5 * nextLevel;
+      cost.materials.material_stone = 5 * nextLevel;
+      cost.materials.material_iron_ore = 3 * nextLevel;
+    } else if (mat === "steel") {
+      cost.gold = 150 * nextLevel;
+      cost.materials.material_stone = 10 * nextLevel;
+      cost.materials.material_steel_ingot = 3 * nextLevel;
+    } else if (mat === "gold") {
+      cost.gold = 300 * nextLevel;
+      cost.materials.material_stone = 15 * nextLevel;
+    } else if (mat === "mythril") {
+      cost.gold = 500 * nextLevel;
+      cost.materials.material_mythril = 2 * nextLevel;
+    }
+    return cost;
+  }
+  refineEquipment(itemId) {
+    let item = this.inventoryService.getEquipment(itemId);
+    let equippedHero = null;
+    if (!item) {
+      for (const h of this.heroService.list()) {
+        for (const slot of ["head", "body", "legs", "leftHand", "rightHand", "accessory"]) {
+          const eq = h.equipment[slot];
+          if (eq && eq.id === itemId) {
+            item = eq;
+            equippedHero = h;
+            break;
+          }
+        }
+        if (item) break;
+      }
+    }
+    if (!item) return Result.fail("error_item_not_found");
+    if (item.level >= 10) return Result.fail("error_refine_max");
+    const cost = this.getRefineCost(item);
+    if (this.villageService.state.gold < cost.gold) {
+      return Result.fail("error_not_enough_gold");
+    }
+    for (const [matId, qty] of Object.entries(cost.materials)) {
+      if (this.inventoryService.getItemCount(matId) < qty) {
+        return Result.fail("error_not_enough_materials");
+      }
+    }
+    this.villageService.state.gold -= cost.gold;
+    this.villageService.save();
+    for (const [matId, qty] of Object.entries(cost.materials)) {
+      this.inventoryService.useItem(matId, qty);
+    }
+    if (equippedHero) {
+      item.level = (item.level || 0) + 1;
+      equippedHero.recalculateStats({});
+      this.heroService.saveAll();
+    } else {
+      item.increaseLevel();
+      this.inventoryService.save();
+    }
+    return Result.ok(item);
   }
   // --- Combat Facade ---
   startBattle(enemies) {
@@ -3394,6 +3982,38 @@ class EngineAdapter {
       if (domain === "heroes") {
         view.on("increaseStat", (data) => {
           const result = this.engine.increaseHeroStat(data.heroId, data.statId);
+          if (!result.success) {
+            alert(this.engine.i18n.t(result.error));
+          }
+          this.forceUpdate();
+        });
+        view.on("equipItem", (data) => {
+          const result = this.engine.equipHeroItem(data.heroId, data.slot, data.itemId);
+          if (!result.success) {
+            alert(this.engine.i18n.t(result.error));
+          }
+          this.forceUpdate();
+        });
+        view.on("unequipItem", (data) => {
+          const result = this.engine.unequipHeroItem(data.heroId, data.slot);
+          if (!result.success) {
+            alert(this.engine.i18n.t(result.error));
+          }
+          this.forceUpdate();
+        });
+      }
+      if (domain === "shop") {
+        view.on("buyItem", (data) => {
+          const result = this.engine.buyItem(data.itemData, data.costGold);
+          if (!result.success) {
+            alert(this.engine.i18n.t(result.error));
+          }
+          this.forceUpdate();
+        });
+      }
+      if (domain === "forge") {
+        view.on("refineItem", (data) => {
+          const result = this.engine.refineEquipment(data.itemId);
           if (!result.success) {
             alert(this.engine.i18n.t(result.error));
           }
@@ -3549,8 +4169,39 @@ class VillageView extends BaseView {
         this.elements.storageBar.classList.toggle("danger", percent > 90);
       }
     }
+    this.renderVillageCanvas(village);
     this.renderConstructionQueue(village.constructionQueue);
     this.renderDailyReport(village.lastDailyReport);
+  }
+  renderVillageCanvas(village) {
+    const canvas = this.$("#village-canvas-container");
+    if (!canvas) return;
+    const infra = village.infrastructure || {};
+    const tiles = [
+      { id: "townhall", name: "Town Hall", icon: "🏛️", lvl: 1, active: true },
+      { id: "housing", name: this.t("village_housing") || "Housing", icon: "🏠", lvl: infra.housing || 0, active: (infra.housing || 0) > 0 },
+      { id: "farm", name: this.t("village_farm") || "Farm", icon: "🌾", lvl: infra.farm || 0, active: (infra.farm || 0) > 0 },
+      { id: "warehouse", name: this.t("village_warehouse") || "Warehouse", icon: "📦", lvl: infra.warehouse || 0, active: (infra.warehouse || 0) > 0 },
+      { id: "blacksmith", name: this.t("village_blacksmith") || "Blacksmith", icon: "⚒️", lvl: infra.blacksmith || 0, active: (infra.blacksmith || 0) > 0 },
+      { id: "infirmary", name: this.t("village_infirmary") || "Infirmary", icon: "🏥", lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 }
+    ];
+    canvas.innerHTML = `
+            <div class="village-grid">
+                ${tiles.map((tile) => {
+      const statusClass = tile.active ? "active" : "locked";
+      const lvlLabel = this.t("ui_level") || "Level";
+      const displayedIcon = tile.active ? tile.icon : "🔒";
+      const displayedLvl = tile.active ? `${lvlLabel} ${tile.lvl}` : this.t("ui_locked") || "Locked";
+      return `
+                        <div class="village-tile ${statusClass}">
+                            <div class="village-tile-icon">${displayedIcon}</div>
+                            <div class="village-tile-name">${tile.name}</div>
+                            <div class="village-tile-level">${displayedLvl}</div>
+                        </div>
+                    `;
+    }).join("")}
+            </div>
+        `;
   }
   renderDailyReport(report) {
     const container = this.$("#daily-report-container");
@@ -3655,10 +4306,10 @@ class VillageView extends BaseView {
             <div class="list-item construction-item">
                 <div class="list-item-header">
                     <span class="list-item-title">${this.t("village_" + project.buildingId)}</span>
-                    <span class="list-item-level">Lvl ${project.targetLevel}</span>
+                    <span class="list-item-level">${this.t("ui_level") || "Level"} ${project.targetLevel}</span>
                 </div>
                 <div class="construction-status">
-                    <span class="days-remaining">⏳ ${project.daysRemaining} Days</span>
+                    <span class="days-remaining">⏳ ${project.daysRemaining} ${this.t("ui_days") || "Days"}</span>
                 </div>
                 <div class="progress-container">
                     <div class="progress-bar warning" style="width: ${(project.duration - project.daysRemaining) / project.duration * 100}%"></div>
@@ -3725,7 +4376,7 @@ class BuildingsView extends BaseView {
       const card = this.elements.cardTemplate.content.cloneNode(true).querySelector(".building-card");
       card.dataset.id = id;
       card.querySelector(".list-item-title").textContent = this.t("village_" + id);
-      card.querySelector(".list-item-level").textContent = `LVL ${level}`;
+      card.querySelector(".list-item-level").textContent = `${this.t("ui_level") || "Level"} ${level}`;
       if (id === this.selectedBuildingId) {
         card.classList.add("active");
       }
@@ -3738,13 +4389,90 @@ class BuildingsView extends BaseView {
       this.elements.list.appendChild(card);
     });
   }
+  _getUpgradeCost(buildingId, nextLevel) {
+    if (buildingId === "farm") {
+      if (nextLevel === 1) return { gold: 30, wood: 10, stone: 0, duration: 1 };
+      if (nextLevel === 2) return { gold: 80, wood: 30, stone: 10, duration: 3 };
+    }
+    if (buildingId === "housing") {
+      if (nextLevel === 2) return { gold: 150, wood: 40, stone: 10, duration: 4 };
+      if (nextLevel === 3) return { gold: 300, wood: 90, stone: 45, duration: 6 };
+    }
+    if (buildingId === "warehouse") {
+      if (nextLevel === 2) return { gold: 120, wood: 50, stone: 30, duration: 4 };
+    }
+    if (buildingId === "blacksmith") {
+      if (nextLevel === 1) return { gold: 150, wood: 50, stone: 30, duration: 3 };
+    }
+    if (buildingId === "infirmary") {
+      if (nextLevel === 1) return { gold: 150, wood: 100, stone: 0, duration: 3 };
+      if (nextLevel === 2) return { gold: 400, wood: 200, stone: 100, duration: 5 };
+      if (nextLevel === 3) return { gold: 800, wood: 300, stone: 200, duration: 7 };
+    }
+    return {
+      gold: nextLevel * 100,
+      wood: nextLevel * 50,
+      stone: nextLevel * 25,
+      duration: nextLevel * 2
+    };
+  }
+  _getBuildingStatsComparison(id, currentLevel, nextLevel) {
+    const t = this.t.bind(this);
+    let currentEffect = "";
+    let nextEffect = "";
+    let label = "";
+    if (id === "farm") {
+      label = t("ui_effect_grain") || "Daily Grain";
+      currentEffect = `+${4 * currentLevel}`;
+      nextEffect = `+${4 * nextLevel}`;
+    } else if (id === "housing") {
+      label = t("ui_effect_pop") || "Max Villagers";
+      const calcPop = (lvl) => {
+        if (lvl <= 0) return 0;
+        if (lvl === 1) return 3;
+        if (lvl === 2) return 10;
+        return 20 + (lvl - 3) * 10;
+      };
+      currentEffect = `${calcPop(currentLevel)}`;
+      nextEffect = `${calcPop(nextLevel)}`;
+    } else if (id === "warehouse") {
+      label = t("ui_effect_storage") || "Max Storage";
+      const calcStorage = (lvl) => {
+        if (lvl <= 0) return 100;
+        if (lvl === 1) return 200;
+        if (lvl === 2) return 500;
+        return 500 + (lvl - 2) * 500;
+      };
+      currentEffect = `${calcStorage(currentLevel)} 🪵/🪨`;
+      nextEffect = `${calcStorage(nextLevel)} 🪵/🪨`;
+    } else if (id === "blacksmith") {
+      label = t("ui_effect_forge") || "Forge Features";
+      currentEffect = currentLevel >= 1 ? "Iron Gear" : "Locked";
+      nextEffect = "Iron Gear & Refining";
+    } else if (id === "infirmary") {
+      label = t("ui_effect_heal") || "Passive Healing";
+      currentEffect = `+${currentLevel * 10}%`;
+      nextEffect = `+${nextLevel * 10}%`;
+    }
+    return `
+            <div class="building-stats-comparison">
+                <h4>${t("ui_building_effects") || "Building Effects"}</h4>
+                <div class="building-stat-row">
+                    <span class="building-stat-label">${label}</span>
+                    <span class="building-stat-values">
+                        ${currentEffect} ➡️ <span class="building-stat-next">${nextEffect}</span>
+                    </span>
+                </div>
+            </div>
+        `;
+  }
   renderDetail(village, state) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     if (!this.elements.detail) return;
     if (!this.selectedBuildingId) {
       this.elements.detail.innerHTML = `
                 <div class="empty-detail">
-                    <div class="detail-icon-bg">⚒️</div>
+                    <div class="detail-icon-bg">🏢</div>
                     <p data-i18n="ui_select_building">${this.t("ui_select_building")}</p>
                 </div>
             `;
@@ -3753,56 +4481,88 @@ class BuildingsView extends BaseView {
     const id = this.selectedBuildingId;
     const currentLevel = village.infrastructure[id];
     const nextLevel = currentLevel + 1;
-    const costGold = nextLevel * 50;
-    const costWood = nextLevel * 20;
-    const duration = nextLevel * 2;
+    const cost = this._getUpgradeCost(id, nextLevel);
+    const costGold = cost.gold;
+    const costWood = cost.wood;
+    const costStone = cost.stone;
+    const duration = cost.duration;
     const hasGold = village.gold >= costGold;
     const woodCount = ((_b = (_a = state.inventory) == null ? void 0 : _a.materials) == null ? void 0 : _b.material_wood) || 0;
     const hasWood = woodCount >= costWood;
+    const stoneCount = ((_d = (_c = state.inventory) == null ? void 0 : _c.materials) == null ? void 0 : _d.material_stone) || 0;
+    const hasStone = stoneCount >= costStone;
     const activeProject = village.constructionQueue.find((p) => p.buildingId === id);
+    const icons = {
+      housing: "🏠",
+      farm: "🌾",
+      warehouse: "📦",
+      blacksmith: "⚒️",
+      infirmary: "🏥"
+    };
+    const icon = icons[id] || "🏢";
     this.elements.detail.innerHTML = `
             <div class="building-profile">
                 <header class="building-profile-header">
                     <div class="profile-title-group">
-                        <span class="profile-badge">INFRASTRUCTURE</span>
+                        <span class="profile-badge">${this.t("ui_infrastructure") || "INFRASTRUCTURE"}</span>
                         <h2>${this.t("village_" + id)}</h2>
                     </div>
                     <div class="profile-stat">
-                        <span class="label">CURRENT LEVEL</span>
+                        <span class="label">${this.t("ui_current_level") || "CURRENT LEVEL"}</span>
                         <span class="value">${currentLevel}</span>
                     </div>
                 </header>
 
-                <div class="upgrade-section">
-                    <h3>Next Upgrade: Level ${nextLevel}</h3>
-                    <p class="description">${this.t("desc_" + id)}</p>
-                    
-                    <div class="cost-grid">
-                        <div class="cost-item ${!hasGold ? "insufficient" : ""}">
-                            <span class="label">GOLD</span>
-                            <span class="value">💰 ${costGold}</span>
-                        </div>
-                        <div class="cost-item ${!hasWood ? "insufficient" : ""}">
-                            <span class="label">WOOD</span>
-                            <span class="value">🪵 ${costWood}</span>
-                        </div>
-                        <div class="cost-item">
-                            <span class="label">TIME</span>
-                            <span class="value">⏳ ${duration} Days</span>
+                <div class="building-detail-grid">
+                    <div class="building-detail-visual-column">
+                        <div class="building-preview-card">
+                            <div class="building-preview-icon">${icon}</div>
                         </div>
                     </div>
+                    <div class="building-detail-info-column">
+                        <p class="building-description">${this.t("desc_" + id)}</p>
+                        
+                        ${this._getBuildingStatsComparison(id, currentLevel, nextLevel)}
+                        
+                        <div class="upgrade-section">
+                            <h3>${(this.t("ui_next_upgrade") || "Next Upgrade: Level {level}").replace("{level}", nextLevel)}</h3>
+                            
+                            <div class="cost-grid">
+                                <div class="cost-item ${!hasGold ? "insufficient" : ""}">
+                                    <span class="label">${this.t("village_gold") || "GOLD"}</span>
+                                    <span class="value">💰 ${costGold}</span>
+                                </div>
+                                ${costWood > 0 ? `
+                                <div class="cost-item ${!hasWood ? "insufficient" : ""}">
+                                    <span class="label">${this.t("material_wood") || "WOOD"}</span>
+                                    <span class="value">🪵 ${costWood}</span>
+                                </div>
+                                ` : ""}
+                                ${costStone > 0 ? `
+                                <div class="cost-item ${!hasStone ? "insufficient" : ""}">
+                                    <span class="label">${this.t("material_stone") || "STONE"}</span>
+                                    <span class="value">🪨 ${costStone}</span>
+                                </div>
+                                ` : ""}
+                                <div class="cost-item">
+                                    <span class="label">${this.t("ui_time") || "TIME"}</span>
+                                    <span class="value">⏳ ${duration} ${this.t("ui_days") || "Days"}</span>
+                                </div>
+                            </div>
 
-                    <div class="action-footer">
-                        ${activeProject ? `
-                            <button class="btn btn-secondary btn-lg" disabled>
-                                ⏳ ${this.t("ui_under_construction") || "Under Construction"} (${activeProject.daysRemaining}d)
-                            </button>
-                        ` : `
-                            <button class="btn btn-primary btn-lg upgrade-btn" ${!hasGold || !hasWood ? "disabled" : ""}>
-                                <span class="icon">⚒️</span>
-                                ${this.t("btn_confirm")}
-                            </button>
-                        `}
+                            <div class="action-footer">
+                                ${activeProject ? `
+                                    <button class="btn btn-secondary btn-lg" disabled>
+                                        ⏳ ${this.t("ui_under_construction") || "Under Construction"} (${activeProject.daysRemaining}d)
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-primary btn-lg upgrade-btn" ${!hasGold || !hasWood || !hasStone ? "disabled" : ""}>
+                                        <span class="icon">⚒️</span>
+                                        ${this.t("btn_confirm")}
+                                    </button>
+                                `}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3810,21 +4570,98 @@ class BuildingsView extends BaseView {
     const btn = this.elements.detail.querySelector(".upgrade-btn");
     if (btn) {
       btn.addEventListener("click", () => {
+        const materials = {};
+        if (costWood > 0) materials.material_wood = costWood;
+        if (costStone > 0) materials.material_stone = costStone;
         this.emit("startProject", {
           buildingId: id,
           targetLevel: nextLevel,
           costGold,
-          costMaterials: { material_wood: costWood },
+          costMaterials: materials,
           duration
         });
       });
     }
   }
 }
+function getEquipmentName(item, t) {
+  if (!item) return t("ui_empty_slot");
+  const tierName = t("tier_" + item.material) || item.material;
+  if (item.type === "weapon") {
+    const familyName = t("family_" + item.family) || item.family;
+    return `${tierName} ${familyName} +${item.level || 0}`;
+  } else {
+    const archName = t("archetype_" + item.archetype) || item.archetype;
+    const slotName = t("slot_name_" + item.slot) || item.slot;
+    return `${tierName} ${archName} ${slotName} +${item.level || 0}`;
+  }
+}
+function getEquipmentStats(item) {
+  const stats = {};
+  if (!item) return stats;
+  const tier = MATERIAL_TIERS[item.material];
+  const upgradeMult = Math.pow(1.1, item.level || 0);
+  if (item.type === "weapon") {
+    const family = WEAPON_FAMILIES[item.family];
+    if (family && tier) {
+      const itemPower = 2 * tier.mult * upgradeMult;
+      stats.strength = Math.floor(itemPower * family.dmgMult);
+      if (family.spdBonus) stats.speed = family.spdBonus;
+      if (family.evaBonus) stats.evasion = family.evaBonus;
+      if (family.magBonus) stats.magicPower = Math.floor(family.magBonus * tier.mult * upgradeMult);
+      if (family.mpCostReduction) stats.mpCostReduction = family.mpCostReduction;
+    }
+  } else if (item.type === "armor") {
+    const arch = ARMOR_ARCHETYPES[item.archetype];
+    if (arch && tier) {
+      const itemPower = 5 * tier.mult * upgradeMult;
+      stats.defense = Math.floor(itemPower * arch.defMult);
+      if (arch.hpMult) stats.maxHp = Math.floor(itemPower * arch.hpMult);
+      if (arch.mpMult) stats.maxMp = Math.floor(itemPower * arch.mpMult);
+      if (arch.magMult) stats.magicPower = Math.floor(itemPower * arch.magMult);
+      if (arch.spdPenalty) stats.speed = arch.spdPenalty;
+      const eva = arch.evaBonus || arch.evaPenalty || 0;
+      if (eva) stats.evasion = eva;
+    }
+  }
+  return stats;
+}
+function getFormattedStats(item, t) {
+  const statsObj = getEquipmentStats(item);
+  const statLines = [];
+  if (statsObj.strength) {
+    statLines.push(`+${statsObj.strength} ${t("ui_stats_power") || "STR"}`);
+  }
+  if (statsObj.defense) {
+    statLines.push(`+${statsObj.defense} ${t("ui_stats_defense") || "DEF"}`);
+  }
+  if (statsObj.maxHp) {
+    statLines.push(`+${statsObj.maxHp} ${t("ui_stats_hp") || "HP"}`);
+  }
+  if (statsObj.maxMp) {
+    statLines.push(`+${statsObj.maxMp} ${t("ui_stats_mp") || "MP"}`);
+  }
+  if (statsObj.magicPower) {
+    statLines.push(`+${statsObj.magicPower} ${t("ui_stats_magic") || "MAG"}`);
+  }
+  if (statsObj.speed) {
+    const sign = statsObj.speed > 0 ? "+" : "";
+    statLines.push(`${sign}${statsObj.speed} ${t("ui_stats_speed") || "SPD"}`);
+  }
+  if (statsObj.evasion) {
+    const sign = statsObj.evasion > 0 ? "+" : "";
+    statLines.push(`${sign}${statsObj.evasion}% ${t("ui_stats_evasion") || "EVA"}`);
+  }
+  if (statsObj.mpCostReduction) {
+    statLines.push(`-${statsObj.mpCostReduction}% ${t("ui_stats_mpreduce") || "MP Cost"}`);
+  }
+  return statLines.join(", ") || t("ui_no_item_stats") || "No stats modification.";
+}
 class HeroesView extends BaseView {
   constructor() {
     super("heroes");
     this.selectedHeroId = null;
+    this.inventoryEquipment = [];
   }
   onMount() {
     this.elements = {
@@ -3847,6 +4684,12 @@ class HeroesView extends BaseView {
         if (btn) {
           const statId = btn.dataset.stat;
           this.emit("increaseStat", { heroId: this.selectedHeroId, statId });
+          return;
+        }
+        const slotBtn = e.target.closest(".equip-slot.clickable");
+        if (slotBtn) {
+          const slot = slotBtn.dataset.slot;
+          this._openEquipModal(slot);
         }
       });
     }
@@ -3855,6 +4698,7 @@ class HeroesView extends BaseView {
     this.lastRawState = state;
     const heroes = state.heroes;
     if (!heroes) return;
+    this.inventoryEquipment = state.inventory.equipment || [];
     const activeHero = heroes.find((h) => h.id === this.selectedHeroId);
     const stateString = JSON.stringify({
       heroes: heroes.map((h) => ({ id: h.id, level: h.level })),
@@ -3868,7 +4712,8 @@ class HeroesView extends BaseView {
         strength: activeHero.strength,
         speed: activeHero.speed,
         defense: activeHero.defense,
-        magicPower: activeHero.magicPower
+        magicPower: activeHero.magicPower,
+        equipment: activeHero.equipment
       } : null
     });
     if (this.lastRenderedState === stateString) return;
@@ -3886,7 +4731,7 @@ class HeroesView extends BaseView {
       const card = this.elements.cardTemplate.content.cloneNode(true).querySelector(".list-item");
       card.dataset.id = hero.id;
       card.querySelector(".list-item-title").textContent = hero.name;
-      card.querySelector(".list-item-level").textContent = `LVL ${hero.level}`;
+      card.querySelector(".list-item-level").textContent = `${this.t("ui_level") || "Level"} ${hero.level}`;
       if (hero.id === this.selectedHeroId) {
         card.classList.add("active");
       }
@@ -3906,16 +4751,21 @@ class HeroesView extends BaseView {
     const isIdle = hero.activity === "idle";
     const activityText = isIdle ? this.t("ui_activity_idle") : this.t("ui_activity_expedition");
     const equipSlots = ["head", "body", "legs", "leftHand", "rightHand", "accessory"];
-    let equipHtml = equipSlots.map((slot) => `
-            <div class="equip-slot">
-                <span class="slot-name">${this.t("slot_" + slot)}</span>
-                <span class="slot-item">${hero.equipment[slot] ? hero.equipment[slot].name : this.t("ui_empty_slot")}</span>
-            </div>
-        `).join("");
+    let equipHtml = equipSlots.map((slot) => {
+      const hasItem = !!hero.equipment[slot];
+      const itemName = hasItem ? getEquipmentName(hero.equipment[slot], this.t.bind(this)) : this.t("ui_empty_slot");
+      const clickableClass = isIdle ? "clickable" : "locked";
+      return `
+                <div class="equip-slot ${clickableClass}" data-slot="${slot}">
+                    <span class="slot-name">${this.t("slot_" + slot)}</span>
+                    <span class="slot-item" style="color: ${hasItem ? "var(--accent-color)" : "var(--text-muted)"};">${itemName}</span>
+                </div>
+            `;
+    }).join("");
     let skillsHtml = Object.keys(hero.skills).map((skillId) => `
             <div class="skill-item">
                 <span class="skill-name">${this.t(skillId)}</span>
-                <span class="skill-level">Lvl ${hero.skills[skillId]}</span>
+                <span class="skill-level">${this.t("ui_level") || "Level"} ${hero.skills[skillId]}</span>
             </div>
         `).join("");
     const hasStatPoints = hero.statPoints > 0;
@@ -3943,42 +4793,42 @@ class HeroesView extends BaseView {
                 </div>
                 <div class="stats-grid">
                     <div class="stat-row">
-                        <span>HP</span> 
+                        <span>${this.t("ui_stats_hp") || "HP"}</span> 
                         <div class="stat-value-group">
                             <span>${hero.hp} / ${hero.maxHp}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxHp">+</button>` : ""}
                         </div>
                     </div>
                     <div class="stat-row">
-                        <span>MP</span> 
+                        <span>${this.t("ui_stats_mp") || "MP"}</span> 
                         <div class="stat-value-group">
                             <span>${hero.mp} / ${hero.maxMp}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxMp">+</button>` : ""}
                         </div>
                     </div>
                     <div class="stat-row">
-                        <span>STR</span> 
+                        <span>${this.t("ui_stats_power") || "STR"}</span> 
                         <div class="stat-value-group">
                             <span>${hero.strength}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseStrength">+</button>` : ""}
                         </div>
                     </div>
                     <div class="stat-row">
-                        <span>SPD</span> 
+                        <span>${this.t("ui_stats_speed") || "SPD"}</span> 
                         <div class="stat-value-group">
                             <span>${hero.speed}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseSpeed">+</button>` : ""}
                         </div>
                     </div>
                     <div class="stat-row">
-                        <span>DEF</span> 
+                        <span>${this.t("ui_stats_defense") || "DEF"}</span> 
                         <div class="stat-value-group">
                             <span>${hero.defense}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseDefense">+</button>` : ""}
                         </div>
                     </div>
                     <div class="stat-row">
-                        <span>MAG</span> 
+                        <span>${this.t("ui_stats_magic") || "MAG"}</span> 
                         <div class="stat-value-group">
                             <span>${hero.magicPower}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMagicPower">+</button>` : ""}
@@ -4002,20 +4852,157 @@ class HeroesView extends BaseView {
             </div>
         `;
   }
+  _openEquipModal(slot) {
+    const hero = this.lastRawState.heroes.find((h) => h.id === this.selectedHeroId);
+    if (!hero || hero.activity !== "idle") return;
+    const currentItem = hero.equipment[slot];
+    const eligibleItems = this.inventoryEquipment.filter((item) => {
+      if (slot === "leftHand" || slot === "rightHand") {
+        return item.type === "weapon";
+      } else {
+        return item.type === "armor" && item.slot === slot;
+      }
+    });
+    const modalOverlay = document.createElement("div");
+    modalOverlay.className = "modal-overlay";
+    modalOverlay.style.zIndex = "2000";
+    const t = this.t.bind(this);
+    let itemsHtml = "";
+    if (eligibleItems.length === 0) {
+      itemsHtml = `<div style="text-align:center; padding: 25px; color: var(--text-muted); font-size: 0.95rem;">${t("ui_no_items")}</div>`;
+    } else {
+      itemsHtml = eligibleItems.map((item) => {
+        const statsObj = getEquipmentStats(item);
+        const statLines = [];
+        if (statsObj.strength) statLines.push(`+${statsObj.strength} ${t("ui_stats_power") || "STR"}`);
+        if (statsObj.defense) statLines.push(`+${statsObj.defense} DEF`);
+        if (statsObj.maxHp) statLines.push(`+${statsObj.maxHp} HP`);
+        if (statsObj.maxMp) statLines.push(`+${statsObj.maxMp} MP`);
+        if (statsObj.magicPower) statLines.push(`+${statsObj.magicPower} MAG`);
+        if (statsObj.speed) statLines.push(`${statsObj.speed} SPD`);
+        if (statsObj.evasion) statLines.push(`${statsObj.evasion > 0 ? "+" : ""}${statsObj.evasion}% EVA`);
+        const desc = statLines.join(", ");
+        return `
+                    <div class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; cursor: default;">
+                        <div style="flex: 1; text-align: left; padding-right: 10px;">
+                            <div style="font-weight:700; color: var(--text-primary);">${getEquipmentName(item, t)}</div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top: 2px;">${desc}</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm btn-select-equip" data-id="${item.id}" style="min-width: 70px;">
+                            ${t("ui_equip") || "Equip"}
+                        </button>
+                    </div>
+                `;
+      }).join("");
+    }
+    modalOverlay.innerHTML = `
+            <div class="modal-body" style="max-width: 480px; max-height: 80vh; display: flex; flex-direction: column;">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+                    <h3 style="margin: 0; font-size:1.1rem; color: var(--accent-color);">${t("ui_equip")} - ${t("slot_" + slot)}</h3>
+                    <button class="btn btn-secondary btn-sm" id="btn-close-equip-modal" style="padding: 4px 8px; font-size: 0.8rem;">❌</button>
+                </div>
+                
+                <div style="flex: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 5px;">
+                    ${currentItem ? `
+                        <div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--danger); padding: 12px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div style="text-align: left;">
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">${t("ui_equipped") || "Equipped"}:</div>
+                                <div style="font-weight: 700; color: var(--danger); margin-top: 2px;">${getEquipmentName(currentItem, t)}</div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" id="btn-unequip-slot" style="padding: 6px 12px; font-size: 0.8rem;">
+                                ${t("ui_unequip") || "Unequip"}
+                            </button>
+                        </div>
+                    ` : ""}
+                    
+                    <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; text-align: left;">
+                        ${t("ui_available_gear") || "Available Gear"}
+                    </div>
+                    ${itemsHtml}
+                </div>
+                
+                <div class="modal-actions" style="border-top: 1px solid var(--glass-border); padding-top: 12px; display: flex; justify-content: flex-end;">
+                    <button class="btn btn-secondary btn-sm" id="btn-cancel-equip-modal">${t("btn_cancel")}</button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(modalOverlay);
+    const closeModal = () => {
+      document.body.removeChild(modalOverlay);
+    };
+    modalOverlay.querySelector("#btn-close-equip-modal").addEventListener("click", closeModal);
+    modalOverlay.querySelector("#btn-cancel-equip-modal").addEventListener("click", closeModal);
+    if (currentItem) {
+      modalOverlay.querySelector("#btn-unequip-slot").addEventListener("click", () => {
+        this.emit("unequipItem", { heroId: this.selectedHeroId, slot });
+        closeModal();
+      });
+    }
+    modalOverlay.querySelectorAll(".btn-select-equip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const itemId = btn.dataset.id;
+        this.emit("equipItem", { heroId: this.selectedHeroId, slot, itemId });
+        closeModal();
+      });
+    });
+  }
 }
 class InventoryView extends BaseView {
   constructor() {
     super("inventory");
+    this.activeFilter = "all";
+    this.selectedItemId = null;
+    this.cachedItems = [];
+    this.lastState = null;
   }
   onMount() {
     this.elements = {
       storageText: this.$("#inv-storage-text"),
       storageBar: this.$("#inv-storage-bar"),
-      materialsGrid: this.$("#materials-grid"),
-      foodGrid: this.$("#food-grid"),
-      equipmentList: this.$("#equipment-list"),
-      itemTemplate: this.$("#tpl-resource-item")
+      itemsContainer: this.$("#inventory-items-container"),
+      detail: this.$("#inventory-detail-content")
     };
+    const filtersContainer = this.$(".inventory-filters");
+    if (filtersContainer) {
+      filtersContainer.addEventListener("click", (e) => {
+        const btn = e.target.closest(".filter-btn");
+        if (btn) {
+          filtersContainer.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          this.activeFilter = btn.getAttribute("data-filter") || "all";
+          this.selectedItemId = null;
+          if (this.lastState) {
+            this.onUpdate(this.lastState);
+          }
+        }
+      });
+    }
+    if (this.elements.itemsContainer) {
+      this.elements.itemsContainer.addEventListener("click", (e) => {
+        const card = e.target.closest(".inventory-item-card");
+        if (card) {
+          const itemId = card.getAttribute("data-id");
+          this.selectedItemId = itemId;
+          if (this.lastState) {
+            this.onUpdate(this.lastState);
+          }
+        }
+      });
+    }
+  }
+  update(state) {
+    if (!state.inventory) return;
+    const stateString = JSON.stringify({
+      inventory: state.inventory,
+      activeFilter: this.activeFilter,
+      selectedItemId: this.selectedItemId
+    });
+    if (this.lastRenderedState === stateString) {
+      return;
+    }
+    this.lastState = state;
+    this.onUpdate(state);
+    this.lastRenderedState = stateString;
   }
   onUpdate(state) {
     const { inventory, village } = state;
@@ -4029,41 +5016,162 @@ class InventoryView extends BaseView {
       this.elements.storageBar.classList.toggle("warning", percent > 70);
       this.elements.storageBar.classList.toggle("danger", percent > 90);
     }
-    this.renderGrid(this.elements.materialsGrid, inventory.materials);
-    this.renderGrid(this.elements.foodGrid, inventory.food);
-    this.renderEquipment(inventory.equipment);
-  }
-  renderGrid(container, items) {
-    if (!container || !items) return;
-    container.innerHTML = "";
-    const keys = Object.keys(items);
-    if (keys.length === 0) {
-      container.innerHTML = `<div class="empty-state">No items</div>`;
-      return;
+    const items = [];
+    if (inventory.materials) {
+      Object.entries(inventory.materials).forEach(([id, count]) => {
+        if (count > 0) {
+          items.push({
+            id,
+            type: "materials",
+            name: this.t(id),
+            qty: count,
+            icon: id === "material_wood" ? "🪵" : id === "material_stone" ? "🪨" : "⛓️"
+          });
+        }
+      });
     }
-    keys.forEach((id) => {
-      const count = items[id];
-      if (count <= 0) return;
-      const item = this.elements.itemTemplate.content.cloneNode(true).querySelector(".resource-item");
-      item.querySelector(".label").textContent = this.t(id);
-      item.querySelector(".value").textContent = count;
-      container.appendChild(item);
+    if (inventory.food) {
+      Object.entries(inventory.food).forEach(([id, count]) => {
+        if (count > 0) {
+          items.push({
+            id,
+            type: "food",
+            name: this.t(id),
+            qty: count,
+            icon: "🌾"
+          });
+        }
+      });
+    }
+    if (inventory.consumables) {
+      Object.entries(inventory.consumables).forEach(([id, count]) => {
+        if (count > 0) {
+          items.push({
+            id,
+            type: "consumables",
+            name: this.t(id),
+            qty: count,
+            icon: id === "item_teleport_scroll" ? "📜" : "🧪"
+          });
+        }
+      });
+    }
+    if (inventory.equipment) {
+      inventory.equipment.forEach((item, index) => {
+        const eqId = `eq_${item.type}_${item.material}_${index}`;
+        const name = getEquipmentName(item, this.t.bind(this));
+        const icon = item.type === "weapon" ? "🗡️" : item.slot === "head" ? "🪖" : item.slot === "body" ? "👕" : "🥾";
+        items.push({
+          id: eqId,
+          type: "equipment",
+          name: `${name} +${item.level || 0}`,
+          qty: 1,
+          icon,
+          rawEquipment: item
+        });
+      });
+    }
+    this.cachedItems = items;
+    const filtered = items.filter((item) => {
+      if (this.activeFilter === "all") return true;
+      return item.type === this.activeFilter;
     });
+    if (this.elements.itemsContainer) {
+      if (filtered.length === 0) {
+        this.elements.itemsContainer.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">No items found</div>`;
+      } else {
+        this.elements.itemsContainer.innerHTML = filtered.map((item) => {
+          const isActive = this.selectedItemId === item.id;
+          return `
+                        <div class="inventory-item-card ${isActive ? "active" : ""}" data-id="${item.id}">
+                            ${item.qty > 1 ? `<span class="item-badge">${item.qty}</span>` : ""}
+                            <div class="item-icon">${item.icon}</div>
+                            <div class="item-name">${item.name}</div>
+                        </div>
+                    `;
+        }).join("");
+      }
+    }
+    this.renderDetail();
   }
-  renderEquipment(equipment) {
-    if (!this.elements.equipmentList) return;
-    if (!equipment || equipment.length === 0) {
-      this.elements.equipmentList.innerHTML = `<div class="empty-state" data-i18n="ui_no_items">${this.t("ui_no_items")}</div>`;
+  renderDetail() {
+    if (!this.elements.detail) return;
+    if (!this.selectedItemId) {
+      this.elements.detail.innerHTML = `
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🎒</div>
+                    <p data-i18n="ui_select_item">${this.t("ui_select_item")}</p>
+                </div>
+            `;
       return;
     }
-    this.elements.equipmentList.innerHTML = equipment.map((item) => `
-            <div class="list-item">
-                <div class="list-item-header">
-                    <span class="list-item-title">${item.name || "Unknown Item"}</span>
-                    <span class="list-item-level">${item.rarity || "Common"}</span>
+    const item = this.cachedItems.find((i) => i.id === this.selectedItemId);
+    if (!item) {
+      this.selectedItemId = null;
+      this.elements.detail.innerHTML = `
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🎒</div>
+                    <p data-i18n="ui_select_item">${this.t("ui_select_item")}</p>
+                </div>
+            `;
+      return;
+    }
+    let categoryLabel = this.t("ui_" + item.type);
+    let description = "";
+    if (item.type === "materials") {
+      description = this.t("desc_" + item.id) || "";
+    } else if (item.type === "food") {
+      description = this.t("desc_" + item.id) || "";
+    } else if (item.type === "consumables") {
+      description = this.t(item.id + "_desc") || "";
+    }
+    let detailsHtml = "";
+    if (item.type === "equipment" && item.rawEquipment) {
+      const eq = item.rawEquipment;
+      categoryLabel = this.t("ui_equipment");
+      description = this.t("desc_" + eq.type + "_" + eq.material) || `${this.t("material_" + eq.material)} ${this.t("eq_" + eq.type)}.`;
+      const formattedStats = getFormattedStats(eq, this.t.bind(this));
+      detailsHtml = `
+                <div class="item-inspector-stats">
+                    <h4>Equipment Stats</h4>
+                    <div class="inspector-stat-row">
+                        <span class="inspector-stat-label">Slot</span>
+                        <span class="inspector-stat-value" style="text-transform: capitalize;">${eq.type} (${eq.slot})</span>
+                    </div>
+                    <div class="inspector-stat-row">
+                        <span class="inspector-stat-label">Tier</span>
+                        <span class="inspector-stat-value">${eq.tier || 1}</span>
+                    </div>
+                    <div class="inspector-stat-row">
+                        <span class="inspector-stat-label">Level</span>
+                        <span class="inspector-stat-value">+${eq.level || 0}</span>
+                    </div>
+                    <div class="inspector-stat-row">
+                        <span class="inspector-stat-label">Properties</span>
+                        <span class="inspector-stat-value" style="color: var(--success);">${formattedStats}</span>
+                    </div>
+                </div>
+            `;
+    }
+    this.elements.detail.innerHTML = `
+            <div class="item-inspector">
+                <div class="item-inspector-header">
+                    <div class="item-inspector-visual">
+                        <span class="item-inspector-icon">${item.icon}</span>
+                    </div>
+                    <div class="item-inspector-title-group">
+                        <span class="item-inspector-badge">${categoryLabel}</span>
+                        <h2>${item.name}</h2>
+                        <div class="item-inspector-qty">${this.t("ui_owned") || "Owned"}: <strong>${item.qty}</strong></div>
+                    </div>
+                </div>
+                
+                <div class="item-inspector-body">
+                    <p class="item-inspector-description">${description}</p>
+                    ${detailsHtml}
                 </div>
             </div>
-        `).join("");
+        `;
   }
 }
 class ExploreView extends BaseView {
@@ -4114,7 +5222,7 @@ class ExploreView extends BaseView {
     if (!this.elements.statusBanner) return;
     if (activeExpedition) {
       this.elements.statusBanner.className = "status-banner";
-      this.elements.statusBanner.innerHTML = `<span data-i18n="ui_active_expeditions">${this.t("ui_active_expeditions")}</span>: In Progress`;
+      this.elements.statusBanner.innerHTML = `<span data-i18n="ui_active_expeditions">${this.t("ui_active_expeditions")}</span>: ${this.t("status_active")}`;
     } else {
       this.elements.statusBanner.className = "status-banner none";
     }
@@ -4135,7 +5243,8 @@ class ExploreView extends BaseView {
         const nodeEl = this.elements.tplNode.content.cloneNode(true).querySelector(".expedition-card");
         nodeEl.dataset.id = exp.id;
         nodeEl.querySelector(".list-item-title").textContent = exp.name;
-        nodeEl.querySelector(".list-item-badge").textContent = exp.stages.length + " Stages";
+        const labelStages = this.t("ui_exp_stages") || "Stages";
+        nodeEl.querySelector(".list-item-badge").textContent = `${exp.stages.length} ${labelStages}`;
         if (exp.id === this.selectedExpId) {
           nodeEl.classList.add("active");
         }
@@ -4188,8 +5297,9 @@ class ExploreView extends BaseView {
     const assignedHeroes = isActiveNode ? state.heroes.filter((h) => state.activeExpedition.heroIds.includes(h.id)) : [];
     let heroListHtml = "";
     if (isLocked) {
+      const lvlLabel = this.t("ui_level") || "Level";
       heroListHtml = `<p>${this.t("ui_roster_locked")}</p>
-                <ul>${assignedHeroes.map((h) => `<li>${h.name} (Lvl ${h.level})</li>`).join("")}</ul>`;
+                <ul>${assignedHeroes.map((h) => `<li>${h.name} (${lvlLabel} ${h.level})</li>`).join("")}</ul>`;
     } else {
       const availableHeroes = [...assignedHeroes, ...idleHeroes];
       if (availableHeroes.length === 0) {
@@ -4200,12 +5310,15 @@ class ExploreView extends BaseView {
           const isAssigned = isActiveNode && state.activeExpedition.heroIds.includes(h.id);
           const isChecked = this.selectedHeroIds.has(h.id) || isAssigned && !this.selectedHeroIds.size;
           if (isChecked) this.selectedHeroIds.add(h.id);
+          const isWounded = h.hp <= 0;
           return `
-                        <label class="hero-checkbox-item">
-                            <input type="checkbox" value="${h.id}" class="exp-hero-check" ${isChecked ? "checked" : ""}>
-                            <div class="hero-info">
-                                <strong>${h.name}</strong> (Lvl ${h.level})
-                                <br><small>HP: ${h.hp}/${h.maxHp}</small>
+                        <label class="hero-checkbox-item ${isWounded ? "wounded" : ""}">
+                            <input type="checkbox" value="${h.id}" class="exp-hero-check" ${isChecked ? "checked" : ""} ${isWounded ? "disabled" : ""}>
+                            <div class="hero-info" style="${isWounded ? "opacity: 0.6;" : ""}">
+                                <strong>${h.name}</strong> (${this.t("ui_level") || "Level"} ${h.level})
+                                <br><small style="color: ${isWounded ? "#ff3b30; font-weight: bold;" : h.hp < h.maxHp * 0.5 ? "#ff9500; font-weight: bold;" : "#4cd964;"};">
+                                    ${isWounded ? "💀 " + (this.t("ui_wounded") || "Wounded") : `HP: ${h.hp}/${h.maxHp}`}
+                                </small>
                             </div>
                         </label>
                         `;
@@ -4311,6 +5424,363 @@ class SettingsView extends BaseView {
   onUpdate(state) {
   }
 }
+class ShopView extends BaseView {
+  constructor() {
+    super("shop");
+    this.consumables = [
+      { id: "item_tiny_hp_potion", type: "consumable", cost: 10, i18n_name: "item_tiny_hp_potion", i18n_desc: "item_tiny_hp_potion_desc" },
+      { id: "item_tiny_mp_potion", type: "consumable", cost: 15, i18n_name: "item_tiny_mp_potion", i18n_desc: "item_tiny_mp_potion_desc" },
+      { id: "item_teleport_scroll", type: "consumable", cost: 50, i18n_name: "item_teleport_scroll", i18n_desc: "item_teleport_scroll_desc" }
+    ];
+    this.weapons = [
+      // Tier 1 (Wooden)
+      { type: "weapon", material: "wooden", family: "dagger", cost: 50, tier: 1 },
+      { type: "weapon", material: "wooden", family: "broadsword", cost: 80, tier: 1 },
+      { type: "weapon", material: "wooden", family: "battle_axe", cost: 120, tier: 1 },
+      { type: "weapon", material: "wooden", family: "wand", cost: 100, tier: 1 },
+      // Tier 2 (Iron)
+      { type: "weapon", material: "iron", family: "dagger", cost: 150, tier: 2 },
+      { type: "weapon", material: "iron", family: "broadsword", cost: 240, tier: 2 },
+      { type: "weapon", material: "iron", family: "battle_axe", cost: 360, tier: 2 },
+      { type: "weapon", material: "iron", family: "wand", cost: 300, tier: 2 }
+    ];
+    this.armor = [
+      // Tier 1 (Wooden / Basic)
+      { type: "armor", material: "wooden", archetype: "plate", slot: "head", cost: 50, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "plate", slot: "body", cost: 100, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "plate", slot: "legs", cost: 65, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "leather", slot: "head", cost: 40, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "leather", slot: "body", cost: 80, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "leather", slot: "legs", cost: 50, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "robes", slot: "head", cost: 45, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "robes", slot: "body", cost: 90, tier: 1 },
+      { type: "armor", material: "wooden", archetype: "robes", slot: "legs", cost: 55, tier: 1 },
+      // Tier 2 (Iron)
+      { type: "armor", material: "iron", archetype: "plate", slot: "head", cost: 150, tier: 2 },
+      { type: "armor", material: "iron", archetype: "plate", slot: "body", cost: 300, tier: 2 },
+      { type: "armor", material: "iron", archetype: "plate", slot: "legs", cost: 200, tier: 2 },
+      { type: "armor", material: "iron", archetype: "leather", slot: "head", cost: 120, tier: 2 },
+      { type: "armor", material: "iron", archetype: "leather", slot: "body", cost: 240, tier: 2 },
+      { type: "armor", material: "iron", archetype: "leather", slot: "legs", cost: 160, tier: 2 },
+      { type: "armor", material: "iron", archetype: "robes", slot: "head", cost: 130, tier: 2 },
+      { type: "armor", material: "iron", archetype: "robes", slot: "body", cost: 260, tier: 2 },
+      { type: "armor", material: "iron", archetype: "robes", slot: "legs", cost: 175, tier: 2 }
+    ];
+  }
+  onMount() {
+    this.elements = {
+      lockOverlay: this.$("#shop-lock-overlay"),
+      consumablesList: this.$("#shop-consumables-list"),
+      weaponsList: this.$("#shop-weapons-list"),
+      armorList: this.$("#shop-armor-list")
+    };
+  }
+  onUpdate(state) {
+    const completed = state.completedExpeditions || [];
+    const isUnlocked = completed.includes("exp_tutorial_cave");
+    if (!isUnlocked) {
+      if (this.elements.lockOverlay) this.elements.lockOverlay.style.display = "flex";
+      return;
+    }
+    if (this.elements.lockOverlay) this.elements.lockOverlay.style.display = "none";
+    const blacksmithLevel = state.village.infrastructure.blacksmith || 0;
+    const maxTier = blacksmithLevel >= 1 ? 2 : 1;
+    if (this.elements.consumablesList) {
+      this.elements.consumablesList.innerHTML = this.consumables.map((item) => this._renderShopItem(item, state)).join("");
+    }
+    if (this.elements.weaponsList) {
+      this.elements.weaponsList.innerHTML = this.weapons.filter((w) => w.tier <= maxTier).map((item) => this._renderShopItem(item, state)).join("");
+    }
+    if (this.elements.armorList) {
+      this.elements.armorList.innerHTML = this.armor.filter((a) => a.tier <= maxTier).map((item) => this._renderShopItem(item, state)).join("");
+    }
+    this._bindBuyButtons();
+  }
+  _renderShopItem(item, state) {
+    const playerGold = state.village.gold;
+    let name = "";
+    let desc = "";
+    const t = this.t.bind(this);
+    if (item.type === "consumable") {
+      name = t(item.i18n_name);
+      desc = t(item.i18n_desc);
+    } else {
+      name = getEquipmentName(item, t);
+      desc = getFormattedStats(item, t);
+    }
+    let ownedCount = 0;
+    if (item.type === "consumable") {
+      ownedCount = state.inventory && state.inventory.consumables ? state.inventory.consumables[item.id] || 0 : 0;
+    } else if (state.inventory) {
+      const matchingInv = (state.inventory.equipment || []).filter(
+        (eq) => eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)
+      ).length;
+      let matchingEq = 0;
+      if (state.heroes) {
+        state.heroes.forEach((h) => {
+          Object.values(h.equipment).forEach((eq) => {
+            if (eq && eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)) {
+              matchingEq++;
+            }
+          });
+        });
+      }
+      ownedCount = matchingInv + matchingEq;
+    }
+    const canAfford = playerGold >= item.cost;
+    const btnClass = canAfford ? "btn-primary" : "btn-secondary";
+    return `
+            <div class="shop-item-card">
+                <div class="shop-item-header">
+                    <span class="shop-item-name">
+                        ${name}
+                        <span class="shop-item-owned" style="color: var(--text-muted); font-size: 0.75rem; font-weight: normal; margin-left: 5px;">(${t("ui_owned") || "Owned"}: ${ownedCount})</span>
+                    </span>
+                    <span class="shop-item-cost">💰 ${item.cost}</span>
+                </div>
+                <div class="shop-item-details">
+                    <span class="shop-item-stats">${desc}</span>
+                    <button class="btn ${btnClass} btn-sm btn-buy-action" 
+                            data-item='${JSON.stringify(item)}' 
+                            data-cost="${item.cost}" 
+                            ${canAfford ? "" : "disabled"}>
+                        ${t("ui_buy")}
+                    </button>
+                </div>
+            </div>
+        `;
+  }
+  _bindBuyButtons() {
+    this.$$(".btn-buy-action").forEach((btn) => {
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newBtn.addEventListener("click", () => {
+        const itemData = JSON.parse(newBtn.getAttribute("data-item"));
+        const cost = parseInt(newBtn.getAttribute("data-cost"));
+        this.emit("buyItem", { itemData, costGold: cost });
+      });
+    });
+  }
+}
+class ForgeView extends BaseView {
+  constructor() {
+    super("forge");
+    this.selectedItemId = null;
+  }
+  onMount() {
+    this.elements = {
+      lockOverlay: this.$("#forge-lock-overlay"),
+      itemsList: this.$("#forge-items-list"),
+      detailContent: this.$("#forge-detail-content")
+    };
+  }
+  onUpdate(state) {
+    const blacksmithLevel = state.village.infrastructure.blacksmith || 0;
+    const isUnlocked = blacksmithLevel >= 1;
+    if (!isUnlocked) {
+      if (this.elements.lockOverlay) this.elements.lockOverlay.style.display = "flex";
+      return;
+    }
+    if (this.elements.lockOverlay) this.elements.lockOverlay.style.display = "none";
+    const equipment = [...state.inventory.equipment || []];
+    if (state.heroes) {
+      state.heroes.forEach((h) => {
+        ["head", "body", "legs", "leftHand", "rightHand", "accessory"].forEach((slot) => {
+          const item = h.equipment[slot];
+          if (item) {
+            equipment.push({
+              ...item,
+              equippedOn: h.name
+            });
+          }
+        });
+      });
+    }
+    if (this.elements.itemsList) {
+      if (equipment.length === 0) {
+        this.elements.itemsList.innerHTML = `<div class="empty-state" data-i18n="ui_no_items">${this.t("ui_no_items")}</div>`;
+        this.selectedItemId = null;
+      } else {
+        this.elements.itemsList.innerHTML = equipment.map((item) => {
+          const activeClass = this.selectedItemId === item.id ? "active" : "";
+          const equippedSuffix = item.equippedOn ? ` [${item.equippedOn}]` : "";
+          return `
+                        <div class="list-item forge-item-row ${activeClass}" data-id="${item.id}">
+                            <div class="list-item-header">
+                                <span class="list-item-title">${getEquipmentName(item, this.t.bind(this))}${equippedSuffix}</span>
+                                <span class="list-item-level">+${item.level || 0}</span>
+                            </div>
+                        </div>
+                    `;
+        }).join("");
+        this.$$(".forge-item-row").forEach((row) => {
+          row.addEventListener("click", () => {
+            this.selectedItemId = row.getAttribute("data-id");
+            this.ui.forceUpdate();
+          });
+        });
+      }
+    }
+    this._renderDetails(equipment, state);
+  }
+  _renderDetails(equipment, state) {
+    var _a, _b, _c;
+    if (!this.elements.detailContent) return;
+    const selectedItem = equipment.find((e) => e.id === this.selectedItemId);
+    if (!selectedItem) {
+      this.elements.detailContent.innerHTML = `
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🔥</div>
+                    <p data-i18n="ui_select_item" style="color: var(--text-muted);">${this.t("ui_select_item") || "Select a piece of equipment from the inventory to upgrade."}</p>
+                </div>
+            `;
+      return;
+    }
+    const t = this.t.bind(this);
+    const currentLevel = selectedItem.level || 0;
+    const isMaxLevel = currentLevel >= 10;
+    const currentStats = getEquipmentStats(selectedItem);
+    const nextItemMock = { ...selectedItem, level: currentLevel + 1 };
+    const nextStats = isMaxLevel ? null : getEquipmentStats(nextItemMock);
+    let statsHtml = "";
+    const allStatKeys = Array.from(/* @__PURE__ */ new Set([...Object.keys(currentStats), ...nextStats ? Object.keys(nextStats) : []]));
+    if (allStatKeys.length === 0) {
+      statsHtml = `<div style="color: var(--text-muted); font-size: 0.9rem;">${t("ui_no_item_stats") || "No stats modification."}</div>`;
+    } else {
+      statsHtml = allStatKeys.map((key) => {
+        const curVal = currentStats[key] || 0;
+        let nextValHtml = "";
+        if (!isMaxLevel && nextStats) {
+          const nextVal = nextStats[key] || 0;
+          if (nextVal !== curVal) {
+            const diff = nextVal - curVal;
+            const diffSign = diff > 0 ? "+" : "";
+            nextValHtml = ` ➔ <span class="forge-stat-next">${nextVal} (${diffSign}${diff})</span>`;
+          }
+        }
+        const labelMap = {
+          strength: "ui_stats_power",
+          defense: "ui_stats_defense",
+          maxHp: "ui_stats_hp",
+          maxMp: "ui_stats_mp",
+          magicPower: "ui_stats_magic",
+          speed: "ui_stats_speed",
+          evasion: "ui_stats_evasion",
+          mpCostReduction: "ui_stats_mpreduce"
+        };
+        const labelKey = labelMap[key] || key;
+        const label = t(labelKey) || key.toUpperCase();
+        return `
+                    <div class="forge-stat-row">
+                        <span class="forge-stat-label">${label}</span>
+                        <span class="forge-stat-values">${curVal}${nextValHtml}</span>
+                    </div>
+                `;
+      }).join("");
+    }
+    let costHtml = "";
+    let canAfford = true;
+    if (!isMaxLevel) {
+      const cost = this._getRefineCost(selectedItem);
+      const playerGold = state.village.gold;
+      const goldClass = playerGold >= cost.gold ? "" : "insufficient";
+      if (playerGold < cost.gold) canAfford = false;
+      let costItems = [
+        `<div class="forge-cost-item ${goldClass}">
+                    <span class="label">💰 Gold</span>
+                    <span class="value">${cost.gold} / ${playerGold}</span>
+                </div>`
+      ];
+      for (const [matId, requiredQty] of Object.entries(cost.materials)) {
+        let ownedQty = 0;
+        if (matId.startsWith("material_")) {
+          ownedQty = ((_a = state.inventory.materials) == null ? void 0 : _a[matId]) || 0;
+        } else if (matId.startsWith("food_")) {
+          ownedQty = ((_b = state.inventory.food) == null ? void 0 : _b[matId]) || 0;
+        } else {
+          ownedQty = ((_c = state.inventory.consumables) == null ? void 0 : _c[matId]) || 0;
+        }
+        const isEnough = ownedQty >= requiredQty;
+        if (!isEnough) canAfford = false;
+        const matClass = isEnough ? "" : "insufficient";
+        const matName = t(matId) || matId;
+        costItems.push(`
+                     <div class="forge-cost-item ${matClass}">
+                         <span class="label">📦 ${matName}</span>
+                         <span class="value">${requiredQty} / ${ownedQty}</span>
+                     </div>
+                 `);
+      }
+      costHtml = `
+                <div class="forge-cost-section">
+                    <h4 data-i18n="ui_refine_cost">${t("ui_refine_cost")}</h4>
+                    <div class="forge-cost-grid">
+                        ${costItems.join("")}
+                    </div>
+                </div>
+            `;
+    }
+    const btnLabel = isMaxLevel ? t("ui_refine_max") : t("ui_refine");
+    const btnDisabled = isMaxLevel || !canAfford;
+    this.elements.detailContent.innerHTML = `
+            <div class="forge-upgrade-header">
+                <div class="forge-title-group">
+                    <h2>${getEquipmentName(selectedItem, t)}</h2>
+                </div>
+                <span class="forge-level-badge">+${currentLevel}</span>
+            </div>
+
+            <div class="forge-stats-comparison">
+                <h4 data-i18n="ui_item_stats">${t("ui_item_stats") || "Stats"}</h4>
+                ${statsHtml}
+            </div>
+
+            ${costHtml}
+
+            <div class="forge-action-footer">
+                <button class="btn btn-primary btn-lg" id="btn-forge-refine" ${btnDisabled ? "disabled" : ""}>
+                    <span class="icon">🔥</span>
+                    <span>${btnLabel}</span>
+                </button>
+            </div>
+        `;
+    const btnRefine = this.$("#btn-forge-refine");
+    if (btnRefine && !btnDisabled) {
+      btnRefine.addEventListener("click", () => {
+        this.emit("refineItem", { itemId: selectedItem.id });
+      });
+    }
+  }
+  _getRefineCost(item) {
+    const L = item.level || 0;
+    const nextLevel = L + 1;
+    const mat = item.material;
+    const cost = {
+      gold: 0,
+      materials: {}
+    };
+    if (mat === "wooden") {
+      cost.gold = 30 * nextLevel;
+      cost.materials.material_wood = 10 * nextLevel;
+    } else if (mat === "iron") {
+      cost.gold = 75 * nextLevel;
+      cost.materials.material_wood = 5 * nextLevel;
+      cost.materials.material_stone = 5 * nextLevel;
+      cost.materials.material_iron_ore = 3 * nextLevel;
+    } else if (mat === "steel") {
+      cost.gold = 150 * nextLevel;
+      cost.materials.material_stone = 10 * nextLevel;
+      cost.materials.material_steel_ingot = 3 * nextLevel;
+    } else if (mat === "gold") {
+      cost.gold = 300 * nextLevel;
+      cost.materials.material_stone = 15 * nextLevel;
+    } else if (mat === "mythril") {
+      cost.gold = 500 * nextLevel;
+      cost.materials.material_mythril = 2 * nextLevel;
+    }
+    return cost;
+  }
+}
 document.addEventListener("DOMContentLoaded", () => {
   console.log("RPG Village Initializing...");
   const engine = new GameEngine();
@@ -4323,6 +5793,8 @@ document.addEventListener("DOMContentLoaded", () => {
   ui.registerView("inventory", new InventoryView());
   ui.registerView("explore", new ExploreView());
   ui.registerView("settings", new SettingsView());
+  ui.registerView("shop", new ShopView());
+  ui.registerView("forge", new ForgeView());
   ui.switchView("village");
   if (engine.isNewGame) {
     ui.showIntroDialog();
@@ -4477,6 +5949,14 @@ body {
 .nav-item:hover { color: var(--text-secondary); }
 .nav-item.active { color: var(--accent-color); }
 .nav-item.active .nav-icon { transform: translateY(-5px) scale(1.2); }
+
+.nav-item.nav-locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.nav-item.nav-locked:hover {
+    color: var(--text-muted);
+}
 
 /* Buttons */
 .btn {
@@ -4846,6 +6326,208 @@ body {
     border: 1px dashed var(--warning, #f59e0b);
     color: var(--warning, #f59e0b);
     animation: none;
+}
+
+/* Dynamic Village Canvas Grid */
+.village-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    min-height: 250px;
+    align-items: stretch;
+}
+
+.village-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    text-align: center;
+}
+
+.village-tile.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);
+}
+
+.village-tile.active:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.25);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.village-tile.locked {
+    opacity: 0.45;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.village-tile-icon {
+    font-size: 2.2rem;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+    transition: transform 0.3s ease;
+}
+
+.village-tile.active:hover .village-tile-icon {
+    transform: scale(1.18) rotate(6deg);
+}
+
+.village-tile-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+.village-tile-level {
+    font-size: 0.65rem;
+    background: var(--accent-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 800;
+}
+
+.village-tile.locked .village-tile-level {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-muted);
+}
+
+@media (max-width: 575px) {
+    .village-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+    }
+}
+
+.hero-checkbox-item.wounded {
+    cursor: not-allowed !important;
+    border-color: rgba(255, 59, 48, 0.15) !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Master-Detail Layout Styles */
+.master-detail-layout {
+    display: flex;
+    flex-direction: row;
+    gap: var(--spacing-md);
+    align-items: stretch;
+    min-height: 520px;
+}
+
+.master-detail-layout .master-pane {
+    flex: 0 0 320px;
+    display: flex;
+    flex-direction: column;
+}
+
+.master-detail-layout .detail-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .master-detail-layout {
+        flex-direction: column;
+    }
+    .master-detail-layout .master-pane {
+        flex: auto;
+    }
+}
+
+/* Building Details Grid & Visual Previews */
+.building-detail-grid {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 20px;
+    margin-top: 15px;
+}
+
+@media (max-width: 575px) {
+    .building-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.building-preview-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);
+}
+
+.building-preview-icon {
+    font-size: 5rem;
+    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+    animation: bounceSlow 3s infinite ease-in-out;
+}
+
+@keyframes bounceSlow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.building-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+/* Building Stats Comparison */
+.building-stats-comparison {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 20px;
+}
+
+.building-stats-comparison h4 {
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.building-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+}
+
+.building-stat-label {
+    color: var(--text-secondary);
+}
+
+.building-stat-values {
+    font-weight: 700;
+}
+
+.building-stat-next {
+    color: var(--success);
+    margin-left: 8px;
 }</style>
 </head>
 <body>
@@ -4899,6 +6581,14 @@ body {
             <button class="nav-item" data-view="explore">
                 <span class="nav-icon">🗺️</span>
                 <span class="nav-label" data-i18n="nav_explore">Explore</span>
+            </button>
+            <button class="nav-item" data-view="shop">
+                <span class="nav-icon">🛒</span>
+                <span class="nav-label" data-i18n="nav_shop">Shop</span>
+            </button>
+            <button class="nav-item" data-view="forge">
+                <span class="nav-icon">🔥</span>
+                <span class="nav-label" data-i18n="nav_forge">Forge</span>
             </button>
             <button class="nav-item" data-view="settings">
                 <span class="nav-icon">⚙️</span>
@@ -4958,18 +6648,8 @@ body {
 
         <!-- Right Column: Visual Center & Global Actions -->
         <div class="main-panel">
-            <div id="daily-report-container"></div>
-            
-            <div class="card canvas-card">
-                <div class="village-visual-placeholder">
-                    <div class="visual-placeholder-text" data-i18n="ui_visual_rep">
-                        [Village Visual Representation]
-                    </div>
-                </div>
-            </div>
-
             <!-- Day Cycle Controller (The "Big Button" Area) -->
-            <div class="card action-card">
+            <div class="card action-card" style="margin-top: 0; margin-bottom: 10px;">
                 <div class="day-cycle-info">
                     <span class="day-label" data-i18n="village_day">Day</span>
                     <span id="village-day" class="day-value">--</span>
@@ -4981,6 +6661,12 @@ body {
                         <span data-i18n="btn_next_day">Next Day</span>
                     </button>
                 </div>
+            </div>
+
+            <div id="daily-report-container"></div>
+            
+            <div id="village-canvas-container">
+                <!-- Dynamic village tiles will be rendered here -->
             </div>
         </div>
     </div>
@@ -5279,7 +6965,19 @@ body {
         display: flex;
         justify-content: space-between;
         padding: 8px 0;
-        border-bottom: 1px dashed rgba(255,255,255,0.05);
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+    
+    .equip-slot.clickable {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 8px 5px;
+    }
+    
+    .equip-slot.clickable:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--accent-color);
+        border-radius: var(--radius-sm);
     }
     
     .equip-slot:last-child, .skill-item:last-child {
@@ -5298,7 +6996,8 @@ body {
 </style>
 </template>
     <template id="tpl-inventory"><section id="inventory-view" class="domain-view">
-    <div class="card storage-summary">
+    <!-- Storage Summary Widget -->
+    <div class="card storage-summary" style="margin-bottom: var(--spacing-md);">
         <div class="list-item-header">
             <h3 data-i18n="inv_storage">Storage</h3>
             <span id="inv-storage-text" class="value">-- / --</span>
@@ -5308,40 +7007,231 @@ body {
         </div>
     </div>
 
-    <div class="inventory-sections">
-        <!-- Materials Section -->
-        <div class="card">
-            <h3 data-i18n="ui_materials">Materials</h3>
-            <div id="materials-grid" class="resource-grid">
-                <!-- Material items will be injected here -->
+    <div class="master-detail-layout">
+        <!-- Master Pane: Grid/List of Items -->
+        <aside class="master-pane card">
+            <!-- Category Tabs / Filters -->
+            <div class="inventory-filters">
+                <button class="filter-btn active" data-filter="all" data-i18n="ui_all">All</button>
+                <button class="filter-btn" data-filter="materials" data-i18n="ui_materials">Materials</button>
+                <button class="filter-btn" data-filter="food" data-i18n="ui_food">Food</button>
+                <button class="filter-btn" data-filter="consumables" data-i18n="ui_consumables">Consumables</button>
+                <button class="filter-btn" data-filter="equipment" data-i18n="ui_equipment">Equipment</button>
             </div>
-        </div>
+            
+            <div id="inventory-items-container" class="inventory-grid-list">
+                <!-- Items will be dynamically populated here -->
+            </div>
+        </aside>
 
-        <!-- Food Section -->
-        <div class="card">
-            <h3 data-i18n="food_bread">Food</h3> <!-- Using bread as a generic title or ui_food if available -->
-            <div id="food-grid" class="resource-grid">
-                <!-- Food items will be injected here -->
+        <!-- Detail Pane: Item Inspection -->
+        <main class="detail-pane card glass-pane">
+            <div id="inventory-detail-content">
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🎒</div>
+                    <p data-i18n="ui_select_item">Select an item to view details.</p>
+                </div>
             </div>
-        </div>
-
-        <!-- Consumables & Equipment Section -->
-        <div class="card">
-            <h3 data-i18n="ui_equipment">Equipment</h3>
-            <div id="equipment-list" class="list-container">
-                <div class="empty-state" data-i18n="ui_no_items">No items found.</div>
-            </div>
-        </div>
+        </main>
     </div>
-
-    <!-- Template for a resource item -->
-    <template id="tpl-resource-item">
-        <div class="resource-item">
-            <span class="label"></span>
-            <span class="value"></span>
-        </div>
-    </template>
 </section>
+
+<style>
+    .inventory-filters {
+        display: flex;
+        gap: 8px;
+        margin-bottom: var(--spacing-md);
+        overflow-x: auto;
+        padding-bottom: 5px;
+    }
+    
+    .filter-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-secondary);
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+    
+    .filter-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+    }
+    
+    .filter-btn.active {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        color: white;
+        font-weight: 700;
+    }
+    
+    .inventory-grid-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+        max-height: 480px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    .inventory-item-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-md);
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+        min-height: 90px;
+    }
+    
+    .inventory-item-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .inventory-item-card.active {
+        background: rgba(255, 107, 107, 0.15);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 10px rgba(255, 107, 107, 0.2);
+    }
+    
+    .inventory-item-card .item-icon {
+        font-size: 2rem;
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .inventory-item-card .item-name {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        width: 100%;
+    }
+    
+    .inventory-item-card .item-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: var(--accent-color);
+        color: white;
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 800;
+    }
+
+    /* Inspector Layout */
+    .item-inspector {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 10px;
+    }
+
+    .item-inspector-header {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 15px;
+    }
+
+    .item-inspector-visual {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        width: 90px;
+        height: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    .item-inspector-icon {
+        font-size: 3.5rem;
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+    }
+
+    .item-inspector-title-group h2 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.6rem;
+        color: var(--text-primary);
+        margin: 4px 0;
+    }
+
+    .item-inspector-badge {
+        background: var(--accent-color);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .item-inspector-description {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    .item-inspector-qty {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    /* Equipment Inspector Stats Box */
+    .item-inspector-stats {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 15px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--glass-border);
+        margin-top: 15px;
+    }
+
+    .item-inspector-stats h4 {
+        margin-bottom: 10px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+
+    .inspector-stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+        font-size: 0.9rem;
+    }
+
+    .inspector-stat-row:last-child {
+        border-bottom: none;
+    }
+
+    .inspector-stat-label {
+        color: var(--text-secondary);
+    }
+
+    .inspector-stat-value {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+</style>
 </template>
     <template id="tpl-explore"><section id="explore-view" class="domain-view">
     <div class="explore-header">
@@ -5422,17 +7312,47 @@ body {
     .hero-checkbox-item {
         display: flex;
         align-items: center;
-        gap: 10px;
-        background: rgba(255,255,255,0.05);
-        padding: 8px 12px;
-        border-radius: var(--radius-sm);
+        gap: 15px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
         cursor: pointer;
+        transition: all var(--transition-fast) ease;
+        position: relative;
     }
     .hero-checkbox-item:hover {
-        background: rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(var(--primary-color-rgb), 0.3);
     }
-    .hero-checkbox-item input {
+    /* Style custom checkbox */
+    .hero-checkbox-item input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 4px;
+        background: transparent;
+        outline: none;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
         cursor: pointer;
+        margin: 0;
+    }
+    .hero-checkbox-item input[type="checkbox"]:checked {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    .hero-checkbox-item input[type="checkbox"]:checked::after {
+        content: "✓";
+        color: #000;
+        font-size: 13px;
+        font-weight: bold;
+        display: block;
     }
     .status-banner {
         background: rgba(46, 204, 113, 0.2);
@@ -5497,6 +7417,371 @@ body {
         </div>
     </div>
 </section>
+</template>
+    <template id="tpl-shop"><section class="domain-view shop-view">
+    <!-- Locked Overlay -->
+    <div class="lock-overlay" id="shop-lock-overlay" style="display: none;">
+        <div class="lock-card">
+            <span class="lock-icon">🔒</span>
+            <h2 data-i18n="ui_shop_locked">Shop Locked</h2>
+            <p data-i18n="ui_shop_locked_desc" style="margin-top: 10px; color: var(--text-secondary);">Complete the Tutorial Cave expedition to unlock the Shop.</p>
+        </div>
+    </div>
+
+    <!-- Shop Content -->
+    <div class="shop-content-wrapper">
+        <div class="shop-header-pane">
+            <h2 data-i18n="ui_shop_title">Village Shop</h2>
+            <p class="subtitle" style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 4px;">Purchase supplies, weaponry, and protective gear for your heroes.</p>
+        </div>
+        <div class="shop-grid">
+            <!-- Consumables -->
+            <div class="card shop-category">
+                <h3><span class="icon">🧪</span><span data-i18n="ui_consumables">Consumables</span></h3>
+                <div class="shop-item-list" id="shop-consumables-list"></div>
+            </div>
+            <!-- Weapons -->
+            <div class="card shop-category">
+                <h3><span class="icon">⚔️</span><span data-i18n="ui_equipment">Weapons</span></h3>
+                <div class="shop-item-list" id="shop-weapons-list"></div>
+            </div>
+            <!-- Armor -->
+            <div class="card shop-category">
+                <h3><span class="icon">🛡️</span><span data-i18n="ui_equipment">Armor</span></h3>
+                <div class="shop-item-list" id="shop-armor-list"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.shop-view {
+    position: relative;
+    padding: var(--spacing-md);
+    min-height: 100%;
+}
+
+.lock-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 11, 16, 0.92);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+}
+
+.lock-card {
+    background: var(--bg-secondary);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.4s ease-out;
+}
+
+.lock-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--spacing-md);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.shop-header-pane {
+    margin-bottom: var(--spacing-lg);
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+}
+
+@media (min-width: 992px) {
+    .shop-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.shop-category {
+    display: flex;
+    flex-direction: column;
+}
+
+.shop-item-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.shop-item-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    transition: all 0.2s ease;
+}
+
+.shop-item-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--accent-color);
+}
+
+.shop-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shop-item-name {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.shop-item-cost {
+    color: var(--warning);
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.95rem;
+}
+
+.shop-item-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shop-item-stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.btn-buy {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+</style>
+</template>
+    <template id="tpl-forge"><section class="domain-view forge-view">
+    <!-- Locked Overlay -->
+    <div class="lock-overlay" id="forge-lock-overlay" style="display: none;">
+        <div class="lock-card">
+            <span class="lock-icon">🔥</span>
+            <h2 data-i18n="ui_forge_locked">Forge Locked</h2>
+            <p data-i18n="ui_forge_locked_desc" style="margin-top: 10px; color: var(--text-secondary);">Build a Blacksmith in the village to unlock the Forge.</p>
+        </div>
+    </div>
+
+    <!-- Forge Content -->
+    <div class="master-detail-layout">
+        <!-- Master Pane: List of Items in Inventory -->
+        <aside class="master-pane card">
+            <h3><span class="icon">🎒</span><span data-i18n="ui_equipment">Equipment</span></h3>
+            <div id="forge-items-list" class="list-container">
+                <!-- Equipment items will be injected here -->
+            </div>
+        </aside>
+
+        <!-- Detail Pane: Upgrade Information & Actions -->
+        <main class="detail-pane card glass-pane">
+            <div id="forge-detail-content">
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🔥</div>
+                    <p data-i18n="ui_select_item" style="color: var(--text-muted);">Select a piece of equipment from the inventory to upgrade.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</section>
+
+<style>
+.forge-view {
+    position: relative;
+    padding: var(--spacing-md);
+    min-height: 100%;
+}
+
+.forge-view .lock-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 11, 16, 0.92);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+}
+
+.forge-view .lock-card {
+    background: var(--bg-secondary);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.4s ease-out;
+}
+
+.forge-view .lock-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--spacing-md);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.forge-view .detail-pane {
+    background: rgba(22, 24, 33, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    min-height: 350px;
+}
+
+.forge-view .empty-detail {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.forge-view .detail-icon-bg {
+    font-size: 4rem;
+    opacity: 0.1;
+    margin-bottom: 20px;
+}
+
+/* Forge Upgrade Pane Specifics */
+.forge-upgrade-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.forge-title-group h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem;
+    color: var(--text-primary);
+}
+
+.forge-level-badge {
+    background: var(--accent-color);
+    color: white;
+    padding: 4px 12px;
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.forge-stats-comparison {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 20px;
+}
+
+.forge-stats-comparison h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.forge-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.forge-stat-row:last-child {
+    border-bottom: none;
+}
+
+.forge-stat-label {
+    color: var(--text-secondary);
+}
+
+.forge-stat-values {
+    font-weight: 700;
+}
+
+.forge-stat-next {
+    color: var(--success);
+    margin-left: 8px;
+}
+
+.forge-cost-section {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 20px;
+}
+
+.forge-cost-section h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.forge-cost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.forge-cost-item {
+    background: var(--bg-accent);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.forge-cost-item.insufficient {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.forge-cost-item .value {
+    font-weight: 700;
+}
+
+.forge-action-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+</style>
 </template>
 
     <!-- Application Entry Point -->

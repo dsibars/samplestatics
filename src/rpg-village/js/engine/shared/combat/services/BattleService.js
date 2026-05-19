@@ -94,7 +94,9 @@ export class BattleService {
                     amount: regenAmount, 
                     targetId: currentEntity.id,
                     targetName: currentEntity.name,
-                    targetIsHero: true
+                    targetIsHero: true,
+                    targetHp: currentEntity.hp,
+                    targetMaxHp: currentEntity.maxHp
                 };
                 statusResults.push(event);
                 this.log.push(event);
@@ -135,7 +137,9 @@ export class BattleService {
                     damage, 
                     targetId: entity.id,
                     targetName: entity.name,
-                    targetIsHero: isHero
+                    targetIsHero: isHero,
+                    targetHp: entity.hp,
+                    targetMaxHp: entity.maxHp
                 };
                 events.push(event);
                 this.log.push(event);
@@ -263,6 +267,8 @@ export class BattleService {
                     }
                 }
             }
+            event.targetHp = target.hp;
+            event.targetMaxHp = target.maxHp;
             actionEvents.push(event);
             this.log.push(event);
         });
@@ -323,7 +329,9 @@ export class BattleService {
             targetIsHero: this.heroes.includes(target),
             consumableId,
             healType: type,
-            amount
+            amount,
+            targetHp: target.hp,
+            targetMaxHp: target.maxHp
         };
 
         this.log.push(event);

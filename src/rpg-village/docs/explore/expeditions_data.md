@@ -10,15 +10,22 @@ While regions generate infinite random expeditions, **Story Missions** are uniqu
 - **Completion Reward**: 
   - `gold`: 100
   - `items`: 20 Wood, 10 Stone
-- **Description**: A basic cave to teach the player how to fight.
+- **Stages**:
+  - Stage 1: 1x Green Slime (designed to defeat the hero on the first day if stats/gear are unallocated)
+  - Stage 2: 1x Fire Slime (Boss)
+- **Description**: A basic cave to teach the player how to fight and allocate stats/equip items.
 
 ### `exp_rescue_mission` (The Captured Guard)
 - **Region**: `reg_greenfields` (Special Instance)
-- **Unlock**: Complete 5 expeditions in Greenfields.
+- **Unlock**: Complete 1 expedition in Greenfields (Tutorial Cave).
 - **Completion Reward**: 
-  - `gold**: 300
-  - `special**: **New Hero: "Sir Valen" (Guard)**
-- **Description**: A local guard is being held by a goblin warband.
+  - `gold`: 200
+  - `items`: 15 Wood, 5 Stone
+  - `special`: **New Hero: "Sir Valen" (Guard)**
+- **Stages**:
+  - Stage 1: 2x Green Slime
+  - Stage 2: 1x Fire Slime
+- **Description**: A local guard is being held by a goblin warband. Unlocks the second hero and the area branching.
 
 ### `exp_forgotten_tomb` (The Forgotten Tomb)
 - **Region**: `reg_forgotten_ruins`

@@ -113,7 +113,19 @@
         display: flex;
         justify-content: space-between;
         padding: 8px 0;
-        border-bottom: 1px dashed rgba(255,255,255,0.05);
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+    
+    .equip-slot.clickable {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 8px 5px;
+    }
+    
+    .equip-slot.clickable:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--accent-color);
+        border-radius: var(--radius-sm);
     }
     
     .equip-slot:last-child, .skill-item:last-child {

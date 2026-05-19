@@ -1,0 +1,205 @@
+<section class="domain-view forge-view">
+    <!-- Locked Overlay -->
+    <div class="lock-overlay" id="forge-lock-overlay" style="display: none;">
+        <div class="lock-card">
+            <span class="lock-icon">🔥</span>
+            <h2 data-i18n="ui_forge_locked">Forge Locked</h2>
+            <p data-i18n="ui_forge_locked_desc" style="margin-top: 10px; color: var(--text-secondary);">Build a Blacksmith in the village to unlock the Forge.</p>
+        </div>
+    </div>
+
+    <!-- Forge Content -->
+    <div class="master-detail-layout">
+        <!-- Master Pane: List of Items in Inventory -->
+        <aside class="master-pane card">
+            <h3><span class="icon">🎒</span><span data-i18n="ui_equipment">Equipment</span></h3>
+            <div id="forge-items-list" class="list-container">
+                <!-- Equipment items will be injected here -->
+            </div>
+        </aside>
+
+        <!-- Detail Pane: Upgrade Information & Actions -->
+        <main class="detail-pane card glass-pane">
+            <div id="forge-detail-content">
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🔥</div>
+                    <p data-i18n="ui_select_item" style="color: var(--text-muted);">Select a piece of equipment from the inventory to upgrade.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</section>
+
+<style>
+.forge-view {
+    position: relative;
+    padding: var(--spacing-md);
+    min-height: 100%;
+}
+
+.forge-view .lock-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 11, 16, 0.92);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+}
+
+.forge-view .lock-card {
+    background: var(--bg-secondary);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.4s ease-out;
+}
+
+.forge-view .lock-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--spacing-md);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.forge-view .detail-pane {
+    background: rgba(22, 24, 33, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    min-height: 350px;
+}
+
+.forge-view .empty-detail {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.forge-view .detail-icon-bg {
+    font-size: 4rem;
+    opacity: 0.1;
+    margin-bottom: 20px;
+}
+
+/* Forge Upgrade Pane Specifics */
+.forge-upgrade-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.forge-title-group h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem;
+    color: var(--text-primary);
+}
+
+.forge-level-badge {
+    background: var(--accent-color);
+    color: white;
+    padding: 4px 12px;
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.forge-stats-comparison {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 20px;
+}
+
+.forge-stats-comparison h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.forge-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.forge-stat-row:last-child {
+    border-bottom: none;
+}
+
+.forge-stat-label {
+    color: var(--text-secondary);
+}
+
+.forge-stat-values {
+    font-weight: 700;
+}
+
+.forge-stat-next {
+    color: var(--success);
+    margin-left: 8px;
+}
+
+.forge-cost-section {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 20px;
+}
+
+.forge-cost-section h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.forge-cost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.forge-cost-item {
+    background: var(--bg-accent);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.forge-cost-item.insufficient {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.forge-cost-item .value {
+    font-weight: 700;
+}
+
+.forge-action-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+</style>

@@ -11,8 +11,14 @@ export class UIController {
             goldCount: document.getElementById('gold-count'),
             villagerCount: document.getElementById('villager-count'),
             woodCount: document.getElementById('wood-count'),
-            navItems: document.querySelectorAll('.nav-item')
+            navItems: document.querySelectorAll('.nav-item'),
+            shopNav: document.querySelector('.nav-item[data-view="shop"]'),
+            forgeNav: document.querySelector('.nav-item[data-view="forge"]')
         };
+        
+        this.isShopUnlocked = false;
+        this.isForgeUnlocked = false;
+        this.lastState = null;
         
         this.views = new Map(); // domainName -> BaseView instance
         this.activeView = null;
@@ -34,6 +40,8 @@ export class UIController {
         this.elements.navItems.forEach(item => {
             item.addEventListener('click', () => {
                 const domain = item.getAttribute('data-view');
+                if (domain === 'shop' && !this.isShopUnlocked) return;
+                if (domain === 'forge' && !this.isForgeUnlocked) return;
                 this.switchView(domain);
             });
         });
@@ -43,6 +51,8 @@ export class UIController {
      * Transitions to a new domain view.
      */
     async switchView(domain) {
+        if (domain === 'shop' && !this.isShopUnlocked) return;
+        if (domain === 'forge' && !this.isForgeUnlocked) return;
         if (this.activeDomain === domain) return;
         
         console.log(`Switching to domain: ${domain}`);
@@ -126,15 +136,71 @@ export class UIController {
     setLanguage(lang) {
         if (this.i18n.setLanguage(lang)) {
             this.translateView(document.body);
+            if (this.lastState) {
+                this.updateNavLocks(this.lastState);
+            }
             return true;
         }
         return false;
+    }
+
+    updateNavLocks(state) {
+        const completed = state.completedExpeditions || [];
+        this.isShopUnlocked = completed.includes('exp_tutorial_cave');
+        
+        const blacksmithLvl = state.village?.infrastructure?.blacksmith || 0;
+        this.isForgeUnlocked = blacksmithLvl >= 1;
+
+        // Update Shop Tab
+        if (this.elements.shopNav) {
+            const iconEl = this.elements.shopNav.querySelector('.nav-icon');
+            const labelEl = this.elements.shopNav.querySelector('.nav-label');
+            if (this.isShopUnlocked) {
+                this.elements.shopNav.classList.remove('nav-locked');
+                if (iconEl) iconEl.textContent = '🛒';
+                if (labelEl) {
+                    labelEl.textContent = this.t('nav_shop');
+                    labelEl.setAttribute('data-i18n', 'nav_shop');
+                }
+            } else {
+                this.elements.shopNav.classList.add('nav-locked');
+                if (iconEl) iconEl.textContent = '🔒';
+                if (labelEl) {
+                    labelEl.textContent = '???';
+                    labelEl.removeAttribute('data-i18n');
+                }
+            }
+        }
+
+        // Update Forge Tab
+        if (this.elements.forgeNav) {
+            const iconEl = this.elements.forgeNav.querySelector('.nav-icon');
+            const labelEl = this.elements.forgeNav.querySelector('.nav-label');
+            if (this.isForgeUnlocked) {
+                this.elements.forgeNav.classList.remove('nav-locked');
+                if (iconEl) iconEl.textContent = '🔥';
+                if (labelEl) {
+                    labelEl.textContent = this.t('nav_forge');
+                    labelEl.setAttribute('data-i18n', 'nav_forge');
+                }
+            } else {
+                this.elements.forgeNav.classList.add('nav-locked');
+                if (iconEl) iconEl.textContent = '🔒';
+                if (labelEl) {
+                    labelEl.textContent = '???';
+                    labelEl.removeAttribute('data-i18n');
+                }
+            }
+        }
     }
 
     /**
      * Updates the global shell stats and the active view.
      */
     update(state) {
+        this.lastState = state;
+        this.updateNavLocks(state);
+
         // Update Shell
         if (state.village) {
             if (this.elements.goldCount) this.elements.goldCount.textContent = Math.floor(state.village.gold || 0);
@@ -307,11 +373,27 @@ export class UIController {
                 text = this.t('log_regen').replace('{target}', ev.targetName).replace('{amount}', ev.amount);
                 color = "#8bc34a";
             } else if (ev.type === 'USE_CONSUMABLE') {
-                text = `${ev.actorName} used a consumable on ${ev.targetName}.`;
+                const itemName = this.t(ev.consumableId) || ev.consumableId;
+                const statName = ev.healType === 'HEAL_HP' ? 'HP' : 'MP';
+                text = (this.t('log_use_consumable') || '{attacker} used {item} on {target}, restoring {amount} {stat}.')
+                    .replace('{attacker}', ev.actorName)
+                    .replace('{item}', itemName)
+                    .replace('{target}', ev.targetName)
+                    .replace('{amount}', ev.amount)
+                    .replace('{stat}', statName);
                 color = "#00bcd4";
             }
 
-            return `<p style="margin: 5px 0; color: ${color}; opacity: 0; animation: fadeIn 0.3s forwards;">${text}</p>`;
+            let hpSuffix = "";
+            if (ev.targetHp !== undefined && ev.targetMaxHp !== undefined) {
+                if (ev.targetHp <= 0) {
+                    hpSuffix = ` <span style="color: #ff3b30; font-size: 0.85em; font-weight: bold;">(DEAD 💀)</span>`;
+                } else {
+                    hpSuffix = ` <span style="color: #8e8e93; font-size: 0.85em;">(HP: ${ev.targetHp}/${ev.targetMaxHp})</span>`;
+                }
+            }
+
+            return `<p style="margin: 5px 0; color: ${color}; opacity: 0; animation: fadeIn 0.3s forwards;">${text}${hpSuffix}</p>`;
         };
 
         const timer = setInterval(() => {

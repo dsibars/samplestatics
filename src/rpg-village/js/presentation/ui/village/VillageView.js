@@ -62,11 +62,49 @@ export class VillageView extends BaseView {
             }
         }
 
+        // Render Canvas Visuals
+        this.renderVillageCanvas(village);
+
         // Construction Queue
         this.renderConstructionQueue(village.constructionQueue);
 
         // Daily Report
         this.renderDailyReport(village.lastDailyReport);
+    }
+
+    renderVillageCanvas(village) {
+        const canvas = this.$('#village-canvas-container');
+        if (!canvas) return;
+
+        const infra = village.infrastructure || {};
+        
+        const tiles = [
+            { id: 'townhall', name: 'Town Hall', icon: '🏛️', lvl: 1, active: true },
+            { id: 'housing', name: this.t('village_housing') || 'Housing', icon: '🏠', lvl: infra.housing || 0, active: (infra.housing || 0) > 0 },
+            { id: 'farm', name: this.t('village_farm') || 'Farm', icon: '🌾', lvl: infra.farm || 0, active: (infra.farm || 0) > 0 },
+            { id: 'warehouse', name: this.t('village_warehouse') || 'Warehouse', icon: '📦', lvl: infra.warehouse || 0, active: (infra.warehouse || 0) > 0 },
+            { id: 'blacksmith', name: this.t('village_blacksmith') || 'Blacksmith', icon: '⚒️', lvl: infra.blacksmith || 0, active: (infra.blacksmith || 0) > 0 },
+            { id: 'infirmary', name: this.t('village_infirmary') || 'Infirmary', icon: '🏥', lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 }
+        ];
+
+        canvas.innerHTML = `
+            <div class="village-grid">
+                ${tiles.map(tile => {
+                    const statusClass = tile.active ? 'active' : 'locked';
+                    const lvlLabel = this.t('ui_level') || 'Level';
+                    const displayedIcon = tile.active ? tile.icon : '🔒';
+                    const displayedLvl = tile.active ? `${lvlLabel} ${tile.lvl}` : (this.t('ui_locked') || 'Locked');
+                    
+                    return `
+                        <div class="village-tile ${statusClass}">
+                            <div class="village-tile-icon">${displayedIcon}</div>
+                            <div class="village-tile-name">${tile.name}</div>
+                            <div class="village-tile-level">${displayedLvl}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
     renderDailyReport(report) {
@@ -183,10 +221,10 @@ export class VillageView extends BaseView {
             <div class="list-item construction-item">
                 <div class="list-item-header">
                     <span class="list-item-title">${this.t('village_' + project.buildingId)}</span>
-                    <span class="list-item-level">Lvl ${project.targetLevel}</span>
+                    <span class="list-item-level">${this.t('ui_level') || 'Level'} ${project.targetLevel}</span>
                 </div>
                 <div class="construction-status">
-                    <span class="days-remaining">⏳ ${project.daysRemaining} Days</span>
+                    <span class="days-remaining">⏳ ${project.daysRemaining} ${this.t('ui_days') || 'Days'}</span>
                 </div>
                 <div class="progress-container">
                     <div class="progress-bar warning" style="width: ${((project.duration - project.daysRemaining) / project.duration) * 100}%"></div>
