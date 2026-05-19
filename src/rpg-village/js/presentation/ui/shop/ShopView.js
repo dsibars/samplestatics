@@ -30,22 +30,28 @@ export class ShopView extends BaseView {
             { type: 'armor', material: 'wooden', archetype: 'plate', slot: 'head', cost: 50, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'plate', slot: 'body', cost: 100, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'plate', slot: 'legs', cost: 65, tier: 1 },
+            { type: 'armor', material: 'wooden', archetype: 'plate', slot: 'rightHand', cost: 60, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'leather', slot: 'head', cost: 40, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'leather', slot: 'body', cost: 80, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'leather', slot: 'legs', cost: 50, tier: 1 },
+            { type: 'armor', material: 'wooden', archetype: 'leather', slot: 'rightHand', cost: 45, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'robes', slot: 'head', cost: 45, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'robes', slot: 'body', cost: 90, tier: 1 },
             { type: 'armor', material: 'wooden', archetype: 'robes', slot: 'legs', cost: 55, tier: 1 },
+            { type: 'armor', material: 'wooden', archetype: 'robes', slot: 'rightHand', cost: 40, tier: 1 },
             // Tier 2 (Iron)
             { type: 'armor', material: 'iron', archetype: 'plate', slot: 'head', cost: 150, tier: 2 },
             { type: 'armor', material: 'iron', archetype: 'plate', slot: 'body', cost: 300, tier: 2 },
             { type: 'armor', material: 'iron', archetype: 'plate', slot: 'legs', cost: 200, tier: 2 },
+            { type: 'armor', material: 'iron', archetype: 'plate', slot: 'rightHand', cost: 180, tier: 2 },
             { type: 'armor', material: 'iron', archetype: 'leather', slot: 'head', cost: 120, tier: 2 },
             { type: 'armor', material: 'iron', archetype: 'leather', slot: 'body', cost: 240, tier: 2 },
             { type: 'armor', material: 'iron', archetype: 'leather', slot: 'legs', cost: 160, tier: 2 },
+            { type: 'armor', material: 'iron', archetype: 'leather', slot: 'rightHand', cost: 135, tier: 2 },
             { type: 'armor', material: 'iron', archetype: 'robes', slot: 'head', cost: 130, tier: 2 },
             { type: 'armor', material: 'iron', archetype: 'robes', slot: 'body', cost: 260, tier: 2 },
-            { type: 'armor', material: 'iron', archetype: 'robes', slot: 'legs', cost: 175, tier: 2 }
+            { type: 'armor', material: 'iron', archetype: 'robes', slot: 'legs', cost: 175, tier: 2 },
+            { type: 'armor', material: 'iron', archetype: 'robes', slot: 'rightHand', cost: 120, tier: 2 }
         ];
     }
 

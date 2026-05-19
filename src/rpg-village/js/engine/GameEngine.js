@@ -54,6 +54,7 @@ export class GameEngine {
             this.heroService.add({
                 name: "Arthur",
                 origin: "origin_warrior",
+                avatar: "arthur.png",
                 level: 1,
                 statPoints: 5,
                 baseMaxHp: 10,

@@ -277,5 +277,18 @@ export const eu = {
     desc_material_wood: "Eraikuntzarako oinarrizko lehengaia. Espedizioetan bildutakoa edo Baserriak ekoitzia. Eraikuntzetarako erabiltzen da.",
     desc_material_stone: "Hargintza sendoa. Herriko eraikuntza eta gotorleku aurreratuagoetarako beharrezkoa da.",
     desc_material_iron: "Mea findua. Burdinazko armamentu aurreratua egiteko eta forja berritzeko lanetarako erabiltzen da.",
-    desc_food_raw_grain: "Biltzen den zereala. Herritarrek egunero jaten dute gosea saihesteko. Mantendu stock handia!"
+    desc_food_raw_grain: "Biltzen den zereala. Herritarrek egunero jaten dute gosea saihesteko. Mantendu stock handia!",
+    
+    // Intro Narrative
+    intro_title: "Hasiera Berri Bat",
+    intro_lore: "Betiereko gerra baten sugarrek suntsitutako mundu batean, bizirik atera den talde txiki batek ihes egin dio kaosari. Heroi kementsu batek gidatuta, haran urrun bat bilatzen dute bakezko babesleku bat eraikitzeko. Bidaia luzea izan da eta baliabideak urriak dira, baina itxaropenak bizirik dirau.",
+    intro_btn: "Hasi Bidaia",
+    prologue_title_1: "I. Kapitulua: Iraganeko Errautsak",
+    prologue_lore_1: "Betiereko gerra baten sugarrek suntsitutako mundu batean, antzinako erresuma erori da. Errautsak eta hondakinak besterik ez dira geratzen garai batean etxe deitzen genuen lurraldetik. Beharrak eta biziraupenak bultzatuta, eraman ahal genuen gutxia bildu eta zabaltzen ari zen kaosetik ihes egin genuen.",
+    prologue_title_2: "II. Kapitulua: Bidaia Luzea",
+    prologue_lore_2: "Heroi kementsu batek gidatuta, gure karabana txikia mendateko altuera izoztuetan barneratu zen. Haizea gogorra zen, janaria urria eta etsipenak gu harrapatzeko mehatxua egiten zuen. Hala ere, hotzaren eta nekearen bidez, aurrera jarraitu genuen, biharko egun baketsu baten promesak bizirik mantenduta.",
+    prologue_title_3: "III. Kapitulua: Aurkitutako Babeslekua",
+    prologue_lore_3: "Labar zorrotzetatik behera jaitsiz, haran urrun bat aurkitu genuen, kanpoko mundutik laino lodi baten bidez ezkutatua. Hemen, lurra emankorra da eta ura garbia da. Santutegi honetan, gure herrixka berria eraikiko dugu eta gure bizitzak berreraikiko ditugu, pausoz pauso.",
+    prologue_btn_back: "Atzera",
+    prologue_btn_next: "Hurrengoa"
 };

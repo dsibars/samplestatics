@@ -277,5 +277,18 @@ export const gl = {
     desc_material_wood: "Un recurso básico de construción. Obtido en expedicións ou producido pola Granxa. Úsase para edificios.",
     desc_material_stone: "Un recurso de cantería resistente. Requirido para construcións e fortificacións avanzadas do pobo.",
     desc_material_iron: "Mineral refinado. Utilizado para a fabricación de armamento avanzado e obras de forxa.",
-    desc_food_raw_grain: "Trigo colleitado. Consumido diariamente polos aldeáns para evitar la inanición. ¡Mantén existencias!"
+    desc_food_raw_grain: "Trigo colleitado. Consumido diariamente polos aldeáns para evitar la inanición. ¡Mantén existencias!",
+    
+    // Intro Narrative
+    intro_title: "Un Novo Comezo",
+    intro_lore: "Nun mundo consumido polas chamas dunha guerra eterna, un pequeno grupo de superviventes fuxiu do caos. Guiados por un valente heroe, buscan un val remoto para construír un santuario de paz. O viaxe foi longo e os recursos son escasos, pero a esperanza aínda perdura.",
+    intro_btn: "Comezar Viaxe",
+    prologue_title_1: "Capítulo I: As Cinzas do Pasado",
+    prologue_lore_1: "Nun mundo consumido polas chamas dunha guerra eterna, o antigo reino caeu. Cinzas e ruínas son todo o que queda da terra que unha vez chamamos fogar. Impulsados pola necesidade e a supervivencia, reunimos o pouco que puidemos levar e fuximos do caos crecente.",
+    prologue_title_2: "Capítulo II: O Longo Viaxe",
+    prologue_lore_2: "Guiados por un heroe valente, a nosa pequena caravana aventurouse nas alturas xeadas do paso de montaña. O vento era implacable, a comida escasa e a desesperación ameazaba con apoderarse de nós. Con todo, a través del frío e o esgotamento, seguimos adiante, manténdonos con vida grazas á promesa dun mañá en paz.",
+    prologue_title_3: "Capítulo III: Un Refuxio Atopado",
+    prologue_lore_3: "Descendendo dos cantís escarpados, descubrimos un val remoto, oculto do mundo exterior por un denso manto de néboa. Aquí, a terra é fértil e a auga corre pura. Neste santuario, construiremos a nosa nova aldea e reconstruiremos as nosas vidas, paso a paso.",
+    prologue_btn_back: "Atrás",
+    prologue_btn_next: "Seguinte"
 };

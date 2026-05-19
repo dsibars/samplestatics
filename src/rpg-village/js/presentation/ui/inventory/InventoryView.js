@@ -137,7 +137,7 @@ export class InventoryView extends BaseView {
             inventory.equipment.forEach((item, index) => {
                 const eqId = `eq_${item.type}_${item.material}_${index}`;
                 const name = getEquipmentName(item, this.t.bind(this));
-                const icon = item.type === 'weapon' ? '🗡️' : (item.slot === 'head' ? '🪖' : (item.slot === 'body' ? '👕' : '🥾'));
+                const icon = item.type === 'weapon' ? '🗡️' : (item.slot === 'head' ? '🪖' : (item.slot === 'body' ? '👕' : (item.slot === 'rightHand' ? '🛡️' : '🥾')));
                 items.push({
                     id: eqId,
                     type: 'equipment',

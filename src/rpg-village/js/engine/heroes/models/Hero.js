@@ -10,6 +10,7 @@ export class Hero {
         this.exp = data.exp || 0;
         this.statPoints = data.statPoints !== undefined ? data.statPoints : 5;
         this.skillPoints = data.skillPoints || 0;
+        this.avatar = data.avatar || null;
 
         // Base stats
         this.baseMaxHp = data.baseMaxHp || 10;
@@ -287,7 +288,8 @@ export class Hero {
             skills: JSON.parse(JSON.stringify(this.skills)),
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
             phoenixUsed: this.phoenixUsed,
-            equipment: JSON.parse(JSON.stringify(this.equipment))
+            equipment: JSON.parse(JSON.stringify(this.equipment)),
+            avatar: this.avatar
         };
     }
 }

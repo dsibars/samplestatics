@@ -384,7 +384,8 @@ export class ExpeditionService {
         if (exp.reward.special) {
             const s = exp.reward.special;
             if (s.type === 'hero') {
-                this.heroService.add({ name: s.value, origin: 'origin_guard' });
+                const avatar = s.value === 'Sir Valen' ? 'valen.png' : null;
+                this.heroService.add({ name: s.value, origin: 'origin_guard', avatar });
             } else if (s.type === 'villagers') {
                 this.villageService.addVillagers(s.value);
             }

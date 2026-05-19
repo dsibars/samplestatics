@@ -725,5 +725,70 @@ body {
     margin-left: 8px;
 }
 
+/* Prologue Storybook */
+.intro-modal.story-slideshow {
+    max-width: 650px;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.prologue-illustration-container {
+    width: 100%;
+    height: 320px;
+    overflow: hidden;
+    position: relative;
+    border-bottom: 2px solid var(--accent-color);
+}
+.prologue-illustration-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.prologue-text-container {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    text-align: left;
+    min-height: 150px;
+}
+.prologue-text-container h2 {
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.prologue-text-container p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: 0;
+}
+.prologue-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px var(--spacing-xl) 20px var(--spacing-xl);
+    background: rgba(0,0,0,0.3);
+    border-top: 1px solid var(--glass-border);
+}
+.prologue-dots {
+    display: flex;
+    gap: 8px;
+}
+.prologue-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+.prologue-dot.active {
+    background: var(--accent-color);
+    opacity: 1;
+    transform: scale(1.2);
+}
+
 
 

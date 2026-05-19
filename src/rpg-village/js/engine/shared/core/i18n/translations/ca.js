@@ -277,5 +277,18 @@ export const ca = {
     desc_material_wood: "Un recurs bàsic de construcció. Obtingut en expedicions o produït per la Granja. S'utilitza per a edificis.",
     desc_material_stone: "Un recurs de picapedrer resistent. Requerit per a construccions i fortificacions avançades del poble.",
     desc_material_iron: "Mineral refinat. Utilitzat per a la fabricació d'armament avançat i obres de forja.",
-    desc_food_raw_grain: "Blat collit. Consumit diàriament pels aldeans per evitar la inanició. ¡Mantén existències!"
+    desc_food_raw_grain: "Blat collit. Consumit diàriament pels aldeans per evitar la inanició. ¡Mantén existències!",
+    
+    // Intro Narrative
+    intro_title: "Un Nou Començament",
+    intro_lore: "En un món consumit per les flames d'una guerra eterna, un petit grup de supervivents ha fugit del caos. Guiats per un heroi valent, busquen una vall remota per construir un santuari de pau. El viatge ha estat llarg i els recursos són escassos, però l'esperança encara perdura.",
+    intro_btn: "Començar Viatge",
+    prologue_title_1: "Capítol I: Les Cendres del Passat",
+    prologue_lore_1: "En un món consumit per les flames d'una guerra eterna, l'antic regne ha caigut. Cendres i ruïnes és tot el que queda de la terra que un cop vam anomenar llar. Impulsats per la necessitat i la supervivència, vam recollir el poc que podíem portar i vam fugir del caos creixent.",
+    prologue_title_2: "Capítol II: El Llarg Viatge",
+    prologue_lore_2: "Guiats per un heroi valent, la nostra petita caravana es va aventurar a les altures gelades del pas de muntanya. El vent era implacable, el menjar escàs i la desesperació amenaçava amb apoderar-se de nosaltres. No obstant això, a través del fred i l'esgotament, vam seguir endavant, mantenint-nos vius gràcies a la promesa d'un demà en pau.",
+    prologue_title_3: "Capítol III: Un Refugi Trobat",
+    prologue_lore_3: "Descendint dels penya-segats escarpats, vam descobrir una vall remota, oculta del món exterior per un dens mantell de boira. Aquí, la terra és fèrtil i l'aigua corre pura. En aquest santuari, construirem la nostra nova aldea i reconstruirem les nostres vides, pas a pas.",
+    prologue_btn_back: "Enrere",
+    prologue_btn_next: "Següent"
 };

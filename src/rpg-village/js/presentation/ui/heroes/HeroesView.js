@@ -138,25 +138,44 @@ export class HeroesView extends BaseView {
             ? this.t('ui_stat_points').replace('{amount}', hero.statPoints)
             : this.t('ui_stat_points_busy').replace('{amount}', hero.statPoints);
 
+        let avatarSrc = 'assets/heroes/arthur.png';
+        if (hero.avatar) {
+            avatarSrc = `assets/heroes/${hero.avatar}`;
+        } else {
+            const fallbackMap = {
+                origin_warrior: 'arthur.png',
+                origin_guard: 'valen.png',
+                origin_thief: 'origin_thief.png',
+                origin_monk: 'origin_monk.png',
+                origin_clown: 'origin_clown.png',
+                origin_poet: 'origin_poet.png'
+            };
+            const mapped = fallbackMap[hero.origin] || 'arthur.png';
+            avatarSrc = `assets/heroes/${mapped}`;
+        }
+
         this.elements.detail.innerHTML = `
             <div class="hero-profile">
-                <header class="building-profile-header">
-                    <div class="profile-title-group">
-                        <span class="profile-badge">${this.t(hero.origin)}</span>
-                        <h2>${hero.name} <span class="hero-level-text">(${this.t('ui_level')} ${hero.level})</span></h2>
+                <div class="hero-detail-header-card">
+                    <div class="hero-portrait-container">
+                        <img class="hero-portrait-img" src="${avatarSrc}" alt="${hero.name}">
                     </div>
-                </header>
-                <div class="hero-info-section">
-                    <p class="hero-origin-desc"><em>${this.t(hero.origin + '_desc')}</em></p>
-                    <div class="hero-status-row">
-                        <span><strong>${this.t('ui_activity')}:</strong> <span class="status-badge ${isIdle ? 'idle' : 'busy'}">${activityText}</span></span>
-                        <span><strong>${this.t('ui_experience')}:</strong> ${hero.exp} / ${hero.expToNextLevel}</span>
+                    <div class="hero-detail-info">
+                        <div class="profile-title-group">
+                            <span class="profile-badge">${this.t(hero.origin)}</span>
+                            <h2>${hero.name} <span class="hero-level-text">(${this.t('ui_level')} ${hero.level})</span></h2>
+                        </div>
+                        <p class="hero-origin-desc"><em>${this.t(hero.origin + '_desc')}</em></p>
+                        <div class="hero-status-row">
+                            <span><strong>${this.t('ui_activity')}:</strong> <span class="status-badge ${isIdle ? 'idle' : 'busy'}">${activityText}</span></span>
+                            <span><strong>${this.t('ui_experience')}:</strong> ${hero.exp} / ${hero.expToNextLevel}</span>
+                        </div>
+                        ${hasStatPoints ? `
+                        <div class="stat-points-alert ${canAllocate ? '' : 'locked'}">
+                            <strong>${statPointsText}</strong>
+                        </div>
+                        ` : ''}
                     </div>
-                    ${hasStatPoints ? `
-                    <div class="stat-points-alert ${canAllocate ? '' : 'locked'}">
-                        <strong>${statPointsText}</strong>
-                    </div>
-                    ` : ''}
                 </div>
                 <div class="stats-grid">
                     <div class="stat-row">
@@ -229,7 +248,7 @@ export class HeroesView extends BaseView {
         // Filter eligible items in inventory
         const eligibleItems = this.inventoryEquipment.filter(item => {
             if (slot === 'leftHand' || slot === 'rightHand') {
-                return item.type === 'weapon';
+                return item.type === 'weapon' || (item.type === 'armor' && item.slot === slot);
             } else {
                 return item.type === 'armor' && item.slot === slot;
             }
