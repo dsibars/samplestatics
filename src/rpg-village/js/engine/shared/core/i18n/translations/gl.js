@@ -178,5 +178,19 @@ export const gl = {
     ui_exp_base_reward: "Recompensa Base",
     ui_select_heroes: "Seleccionar Heroes",
     ui_under_construction: "En Construción",
-    error_already_in_queue: "O edificio xa está en construción."
+    error_already_in_queue: "O edificio xa está en construción.",
+
+    // Combat Log
+    log_attack: "¡{attacker} ataca a {target} por {damage} de dano!",
+    log_miss: "¡{attacker} fallou o ataque contra {target}!",
+    log_heal: "¡{attacker} cura a {target} por {amount} PV!",
+    log_poison: "¡{target} sofre {damage} de dano por veleno!",
+    log_burn: "¡{target} sofre {damage} de dano por queimadura!",
+    log_regen: "{target} rexenera {amount} PV.",
+    log_battle_won: "¡Vitoria! Os heroes derrotaron aos inimigos.",
+    log_battle_lost: "¡Derrota! Os heroes foron abrumados.",
+    ui_btn_close: "Pechar",
+    village_infirmary: "Enfermaría",
+    error_hero_dead: "Non se pode asignar un heroe con 0 PV.",
+    ui_report_recovery: "Recuperación: {healed}"
 };

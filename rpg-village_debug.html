@@ -232,6 +232,122 @@ class UIController {
       if (onConfirm) onConfirm();
     });
   }
+  /**
+   * Plays the battle log in a full-screen overlay dynamically imitating a turn-based combat log.
+   */
+  playBattleLog(combatLog, onComplete) {
+    const overlay = document.createElement("div");
+    overlay.className = "battle-overlay";
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100vw";
+    overlay.style.height = "100vh";
+    overlay.style.backgroundColor = "rgba(10, 10, 15, 0.95)";
+    overlay.style.zIndex = "9999";
+    overlay.style.display = "flex";
+    overlay.style.flexDirection = "column";
+    overlay.style.alignItems = "center";
+    overlay.style.padding = "20px";
+    overlay.style.overflowY = "hidden";
+    overlay.style.fontFamily = '"Fira Code", monospace';
+    const headerHtml = `
+            <div style="display: flex; justify-content: space-between; width: 100%; max-width: 800px; border-bottom: 2px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px;">
+                <div style="color: var(--primary-color);">
+                    <h3 style="margin: 0;">Heroes</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${combatLog.heroes.join(", ")}</p>
+                </div>
+                <div style="text-align: right; color: var(--danger-color);">
+                    <h3 style="margin: 0;">Enemies</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${combatLog.enemies.join(", ")}</p>
+                </div>
+            </div>
+        `;
+    const logContainerHtml = `
+            <div id="battle-log-container" style="flex: 1; width: 100%; max-width: 800px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);">
+            </div>
+        `;
+    const footerHtml = `
+            <div id="battle-log-footer" style="width: 100%; max-width: 800px; text-align: center; min-height: 50px;">
+                \x3C!-- Summary and Close button will appear here -->
+            </div>
+        `;
+    overlay.innerHTML = headerHtml + logContainerHtml + footerHtml;
+    document.body.appendChild(overlay);
+    const logContainer = overlay.querySelector("#battle-log-container");
+    const footer = overlay.querySelector("#battle-log-footer");
+    let eventIndex = 0;
+    const events = combatLog.events;
+    const formatEventLog = (ev) => {
+      let text = "";
+      let color = "#aaa";
+      if (ev.type === "DAMAGE") {
+        const isMiss = ev.isMiss ? this.t("log_miss").replace("{attacker}", ev.actorName).replace("{target}", ev.targetName) : null;
+        const hitText = this.t("log_attack").replace("{attacker}", ev.actorName).replace("{target}", ev.targetName).replace("{damage}", ev.amount);
+        text = isMiss || hitText;
+        if (ev.isCrit) text = `🔥 CRITICAL! ${text}`;
+        color = ev.actorIsHero ? "#4caf50" : "#f44336";
+      } else if (ev.type === "HEAL") {
+        text = this.t("log_heal").replace("{attacker}", ev.actorName).replace("{target}", ev.targetName).replace("{amount}", ev.amount);
+        color = "#03a9f4";
+      } else if (ev.type === "STATUS_TICK") {
+        if (ev.effectType === "poison") {
+          text = this.t("log_poison").replace("{target}", ev.targetName).replace("{damage}", ev.damage);
+          color = "#9c27b0";
+        } else if (ev.effectType === "burn") {
+          text = this.t("log_burn").replace("{target}", ev.targetName).replace("{damage}", ev.damage);
+          color = "#ff9800";
+        }
+      } else if (ev.type === "TRAIT_REGEN") {
+        text = this.t("log_regen").replace("{target}", ev.targetName).replace("{amount}", ev.amount);
+        color = "#8bc34a";
+      } else if (ev.type === "USE_CONSUMABLE") {
+        text = `${ev.actorName} used a consumable on ${ev.targetName}.`;
+        color = "#00bcd4";
+      }
+      return `<p style="margin: 5px 0; color: ${color}; opacity: 0; animation: fadeIn 0.3s forwards;">${text}</p>`;
+    };
+    const timer = setInterval(() => {
+      if (eventIndex < events.length) {
+        const ev = events[eventIndex];
+        const logHtml = formatEventLog(ev);
+        if (logHtml.includes("<p")) {
+          logContainer.insertAdjacentHTML("beforeend", logHtml);
+          logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        eventIndex++;
+      } else {
+        clearInterval(timer);
+        const summaryHtml = combatLog.summary.map((s) => {
+          let text = `<strong>${s.heroName}</strong>: `;
+          if (s.hpLost > 0) text += `<span style="color: #f44336;">-${s.hpLost} HP</span> | `;
+          else if (s.hpLost < 0) text += `<span style="color: #4caf50;">+${-s.hpLost} HP</span> | `;
+          text += `<span style="color: #03a9f4;">+${s.expEarned} EXP</span>`;
+          if (s.leveledUp) text += ` <span style="color: #ffeb3b; font-weight: bold;">(LEVEL UP!)</span>`;
+          return `<div>${text}</div>`;
+        }).join("");
+        const resultText = combatLog.isVictory ? this.t("log_battle_won") : this.t("log_battle_lost");
+        const resultColor = combatLog.isVictory ? "#4caf50" : "#f44336";
+        footer.innerHTML = `
+                    <div style="margin-bottom: 15px; font-size: 1.1rem;">
+                        <div style="color: ${resultColor}; font-weight: bold; margin-bottom: 10px;">${resultText}</div>
+                        ${summaryHtml}
+                    </div>
+                    <button class="btn btn-primary" id="btn-close-battle">
+                        ${this.t("ui_btn_close")}
+                    </button>
+                `;
+        footer.querySelector("#btn-close-battle").addEventListener("click", () => {
+          overlay.style.opacity = "0";
+          overlay.style.transition = "opacity 0.3s ease";
+          setTimeout(() => {
+            overlay.remove();
+            if (onComplete) onComplete();
+          }, 300);
+        });
+      }
+    }, 500);
+  }
 }
 class Result {
   constructor(success, data = null, error = null, context = {}) {
@@ -1178,7 +1294,15 @@ class BattleService {
       const regenAmount = Math.floor(currentEntity.maxHp * this.partyTraits.hpRegen);
       if (regenAmount > 0) {
         currentEntity.hp = Math.min(currentEntity.maxHp, currentEntity.hp + regenAmount);
-        statusResults.push({ type: "TRAIT_REGEN", amount: regenAmount, targetId: currentEntity.id });
+        const event = {
+          type: "TRAIT_REGEN",
+          amount: regenAmount,
+          targetId: currentEntity.id,
+          targetName: currentEntity.name,
+          targetIsHero: true
+        };
+        statusResults.push(event);
+        this.log.push(event);
       }
     }
     if (currentEntity.hp <= 0) {
@@ -1195,6 +1319,7 @@ class BattleService {
   }
   _processStatusEffects(entity) {
     if (!entity.statusEffects || entity.statusEffects.length === 0) return [];
+    const isHero = this.heroes.includes(entity);
     const events = [];
     for (let i = entity.statusEffects.length - 1; i >= 0; i--) {
       const eff = entity.statusEffects[i];
@@ -1202,12 +1327,29 @@ class BattleService {
       if (eff.type === "poison" || eff.type === "burn") {
         damage = Math.floor(entity.maxHp * (eff.power || 0.05));
         entity.hp = Math.max(0, entity.hp - damage);
-        events.push({ type: "STATUS_TICK", effectType: eff.type, damage, targetId: entity.id });
+        const event = {
+          type: "STATUS_TICK",
+          effectType: eff.type,
+          damage,
+          targetId: entity.id,
+          targetName: entity.name,
+          targetIsHero: isHero
+        };
+        events.push(event);
+        this.log.push(event);
       }
       eff.duration--;
       if (eff.duration <= 0) {
         entity.statusEffects.splice(i, 1);
-        events.push({ type: "STATUS_EXPIRED", effectType: eff.type, targetId: entity.id });
+        const event = {
+          type: "STATUS_EXPIRED",
+          effectType: eff.type,
+          targetId: entity.id,
+          targetName: entity.name,
+          targetIsHero: isHero
+        };
+        events.push(event);
+        this.log.push(event);
         if (entity.recalculateStats) entity.recalculateStats({});
       }
     }
@@ -1272,7 +1414,11 @@ class BattleService {
       const event = {
         type: skillData.category === "support" ? "HEAL" : "DAMAGE",
         actorId: actor.id,
+        actorName: actor.name,
+        actorIsHero: isActorHero,
         targetId: target.id,
+        targetName: target.name,
+        targetIsHero: this.heroes.includes(target),
         skillId,
         isMiss: result.isMiss,
         amount: 0,
@@ -1337,7 +1483,11 @@ class BattleService {
     const event = {
       type: "USE_CONSUMABLE",
       actorId: actor.id,
+      actorName: actor.name,
+      actorIsHero: this.heroes.includes(actor),
       targetId: target.id,
+      targetName: target.name,
+      targetIsHero: this.heroes.includes(target),
       consumableId,
       healType: type,
       amount
@@ -1559,7 +1709,8 @@ class VillageService {
         warehouse: 1,
         blacksmith: 0,
         training_grounds: 0,
-        explorer_guild: 0
+        explorer_guild: 0,
+        infirmary: 0
       },
       constructionQueue: [],
       day: 1,
@@ -1876,6 +2027,8 @@ class ExpeditionService {
       this.save();
       return Result.ok();
     }
+    const hasDeadHero = heroes.some((h) => h.hp <= 0);
+    if (hasDeadHero) return Result.fail("error_hero_dead");
     this.state.activeExpedition = {
       id: expId,
       currentStage: 0,
@@ -1916,19 +2069,62 @@ class ExpeditionService {
     if (!exp) return Result.fail("error_expedition_not_found");
     const stage = exp.stages[this.state.activeExpedition.currentStage];
     if (stage.type === "battle") {
-      const success = Math.random() < 0.9;
-      if (success) {
+      const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+      const enemies = stage.enemies.map((eId) => this._createEnemy(eId, stage.isBoss));
+      const initialHp = {};
+      heroes.forEach((h) => initialHp[h.id] = h.hp);
+      const totalEnemyHp = enemies.reduce((sum, e) => sum + e.maxHp, 0);
+      const expPerHero = Math.floor(totalEnemyHp / heroes.length);
+      this.battleService.startBattle(heroes, enemies, true);
+      while (!this.battleService.isOver) {
+        this.battleService.nextTurn();
+      }
+      const isVictory = this.battleService.winner === "heroes";
+      const stageNum = this.state.activeExpedition.currentStage + 1;
+      const stageTotal = exp.stages.length;
+      const combatLog = {
+        heroes: heroes.map((h) => h.name),
+        enemies: enemies.map((e) => e.name),
+        events: [...this.battleService.log],
+        summary: [],
+        isVictory
+      };
+      heroes.forEach((h) => {
+        let leveledUp = false;
+        let expEarned = 0;
+        if (isVictory && h.hp > 0) {
+          const preLevel = h.level;
+          h.addExperience(expPerHero);
+          leveledUp = h.level > preLevel;
+          expEarned = expPerHero;
+        }
+        const hpLost = initialHp[h.id] - h.hp;
+        combatLog.summary.push({
+          heroId: h.id,
+          heroName: h.name,
+          expName: exp.name,
+          stageNum,
+          stageTotal,
+          expEarned,
+          leveledUp,
+          hpLost
+        });
+      });
+      this.heroService.saveAll();
+      if (isVictory) {
         this.state.activeExpedition.currentStage++;
         if (this.state.activeExpedition.currentStage >= exp.stages.length) {
-          return this._finishExpedition(exp);
+          const result = this._finishExpedition(exp);
+          result.data.combatLog = combatLog;
+          return result;
         } else {
           this.save();
-          return Result.ok({ status: "progress", expId: exp.id, expName: exp.name });
+          return Result.ok({ status: "progress", expId: exp.id, expName: exp.name, combatLog });
         }
       } else {
         this.state.activeExpedition = null;
         this.save();
-        return Result.ok({ status: "failed", expId: exp.id, expName: exp.name });
+        return Result.ok({ status: "failed", expId: exp.id, expName: exp.name, combatLog });
       }
     }
     return Result.fail("error_unknown_stage_type");
@@ -2171,7 +2367,20 @@ const en = {
   ui_exp_base_reward: "Base Reward",
   ui_select_heroes: "Select Heroes",
   ui_under_construction: "Under Construction",
-  error_already_in_queue: "Building is already under construction."
+  error_already_in_queue: "Building is already under construction.",
+  // Combat Log
+  log_attack: "{attacker} attacks {target} for {damage} damage!",
+  log_miss: "{attacker} missed {target}!",
+  log_heal: "{attacker} heals {target} for {amount} HP!",
+  log_poison: "{target} takes {damage} poison damage!",
+  log_burn: "{target} takes {damage} burn damage!",
+  log_regen: "{target} regenerates {amount} HP.",
+  log_battle_won: "Victory! The heroes defeated the enemies!",
+  log_battle_lost: "Defeat! The heroes were overwhelmed.",
+  ui_btn_close: "Close",
+  village_infirmary: "Infirmary",
+  error_hero_dead: "Cannot assign a hero with 0 HP.",
+  ui_report_recovery: "Recovery: {healed}"
 };
 const es = {
   // UI General
@@ -2352,7 +2561,20 @@ const es = {
   ui_exp_base_reward: "Recompensa Base",
   ui_select_heroes: "Seleccionar Héroes",
   ui_under_construction: "En Construcción",
-  error_already_in_queue: "El edificio ya está en construcción."
+  error_already_in_queue: "El edificio ya está en construcción.",
+  // Combat Log
+  log_attack: "¡{attacker} ataca a {target} por {damage} de daño!",
+  log_miss: "¡{attacker} falló el ataque contra {target}!",
+  log_heal: "¡{attacker} cura a {target} por {amount} PV!",
+  log_poison: "¡{target} sufre {damage} de daño por veneno!",
+  log_burn: "¡{target} sufre {damage} de daño por quemadura!",
+  log_regen: "{target} regenera {amount} PV.",
+  log_battle_won: "¡Victoria! Los héroes derrotaron a los enemigos.",
+  log_battle_lost: "¡Derrota! Los héroes fueron abrumados.",
+  ui_btn_close: "Cerrar",
+  village_infirmary: "Enfermería",
+  error_hero_dead: "No se puede asignar un héroe con 0 PV.",
+  ui_report_recovery: "Recuperación: {healed}"
 };
 const ca = {
   // UI General
@@ -2517,7 +2739,20 @@ const ca = {
   ui_exp_base_reward: "Recompensa Base",
   ui_select_heroes: "Seleccionar Herois",
   ui_under_construction: "En Construcció",
-  error_already_in_queue: "L'edifici ja està en construcció."
+  error_already_in_queue: "L'edifici ja està en construcció.",
+  // Combat Log
+  log_attack: "{attacker} ataca {target} per {damage} de dany!",
+  log_miss: "{attacker} ha fallat l'atac contra {target}!",
+  log_heal: "{attacker} cura {target} per {amount} PV!",
+  log_poison: "{target} pateix {damage} de dany per verí!",
+  log_burn: "{target} pateix {damage} de dany per cremada!",
+  log_regen: "{target} regenera {amount} PV.",
+  log_battle_won: "Victòria! Els herois han derrotat els enemics.",
+  log_battle_lost: "Derrota! Els herois han estat superats.",
+  ui_btn_close: "Tancar",
+  village_infirmary: "Infermeria",
+  error_hero_dead: "No es pot assignar un heroi amb 0 PV.",
+  ui_report_recovery: "Recuperació: {healed}"
 };
 const eu = {
   // UI General
@@ -2682,7 +2917,20 @@ const eu = {
   ui_exp_base_reward: "Oinarrizko Saria",
   ui_select_heroes: "Heroiak Aukeratu",
   ui_under_construction: "Eraikitzen",
-  error_already_in_queue: "Eraikina jada eraikitzen ari da."
+  error_already_in_queue: "Eraikina jada eraikitzen ari da.",
+  // Combat Log
+  log_attack: "{attacker}(e)k {target} eraso du {damage} min emanez!",
+  log_miss: "{attacker}(e)k huts egin du {target} erasotzean!",
+  log_heal: "{attacker}(e)k {target} sendatu du {amount} BPz!",
+  log_poison: "{target}(e)k {damage} pozoi min jaso du!",
+  log_burn: "{target}(e)k {damage} erre min jaso du!",
+  log_regen: "{target}(e)k {amount} BP berritu ditu.",
+  log_battle_won: "Garaipena! Heroiek etsaiak garaitu dituzte.",
+  log_battle_lost: "Porrota! Heroiak gaindituak izan dira.",
+  ui_btn_close: "Itxi",
+  village_infirmary: "Erizaindegia",
+  error_hero_dead: "Ezin da 0 BP dituen heroirik esleitu.",
+  ui_report_recovery: "Berreskuratzea: {healed}"
 };
 const gl = {
   // UI General
@@ -2847,7 +3095,20 @@ const gl = {
   ui_exp_base_reward: "Recompensa Base",
   ui_select_heroes: "Seleccionar Heroes",
   ui_under_construction: "En Construción",
-  error_already_in_queue: "O edificio xa está en construción."
+  error_already_in_queue: "O edificio xa está en construción.",
+  // Combat Log
+  log_attack: "¡{attacker} ataca a {target} por {damage} de dano!",
+  log_miss: "¡{attacker} fallou o ataque contra {target}!",
+  log_heal: "¡{attacker} cura a {target} por {amount} PV!",
+  log_poison: "¡{target} sofre {damage} de dano por veleno!",
+  log_burn: "¡{target} sofre {damage} de dano por queimadura!",
+  log_regen: "{target} rexenera {amount} PV.",
+  log_battle_won: "¡Vitoria! Os heroes derrotaron aos inimigos.",
+  log_battle_lost: "¡Derrota! Os heroes foron abrumados.",
+  ui_btn_close: "Pechar",
+  village_infirmary: "Enfermaría",
+  error_hero_dead: "Non se pode asignar un heroe con 0 PV.",
+  ui_report_recovery: "Recuperación: {healed}"
 };
 class I18nService {
   constructor() {
@@ -2949,9 +3210,26 @@ class GameEngine {
   nextDay() {
     const villageReport = this.villageService.nextDay();
     const expeditionResult = this.expeditionService.processDay();
+    const infirmaryLevel = this.villageService.getState().infrastructure.infirmary || 0;
+    const healPercentage = 0.2 + infirmaryLevel * 0.1;
+    const maxHeroesHealed = 1 + Math.floor(infirmaryLevel / 2);
+    const heroesNeedingHeal = this.heroService.list().filter((h) => h.hp < h.maxHp);
+    heroesNeedingHeal.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+    const heroesToHeal = heroesNeedingHeal.slice(0, maxHeroesHealed);
+    const healedLog = [];
+    heroesToHeal.forEach((hero) => {
+      const amount = Math.floor(hero.maxHp * healPercentage);
+      const actualHeal = Math.min(amount, hero.maxHp - hero.hp);
+      hero.hp += actualHeal;
+      healedLog.push({ heroName: hero.name, amount: actualHeal });
+    });
+    if (heroesToHeal.length > 0) {
+      this.heroService.saveAll();
+    }
     const dailyReport = {
       ...villageReport,
-      expedition: expeditionResult.success ? expeditionResult.data : null
+      expedition: expeditionResult.success ? expeditionResult.data : null,
+      recovery: healedLog
     };
     this.villageService.setDailyReport(dailyReport);
     return dailyReport;
@@ -2982,8 +3260,14 @@ class EngineAdapter {
     this.ui.views.forEach((view, domain) => {
       if (domain === "village") {
         view.on("nextDay", () => {
-          this.engine.nextDay();
-          this.forceUpdate();
+          const report = this.engine.nextDay();
+          if (report && report.expedition && report.expedition.combatLog) {
+            this.ui.playBattleLog(report.expedition.combatLog, () => {
+              this.forceUpdate();
+            });
+          } else {
+            this.forceUpdate();
+          }
         });
       }
       if (domain === "buildings") {
@@ -3230,6 +3514,16 @@ class VillageView extends BaseView {
                 `;
       }
     }
+    let recoveryHtml = "";
+    if (report.recovery && report.recovery.length > 0) {
+      const healedStr = report.recovery.map((h) => `${h.heroName} (+${h.amount} HP)`).join(", ");
+      recoveryHtml = `
+                <div class="report-section success">
+                    <span class="report-icon">💖</span>
+                    <span>${this.t("ui_report_recovery").replace("{healed}", healedStr)}</span>
+                </div>
+            `;
+    }
     container.innerHTML = `
             <div class="card widget daily-report-widget">
                 <h3>${this.t("ui_daily_report_title").replace("{day}", report.day - 1)}</h3>
@@ -3240,6 +3534,7 @@ class VillageView extends BaseView {
                     </div>
                     ${growthHtml}
                     ${builtHtml}
+                    ${recoveryHtml}
                     ${expHtml}
                 </div>
             </div>

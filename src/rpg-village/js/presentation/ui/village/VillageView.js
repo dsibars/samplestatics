@@ -140,6 +140,17 @@ export class VillageView extends BaseView {
             }
         }
 
+        let recoveryHtml = '';
+        if (report.recovery && report.recovery.length > 0) {
+            const healedStr = report.recovery.map(h => `${h.heroName} (+${h.amount} HP)`).join(', ');
+            recoveryHtml = `
+                <div class="report-section success">
+                    <span class="report-icon">💖</span>
+                    <span>${this.t('ui_report_recovery').replace('{healed}', healedStr)}</span>
+                </div>
+            `;
+        }
+
         container.innerHTML = `
             <div class="card widget daily-report-widget">
                 <h3>${this.t('ui_daily_report_title').replace('{day}', report.day - 1)}</h3>
@@ -150,6 +161,7 @@ export class VillageView extends BaseView {
                     </div>
                     ${growthHtml}
                     ${builtHtml}
+                    ${recoveryHtml}
                     ${expHtml}
                 </div>
             </div>

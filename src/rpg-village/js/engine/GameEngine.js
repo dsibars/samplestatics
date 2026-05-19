@@ -109,9 +109,33 @@ export class GameEngine {
         const villageReport = this.villageService.nextDay();
         const expeditionResult = this.expeditionService.processDay();
         
+        // --- Hero Recovery Phase ---
+        const infirmaryLevel = this.villageService.getState().infrastructure.infirmary || 0;
+        const healPercentage = 0.20 + (infirmaryLevel * 0.10);
+        const maxHeroesHealed = 1 + Math.floor(infirmaryLevel / 2);
+
+        const heroesNeedingHeal = this.heroService.list().filter(h => h.hp < h.maxHp);
+        // Sort by lowest hp percentage first
+        heroesNeedingHeal.sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+
+        const heroesToHeal = heroesNeedingHeal.slice(0, maxHeroesHealed);
+        
+        const healedLog = [];
+        heroesToHeal.forEach(hero => {
+            const amount = Math.floor(hero.maxHp * healPercentage);
+            const actualHeal = Math.min(amount, hero.maxHp - hero.hp);
+            hero.hp += actualHeal;
+            healedLog.push({ heroName: hero.name, amount: actualHeal });
+        });
+
+        if (heroesToHeal.length > 0) {
+            this.heroService.saveAll();
+        }
+
         const dailyReport = {
             ...villageReport,
-            expedition: expeditionResult.success ? expeditionResult.data : null
+            expedition: expeditionResult.success ? expeditionResult.data : null,
+            recovery: healedLog
         };
         
         this.villageService.setDailyReport(dailyReport);

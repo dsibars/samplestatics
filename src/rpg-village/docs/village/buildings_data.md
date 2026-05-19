@@ -16,3 +16,7 @@ This registry defines the costs, construction times, and bonuses for all village
 | **Combat** | | | | | |
 | `blacksmith` | 1 | 200 | 100 Wood, 50 Stone | 4 | Unlock Tier 2 Gear |
 | `training_grounds`| 1 | 300 | 150 Stone, 50 Iron | 5 | +10% Training XP |
+| **Health & Recovery** | | | | | |
+| `infirmary` | 1 | 150 | 100 Wood | 3 | Daily Heal: +10% amount, +0 Heroes |
+| `infirmary` | 2 | 400 | 200 Wood, 100 Stone | 5 | Daily Heal: +20% amount, +1 Hero |
+| `infirmary` | 3 | 800 | 300 Wood, 200 Stone | 7 | Daily Heal: +30% amount, +1 Hero |

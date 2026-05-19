@@ -16,8 +16,14 @@ export class EngineAdapter {
         this.ui.views.forEach((view, domain) => {
             if (domain === 'village') {
                 view.on('nextDay', () => {
-                    this.engine.nextDay();
-                    this.forceUpdate();
+                    const report = this.engine.nextDay();
+                    if (report && report.expedition && report.expedition.combatLog) {
+                        this.ui.playBattleLog(report.expedition.combatLog, () => {
+                            this.forceUpdate();
+                        });
+                    } else {
+                        this.forceUpdate();
+                    }
                 });
             }
 

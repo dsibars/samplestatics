@@ -178,5 +178,19 @@ export const eu = {
     ui_exp_base_reward: "Oinarrizko Saria",
     ui_select_heroes: "Heroiak Aukeratu",
     ui_under_construction: "Eraikitzen",
-    error_already_in_queue: "Eraikina jada eraikitzen ari da."
+    error_already_in_queue: "Eraikina jada eraikitzen ari da.",
+
+    // Combat Log
+    log_attack: "{attacker}(e)k {target} eraso du {damage} min emanez!",
+    log_miss: "{attacker}(e)k huts egin du {target} erasotzean!",
+    log_heal: "{attacker}(e)k {target} sendatu du {amount} BPz!",
+    log_poison: "{target}(e)k {damage} pozoi min jaso du!",
+    log_burn: "{target}(e)k {damage} erre min jaso du!",
+    log_regen: "{target}(e)k {amount} BP berritu ditu.",
+    log_battle_won: "Garaipena! Heroiek etsaiak garaitu dituzte.",
+    log_battle_lost: "Porrota! Heroiak gaindituak izan dira.",
+    ui_btn_close: "Itxi",
+    village_infirmary: "Erizaindegia",
+    error_hero_dead: "Ezin da 0 BP dituen heroirik esleitu.",
+    ui_report_recovery: "Berreskuratzea: {healed}"
 };

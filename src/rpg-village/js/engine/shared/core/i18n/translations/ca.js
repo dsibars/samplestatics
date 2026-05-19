@@ -178,5 +178,19 @@ export const ca = {
     ui_exp_base_reward: "Recompensa Base",
     ui_select_heroes: "Seleccionar Herois",
     ui_under_construction: "En Construcció",
-    error_already_in_queue: "L'edifici ja està en construcció."
+    error_already_in_queue: "L'edifici ja està en construcció.",
+
+    // Combat Log
+    log_attack: "{attacker} ataca {target} per {damage} de dany!",
+    log_miss: "{attacker} ha fallat l'atac contra {target}!",
+    log_heal: "{attacker} cura {target} per {amount} PV!",
+    log_poison: "{target} pateix {damage} de dany per verí!",
+    log_burn: "{target} pateix {damage} de dany per cremada!",
+    log_regen: "{target} regenera {amount} PV.",
+    log_battle_won: "Victòria! Els herois han derrotat els enemics.",
+    log_battle_lost: "Derrota! Els herois han estat superats.",
+    ui_btn_close: "Tancar",
+    village_infirmary: "Infermeria",
+    error_hero_dead: "No es pot assignar un heroi amb 0 PV.",
+    ui_report_recovery: "Recuperació: {healed}"
 };

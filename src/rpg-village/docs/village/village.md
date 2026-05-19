@@ -26,7 +26,10 @@ For details on how a new game begins, see the [Initialization Specification](ini
 ## Gameplay Loop
 - Manage heroes and assign villagers.
 - Initiate construction projects.
-- Advance day: Consumes food and progresses construction.
+- Advance day: 
+  - Consumes food.
+  - Progresses construction.
+  - **Recovery Phase**: Heroes recover a base 20% of their maximum HP. The `infirmary` building increases this healing percentage and the number of heroes healed simultaneously.
 - **Over-capacity**: If `storage.current > storage.max`, you cannot gather new resources or buy items.
 
 ## Resource Management

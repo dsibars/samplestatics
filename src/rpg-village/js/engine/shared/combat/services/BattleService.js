@@ -89,7 +89,15 @@ export class BattleService {
             const regenAmount = Math.floor(currentEntity.maxHp * this.partyTraits.hpRegen);
             if (regenAmount > 0) {
                 currentEntity.hp = Math.min(currentEntity.maxHp, currentEntity.hp + regenAmount);
-                statusResults.push({ type: 'TRAIT_REGEN', amount: regenAmount, targetId: currentEntity.id });
+                const event = { 
+                    type: 'TRAIT_REGEN', 
+                    amount: regenAmount, 
+                    targetId: currentEntity.id,
+                    targetName: currentEntity.name,
+                    targetIsHero: true
+                };
+                statusResults.push(event);
+                this.log.push(event);
             }
         }
 
@@ -112,6 +120,7 @@ export class BattleService {
     _processStatusEffects(entity) {
         if (!entity.statusEffects || entity.statusEffects.length === 0) return [];
 
+        const isHero = this.heroes.includes(entity);
         const events = [];
         for (let i = entity.statusEffects.length - 1; i >= 0; i--) {
             const eff = entity.statusEffects[i];
@@ -120,13 +129,30 @@ export class BattleService {
             if (eff.type === 'poison' || eff.type === 'burn') {
                 damage = Math.floor(entity.maxHp * (eff.power || 0.05));
                 entity.hp = Math.max(0, entity.hp - damage);
-                events.push({ type: 'STATUS_TICK', effectType: eff.type, damage, targetId: entity.id });
+                const event = { 
+                    type: 'STATUS_TICK', 
+                    effectType: eff.type, 
+                    damage, 
+                    targetId: entity.id,
+                    targetName: entity.name,
+                    targetIsHero: isHero
+                };
+                events.push(event);
+                this.log.push(event);
             }
 
             eff.duration--;
             if (eff.duration <= 0) {
                 entity.statusEffects.splice(i, 1);
-                events.push({ type: 'STATUS_EXPIRED', effectType: eff.type, targetId: entity.id });
+                const event = { 
+                    type: 'STATUS_EXPIRED', 
+                    effectType: eff.type, 
+                    targetId: entity.id,
+                    targetName: entity.name,
+                    targetIsHero: isHero
+                };
+                events.push(event);
+                this.log.push(event);
                 if (entity.recalculateStats) entity.recalculateStats({});
             }
         }
@@ -207,7 +233,11 @@ export class BattleService {
             const event = {
                 type: skillData.category === 'support' ? 'HEAL' : 'DAMAGE',
                 actorId: actor.id,
+                actorName: actor.name,
+                actorIsHero: isActorHero,
                 targetId: target.id,
+                targetName: target.name,
+                targetIsHero: this.heroes.includes(target),
                 skillId: skillId,
                 isMiss: result.isMiss,
                 amount: 0,
@@ -286,7 +316,11 @@ export class BattleService {
         const event = {
             type: 'USE_CONSUMABLE',
             actorId: actor.id,
+            actorName: actor.name,
+            actorIsHero: this.heroes.includes(actor),
             targetId: target.id,
+            targetName: target.name,
+            targetIsHero: this.heroes.includes(target),
             consumableId,
             healType: type,
             amount

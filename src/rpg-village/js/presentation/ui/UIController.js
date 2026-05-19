@@ -226,4 +226,138 @@ export class UIController {
             if (onConfirm) onConfirm();
         });
     }
+
+    /**
+     * Plays the battle log in a full-screen overlay dynamically imitating a turn-based combat log.
+     */
+    playBattleLog(combatLog, onComplete) {
+        const overlay = document.createElement('div');
+        overlay.className = 'battle-overlay';
+        
+        // Setup overlay style dynamically to avoid breaking existing styles if we don't have CSS yet
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.backgroundColor = 'rgba(10, 10, 15, 0.95)';
+        overlay.style.zIndex = '9999';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.padding = '20px';
+        overlay.style.overflowY = 'hidden';
+        overlay.style.fontFamily = '"Fira Code", monospace';
+
+        const headerHtml = `
+            <div style="display: flex; justify-content: space-between; width: 100%; max-width: 800px; border-bottom: 2px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px;">
+                <div style="color: var(--primary-color);">
+                    <h3 style="margin: 0;">Heroes</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${combatLog.heroes.join(', ')}</p>
+                </div>
+                <div style="text-align: right; color: var(--danger-color);">
+                    <h3 style="margin: 0;">Enemies</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${combatLog.enemies.join(', ')}</p>
+                </div>
+            </div>
+        `;
+
+        const logContainerHtml = `
+            <div id="battle-log-container" style="flex: 1; width: 100%; max-width: 800px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);">
+            </div>
+        `;
+
+        const footerHtml = `
+            <div id="battle-log-footer" style="width: 100%; max-width: 800px; text-align: center; min-height: 50px;">
+                <!-- Summary and Close button will appear here -->
+            </div>
+        `;
+
+        overlay.innerHTML = headerHtml + logContainerHtml + footerHtml;
+        document.body.appendChild(overlay);
+
+        const logContainer = overlay.querySelector('#battle-log-container');
+        const footer = overlay.querySelector('#battle-log-footer');
+        
+        let eventIndex = 0;
+        const events = combatLog.events;
+
+        const formatEventLog = (ev) => {
+            let text = "";
+            let color = "#aaa";
+
+            if (ev.type === 'DAMAGE') {
+                const isMiss = ev.isMiss ? this.t('log_miss').replace('{attacker}', ev.actorName).replace('{target}', ev.targetName) : null;
+                const hitText = this.t('log_attack').replace('{attacker}', ev.actorName).replace('{target}', ev.targetName).replace('{damage}', ev.amount);
+                text = isMiss || hitText;
+                if (ev.isCrit) text = `🔥 CRITICAL! ${text}`;
+                color = ev.actorIsHero ? "#4caf50" : "#f44336";
+            } else if (ev.type === 'HEAL') {
+                text = this.t('log_heal').replace('{attacker}', ev.actorName).replace('{target}', ev.targetName).replace('{amount}', ev.amount);
+                color = "#03a9f4";
+            } else if (ev.type === 'STATUS_TICK') {
+                if (ev.effectType === 'poison') {
+                    text = this.t('log_poison').replace('{target}', ev.targetName).replace('{damage}', ev.damage);
+                    color = "#9c27b0";
+                } else if (ev.effectType === 'burn') {
+                    text = this.t('log_burn').replace('{target}', ev.targetName).replace('{damage}', ev.damage);
+                    color = "#ff9800";
+                }
+            } else if (ev.type === 'TRAIT_REGEN') {
+                text = this.t('log_regen').replace('{target}', ev.targetName).replace('{amount}', ev.amount);
+                color = "#8bc34a";
+            } else if (ev.type === 'USE_CONSUMABLE') {
+                text = `${ev.actorName} used a consumable on ${ev.targetName}.`;
+                color = "#00bcd4";
+            }
+
+            return `<p style="margin: 5px 0; color: ${color}; opacity: 0; animation: fadeIn 0.3s forwards;">${text}</p>`;
+        };
+
+        const timer = setInterval(() => {
+            if (eventIndex < events.length) {
+                const ev = events[eventIndex];
+                const logHtml = formatEventLog(ev);
+                if (logHtml.includes('<p')) { // Check if valid format
+                    logContainer.insertAdjacentHTML('beforeend', logHtml);
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                }
+                eventIndex++;
+            } else {
+                clearInterval(timer);
+                
+                // Show Summary
+                const summaryHtml = combatLog.summary.map(s => {
+                    let text = `<strong>${s.heroName}</strong>: `;
+                    if (s.hpLost > 0) text += `<span style="color: #f44336;">-${s.hpLost} HP</span> | `;
+                    else if (s.hpLost < 0) text += `<span style="color: #4caf50;">+${-s.hpLost} HP</span> | `;
+                    text += `<span style="color: #03a9f4;">+${s.expEarned} EXP</span>`;
+                    if (s.leveledUp) text += ` <span style="color: #ffeb3b; font-weight: bold;">(LEVEL UP!)</span>`;
+                    return `<div>${text}</div>`;
+                }).join('');
+
+                const resultText = combatLog.isVictory ? this.t('log_battle_won') : this.t('log_battle_lost');
+                const resultColor = combatLog.isVictory ? "#4caf50" : "#f44336";
+
+                footer.innerHTML = `
+                    <div style="margin-bottom: 15px; font-size: 1.1rem;">
+                        <div style="color: ${resultColor}; font-weight: bold; margin-bottom: 10px;">${resultText}</div>
+                        ${summaryHtml}
+                    </div>
+                    <button class="btn btn-primary" id="btn-close-battle">
+                        ${this.t('ui_btn_close')}
+                    </button>
+                `;
+
+                footer.querySelector('#btn-close-battle').addEventListener('click', () => {
+                    overlay.style.opacity = '0';
+                    overlay.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => {
+                        overlay.remove();
+                        if (onComplete) onComplete();
+                    }, 300);
+                });
+            }
+        }, 500);
+    }
 }

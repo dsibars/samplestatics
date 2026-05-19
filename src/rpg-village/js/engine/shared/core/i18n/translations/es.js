@@ -196,5 +196,19 @@ export const es = {
     ui_exp_base_reward: "Recompensa Base",
     ui_select_heroes: "Seleccionar Héroes",
     ui_under_construction: "En Construcción",
-    error_already_in_queue: "El edificio ya está en construcción."
+    error_already_in_queue: "El edificio ya está en construcción.",
+
+    // Combat Log
+    log_attack: "¡{attacker} ataca a {target} por {damage} de daño!",
+    log_miss: "¡{attacker} falló el ataque contra {target}!",
+    log_heal: "¡{attacker} cura a {target} por {amount} PV!",
+    log_poison: "¡{target} sufre {damage} de daño por veneno!",
+    log_burn: "¡{target} sufre {damage} de daño por quemadura!",
+    log_regen: "{target} regenera {amount} PV.",
+    log_battle_won: "¡Victoria! Los héroes derrotaron a los enemigos.",
+    log_battle_lost: "¡Derrota! Los héroes fueron abrumados.",
+    ui_btn_close: "Cerrar",
+    village_infirmary: "Enfermería",
+    error_hero_dead: "No se puede asignar un héroe con 0 PV.",
+    ui_report_recovery: "Recuperación: {healed}"
 };

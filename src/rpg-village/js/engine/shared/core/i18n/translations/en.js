@@ -215,5 +215,19 @@ export const en = {
     ui_exp_base_reward: "Base Reward",
     ui_select_heroes: "Select Heroes",
     ui_under_construction: "Under Construction",
-    error_already_in_queue: "Building is already under construction."
+    error_already_in_queue: "Building is already under construction.",
+
+    // Combat Log
+    log_attack: "{attacker} attacks {target} for {damage} damage!",
+    log_miss: "{attacker} missed {target}!",
+    log_heal: "{attacker} heals {target} for {amount} HP!",
+    log_poison: "{target} takes {damage} poison damage!",
+    log_burn: "{target} takes {damage} burn damage!",
+    log_regen: "{target} regenerates {amount} HP.",
+    log_battle_won: "Victory! The heroes defeated the enemies!",
+    log_battle_lost: "Defeat! The heroes were overwhelmed.",
+    ui_btn_close: "Close",
+    village_infirmary: "Infirmary",
+    error_hero_dead: "Cannot assign a hero with 0 HP.",
+    ui_report_recovery: "Recovery: {healed}"
 };
