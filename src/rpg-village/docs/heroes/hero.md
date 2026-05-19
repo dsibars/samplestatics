@@ -23,6 +23,7 @@ Heroes are the defenders of the village and the primary means of progressing the
 
 ## Progression
 - **Leveling**: Every level grants `statPoints` (2-3) and `skillPoints` (1).
+- **Starting Points**: All newly recruited heroes (including the starting hero) begin at Level 1 with **5 unassigned stat points** by default, allowing the player to customize their initial attributes before deployment.
 - **Attributes**: Base HP/MP increase automatically on level up.
 - **Skills**: Heroes can learn and upgrade skills using `skillPoints`.
   - See [../shared/combat/hero_skills.md](../shared/combat/hero_skills.md) for logic and [../shared/combat/hero_skills_data.md](../shared/combat/hero_skills_data.md) for the registry.
@@ -30,3 +31,7 @@ Heroes are the defenders of the village and the primary means of progressing the
 ## Equipment
 Heroes have 6 equipment slots: `head`, `body`, `legs`, `leftHand`, `rightHand`, and `accessory`. 
 - See [../shared/inventory/equipment.md](../shared/inventory/equipment.md) for details on gear and [../shared/inventory/equipment_data.md](../shared/inventory/equipment_data.md) for values.
+
+## Expedition State Lock
+While a hero is deployed on an active expedition (their status or activity is not idle), their progression and equipment are locked. They cannot assign unassigned stat points, learn/upgrade skills, or swap equipment until they return to the village (either by completing the expedition or by retreating).
+

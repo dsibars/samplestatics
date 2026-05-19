@@ -685,7 +685,7 @@ class Hero {
     this.origin = data.origin || "origin_warrior";
     this.level = data.level || 1;
     this.exp = data.exp || 0;
-    this.statPoints = data.statPoints || 0;
+    this.statPoints = data.statPoints !== void 0 ? data.statPoints : 5;
     this.skillPoints = data.skillPoints || 0;
     this.baseMaxHp = data.baseMaxHp || 10;
     this.baseMaxMp = data.baseMaxMp || 5;
@@ -920,6 +920,10 @@ class Hero {
       baseMagicPower: this.baseMagicPower,
       maxHp: this.maxHp,
       maxMp: this.maxMp,
+      strength: this.strength,
+      speed: this.speed,
+      defense: this.defense,
+      magicPower: this.magicPower,
       hp: this.hp,
       mp: this.mp,
       status: this.status,
@@ -1745,9 +1749,10 @@ class VillageService {
   getMaxPopulation() {
     const level = this.state.infrastructure.housing || 0;
     if (level === 0) return 0;
-    if (level === 1) return 10;
-    if (level === 2) return 20;
-    return 20 + (level - 2) * 10;
+    if (level === 1) return 3;
+    if (level === 2) return 10;
+    if (level === 3) return 20;
+    return 20 + (level - 3) * 10;
   }
   getMaxStorage() {
     const level = this.state.infrastructure.warehouse || 0;
@@ -1772,6 +1777,13 @@ class VillageService {
     if (!useResult.success) {
       report.starvation = true;
     }
+    const farmLevel = this.state.infrastructure.farm || 0;
+    let foodProduced = 0;
+    if (farmLevel > 0) {
+      foodProduced = farmLevel * 4;
+      this.addItemToInventory("food_raw_grain", foodProduced);
+    }
+    report.produced = foodProduced;
     const completed = [];
     this.state.constructionQueue.forEach((project) => {
       project.daysRemaining--;
@@ -2089,14 +2101,26 @@ class ExpeditionService {
         summary: [],
         isVictory
       };
+      const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
+      const depletionProportion = totalEnemyHp > 0 ? totalDamageDone / totalEnemyHp : 0;
       heroes.forEach((h) => {
         let leveledUp = false;
         let expEarned = 0;
-        if (isVictory && h.hp > 0) {
-          const preLevel = h.level;
-          h.addExperience(expPerHero);
-          leveledUp = h.level > preLevel;
-          expEarned = expPerHero;
+        if (isVictory) {
+          if (h.hp > 0) {
+            const preLevel = h.level;
+            h.addExperience(expPerHero);
+            leveledUp = h.level > preLevel;
+            expEarned = expPerHero;
+          }
+        } else {
+          const partialExp = Math.floor(expPerHero * depletionProportion * 0.5);
+          if (partialExp > 0) {
+            const preLevel = h.level;
+            h.addExperience(partialExp);
+            leveledUp = h.level > preLevel;
+            expEarned = partialExp;
+          }
         }
         const hpLost = initialHp[h.id] - h.hp;
         combatLog.summary.push({
@@ -2380,7 +2404,18 @@ const en = {
   ui_btn_close: "Close",
   village_infirmary: "Infirmary",
   error_hero_dead: "Cannot assign a hero with 0 HP.",
-  ui_report_recovery: "Recovery: {healed}"
+  ui_report_recovery: "Recovery: {healed}",
+  ui_report_food_produced: "Produced {amount} Food",
+  ui_stat_points: "Unassigned Stat Points: {amount}",
+  desc_housing: "Increases maximum population capacity, allowing you to recruit and house more builders.",
+  desc_warehouse: "Increases maximum global storage capacity for resources, food, and materials.",
+  desc_farm: "Produces 4 raw grain daily per level to feed your villagers and prevent starvation.",
+  desc_blacksmith: "Enables tier 2 equipment crafting and improves gear upgrade efficiency.",
+  desc_training_grounds: "Unlocks training regimes, providing permanent stat boost opportunities for idle heroes.",
+  desc_explorer_guild: "Unlocks advanced expedition maps and new regions to explore.",
+  desc_infirmary: "Heals injured heroes daily (+10% heal amount and +1 hero slot limit per level).",
+  ui_stat_points_busy: "Unassigned Stat Points: {amount} (Cannot assign on expedition)",
+  error_hero_busy: "Hero is currently on an expedition and cannot perform this action."
 };
 const es = {
   // UI General
@@ -2574,7 +2609,18 @@ const es = {
   ui_btn_close: "Cerrar",
   village_infirmary: "Enfermería",
   error_hero_dead: "No se puede asignar un héroe con 0 PV.",
-  ui_report_recovery: "Recuperación: {healed}"
+  ui_report_recovery: "Recuperación: {healed}",
+  ui_report_food_produced: "Producido {amount} de comida",
+  ui_stat_points: "Puntos de atributo: {amount}",
+  desc_housing: "Aumenta la capacidad máxima de población, lo que permite reclutar y alojar a más constructores.",
+  desc_warehouse: "Aumenta la capacidad máxima de almacenamiento global para recursos, alimentos y materiales.",
+  desc_farm: "Produce 4 cereales crudos diarios por nivel para alimentar a los aldeanos y evitar la inanición.",
+  desc_blacksmith: "Permite la fabricación de equipo de nivel 2 y mejora la eficiencia de mejora de equipo.",
+  desc_training_grounds: "Desbloquea regímenes de entrenamiento, proporcionando aumentos de estadísticas permanentes para héroes inactivos.",
+  desc_explorer_guild: "Desbloquea mapas de expedición avanzados y nuevas regiones para explorar.",
+  desc_infirmary: "Cura a los héroes heridos diariamente (+10% de curación y +1 límite de héroes por nivel).",
+  ui_stat_points_busy: "Puntos de atributo: {amount} (No se pueden asignar en expedición)",
+  error_hero_busy: "El héroe está actualmente en una expedición y no puede realizar esta acción."
 };
 const ca = {
   // UI General
@@ -2752,7 +2798,18 @@ const ca = {
   ui_btn_close: "Tancar",
   village_infirmary: "Infermeria",
   error_hero_dead: "No es pot assignar un heroi amb 0 PV.",
-  ui_report_recovery: "Recuperació: {healed}"
+  ui_report_recovery: "Recuperació: {healed}",
+  ui_report_food_produced: "S'ha produït {amount} de menjar",
+  ui_stat_points: "Punts d'atribut: {amount}",
+  desc_housing: "Augmenta la capacitat màxima de població, permetent reclutar i allotjar més constructors.",
+  desc_warehouse: "Augmenta la capacitat màxima d'emmagatzematge global per a recursos, aliments i materials.",
+  desc_farm: "Produeix 4 cereals crus diaris per nivell per alimentar els vilatans i evitar la fam.",
+  desc_blacksmith: "Permet la fabricació d'equips de nivell 2 i millora l'eficiència de millora d'equips.",
+  desc_training_grounds: "Desbloqueja règims d'entrenament, proporcionant millores d'atributs permanents per als herois inactius.",
+  desc_explorer_guild: "Desbloqueja mapes d'expedició avançats i noves regions per explorar.",
+  desc_infirmary: "Cura els herois ferits diàriament (+10% de curació i +1 límit d'herois per nivell).",
+  ui_stat_points_busy: "Punts d'atribut: {amount} (No es poden assignar en expedició)",
+  error_hero_busy: "L'heroi està actualment en una expedició i no pot fer aquesta acció."
 };
 const eu = {
   // UI General
@@ -2930,7 +2987,18 @@ const eu = {
   ui_btn_close: "Itxi",
   village_infirmary: "Erizaindegia",
   error_hero_dead: "Ezin da 0 BP dituen heroirik esleitu.",
-  ui_report_recovery: "Berreskuratzea: {healed}"
+  ui_report_recovery: "Berreskuratzea: {healed}",
+  ui_report_food_produced: "{amount} elikagai ekoitzi da!",
+  ui_stat_points: "Atributu puntuak: {amount}",
+  desc_housing: "Biztanleriaren gehieneko edukiera handitzen du, eraikitzaile gehiago kontratatu eta ostatatzeko.",
+  desc_warehouse: "Baliabide, janari eta materialen biltegiratze eremua handitzen du.",
+  desc_farm: "Egunero 4 ale gordin ekoizten ditu mailako, herritarrak elikatzeko eta gosea saihesteko.",
+  desc_blacksmith: "2. mailako ekipamenduak egitea ahalbidetzen du eta hobekuntzak eraginkorragoak egiten ditu.",
+  desc_training_grounds: "Entrenamendu erregimenak desblokeatzen ditu, alferrikako heroiei estatistika hobekuntza iraunkorrak emanez.",
+  desc_explorer_guild: "Espedizio mapa aurreratuak eta esploratzeko eskualde berriak desblokeatzen ditu.",
+  desc_infirmary: "Zauritutako heroiak osatzen ditu egunero (+%10 osatze eta +1 heroi muga mailako).",
+  ui_stat_points_busy: "Atributu puntuak: {amount} (Ezin dira espedizioan esleitu)",
+  error_hero_busy: "Heroia espedizio batean dago une honetan eta ezin du ekintza hau burutu."
 };
 const gl = {
   // UI General
@@ -3108,7 +3176,18 @@ const gl = {
   ui_btn_close: "Pechar",
   village_infirmary: "Enfermaría",
   error_hero_dead: "Non se pode asignar un heroe con 0 PV.",
-  ui_report_recovery: "Recuperación: {healed}"
+  ui_report_recovery: "Recuperación: {healed}",
+  ui_report_food_produced: "Producido {amount} de comida",
+  ui_stat_points: "Puntos de atributo: {amount}",
+  desc_housing: "Aumenta a capacidade máxima de poboación, permitindo recrutar e aloxar máis construtores.",
+  desc_warehouse: "Aumenta a capacidade máxima de almacenamento global para recursos, alimentos e materiais.",
+  desc_farm: "Produce 4 cereais crus diarios por nivel para alimentar aos aldeáns e evitar a fame.",
+  desc_blacksmith: "Permite a fabricación de equipamento de nivel 2 e mellora a eficiencia de mellora de equipamento.",
+  desc_training_grounds: "Desbloquea réximes de adestramento, proporcionando aumentos de estatísticas permanentes para heroes inactivos.",
+  desc_explorer_guild: "Desbloquea mapas de expedición avanzados e novas rexións para explorar.",
+  desc_infirmary: "Cura os heroes feridos diariamente (+10% de curación e +1 límite de heroes por nivel).",
+  ui_stat_points_busy: "Puntos de atributo: {amount} (Non se poden asignar en expedición)",
+  error_hero_busy: "O heroe está actualmente nunha expedición e non pode realizar esta acción."
 };
 class I18nService {
   constructor() {
@@ -3163,8 +3242,15 @@ class GameEngine {
     if (currentHeroes.length === 0) {
       this.heroService.add({
         name: "Arthur",
-        origin: "warrior",
-        level: 1
+        origin: "origin_warrior",
+        level: 1,
+        statPoints: 5,
+        baseMaxHp: 10,
+        baseMaxMp: 5,
+        baseStrength: 1,
+        baseSpeed: 1,
+        baseDefense: 1,
+        baseMagicPower: 1
       });
     }
   }
@@ -3193,6 +3279,13 @@ class GameEngine {
   }
   getHeroes() {
     return this.heroService.list();
+  }
+  increaseHeroStat(heroId, statId) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.increaseHeroStat(heroId, statId);
   }
   // --- Combat Facade ---
   startBattle(enemies) {
@@ -3295,6 +3388,15 @@ class EngineAdapter {
         });
         view.on("retireExpedition", () => {
           this.engine.retireExpedition();
+          this.forceUpdate();
+        });
+      }
+      if (domain === "heroes") {
+        view.on("increaseStat", (data) => {
+          const result = this.engine.increaseHeroStat(data.heroId, data.statId);
+          if (!result.success) {
+            alert(this.engine.i18n.t(result.error));
+          }
           this.forceUpdate();
         });
       }
@@ -3673,7 +3775,7 @@ class BuildingsView extends BaseView {
 
                 <div class="upgrade-section">
                     <h3>Next Upgrade: Level ${nextLevel}</h3>
-                    <p class="description">Expanding this structure will increase the village's capacity and unlock new potential.</p>
+                    <p class="description">${this.t("desc_" + id)}</p>
                     
                     <div class="cost-grid">
                         <div class="cost-item ${!hasGold ? "insufficient" : ""}">
@@ -3739,14 +3841,35 @@ class HeroesView extends BaseView {
         }
       });
     }
+    if (this.elements.detail) {
+      this.elements.detail.addEventListener("click", (e) => {
+        const btn = e.target.closest(".btn-assign-stat");
+        if (btn) {
+          const statId = btn.dataset.stat;
+          this.emit("increaseStat", { heroId: this.selectedHeroId, statId });
+        }
+      });
+    }
   }
   update(state) {
     this.lastRawState = state;
     const heroes = state.heroes;
     if (!heroes) return;
+    const activeHero = heroes.find((h) => h.id === this.selectedHeroId);
     const stateString = JSON.stringify({
       heroes: heroes.map((h) => ({ id: h.id, level: h.level })),
-      selection: this.selectedHeroId
+      selection: this.selectedHeroId,
+      activeHero: activeHero ? {
+        statPoints: activeHero.statPoints,
+        hp: activeHero.hp,
+        maxHp: activeHero.maxHp,
+        mp: activeHero.mp,
+        maxMp: activeHero.maxMp,
+        strength: activeHero.strength,
+        speed: activeHero.speed,
+        defense: activeHero.defense,
+        magicPower: activeHero.magicPower
+      } : null
     });
     if (this.lastRenderedState === stateString) return;
     this.onUpdate(state);
@@ -3795,6 +3918,9 @@ class HeroesView extends BaseView {
                 <span class="skill-level">Lvl ${hero.skills[skillId]}</span>
             </div>
         `).join("");
+    const hasStatPoints = hero.statPoints > 0;
+    const canAllocate = hasStatPoints && isIdle;
+    const statPointsText = canAllocate ? this.t("ui_stat_points").replace("{amount}", hero.statPoints) : this.t("ui_stat_points_busy").replace("{amount}", hero.statPoints);
     this.elements.detail.innerHTML = `
             <div class="hero-profile">
                 <header class="building-profile-header">
@@ -3809,12 +3935,55 @@ class HeroesView extends BaseView {
                         <span><strong>${this.t("ui_activity")}:</strong> <span class="status-badge ${isIdle ? "idle" : "busy"}">${activityText}</span></span>
                         <span><strong>${this.t("ui_experience")}:</strong> ${hero.exp} / ${hero.expToNextLevel}</span>
                     </div>
+                    ${hasStatPoints ? `
+                    <div class="stat-points-alert ${canAllocate ? "" : "locked"}">
+                        <strong>${statPointsText}</strong>
+                    </div>
+                    ` : ""}
                 </div>
                 <div class="stats-grid">
-                    <div class="stat-row"><span>HP</span> <span>${hero.hp} / ${hero.maxHp}</span></div>
-                    <div class="stat-row"><span>MP</span> <span>${hero.mp} / ${hero.maxMp}</span></div>
-                    <div class="stat-row"><span>STR</span> <span>${hero.strength}</span></div>
-                    <div class="stat-row"><span>SPD</span> <span>${hero.speed}</span></div>
+                    <div class="stat-row">
+                        <span>HP</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.hp} / ${hero.maxHp}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxHp">+</button>` : ""}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>MP</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.mp} / ${hero.maxMp}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxMp">+</button>` : ""}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>STR</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.strength}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseStrength">+</button>` : ""}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>SPD</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.speed}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseSpeed">+</button>` : ""}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>DEF</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.defense}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseDefense">+</button>` : ""}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>MAG</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.magicPower}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMagicPower">+</button>` : ""}
+                        </div>
+                    </div>
                 </div>
                 <div class="hero-sections-grid">
                     <div class="hero-section">
@@ -4618,6 +4787,65 @@ body {
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(50px) scale(0.95); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Stat Assignment & Allocation UI */
+.stat-value-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.btn-assign-stat {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--accent-color);
+    background: transparent;
+    color: var(--accent-color);
+    font-weight: 900;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 5px rgba(99, 102, 241, 0.2);
+}
+
+.btn-assign-stat:hover {
+    background: var(--accent-color);
+    color: white;
+    box-shadow: 0 0 10px var(--accent-glow);
+    transform: scale(1.1);
+}
+
+.btn-assign-stat:active {
+    transform: scale(0.9);
+}
+
+.stat-points-alert {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px dashed var(--success);
+    color: var(--success);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    font-size: 0.9rem;
+    text-align: center;
+    animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.1); }
+    50% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); }
+}
+
+.stat-points-alert.locked {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px dashed var(--warning, #f59e0b);
+    color: var(--warning, #f59e0b);
+    animation: none;
 }</style>
 </head>
 <body>

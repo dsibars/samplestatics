@@ -12,9 +12,9 @@ This document defines the starting conditions for a new game of RPG Village. It 
   - **Materials**: 20x `material_wood`, 10x `material_stone`.
 
 ### 2. Population
-- **Heroes**: 1 (Default or randomly generated starting hero).
+- **Heroes**: 1 starting hero (Arthur, Level 1, with 5 unassigned Stat Points).
 - **Villagers**: 2 (Builders/Laborers).
-- **Total Population**: 3.
+- **Total Population**: 3 (Initial limit matches the Level 1 Housing max population, preventing automatic growth until Housing is upgraded).
 
 ### 3. Infrastructure
 - **Village Level**: 1 (Initial settlement).

@@ -22,6 +22,16 @@ export class HeroesView extends BaseView {
                 }
             });
         }
+
+        if (this.elements.detail) {
+            this.elements.detail.addEventListener('click', (e) => {
+                const btn = e.target.closest('.btn-assign-stat');
+                if (btn) {
+                    const statId = btn.dataset.stat;
+                    this.emit('increaseStat', { heroId: this.selectedHeroId, statId });
+                }
+            });
+        }
     }
 
     update(state) {
@@ -29,9 +39,21 @@ export class HeroesView extends BaseView {
         const heroes = state.heroes;
         if (!heroes) return;
 
+        const activeHero = heroes.find(h => h.id === this.selectedHeroId);
         const stateString = JSON.stringify({
             heroes: heroes.map(h => ({ id: h.id, level: h.level })),
-            selection: this.selectedHeroId
+            selection: this.selectedHeroId,
+            activeHero: activeHero ? {
+                statPoints: activeHero.statPoints,
+                hp: activeHero.hp,
+                maxHp: activeHero.maxHp,
+                mp: activeHero.mp,
+                maxMp: activeHero.maxMp,
+                strength: activeHero.strength,
+                speed: activeHero.speed,
+                defense: activeHero.defense,
+                magicPower: activeHero.magicPower
+            } : null
         });
 
         if (this.lastRenderedState === stateString) return;
@@ -93,6 +115,12 @@ export class HeroesView extends BaseView {
             </div>
         `).join('');
 
+        const hasStatPoints = hero.statPoints > 0;
+        const canAllocate = hasStatPoints && isIdle;
+        const statPointsText = canAllocate 
+            ? this.t('ui_stat_points').replace('{amount}', hero.statPoints)
+            : this.t('ui_stat_points_busy').replace('{amount}', hero.statPoints);
+
         this.elements.detail.innerHTML = `
             <div class="hero-profile">
                 <header class="building-profile-header">
@@ -107,12 +135,55 @@ export class HeroesView extends BaseView {
                         <span><strong>${this.t('ui_activity')}:</strong> <span class="status-badge ${isIdle ? 'idle' : 'busy'}">${activityText}</span></span>
                         <span><strong>${this.t('ui_experience')}:</strong> ${hero.exp} / ${hero.expToNextLevel}</span>
                     </div>
+                    ${hasStatPoints ? `
+                    <div class="stat-points-alert ${canAllocate ? '' : 'locked'}">
+                        <strong>${statPointsText}</strong>
+                    </div>
+                    ` : ''}
                 </div>
                 <div class="stats-grid">
-                    <div class="stat-row"><span>HP</span> <span>${hero.hp} / ${hero.maxHp}</span></div>
-                    <div class="stat-row"><span>MP</span> <span>${hero.mp} / ${hero.maxMp}</span></div>
-                    <div class="stat-row"><span>STR</span> <span>${hero.strength}</span></div>
-                    <div class="stat-row"><span>SPD</span> <span>${hero.speed}</span></div>
+                    <div class="stat-row">
+                        <span>HP</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.hp} / ${hero.maxHp}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxHp">+</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>MP</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.mp} / ${hero.maxMp}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxMp">+</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>STR</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.strength}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseStrength">+</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>SPD</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.speed}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseSpeed">+</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>DEF</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.defense}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseDefense">+</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>MAG</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.magicPower}</span>
+                            ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMagicPower">+</button>` : ''}
+                        </div>
+                    </div>
                 </div>
                 <div class="hero-sections-grid">
                     <div class="hero-section">

@@ -70,10 +70,11 @@ export class VillageService {
     getMaxPopulation() {
         const level = this.state.infrastructure.housing || 0;
         if (level === 0) return 0;
-        if (level === 1) return 10;
-        if (level === 2) return 20;
+        if (level === 1) return 3;
+        if (level === 2) return 10;
+        if (level === 3) return 20;
         // Extendable for higher levels
-        return 20 + (level - 2) * 10;
+        return 20 + (level - 3) * 10;
     }
 
     getMaxStorage() {
@@ -108,6 +109,15 @@ export class VillageService {
             report.starvation = true;
             // Potential future: decrease health/efficiency
         }
+
+        // 1.5. Production Phase: Farm generates food
+        const farmLevel = this.state.infrastructure.farm || 0;
+        let foodProduced = 0;
+        if (farmLevel > 0) {
+            foodProduced = farmLevel * 4;
+            this.addItemToInventory('food_raw_grain', foodProduced);
+        }
+        report.produced = foodProduced;
 
         // 2. Construction Phase
         const completed = [];

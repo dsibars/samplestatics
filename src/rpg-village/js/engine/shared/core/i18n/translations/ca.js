@@ -192,5 +192,16 @@ export const ca = {
     ui_btn_close: "Tancar",
     village_infirmary: "Infermeria",
     error_hero_dead: "No es pot assignar un heroi amb 0 PV.",
-    ui_report_recovery: "Recuperació: {healed}"
+    ui_report_recovery: "Recuperació: {healed}",
+    ui_report_food_produced: "S'ha produït {amount} de menjar",
+    ui_stat_points: "Punts d'atribut: {amount}",
+    desc_housing: "Augmenta la capacitat màxima de població, permetent reclutar i allotjar més constructors.",
+    desc_warehouse: "Augmenta la capacitat màxima d'emmagatzematge global per a recursos, aliments i materials.",
+    desc_farm: "Produeix 4 cereals crus diaris per nivell per alimentar els vilatans i evitar la fam.",
+    desc_blacksmith: "Permet la fabricació d'equips de nivell 2 i millora l'eficiència de millora d'equips.",
+    desc_training_grounds: "Desbloqueja règims d'entrenament, proporcionant millores d'atributs permanents per als herois inactius.",
+    desc_explorer_guild: "Desbloqueja mapes d'expedició avançats i noves regions per explorar.",
+    desc_infirmary: "Cura els herois ferits diàriament (+10% de curació i +1 límit d'herois per nivell).",
+    ui_stat_points_busy: "Punts d'atribut: {amount} (No es poden assignar en expedició)",
+    error_hero_busy: "L'heroi està actualment en una expedició i no pot fer aquesta acció."
 };

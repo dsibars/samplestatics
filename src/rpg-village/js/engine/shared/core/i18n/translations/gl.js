@@ -192,5 +192,16 @@ export const gl = {
     ui_btn_close: "Pechar",
     village_infirmary: "Enfermaría",
     error_hero_dead: "Non se pode asignar un heroe con 0 PV.",
-    ui_report_recovery: "Recuperación: {healed}"
+    ui_report_recovery: "Recuperación: {healed}",
+    ui_report_food_produced: "Producido {amount} de comida",
+    ui_stat_points: "Puntos de atributo: {amount}",
+    desc_housing: "Aumenta a capacidade máxima de poboación, permitindo recrutar e aloxar máis construtores.",
+    desc_warehouse: "Aumenta a capacidade máxima de almacenamento global para recursos, alimentos e materiais.",
+    desc_farm: "Produce 4 cereais crus diarios por nivel para alimentar aos aldeáns e evitar a fame.",
+    desc_blacksmith: "Permite a fabricación de equipamento de nivel 2 e mellora a eficiencia de mellora de equipamento.",
+    desc_training_grounds: "Desbloquea réximes de adestramento, proporcionando aumentos de estatísticas permanentes para heroes inactivos.",
+    desc_explorer_guild: "Desbloquea mapas de expedición avanzados e novas rexións para explorar.",
+    desc_infirmary: "Cura os heroes feridos diariamente (+10% de curación e +1 límite de heroes por nivel).",
+    ui_stat_points_busy: "Puntos de atributo: {amount} (Non se poden asignar en expedición)",
+    error_hero_busy: "O heroe está actualmente nunha expedición e non pode realizar esta acción."
 };

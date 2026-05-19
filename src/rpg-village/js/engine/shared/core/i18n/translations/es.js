@@ -210,5 +210,16 @@ export const es = {
     ui_btn_close: "Cerrar",
     village_infirmary: "Enfermería",
     error_hero_dead: "No se puede asignar un héroe con 0 PV.",
-    ui_report_recovery: "Recuperación: {healed}"
+    ui_report_recovery: "Recuperación: {healed}",
+    ui_report_food_produced: "Producido {amount} de comida",
+    ui_stat_points: "Puntos de atributo: {amount}",
+    desc_housing: "Aumenta la capacidad máxima de población, lo que permite reclutar y alojar a más constructores.",
+    desc_warehouse: "Aumenta la capacidad máxima de almacenamiento global para recursos, alimentos y materiales.",
+    desc_farm: "Produce 4 cereales crudos diarios por nivel para alimentar a los aldeanos y evitar la inanición.",
+    desc_blacksmith: "Permite la fabricación de equipo de nivel 2 y mejora la eficiencia de mejora de equipo.",
+    desc_training_grounds: "Desbloquea regímenes de entrenamiento, proporcionando aumentos de estadísticas permanentes para héroes inactivos.",
+    desc_explorer_guild: "Desbloquea mapas de expedición avanzados y nuevas regiones para explorar.",
+    desc_infirmary: "Cura a los héroes heridos diariamente (+10% de curación y +1 límite de héroes por nivel).",
+    ui_stat_points_busy: "Puntos de atributo: {amount} (No se pueden asignar en expedición)",
+    error_hero_busy: "El héroe está actualmente en una expedición y no puede realizar esta acción."
 };

@@ -192,5 +192,16 @@ export const eu = {
     ui_btn_close: "Itxi",
     village_infirmary: "Erizaindegia",
     error_hero_dead: "Ezin da 0 BP dituen heroirik esleitu.",
-    ui_report_recovery: "Berreskuratzea: {healed}"
+    ui_report_recovery: "Berreskuratzea: {healed}",
+    ui_report_food_produced: "{amount} elikagai ekoitzi da!",
+    ui_stat_points: "Atributu puntuak: {amount}",
+    desc_housing: "Biztanleriaren gehieneko edukiera handitzen du, eraikitzaile gehiago kontratatu eta ostatatzeko.",
+    desc_warehouse: "Baliabide, janari eta materialen biltegiratze eremua handitzen du.",
+    desc_farm: "Egunero 4 ale gordin ekoizten ditu mailako, herritarrak elikatzeko eta gosea saihesteko.",
+    desc_blacksmith: "2. mailako ekipamenduak egitea ahalbidetzen du eta hobekuntzak eraginkorragoak egiten ditu.",
+    desc_training_grounds: "Entrenamendu erregimenak desblokeatzen ditu, alferrikako heroiei estatistika hobekuntza iraunkorrak emanez.",
+    desc_explorer_guild: "Espedizio mapa aurreratuak eta esploratzeko eskualde berriak desblokeatzen ditu.",
+    desc_infirmary: "Zauritutako heroiak osatzen ditu egunero (+%10 osatze eta +1 heroi muga mailako).",
+    ui_stat_points_busy: "Atributu puntuak: {amount} (Ezin dira espedizioan esleitu)",
+    error_hero_busy: "Heroia espedizio batean dago une honetan eta ezin du ekintza hau burutu."
 };

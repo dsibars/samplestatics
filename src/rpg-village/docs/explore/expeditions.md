@@ -46,6 +46,8 @@ Expedition progression is tied to the village's day cycle. Battles and explorati
 - **Assigning Heroes**: Heroes can be assigned to an available expedition node.
 - **Lock-in**: While an expedition is in its initial stage (Stage 0), you can assign or unassign heroes freely.
 - **Mid-Expedition Restrictions**: Once an expedition has progressed past the first stage, **no new heroes can be assigned** to it.
+- **Hero State Lock**: Deployed heroes are outside the village. While on an expedition, they cannot assign stat points, upgrade skills, or change/swap equipment.
+
 
 ### 2. Execution Phase (Day Advance)
 - **Automatic Resolution**: Combat and exploration do not happen instantly upon clicking. They are executed automatically when the game advances to the next day (`GameEngine.nextDay()`).
@@ -56,6 +58,9 @@ Expedition progression is tied to the village's day cycle. Battles and explorati
 An expedition is failed if all heroes are defeated during a daily combat resolution.
 - **Retreat (Unassign)**: Players can "Retire" by unassigning all heroes from an active expedition. If unassigned mid-expedition (Stage 1 or higher), the expedition is aborted and its progress resets to Stage 0. The players keep any rewards gained from previous full expeditions, but this specific instance resets.
 - **Defeat**: If defeated in battle, the expedition is immediately aborted and reset.
+- **Partial Experience on Defeat**: Even if defeated, heroes earn partial experience proportional to the damage dealt:
+  - `Exp Earned = Math.floor(Base Stage Exp * (Total Damage Done / Total Enemy Max HP) * 0.5)`
+  - This guarantees that near-wins provide up to 50% of the victory experience, keeping progression active while encouraging player retries.
 - **Retry**: Procedural nodes can be retried as long as they remain in the "Available" pool.
 
 ### 4. Discovery on Success

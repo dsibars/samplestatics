@@ -56,6 +56,16 @@ export class EngineAdapter {
                     this.forceUpdate();
                 });
             }
+
+            if (domain === 'heroes') {
+                view.on('increaseStat', (data) => {
+                    const result = this.engine.increaseHeroStat(data.heroId, data.statId);
+                    if (!result.success) {
+                        alert(this.engine.i18n.t(result.error));
+                    }
+                    this.forceUpdate();
+                });
+            }
         });
 
         // Handle UI actions (legacy)

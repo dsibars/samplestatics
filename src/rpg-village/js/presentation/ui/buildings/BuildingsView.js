@@ -133,7 +133,7 @@ export class BuildingsView extends BaseView {
 
                 <div class="upgrade-section">
                     <h3>Next Upgrade: Level ${nextLevel}</h3>
-                    <p class="description">Expanding this structure will increase the village's capacity and unlock new potential.</p>
+                    <p class="description">${this.t('desc_' + id)}</p>
                     
                     <div class="cost-grid">
                         <div class="cost-item ${!hasGold ? 'insufficient' : ''}">

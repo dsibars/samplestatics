@@ -5,11 +5,15 @@ This registry defines the costs, construction times, and bonuses for all village
 | Building ID | Level | Gold Cost | Materials Cost | Days to Build | Bonus |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Housing** | | | | | |
-| `housing` | 1 | 0 | - | 0 | Max Pop: 10 |
-| `housing` | 2 | 100 | 50 Wood | 2 | Max Pop: 20 |
+| `housing` | 1 | 0 | - | 0 | Max Pop: 3 |
+| `housing` | 2 | 100 | 50 Wood | 2 | Max Pop: 10 |
+| `housing` | 3 | 200 | 100 Wood, 50 Stone | 3 | Max Pop: 20 |
 | **Logistics** | | | | | |
 | `warehouse` | 1 | 0 | - | 0 | Max Storage: 200 |
 | `warehouse` | 2 | 200 | 100 Wood, 50 Stone | 3 | Max Storage: 500 |
+| **Production** | | | | | |
+| `farm` | 1 | 150 | 100 Wood | 3 | Daily Food: +4 `food_raw_grain` |
+| `farm` | 2 | 400 | 200 Wood, 100 Stone | 5 | Daily Food: +8 `food_raw_grain` |
 | **Exploration** | | | | | |
 | `explorer_guild`| 1 | 300 | 200 Wood, 100 Stone | 4 | Unlock Advanced Expeditions |
 | `explorer_guild`| 2 | 800 | 400 Wood, 200 Iron | 7 | Unlock Tier 3 Maps |

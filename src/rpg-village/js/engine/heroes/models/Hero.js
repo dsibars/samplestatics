@@ -8,7 +8,7 @@ export class Hero {
         this.origin = data.origin || 'origin_warrior';
         this.level = data.level || 1;
         this.exp = data.exp || 0;
-        this.statPoints = data.statPoints || 0;
+        this.statPoints = data.statPoints !== undefined ? data.statPoints : 5;
         this.skillPoints = data.skillPoints || 0;
 
         // Base stats
@@ -277,6 +277,10 @@ export class Hero {
             baseMagicPower: this.baseMagicPower,
             maxHp: this.maxHp,
             maxMp: this.maxMp,
+            strength: this.strength,
+            speed: this.speed,
+            defense: this.defense,
+            magicPower: this.magicPower,
             hp: this.hp,
             mp: this.mp,
             status: this.status,

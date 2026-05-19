@@ -9,12 +9,16 @@ When the player triggers a "Next Day" event, the following steps occur in order:
 1.  **Consumption Phase**: 
     - The village consumes **1 Food** per **Villager** (Total Population).
     - If food is insufficient, growth stops and health/efficiency may drop.
+1.5. **Production Phase**:
+    - The `farm` infrastructure produces food daily (+4 `food_raw_grain` per level) which is added to the inventory.
 2.  **Construction Phase**: 
     - All active projects in the `constructionQueue` have their `daysRemaining` decremented by 1.
     - If `daysRemaining` reaches 0, the building is completed and its bonuses become active.
     - The worker assigned to the project is returned to the `availableVillagers` pool.
 3.  **Growth Phase**:
     - If food is abundant and there is housing capacity, there is a chance for new villagers to join.
+3.5. **Recovery Phase**:
+    - Idle/exhausted heroes recover HP (base +20% HP, increased by the `infirmary` level).
 4.  **Calendar Update**:
     - The `day` counter is incremented.
 

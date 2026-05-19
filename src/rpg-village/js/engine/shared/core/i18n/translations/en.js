@@ -229,5 +229,16 @@ export const en = {
     ui_btn_close: "Close",
     village_infirmary: "Infirmary",
     error_hero_dead: "Cannot assign a hero with 0 HP.",
-    ui_report_recovery: "Recovery: {healed}"
+    ui_report_recovery: "Recovery: {healed}",
+    ui_report_food_produced: "Produced {amount} Food",
+    ui_stat_points: "Unassigned Stat Points: {amount}",
+    desc_housing: "Increases maximum population capacity, allowing you to recruit and house more builders.",
+    desc_warehouse: "Increases maximum global storage capacity for resources, food, and materials.",
+    desc_farm: "Produces 4 raw grain daily per level to feed your villagers and prevent starvation.",
+    desc_blacksmith: "Enables tier 2 equipment crafting and improves gear upgrade efficiency.",
+    desc_training_grounds: "Unlocks training regimes, providing permanent stat boost opportunities for idle heroes.",
+    desc_explorer_guild: "Unlocks advanced expedition maps and new regions to explore.",
+    desc_infirmary: "Heals injured heroes daily (+10% heal amount and +1 hero slot limit per level).",
+    ui_stat_points_busy: "Unassigned Stat Points: {amount} (Cannot assign on expedition)",
+    error_hero_busy: "Hero is currently on an expedition and cannot perform this action."
 };

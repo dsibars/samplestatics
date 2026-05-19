@@ -28,6 +28,7 @@ For details on how a new game begins, see the [Initialization Specification](ini
 - Initiate construction projects.
 - Advance day: 
   - Consumes food.
+  - **Production Phase**: Farms generate food based on their level (+4 `food_raw_grain` per level).
   - Progresses construction.
   - **Recovery Phase**: Heroes recover a base 20% of their maximum HP. The `infirmary` building increases this healing percentage and the number of heroes healed simultaneously.
 - **Over-capacity**: If `storage.current > storage.max`, you cannot gather new resources or buy items.

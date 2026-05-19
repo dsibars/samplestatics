@@ -255,15 +255,28 @@ export class ExpeditionService {
                 isVictory
             };
 
+            const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
+            const depletionProportion = totalEnemyHp > 0 ? totalDamageDone / totalEnemyHp : 0;
+
             heroes.forEach(h => {
                 let leveledUp = false;
                 let expEarned = 0;
 
-                if (isVictory && h.hp > 0) {
-                    const preLevel = h.level;
-                    h.addExperience(expPerHero);
-                    leveledUp = h.level > preLevel;
-                    expEarned = expPerHero;
+                if (isVictory) {
+                    if (h.hp > 0) {
+                        const preLevel = h.level;
+                        h.addExperience(expPerHero);
+                        leveledUp = h.level > preLevel;
+                        expEarned = expPerHero;
+                    }
+                } else {
+                    const partialExp = Math.floor(expPerHero * depletionProportion * 0.5);
+                    if (partialExp > 0) {
+                        const preLevel = h.level;
+                        h.addExperience(partialExp);
+                        leveledUp = h.level > preLevel;
+                        expEarned = partialExp;
+                    }
                 }
 
                 const hpLost = initialHp[h.id] - h.hp;

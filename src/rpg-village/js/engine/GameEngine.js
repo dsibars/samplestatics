@@ -9,6 +9,7 @@ import { VillageService } from './village/services/VillageService.js';
 import { ExpeditionService } from './explore/services/ExpeditionService.js';
 import { persistence } from './shared/core/Persistence.js';
 import { i18n } from './shared/core/i18n/I18nService.js';
+import { Result } from './shared/core/Result.js';
 
 export class GameEngine {
     constructor() {
@@ -52,8 +53,15 @@ export class GameEngine {
         if (currentHeroes.length === 0) {
             this.heroService.add({
                 name: "Arthur",
-                origin: "warrior",
-                level: 1
+                origin: "origin_warrior",
+                level: 1,
+                statPoints: 5,
+                baseMaxHp: 10,
+                baseMaxMp: 5,
+                baseStrength: 1,
+                baseSpeed: 1,
+                baseDefense: 1,
+                baseMagicPower: 1
             });
         }
     }
@@ -88,6 +96,14 @@ export class GameEngine {
 
     getHeroes() {
         return this.heroService.list();
+    }
+
+    increaseHeroStat(heroId, statId) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.increaseHeroStat(heroId, statId);
     }
 
     // --- Combat Facade ---
