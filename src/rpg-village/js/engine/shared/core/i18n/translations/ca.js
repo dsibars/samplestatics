@@ -290,5 +290,8 @@ export const ca = {
     prologue_title_3: "Capítol III: Un Refugi Trobat",
     prologue_lore_3: "Descendint dels penya-segats escarpats, vam descobrir una vall remota, oculta del món exterior per un dens mantell de boira. Aquí, la terra és fèrtil i l'aigua corre pura. En aquest santuari, construirem la nostra nova aldea i reconstruirem les nostres vides, pas a pas.",
     prologue_btn_back: "Enrere",
-    prologue_btn_next: "Següent"
+    prologue_btn_next: "Següent",
+    btn_auto_combat: "Auto-Combat",
+    btn_skip_combat: "Saltar Batalla",
+    ui_choose_target: "Triar Objectiu"
 };

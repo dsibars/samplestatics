@@ -4,10 +4,11 @@
 The Battle System is a shared, turn-based combat engine used whenever Heroes engage with Enemies (e.g., during adventures or village defense). It is agnostic of the UI and handles purely state mutations and math.
 
 ## Turn Phases
-Each turn consists of three distinct phases:
+Each turn consists of four distinct phases:
 1.  **Status Tick Phase**: At the start of an entity's turn, active status effects (Poison, Burn, etc.) are processed. If an entity dies during this phase, they lose their action.
-2.  **Action Phase**: The entity performs a Skill or uses a Consumable.
-3.  **Advance Phase**: The turn pointer moves to the next entity in the speed-sorted list.
+2.  **Action Phase**: The entity performs a Skill.
+3.  **Consumables**: A hero can use up to 1 consumable item per turn. Using a consumable does not consume/waste the Action Phase (i.e. the hero can still execute a Skill afterwards on that same turn).
+4.  **Advance Phase**: The turn pointer moves to the next entity in the speed-sorted list.
 
 ## Combat Calculations
 All core math is isolated in the `CombatCalculator`.

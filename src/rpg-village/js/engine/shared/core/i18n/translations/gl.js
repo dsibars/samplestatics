@@ -290,5 +290,8 @@ export const gl = {
     prologue_title_3: "Capítulo III: Un Refuxio Atopado",
     prologue_lore_3: "Descendendo dos cantís escarpados, descubrimos un val remoto, oculto do mundo exterior por un denso manto de néboa. Aquí, a terra é fértil e a auga corre pura. Neste santuario, construiremos a nosa nova aldea e reconstruiremos as nosas vidas, paso a paso.",
     prologue_btn_back: "Atrás",
-    prologue_btn_next: "Seguinte"
+    prologue_btn_next: "Seguinte",
+    btn_auto_combat: "Auto-Combate",
+    btn_skip_combat: "Saltar Batalla",
+    ui_choose_target: "Elixir Obxectivo"
 };

@@ -303,5 +303,8 @@ export const es = {
     desc_material_wood: "Un recurso básico de construcción. Obtenido en expediciones o producido por la Granja. Se usa para edificios.",
     desc_material_stone: "Un recurso de cantería resistente. Requerido para construcciones y fortificaciones avanzadas del pueblo.",
     desc_material_iron: "Mineral refinado. Utilizado para la fabricación de armamento avanzado y obras de forja.",
-    desc_food_raw_grain: "Trigo cosechado. Consumido diariamente por los aldeanos para evitar la inanición. ¡Mantén existencias!"
+    desc_food_raw_grain: "Trigo cosechado. Consumido diariamente por los aldeanos para evitar la inanición. ¡Mantén existencias!",
+    btn_auto_combat: "Auto-Combate",
+    btn_skip_combat: "Saltar Batalla",
+    ui_choose_target: "Elegir Objetivo"
 };

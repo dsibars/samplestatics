@@ -290,5 +290,8 @@ export const eu = {
     prologue_title_3: "III. Kapitulua: Aurkitutako Babeslekua",
     prologue_lore_3: "Labar zorrotzetatik behera jaitsiz, haran urrun bat aurkitu genuen, kanpoko mundutik laino lodi baten bidez ezkutatua. Hemen, lurra emankorra da eta ura garbia da. Santutegi honetan, gure herrixka berria eraikiko dugu eta gure bizitzak berreraikiko ditugu, pausoz pauso.",
     prologue_btn_back: "Atzera",
-    prologue_btn_next: "Hurrengoa"
+    prologue_btn_next: "Hurrengoa",
+    btn_auto_combat: "Auto-Borroka",
+    btn_skip_combat: "Borroka Saltatu",
+    ui_choose_target: "Helburua Hautatu"
 };

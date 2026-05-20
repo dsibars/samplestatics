@@ -12,15 +12,26 @@ export class EngineAdapter {
     }
 
     init() {
+        this.ui.engine = this.engine;
+        this.ui.adapter = this;
+        
         // Wire up view events
         this.ui.views.forEach((view, domain) => {
             if (domain === 'village') {
                 view.on('nextDay', () => {
                     const report = this.engine.nextDay();
-                    if (report && report.expedition && report.expedition.combatLog) {
-                        this.ui.playBattleLog(report.expedition.combatLog, () => {
+                    if (report && report.expedition) {
+                        if (report.expedition.status === 'battle_started') {
+                            this.ui.openCombatOverlay(report.expedition, () => {
+                                this.forceUpdate();
+                            });
+                        } else if (report.expedition.combatLog) {
+                            this.ui.playBattleLog(report.expedition.combatLog, () => {
+                                this.forceUpdate();
+                            });
+                        } else {
                             this.forceUpdate();
-                        });
+                        }
                     } else {
                         this.forceUpdate();
                     }
@@ -121,6 +132,30 @@ export class EngineAdapter {
             // Throttled update to prevent UI thrashing
             if (timestamp - this.lastUpdateTime >= this.UPDATE_INTERVAL) {
                 const newState = this.engine.update();
+                
+                // Combat Auto-Advance Tick
+                if (newState.activeBattle && !newState.activeBattle.isOver) {
+                    const battle = newState.activeBattle;
+                    const activeActor = battle.turnOrder[battle.currentTurnIndex];
+                    const isHeroTurn = activeActor && activeActor.type === 'Hero';
+                    
+                    if (!isHeroTurn || battle.autoBattle) {
+                        const now = Date.now();
+                        if (!this.lastCombatAdvanceTime) {
+                            this.lastCombatAdvanceTime = now;
+                        }
+                        
+                        if (now - this.lastCombatAdvanceTime >= 500) {
+                            this.engine.nextBattleTurn();
+                            this.lastCombatAdvanceTime = now;
+                        }
+                    } else {
+                        this.lastCombatAdvanceTime = null;
+                    }
+                } else {
+                    this.lastCombatAdvanceTime = null;
+                }
+
                 this.ui.update(newState);
                 this.lastUpdateTime = timestamp;
             }

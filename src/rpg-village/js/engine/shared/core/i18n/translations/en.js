@@ -322,5 +322,8 @@ export const en = {
     desc_material_wood: "A core building material. Gathered during expeditions or produced by the Farm. Used for constructions.",
     desc_material_stone: "A sturdy masonry resource. Required for higher tier village constructions and fortifications.",
     desc_material_iron: "A refined ore. Used for manufacturing advanced iron armaments and upgrade works.",
-    desc_food_raw_grain: "Harvested wheat. Consumed daily by villagers to prevent starvation. Keep stock high!"
+    desc_food_raw_grain: "Harvested wheat. Consumed daily by villagers to prevent starvation. Keep stock high!",
+    btn_auto_combat: "Auto-Combat",
+    btn_skip_combat: "Skip Battle",
+    ui_choose_target: "Choose Target"
 };

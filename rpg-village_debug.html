@@ -65,6 +65,7 @@ class UIController {
     this.isShopUnlocked = false;
     this.isForgeUnlocked = false;
     this.lastState = null;
+    this.isCombatOverlayOpen = false;
     this.views = /* @__PURE__ */ new Map();
     this.activeView = null;
     this.activeDomain = null;
@@ -221,6 +222,12 @@ class UIController {
       if (this.elements.woodCount && state.inventory) {
         this.elements.woodCount.textContent = ((_b = state.inventory.materials) == null ? void 0 : _b.material_wood) || 0;
       }
+    }
+    if (state.activeBattle && !this.isCombatOverlayOpen) {
+      this.openCombatOverlay(state.activeBattle);
+    }
+    if (this.isCombatOverlayOpen && this.renderCombatOverlay) {
+      this.renderCombatOverlay();
     }
     if (this.activeView) {
       this.activeView.update(state);
@@ -467,6 +474,496 @@ class UIController {
         });
       }
     }, 500);
+  }
+  /**
+   * Opens the interactive turn-based combat overlay.
+   */
+  openCombatOverlay(battleContext, onComplete) {
+    if (this.isCombatOverlayOpen) return;
+    this.isCombatOverlayOpen = true;
+    this.lastLogLength = 0;
+    const overlay = document.createElement("div");
+    overlay.className = "combat-overlay";
+    document.body.appendChild(overlay);
+    const render = () => {
+      const state = this.lastState;
+      if (!state || !state.activeBattle) {
+        overlay.remove();
+        this.isCombatOverlayOpen = false;
+        if (onComplete) onComplete();
+        return;
+      }
+      const battle = state.activeBattle;
+      const activeExp = state.activeExpedition;
+      const currentStageNum = activeExp ? activeExp.currentStage + 1 : 1;
+      const stageText = `${this.t("exp_stage")} ${currentStageNum}`;
+      const currentHash = JSON.stringify(battle) + (overlay.menuState || "main") + (overlay.selectedAction ? overlay.selectedAction.id : "");
+      if (overlay.lastRenderHash === currentHash) {
+        return;
+      }
+      overlay.lastRenderHash = currentHash;
+      animateLastEvents();
+      let headerHtml = `
+                <div class="combat-header">
+                    <div>
+                        <h2>${activeExp ? this.t(activeExp.id) !== activeExp.id ? this.t(activeExp.id) : activeExp.name : "Combat"}</h2>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px;">
+                            ${stageText}
+                        </div>
+                    </div>
+                    <div class="combat-header-controls">
+                        <button class="btn btn-sm ${battle.autoBattle ? "btn-primary" : "btn-secondary"}" id="btn-toggle-auto">
+                            ${this.t("btn_auto_combat")} ${battle.autoBattle ? "(ON)" : "(OFF)"}
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btn-skip-combat">
+                            ${this.t("btn_skip_combat")}
+                        </button>
+                    </div>
+                </div>
+            `;
+      let heroesHtml = `<div class="combat-column">
+                <div class="combat-column-title">Heroes</div>`;
+      battle.heroes.forEach((hero, index) => {
+        var _a;
+        const isCurrentTurn = ((_a = battle.turnOrder[battle.currentTurnIndex]) == null ? void 0 : _a.id) === hero.id;
+        const hpPercent = Math.max(0, Math.min(100, hero.hp / hero.maxHp * 100));
+        const mpPercent = Math.max(0, Math.min(100, hero.mp / hero.maxMp * 100));
+        const isDead = hero.hp <= 0;
+        const statusBadges = (hero.statuses || []).map((st) => {
+          const icon = st.type === "poison" ? "🤢" : st.type === "burn" ? "🔥" : st.type === "regen" ? "💚" : "⭐";
+          return `<span class="combat-status-badge" title="${st.type} (${st.duration} turns)">${icon}</span>`;
+        }).join("");
+        let avatarHtml = "⚔️";
+        if (isDead) {
+          avatarHtml = "💀";
+        } else {
+          let avatarSrc = "assets/heroes/arthur.png";
+          if (hero.avatar) {
+            avatarSrc = `assets/heroes/${hero.avatar}`;
+          } else {
+            const fallbackMap = {
+              origin_warrior: "arthur.png",
+              origin_guard: "valen.png",
+              origin_thief: "origin_thief.png",
+              origin_monk: "origin_monk.png",
+              origin_clown: "origin_clown.png",
+              origin_poet: "origin_poet.png"
+            };
+            const mapped = fallbackMap[hero.origin] || "arthur.png";
+            avatarSrc = `assets/heroes/${mapped}`;
+          }
+          avatarHtml = `<img src="${avatarSrc}" alt="${hero.name}" class="combat-avatar-img" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+        }
+        heroesHtml += `
+                    <div class="combat-card hero-card ${isCurrentTurn ? "active" : ""} ${isDead ? "dead" : ""}" data-hero-id="${hero.id}" data-hero-index="${index}">
+                        <div class="combat-card-avatar">${avatarHtml}</div>
+                        <div class="combat-card-info">
+                            <div class="combat-card-header">
+                                <span class="combat-card-name">${hero.name}</span>
+                                <span class="combat-card-level">Lv.${hero.level}</span>
+                            </div>
+                            <div class="combat-bar-container">
+                                <div class="combat-bar combat-bar-hp" style="width: ${hpPercent}%"></div>
+                            </div>
+                            <div class="combat-bar-text">
+                                <span>HP</span>
+                                <span>${hero.hp}/${hero.maxHp}</span>
+                            </div>
+                            <div class="combat-bar-container" style="height: 4px;">
+                                <div class="combat-bar combat-bar-mp" style="width: ${mpPercent}%"></div>
+                            </div>
+                            <div class="combat-bar-text" style="font-size: 0.7rem;">
+                                <span>MP</span>
+                                <span>${hero.mp}/${hero.maxMp}</span>
+                            </div>
+                            <div class="combat-card-statuses">${statusBadges}</div>
+                        </div>
+                        <div class="combat-effects-container" id="effects-hero-${hero.id}"></div>
+                    </div>
+                `;
+      });
+      heroesHtml += `</div>`;
+      let enemiesHtml = `<div class="combat-column">
+                <div class="combat-column-title">Enemies</div>`;
+      battle.enemies.forEach((enemy, index) => {
+        var _a;
+        const isCurrentTurn = ((_a = battle.turnOrder[battle.currentTurnIndex]) == null ? void 0 : _a.id) === enemy.id;
+        const hpPercent = Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100));
+        const isDead = enemy.hp <= 0;
+        const statusBadges = (enemy.statuses || []).map((st) => {
+          const icon = st.type === "poison" ? "🤢" : st.type === "burn" ? "🔥" : st.type === "regen" ? "💚" : "⭐";
+          return `<span class="combat-status-badge" title="${st.type} (${st.duration} turns)">${icon}</span>`;
+        }).join("");
+        const enemyName = this.t(enemy.name) || enemy.name;
+        enemiesHtml += `
+                    <div class="combat-card enemy-card ${isCurrentTurn ? "active" : ""} ${isDead ? "dead" : ""}" data-enemy-index="${index}">
+                        <div class="combat-card-avatar">${enemy.hp <= 0 ? "💀" : "👾"}</div>
+                        <div class="combat-card-info">
+                            <div class="combat-card-header">
+                                <span class="combat-card-name">${enemyName}</span>
+                                <span class="combat-card-level">Lv.${enemy.level || 1}</span>
+                            </div>
+                            <div class="combat-bar-container">
+                                <div class="combat-bar combat-bar-hp" style="width: ${hpPercent}%"></div>
+                            </div>
+                            <div class="combat-bar-text">
+                                <span>HP</span>
+                                <span>${enemy.hp}/${enemy.maxHp}</span>
+                            </div>
+                            <div class="combat-card-statuses">${statusBadges}</div>
+                        </div>
+                        <div class="combat-effects-container" id="effects-enemy-${index}"></div>
+                    </div>
+                `;
+      });
+      enemiesHtml += `</div>`;
+      const formatEventLog = (ev) => {
+        let text = "";
+        let color = "#aaa";
+        if (ev.type === "DAMAGE") {
+          const attackerName = ev.actorName;
+          const targetName = ev.targetName;
+          const isMiss = ev.isMiss ? this.t("log_miss").replace("{attacker}", attackerName).replace("{target}", targetName) : null;
+          const hitText = this.t("log_attack").replace("{attacker}", attackerName).replace("{target}", targetName).replace("{damage}", ev.amount);
+          text = isMiss || hitText;
+          if (ev.isCrit) text = `🔥 ${this.t("crit")} ${text}`;
+          color = ev.actorIsHero ? "#4caf50" : "#f44336";
+        } else if (ev.type === "HEAL") {
+          const attackerName = ev.actorName;
+          const targetName = ev.targetName;
+          text = this.t("log_heal").replace("{attacker}", attackerName).replace("{target}", targetName).replace("{amount}", ev.amount);
+          color = "#03a9f4";
+        } else if (ev.type === "STATUS_TICK") {
+          const targetName = ev.targetName;
+          if (ev.effectType === "poison") {
+            text = this.t("log_poison").replace("{target}", targetName).replace("{damage}", ev.damage);
+            color = "#9c27b0";
+          } else if (ev.effectType === "burn") {
+            text = this.t("log_burn").replace("{target}", targetName).replace("{damage}", ev.damage);
+            color = "#ff9800";
+          }
+        } else if (ev.type === "TRAIT_REGEN") {
+          const targetName = ev.targetName;
+          text = this.t("log_regen").replace("{target}", targetName).replace("{amount}", ev.amount);
+          color = "#8bc34a";
+        } else if (ev.type === "USE_CONSUMABLE") {
+          const attackerName = ev.actorName;
+          const itemName = this.t(ev.consumableId) || ev.consumableId;
+          const targetName = ev.targetName;
+          const statName = ev.healType === "HEAL_HP" ? "HP" : "MP";
+          text = (this.t("log_use_consumable") || "{attacker} used {item} on {target}, restoring {amount} {stat}.").replace("{attacker}", attackerName).replace("{item}", itemName).replace("{target}", targetName).replace("{amount}", ev.amount).replace("{stat}", statName);
+          color = "#00bcd4";
+        }
+        let hpSuffix = "";
+        if (ev.targetHp !== void 0 && ev.targetMaxHp !== void 0) {
+          if (ev.targetHp <= 0) {
+            hpSuffix = ` <span style="color: #ff3b30; font-size: 0.85em; font-weight: bold;">(DEAD 💀)</span>`;
+          } else {
+            hpSuffix = ` <span style="color: #8e8e93; font-size: 0.85em;">(HP: ${ev.targetHp}/${ev.targetMaxHp})</span>`;
+          }
+        }
+        return `<div style="color: ${color}; margin-bottom: 4px; line-height: 1.4;">${text}${hpSuffix}</div>`;
+      };
+      const logLines = battle.log.slice(-12).map(formatEventLog).join("");
+      const activeActor = battle.turnOrder[battle.currentTurnIndex];
+      const activeActorName = activeActor ? this.t(activeActor.name) || activeActor.name : "Unknown";
+      const currentTurnText = activeActor ? `${activeActorName}'s Turn` : "Thinking...";
+      let middleHtml = `
+                <div class="combat-log-column">
+                    <div class="combat-column-title">Battle Log</div>
+                    <div class="combat-log-console" id="combat-log-console">
+                        ${logLines}
+                    </div>
+                    <div class="combat-current-turn-banner">
+                        ${currentTurnText}
+                    </div>
+                    <div class="combat-control-panel" id="combat-control-panel">
+                        \x3C!-- Action UI goes here -->
+                    </div>
+                </div>
+            `;
+      overlay.innerHTML = headerHtml + `
+                <div class="combat-grid">
+                    ${heroesHtml}
+                    ${middleHtml}
+                    ${enemiesHtml}
+                </div>
+            `;
+      overlay.querySelector("#btn-toggle-auto").addEventListener("click", () => {
+        this.engine.battleService.autoBattle = !this.engine.battleService.autoBattle;
+        this.adapter.forceUpdate();
+      });
+      overlay.querySelector("#btn-skip-combat").addEventListener("click", () => {
+        this.engine.skipBattle();
+        this.adapter.forceUpdate();
+      });
+      const consoleEl = overlay.querySelector("#combat-log-console");
+      if (consoleEl) {
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      }
+      const controlPanel = overlay.querySelector("#combat-control-panel");
+      if (battle.isOver) {
+        battle.log.some((l) => l.type === "DAMAGE" && !l.actorIsHero && l.targetHp <= 0) || !battle.heroes.some((h) => h.hp > 0);
+        const resultColor = !battle.heroes.some((h) => h.hp > 0) ? "var(--danger)" : "var(--success)";
+        const resultText = !battle.heroes.some((h) => h.hp > 0) ? this.t("defeat") : this.t("victory");
+        controlPanel.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <h3 style="color: ${resultColor}; font-size: 1.5rem; margin-bottom: 10px;">${resultText}</h3>
+                    </div>
+                    <button class="btn btn-primary" id="btn-resolve-battle" style="width: 100%;">
+                        ${this.t("ui_btn_close")}
+                    </button>
+                `;
+        controlPanel.querySelector("#btn-resolve-battle").addEventListener("click", () => {
+          this.engine.resolveBattle();
+          overlay.style.opacity = "0";
+          overlay.style.transition = "opacity 0.3s ease";
+          setTimeout(() => {
+            overlay.remove();
+            this.isCombatOverlayOpen = false;
+            if (onComplete) onComplete();
+            this.adapter.forceUpdate();
+          }, 300);
+        });
+        return;
+      }
+      const isHeroTurn = activeActor && activeActor.type === "Hero";
+      if (!isHeroTurn || battle.autoBattle) {
+        controlPanel.innerHTML = `
+                    <div class="combat-control-message">
+                        ${battle.autoBattle ? "Running Auto-Combat..." : "Enemy is planning action..."}
+                    </div>
+                `;
+        return;
+      }
+      const currentHero = battle.heroes.find((h) => h.id === activeActor.id);
+      if (!currentHero) return;
+      const menuState = overlay.menuState || "main";
+      const selectedAction = overlay.selectedAction || null;
+      if (menuState === "main") {
+        controlPanel.innerHTML = `
+                    <div class="combat-control-buttons">
+                        <button class="btn btn-secondary" id="btn-action-attack" style="flex: 1 1 120px;">
+                            ⚔️ ${this.t("basic_attack")}
+                        </button>
+                        <button class="btn btn-secondary" id="btn-action-skills" style="flex: 1 1 120px;" ${!currentHero.skills || Object.keys(currentHero.skills).length === 0 ? "disabled" : ""}>
+                            ✨ ${this.t("ui_skills")}
+                        </button>
+                        <button class="btn btn-secondary" id="btn-action-items" style="flex: 1 1 120px;" ${battle.itemUsedThisTurn ? "disabled" : ""}>
+                            🎒 ${this.t("ui_consumables")} ${battle.itemUsedThisTurn ? "(1/Turn)" : ""}
+                        </button>
+                    </div>
+                `;
+        controlPanel.querySelector("#btn-action-attack").addEventListener("click", () => {
+          overlay.menuState = "targeting";
+          overlay.selectedAction = { type: "attack", id: "basic_attack", name: this.t("basic_attack") };
+          render();
+        });
+        const btnSkills = controlPanel.querySelector("#btn-action-skills");
+        if (btnSkills) {
+          btnSkills.addEventListener("click", () => {
+            overlay.menuState = "skills";
+            render();
+          });
+        }
+        const btnItems = controlPanel.querySelector("#btn-action-items");
+        if (btnItems) {
+          btnItems.addEventListener("click", () => {
+            overlay.menuState = "items";
+            render();
+          });
+        }
+      } else if (menuState === "skills") {
+        let skillsButtons = Object.keys(currentHero.skills || {}).map((skillId) => {
+          const skillName = this.t(skillId) || skillId;
+          const skillMeta = {
+            "double_attack": { mp: 3 },
+            "triple_attack": { mp: 6 },
+            "whirlwind": { mp: 4 },
+            "small_fire_ball": { mp: 3 },
+            "small_heal": { mp: 3 },
+            "haste": { mp: 4 }
+          }[skillId] || { mp: 0 };
+          const canAfford = currentHero.mp >= skillMeta.mp;
+          return `
+                        <button class="btn btn-secondary" data-skill-id="${skillId}" ${!canAfford ? "disabled" : ""} style="flex: 1 1 140px;">
+                            ${skillName} <span style="font-size: 0.8rem; opacity: 0.8;">(${skillMeta.mp} MP)</span>
+                        </button>
+                    `;
+        }).join("");
+        controlPanel.innerHTML = `
+                    <div class="combat-control-back">
+                        <button class="btn btn-secondary btn-sm" id="btn-skill-back">◀ ${this.t("btn_back")}</button>
+                    </div>
+                    <div class="combat-control-buttons">
+                        ${skillsButtons || '<div style="color: var(--text-muted);">No skills available.</div>'}
+                    </div>
+                `;
+        controlPanel.querySelector("#btn-skill-back").addEventListener("click", () => {
+          overlay.menuState = "main";
+          render();
+        });
+        controlPanel.querySelectorAll("[data-skill-id]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const skillId = btn.getAttribute("data-skill-id");
+            overlay.menuState = "targeting";
+            overlay.selectedAction = { type: "skill", id: skillId, name: this.t(skillId) };
+            render();
+          });
+        });
+      } else if (menuState === "items") {
+        const inventory = state.inventory || {};
+        const consumables = inventory.consumables || {};
+        let itemsButtons = Object.keys(consumables).filter((itemId) => consumables[itemId] > 0).map((itemId) => {
+          const itemName = this.t(itemId) || itemId;
+          const count = consumables[itemId];
+          return `
+                        <button class="btn btn-secondary" data-item-id="${itemId}" style="flex: 1 1 140px;">
+                            ${itemName} x${count}
+                        </button>
+                    `;
+        }).join("");
+        controlPanel.innerHTML = `
+                    <div class="combat-control-back">
+                        <button class="btn btn-secondary btn-sm" id="btn-item-back">◀ ${this.t("btn_back")}</button>
+                    </div>
+                    <div class="combat-control-buttons">
+                        ${itemsButtons || '<div style="color: var(--text-muted);">No consumables in inventory.</div>'}
+                    </div>
+                `;
+        controlPanel.querySelector("#btn-item-back").addEventListener("click", () => {
+          overlay.menuState = "main";
+          render();
+        });
+        controlPanel.querySelectorAll("[data-item-id]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const itemId = btn.getAttribute("data-item-id");
+            overlay.menuState = "targeting";
+            overlay.selectedAction = { type: "item", id: itemId, name: this.t(itemId) };
+            render();
+          });
+        });
+      } else if (menuState === "targeting") {
+        controlPanel.innerHTML = `
+                    <div class="combat-control-back">
+                        <button class="btn btn-secondary btn-sm" id="btn-target-back">◀ ${this.t("btn_back")}</button>
+                    </div>
+                    <div class="combat-control-message" style="color: var(--success); font-weight: 700;">
+                        ${this.t("ui_choose_target")} - ${selectedAction.name}
+                    </div>
+                `;
+        controlPanel.querySelector("#btn-target-back").addEventListener("click", () => {
+          if (selectedAction.type === "skill") {
+            overlay.menuState = "skills";
+          } else if (selectedAction.type === "item") {
+            overlay.menuState = "items";
+          } else {
+            overlay.menuState = "main";
+          }
+          render();
+        });
+        const isFriendlyTarget = selectedAction.id === "small_heal" || selectedAction.type === "item" && selectedAction.id.includes("potion");
+        if (isFriendlyTarget) {
+          overlay.querySelectorAll(".hero-card").forEach((card) => {
+            const idx = parseInt(card.getAttribute("data-hero-index"));
+            const targetHero = battle.heroes[idx];
+            if (targetHero && targetHero.hp > 0) {
+              card.classList.add("targetable");
+              card.addEventListener("click", () => executeTargetAction(idx, targetHero.id));
+            }
+          });
+        } else {
+          overlay.querySelectorAll(".enemy-card").forEach((card) => {
+            const idx = parseInt(card.getAttribute("data-enemy-index"));
+            const targetEnemy = battle.enemies[idx];
+            if (targetEnemy && targetEnemy.hp > 0) {
+              card.classList.add("targetable");
+              card.addEventListener("click", () => executeTargetAction(idx, targetEnemy.id));
+            }
+          });
+        }
+      }
+    };
+    const executeTargetAction = (targetIndex, targetId) => {
+      const overlay2 = document.querySelector(".combat-overlay");
+      if (!overlay2) return;
+      const selectedAction = overlay2.selectedAction;
+      let result;
+      if (selectedAction.type === "attack") {
+        result = this.engine.executeBattleAction("basic_attack", targetIndex);
+      } else if (selectedAction.type === "skill") {
+        result = this.engine.executeBattleAction(selectedAction.id, targetIndex);
+      } else if (selectedAction.type === "item") {
+        result = this.engine.useBattleConsumable(selectedAction.id, targetId);
+      }
+      if (result && !result.success) {
+        alert(this.t(result.error));
+        return;
+      }
+      overlay2.menuState = "main";
+      overlay2.selectedAction = null;
+      this.adapter.forceUpdate();
+    };
+    const animateLastEvents = () => {
+      const state = this.lastState;
+      if (!state || !state.activeBattle) return;
+      if (this.lastLogLength !== void 0 && state.activeBattle.log.length > this.lastLogLength) {
+        const newEvents = state.activeBattle.log.slice(this.lastLogLength);
+        newEvents.forEach((ev) => {
+          const targetName = ev.targetName;
+          if (!targetName) return;
+          if (ev.type === "DAMAGE") {
+            const text = ev.isMiss ? this.t("miss") : `-${ev.amount}`;
+            const type = ev.isMiss ? "miss" : "damage";
+            triggerVisualEffect(targetName, text, type);
+          } else if (ev.type === "HEAL") {
+            triggerVisualEffect(targetName, `+${ev.amount}`, "heal");
+          } else if (ev.type === "STATUS_TICK") {
+            triggerVisualEffect(targetName, `-${ev.damage}`, "damage");
+          } else if (ev.type === "TRAIT_REGEN") {
+            triggerVisualEffect(targetName, `+${ev.amount}`, "heal");
+          } else if (ev.type === "USE_CONSUMABLE") {
+            const label = ev.healType === "HEAL_HP" ? "HP" : "MP";
+            triggerVisualEffect(targetName, `+${ev.amount} ${label}`, "heal");
+          }
+        });
+      }
+      this.lastLogLength = state.activeBattle.log.length;
+    };
+    const triggerVisualEffect = (targetName, text, type) => {
+      const overlay2 = document.querySelector(".combat-overlay");
+      if (!overlay2) return;
+      const cards = overlay2.querySelectorAll(".combat-card");
+      let card = null;
+      cards.forEach((c) => {
+        const nameEl = c.querySelector(".combat-card-name");
+        if (nameEl && nameEl.textContent.trim() === targetName) {
+          card = c;
+        }
+      });
+      if (card) {
+        if (type === "damage") {
+          card.classList.add("hit-shake");
+          setTimeout(() => card.classList.remove("hit-shake"), 400);
+        }
+        const effectContainer = card.querySelector(".combat-effects-container");
+        if (effectContainer) {
+          const numEl = document.createElement("div");
+          numEl.className = "floating-num";
+          numEl.textContent = text;
+          let color = "#ff3b30";
+          if (type === "heal") color = "#34c759";
+          if (type === "miss") color = "#ffcc00";
+          numEl.style.color = color;
+          numEl.style.left = "50%";
+          numEl.style.top = "20%";
+          effectContainer.appendChild(numEl);
+          setTimeout(() => numEl.remove(), 1e3);
+        }
+      }
+    };
+    this.renderCombatOverlay = render;
+    render();
   }
 }
 class Result {
@@ -1375,7 +1872,7 @@ class BattleService {
     this._determineTurnOrder();
     this.partyTraits = this._calculatePartyTraits();
     return Result.ok({
-      turnOrder: this.turnOrder.map((e) => ({ id: e.id, name: e.name, type: e.constructor.name })),
+      turnOrder: this.turnOrder.map((e) => ({ id: e.id, name: e.name, type: e.origin !== void 0 || e.type === "Hero" ? "Hero" : "Enemy" })),
       partyTraits: this.partyTraits
     });
   }
@@ -1576,8 +2073,8 @@ class BattleService {
       actionEvents.push(event);
       this.log.push(event);
     });
-    const battleEnd = this._checkBattleEnd();
-    if (battleEnd.success && this.isOver) {
+    this._checkBattleEnd();
+    if (this.isOver) {
       return Result.ok({ statusEvents: statusResults, actionEvents, battleOver: true, winner: this.winner });
     }
     return this._advanceTurn({ statusEvents: statusResults, actionEvents });
@@ -2238,6 +2735,17 @@ class ExpeditionService {
     }
     const exp = this.getExpeditions().find((e) => e.id === this.state.activeExpedition.id);
     if (!exp) return Result.fail("error_expedition_not_found");
+    if (this.state.activeExpedition.status === "combat") {
+      const resumed = this.resumeActiveBattle();
+      if (resumed) {
+        return Result.ok({
+          status: "battle_started",
+          expId: exp.id,
+          expName: exp.name,
+          battleContext: this.state.activeExpedition.battleContext
+        });
+      }
+    }
     const stage = exp.stages[this.state.activeExpedition.currentStage];
     if (stage.type === "battle") {
       const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
@@ -2259,71 +2767,119 @@ class ExpeditionService {
       heroes.forEach((h) => initialHp[h.id] = h.hp);
       const totalEnemyHp = enemies.reduce((sum, e) => sum + e.maxHp, 0);
       const expPerHero = Math.floor(totalEnemyHp / heroes.length);
-      this.battleService.startBattle(heroes, enemies, true);
-      while (!this.battleService.isOver) {
-        this.battleService.nextTurn();
-      }
-      const isVictory = this.battleService.winner === "heroes";
       const stageNum = this.state.activeExpedition.currentStage + 1;
       const stageTotal = exp.stages.length;
-      const combatLog = {
-        heroes: heroes.map((h) => h.name),
-        enemies: enemies.map((e) => e.name),
-        events: [...this.battleService.log],
-        summary: [],
-        isVictory
+      this.battleService.startBattle(heroes, enemies, false);
+      this.state.activeExpedition.status = "combat";
+      this.state.activeExpedition.battleContext = {
+        enemies: enemies.map((e) => e.toJSON()),
+        initialHp,
+        expPerHero,
+        totalEnemyHp,
+        stageNum,
+        stageTotal,
+        expName: exp.name
       };
-      const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
-      const depletionProportion = totalEnemyHp > 0 ? totalDamageDone / totalEnemyHp : 0;
-      heroes.forEach((h) => {
-        let leveledUp = false;
-        let expEarned = 0;
-        if (isVictory) {
-          if (h.hp > 0) {
-            const preLevel = h.level;
-            h.addExperience(expPerHero);
-            leveledUp = h.level > preLevel;
-            expEarned = expPerHero;
-          }
-        } else {
-          const partialExp = Math.floor(expPerHero * depletionProportion * 0.5);
-          if (partialExp > 0) {
-            const preLevel = h.level;
-            h.addExperience(partialExp);
-            leveledUp = h.level > preLevel;
-            expEarned = partialExp;
-          }
-        }
-        const hpLost = initialHp[h.id] - h.hp;
-        combatLog.summary.push({
-          heroId: h.id,
-          heroName: h.name,
-          expName: exp.name,
-          stageNum,
-          stageTotal,
-          expEarned,
-          leveledUp,
-          hpLost
-        });
+      this.save();
+      return Result.ok({
+        status: "battle_started",
+        expId: exp.id,
+        expName: exp.name,
+        battleContext: this.state.activeExpedition.battleContext
       });
-      this.heroService.saveAll();
-      if (isVictory) {
-        this.state.activeExpedition.currentStage++;
-        if (this.state.activeExpedition.currentStage >= exp.stages.length) {
-          const result = this._finishExpedition(exp);
-          result.data.combatLog = combatLog;
-          return result;
-        } else {
-          this.save();
-          return Result.ok({ status: "progress", expId: exp.id, expName: exp.name, combatLog });
-        }
-      } else {
-        this.state.activeExpedition = null;
-        this.save();
-        return Result.ok({ status: "failed", expId: exp.id, expName: exp.name, combatLog });
-      }
     }
     return Result.fail("error_unknown_stage_type");
+  }
+  resumeActiveBattle() {
+    if (!this.state.activeExpedition || this.state.activeExpedition.status !== "combat") {
+      return null;
+    }
+    const ctx = this.state.activeExpedition.battleContext;
+    const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+    const enemies = ctx.enemies.map((eData) => new Enemy(eData));
+    this.battleService.startBattle(heroes, enemies, false);
+    return {
+      expId: this.state.activeExpedition.id,
+      expName: ctx.expName,
+      battleContext: ctx
+    };
+  }
+  resolveBattle() {
+    if (!this.state.activeExpedition || this.state.activeExpedition.status !== "combat") {
+      return Result.fail("error_no_active_battle");
+    }
+    if (!this.battleService.isOver) {
+      return Result.fail("error_battle_not_over");
+    }
+    const exp = this.getExpeditions().find((e) => e.id === this.state.activeExpedition.id);
+    if (!exp) return Result.fail("error_expedition_not_found");
+    const ctx = this.state.activeExpedition.battleContext;
+    const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+    const enemies = this.battleService.enemies;
+    const isVictory = this.battleService.winner === "heroes";
+    const stageNum = ctx.stageNum;
+    const stageTotal = ctx.stageTotal;
+    const combatLog = {
+      heroes: heroes.map((h) => h.name),
+      enemies: enemies.map((e) => e.name),
+      events: [...this.battleService.log],
+      summary: [],
+      isVictory
+    };
+    const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
+    const depletionProportion = ctx.totalEnemyHp > 0 ? totalDamageDone / ctx.totalEnemyHp : 0;
+    heroes.forEach((h) => {
+      let leveledUp = false;
+      let expEarned = 0;
+      if (isVictory) {
+        if (h.hp > 0) {
+          const preLevel = h.level;
+          h.addExperience(ctx.expPerHero);
+          leveledUp = h.level > preLevel;
+          expEarned = ctx.expPerHero;
+        }
+      } else {
+        const partialExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+        if (partialExp > 0) {
+          const preLevel = h.level;
+          h.addExperience(partialExp);
+          leveledUp = h.level > preLevel;
+          expEarned = partialExp;
+        }
+      }
+      const hpLost = (ctx.initialHp[h.id] !== void 0 ? ctx.initialHp[h.id] : h.maxHp) - h.hp;
+      combatLog.summary.push({
+        heroId: h.id,
+        heroName: h.name,
+        expName: exp.name,
+        stageNum,
+        stageTotal,
+        expEarned,
+        leveledUp,
+        hpLost
+      });
+    });
+    this.heroService.saveAll();
+    let finalResult;
+    if (isVictory) {
+      this.state.activeExpedition.currentStage++;
+      if (this.state.activeExpedition.currentStage >= exp.stages.length) {
+        const result = this._finishExpedition(exp);
+        result.data.combatLog = combatLog;
+        finalResult = result;
+      } else {
+        this.state.activeExpedition.status = "assigned";
+        delete this.state.activeExpedition.battleContext;
+        this.save();
+        finalResult = Result.ok({ status: "progress", expId: exp.id, expName: exp.name, combatLog });
+      }
+    } else {
+      this.state.activeExpedition = null;
+      this.save();
+      finalResult = Result.ok({ status: "failed", expId: exp.id, expName: exp.name, combatLog });
+    }
+    this.battleService.reset();
+    return finalResult;
   }
   _finishExpedition(exp) {
     this.state.completedIds.push(exp.id);
@@ -2669,7 +3225,10 @@ const en = {
   desc_material_wood: "A core building material. Gathered during expeditions or produced by the Farm. Used for constructions.",
   desc_material_stone: "A sturdy masonry resource. Required for higher tier village constructions and fortifications.",
   desc_material_iron: "A refined ore. Used for manufacturing advanced iron armaments and upgrade works.",
-  desc_food_raw_grain: "Harvested wheat. Consumed daily by villagers to prevent starvation. Keep stock high!"
+  desc_food_raw_grain: "Harvested wheat. Consumed daily by villagers to prevent starvation. Keep stock high!",
+  btn_auto_combat: "Auto-Combat",
+  btn_skip_combat: "Skip Battle",
+  ui_choose_target: "Choose Target"
 };
 const es = {
   // UI General
@@ -2955,7 +3514,10 @@ const es = {
   desc_material_wood: "Un recurso básico de construcción. Obtenido en expediciones o producido por la Granja. Se usa para edificios.",
   desc_material_stone: "Un recurso de cantería resistente. Requerido para construcciones y fortificaciones avanzadas del pueblo.",
   desc_material_iron: "Mineral refinado. Utilizado para la fabricación de armamento avanzado y obras de forja.",
-  desc_food_raw_grain: "Trigo cosechado. Consumido diariamente por los aldeanos para evitar la inanición. ¡Mantén existencias!"
+  desc_food_raw_grain: "Trigo cosechado. Consumido diariamente por los aldeanos para evitar la inanición. ¡Mantén existencias!",
+  btn_auto_combat: "Auto-Combate",
+  btn_skip_combat: "Saltar Batalla",
+  ui_choose_target: "Elegir Objetivo"
 };
 const ca = {
   // UI General
@@ -3229,7 +3791,10 @@ const ca = {
   prologue_title_3: "Capítol III: Un Refugi Trobat",
   prologue_lore_3: "Descendint dels penya-segats escarpats, vam descobrir una vall remota, oculta del món exterior per un dens mantell de boira. Aquí, la terra és fèrtil i l'aigua corre pura. En aquest santuari, construirem la nostra nova aldea i reconstruirem les nostres vides, pas a pas.",
   prologue_btn_back: "Enrere",
-  prologue_btn_next: "Següent"
+  prologue_btn_next: "Següent",
+  btn_auto_combat: "Auto-Combat",
+  btn_skip_combat: "Saltar Batalla",
+  ui_choose_target: "Triar Objectiu"
 };
 const eu = {
   // UI General
@@ -3503,7 +4068,10 @@ const eu = {
   prologue_title_3: "III. Kapitulua: Aurkitutako Babeslekua",
   prologue_lore_3: "Labar zorrotzetatik behera jaitsiz, haran urrun bat aurkitu genuen, kanpoko mundutik laino lodi baten bidez ezkutatua. Hemen, lurra emankorra da eta ura garbia da. Santutegi honetan, gure herrixka berria eraikiko dugu eta gure bizitzak berreraikiko ditugu, pausoz pauso.",
   prologue_btn_back: "Atzera",
-  prologue_btn_next: "Hurrengoa"
+  prologue_btn_next: "Hurrengoa",
+  btn_auto_combat: "Auto-Borroka",
+  btn_skip_combat: "Borroka Saltatu",
+  ui_choose_target: "Helburua Hautatu"
 };
 const gl = {
   // UI General
@@ -3777,7 +4345,10 @@ const gl = {
   prologue_title_3: "Capítulo III: Un Refuxio Atopado",
   prologue_lore_3: "Descendendo dos cantís escarpados, descubrimos un val remoto, oculto do mundo exterior por un denso manto de néboa. Aquí, a terra é fértil e a auga corre pura. Neste santuario, construiremos a nosa nova aldea e reconstruiremos as nosas vidas, paso a paso.",
   prologue_btn_back: "Atrás",
-  prologue_btn_next: "Seguinte"
+  prologue_btn_next: "Seguinte",
+  btn_auto_combat: "Auto-Combate",
+  btn_skip_combat: "Saltar Batalla",
+  ui_choose_target: "Elixir Obxectivo"
 };
 class I18nService {
   constructor() {
@@ -3825,6 +4396,10 @@ class GameEngine {
       this.initNewGame();
     }
     this.i18n.setLanguage(persistence.load("settings_lang", "en"));
+    if (this.expeditionService.state.activeExpedition && this.expeditionService.state.activeExpedition.status === "combat") {
+      console.log("Engine: Resuming active combat...");
+      this.expeditionService.resumeActiveBattle();
+    }
   }
   initNewGame() {
     console.log("Engine: Initializing New Game state...");
@@ -3856,13 +4431,24 @@ class GameEngine {
       }
       return dto;
     });
+    const activeBattle = this.battleService.heroes && this.battleService.heroes.length > 0 ? {
+      heroes: this.battleService.heroes.map((h) => h.toJSON()),
+      enemies: this.battleService.enemies.map((e) => e.toJSON()),
+      turnOrder: this.battleService.turnOrder.map((e) => ({ id: e.id, name: e.name, type: e.origin !== void 0 || e.type === "Hero" ? "Hero" : "Enemy" })),
+      currentTurnIndex: this.battleService.currentTurnIndex,
+      log: [...this.battleService.log],
+      isOver: this.battleService.isOver,
+      autoBattle: this.battleService.autoBattle,
+      itemUsedThisTurn: this.battleService.itemUsedThisTurn
+    } : null;
     return {
       village: this.villageService.getState(),
       inventory: this.inventoryService.getState(),
       heroes: heroesDto,
       expeditions: this.expeditionService.getExpeditions(),
       activeExpedition,
-      completedExpeditions: this.expeditionService.state.completedIds || []
+      completedExpeditions: this.expeditionService.state.completedIds || [],
+      activeBattle
     };
   }
   // --- Hero Facade ---
@@ -3987,6 +4573,31 @@ class GameEngine {
     const activeHeroes = this.heroService.list("active");
     return this.battleService.startBattle(activeHeroes, enemies);
   }
+  nextBattleTurn() {
+    return this.battleService.nextTurn();
+  }
+  executeBattleAction(skillId, targetIndex = null) {
+    const actor = this.battleService.turnOrder[this.battleService.currentTurnIndex];
+    if (!actor) return Result.fail("error_no_active_actor");
+    return this.battleService.executeAction(actor, skillId, targetIndex);
+  }
+  useBattleConsumable(consumableId, targetId = null) {
+    const actor = this.battleService.turnOrder[this.battleService.currentTurnIndex];
+    if (!actor) return Result.fail("error_no_active_actor");
+    return this.battleService.useConsumable(actor, consumableId, targetId);
+  }
+  skipBattle() {
+    if (!this.battleService.isOver) {
+      this.battleService.autoBattle = true;
+      while (!this.battleService.isOver) {
+        this.battleService.nextTurn();
+      }
+    }
+    return Result.ok({ skipped: true });
+  }
+  resolveBattle() {
+    return this.expeditionService.resolveBattle();
+  }
   setLanguage(lang) {
     if (this.i18n.setLanguage(lang)) {
       persistence.save("settings_lang", lang);
@@ -4045,14 +4656,24 @@ class EngineAdapter {
     this.UPDATE_INTERVAL = 100;
   }
   init() {
+    this.ui.engine = this.engine;
+    this.ui.adapter = this;
     this.ui.views.forEach((view, domain) => {
       if (domain === "village") {
         view.on("nextDay", () => {
           const report = this.engine.nextDay();
-          if (report && report.expedition && report.expedition.combatLog) {
-            this.ui.playBattleLog(report.expedition.combatLog, () => {
+          if (report && report.expedition) {
+            if (report.expedition.status === "battle_started") {
+              this.ui.openCombatOverlay(report.expedition, () => {
+                this.forceUpdate();
+              });
+            } else if (report.expedition.combatLog) {
+              this.ui.playBattleLog(report.expedition.combatLog, () => {
+                this.forceUpdate();
+              });
+            } else {
               this.forceUpdate();
-            });
+            }
           } else {
             this.forceUpdate();
           }
@@ -4141,6 +4762,25 @@ class EngineAdapter {
     const loop = (timestamp) => {
       if (timestamp - this.lastUpdateTime >= this.UPDATE_INTERVAL) {
         const newState = this.engine.update();
+        if (newState.activeBattle && !newState.activeBattle.isOver) {
+          const battle = newState.activeBattle;
+          const activeActor = battle.turnOrder[battle.currentTurnIndex];
+          const isHeroTurn = activeActor && activeActor.type === "Hero";
+          if (!isHeroTurn || battle.autoBattle) {
+            const now = Date.now();
+            if (!this.lastCombatAdvanceTime) {
+              this.lastCombatAdvanceTime = now;
+            }
+            if (now - this.lastCombatAdvanceTime >= 500) {
+              this.engine.nextBattleTurn();
+              this.lastCombatAdvanceTime = now;
+            }
+          } else {
+            this.lastCombatAdvanceTime = null;
+          }
+        } else {
+          this.lastCombatAdvanceTime = null;
+        }
         this.ui.update(newState);
         this.lastUpdateTime = timestamp;
       }
@@ -5457,7 +6097,7 @@ class ExploreView extends BaseView {
                 <header class="building-profile-header">
                     <div class="profile-title-group">
                         <span class="profile-badge">${exp.isStory ? this.t("ui_exp_story") : this.t("ui_exp_exploration")}</span>
-                        <h2>${this.t(exp.id) || exp.name}</h2>
+                        <h2>${this.t(exp.id) !== exp.id ? this.t(exp.id) : exp.name}</h2>
                     </div>
                 </header>
                 <div class="exp-stats">
@@ -6724,6 +7364,310 @@ body {
     background: var(--accent-color);
     opacity: 1;
     transform: scale(1.2);
+}
+
+/* --- Turn-Based Combat Styles --- */
+.combat-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(10, 11, 16, 0.98);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    overflow: hidden;
+}
+
+.combat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.combat-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.combat-header-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.combat-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr minmax(300px, 400px) 1fr;
+    gap: 20px;
+    max-width: 1300px;
+    width: 100%;
+    margin: 0 auto 20px auto;
+    min-height: 0; /* allows children to overflow scroll */
+}
+
+@media (max-width: 900px) {
+    .combat-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 200px auto;
+        overflow-y: auto;
+    }
+}
+
+.combat-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+    padding: 10px; /* Gives room for hover scale effect */
+    margin: -10px; /* Offset the padding to align with other grid items */
+}
+
+.combat-column-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+.combat-log-column {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    min-height: 0;
+}
+
+.combat-log-console {
+    flex: 1;
+    overflow-y: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-right: 5px;
+}
+
+.combat-current-turn-banner {
+    background: var(--bg-accent);
+    border: 1px solid var(--glass-border);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 15px;
+    animation: pulseBorder 2s infinite ease-in-out;
+}
+
+@keyframes pulseBorder {
+    0%, 100% { border-color: var(--glass-border); }
+    50% { border-color: var(--accent-color); }
+}
+
+.combat-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.combat-card.active {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px var(--accent-glow);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.combat-card.targetable {
+    border-color: var(--success);
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+.combat-card.targetable:hover {
+    transform: scale(1.03);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.combat-card.dead {
+    opacity: 0.4;
+    filter: grayscale(0.8);
+}
+
+.combat-card-avatar {
+    font-size: 2.2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+}
+
+.combat-card-info {
+    flex: 1;
+}
+
+.combat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.combat-card-name {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.combat-card-level {
+    font-size: 0.75rem;
+    background: var(--bg-accent);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+}
+
+.combat-bar-container {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.combat-bar {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.combat-bar-hp {
+    background: linear-gradient(90deg, var(--danger), #ff6b6b);
+}
+
+.combat-bar-mp {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.combat-bar-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1px;
+}
+
+.combat-card-statuses {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.combat-status-badge {
+    font-size: 0.8rem;
+    cursor: help;
+}
+
+.combat-card-dead-overlay {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-size: 1.4rem;
+}
+
+/* Control Panel */
+.combat-control-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.combat-control-message {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 1rem;
+}
+
+.combat-control-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.combat-control-back {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Floating Animations */
+.combat-effects-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.floating-num {
+    position: absolute;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 1.8rem;
+    text-shadow: 0 0 4px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9);
+    animation: floatUpAndFade 1s forwards cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    pointer-events: none;
+}
+
+@keyframes floatUpAndFade {
+    0% {
+        opacity: 0;
+        transform: translateY(10px) scale(0.5);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-10px) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+}
+
+/* Card hit shake */
+.hit-shake {
+    animation: cardShake 0.4s ease;
+}
+
+@keyframes cardShake {
+    0%, 100% { transform: translateX(0); }
+    15%, 45%, 75% { transform: translateX(-8px); }
+    30%, 60%, 90% { transform: translateX(8px); }
 }</style>
 </head>
 <body>

@@ -1,9 +1,17 @@
-.PHONY: build build-all dsi-build dsi-build-all test-all
+.PHONY: build build-all dsi-build dsi-build-all test-all test-rpg-village
 
 APP ?= daily-routine-exercise
 STAGING_DIR ?= dist_gh_pages
 
-test-all:
+test-rpg-village:
+	@echo "Running all RPG Village Engine tests..."
+	@echo "Step 1: Running Unit Tests..."
+	@node --test tests/rpg-village/unit/*.test.js
+	@echo "Step 2: Running Behaviour / Functional Tests..."
+	@node --test tests/rpg-village/behaviour/*.test.js
+	@echo "All RPG Village tests passed!"
+
+test-all: test-rpg-village
 	@echo "Running all RPG Idle Engine tests..."
 	@echo "Step 1: Running Unit Tests..."
 	@node --test src/rpg-idle/js/engine/tests/unit/*.test.js

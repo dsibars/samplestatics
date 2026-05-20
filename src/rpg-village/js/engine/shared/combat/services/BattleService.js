@@ -31,7 +31,7 @@ export class BattleService {
         this.partyTraits = this._calculatePartyTraits();
 
         return Result.ok({
-            turnOrder: this.turnOrder.map(e => ({ id: e.id, name: e.name, type: e.constructor.name })),
+            turnOrder: this.turnOrder.map(e => ({ id: e.id, name: e.name, type: (e.origin !== undefined || e.type === 'Hero') ? 'Hero' : 'Enemy' })),
             partyTraits: this.partyTraits
         });
     }
@@ -273,8 +273,8 @@ export class BattleService {
             this.log.push(event);
         });
 
-        const battleEnd = this._checkBattleEnd();
-        if (battleEnd.success && this.isOver) {
+        this._checkBattleEnd();
+        if (this.isOver) {
             return Result.ok({ statusEvents: statusResults, actionEvents, battleOver: true, winner: this.winner });
         }
 

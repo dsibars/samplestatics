@@ -42,6 +42,12 @@ export class GameEngine {
         }
 
         this.i18n.setLanguage(persistence.load('settings_lang', 'en'));
+
+        // Resume combat if active
+        if (this.expeditionService.state.activeExpedition && this.expeditionService.state.activeExpedition.status === 'combat') {
+            console.log('Engine: Resuming active combat...');
+            this.expeditionService.resumeActiveBattle();
+        }
     }
 
 
@@ -81,13 +87,25 @@ export class GameEngine {
             return dto;
         });
 
+        const activeBattle = (this.battleService.heroes && this.battleService.heroes.length > 0) ? {
+            heroes: this.battleService.heroes.map(h => h.toJSON()),
+            enemies: this.battleService.enemies.map(e => e.toJSON()),
+            turnOrder: this.battleService.turnOrder.map(e => ({ id: e.id, name: e.name, type: (e.origin !== undefined || e.type === 'Hero') ? 'Hero' : 'Enemy' })),
+            currentTurnIndex: this.battleService.currentTurnIndex,
+            log: [...this.battleService.log],
+            isOver: this.battleService.isOver,
+            autoBattle: this.battleService.autoBattle,
+            itemUsedThisTurn: this.battleService.itemUsedThisTurn
+        } : null;
+
         return {
             village: this.villageService.getState(),
             inventory: this.inventoryService.getState(),
             heroes: heroesDto,
             expeditions: this.expeditionService.getExpeditions(),
             activeExpedition: activeExpedition,
-            completedExpeditions: this.expeditionService.state.completedIds || []
+            completedExpeditions: this.expeditionService.state.completedIds || [],
+            activeBattle
         };
     }
 
@@ -244,6 +262,36 @@ export class GameEngine {
     startBattle(enemies) {
         const activeHeroes = this.heroService.list('active');
         return this.battleService.startBattle(activeHeroes, enemies);
+    }
+
+    nextBattleTurn() {
+        return this.battleService.nextTurn();
+    }
+
+    executeBattleAction(skillId, targetIndex = null) {
+        const actor = this.battleService.turnOrder[this.battleService.currentTurnIndex];
+        if (!actor) return Result.fail('error_no_active_actor');
+        return this.battleService.executeAction(actor, skillId, targetIndex);
+    }
+
+    useBattleConsumable(consumableId, targetId = null) {
+        const actor = this.battleService.turnOrder[this.battleService.currentTurnIndex];
+        if (!actor) return Result.fail('error_no_active_actor');
+        return this.battleService.useConsumable(actor, consumableId, targetId);
+    }
+
+    skipBattle() {
+        if (!this.battleService.isOver) {
+            this.battleService.autoBattle = true;
+            while (!this.battleService.isOver) {
+                this.battleService.nextTurn();
+            }
+        }
+        return Result.ok({ skipped: true });
+    }
+
+    resolveBattle() {
+        return this.expeditionService.resolveBattle();
     }
 
     setLanguage(lang) {

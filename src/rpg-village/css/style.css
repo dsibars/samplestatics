@@ -790,5 +790,309 @@ body {
     transform: scale(1.2);
 }
 
+/* --- Turn-Based Combat Styles --- */
+.combat-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(10, 11, 16, 0.98);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    overflow: hidden;
+}
+
+.combat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.combat-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.combat-header-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.combat-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr minmax(300px, 400px) 1fr;
+    gap: 20px;
+    max-width: 1300px;
+    width: 100%;
+    margin: 0 auto 20px auto;
+    min-height: 0; /* allows children to overflow scroll */
+}
+
+@media (max-width: 900px) {
+    .combat-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 200px auto;
+        overflow-y: auto;
+    }
+}
+
+.combat-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+    padding: 10px; /* Gives room for hover scale effect */
+    margin: -10px; /* Offset the padding to align with other grid items */
+}
+
+.combat-column-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+.combat-log-column {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    min-height: 0;
+}
+
+.combat-log-console {
+    flex: 1;
+    overflow-y: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-right: 5px;
+}
+
+.combat-current-turn-banner {
+    background: var(--bg-accent);
+    border: 1px solid var(--glass-border);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 15px;
+    animation: pulseBorder 2s infinite ease-in-out;
+}
+
+@keyframes pulseBorder {
+    0%, 100% { border-color: var(--glass-border); }
+    50% { border-color: var(--accent-color); }
+}
+
+.combat-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.combat-card.active {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px var(--accent-glow);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.combat-card.targetable {
+    border-color: var(--success);
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+.combat-card.targetable:hover {
+    transform: scale(1.03);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.combat-card.dead {
+    opacity: 0.4;
+    filter: grayscale(0.8);
+}
+
+.combat-card-avatar {
+    font-size: 2.2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+}
+
+.combat-card-info {
+    flex: 1;
+}
+
+.combat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.combat-card-name {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.combat-card-level {
+    font-size: 0.75rem;
+    background: var(--bg-accent);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+}
+
+.combat-bar-container {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.combat-bar {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.combat-bar-hp {
+    background: linear-gradient(90deg, var(--danger), #ff6b6b);
+}
+
+.combat-bar-mp {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.combat-bar-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1px;
+}
+
+.combat-card-statuses {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.combat-status-badge {
+    font-size: 0.8rem;
+    cursor: help;
+}
+
+.combat-card-dead-overlay {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-size: 1.4rem;
+}
+
+/* Control Panel */
+.combat-control-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.combat-control-message {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 1rem;
+}
+
+.combat-control-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.combat-control-back {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Floating Animations */
+.combat-effects-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.floating-num {
+    position: absolute;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 1.8rem;
+    text-shadow: 0 0 4px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9);
+    animation: floatUpAndFade 1s forwards cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    pointer-events: none;
+}
+
+@keyframes floatUpAndFade {
+    0% {
+        opacity: 0;
+        transform: translateY(10px) scale(0.5);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-10px) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+}
+
+/* Card hit shake */
+.hit-shake {
+    animation: cardShake 0.4s ease;
+}
+
+@keyframes cardShake {
+    0%, 100% { transform: translateX(0); }
+    15%, 45%, 75% { transform: translateX(-8px); }
+    30%, 60%, 90% { transform: translateX(8px); }
+}
+
 
 

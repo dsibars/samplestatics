@@ -255,6 +255,19 @@ export class ExpeditionService {
         const exp = this.getExpeditions().find(e => e.id === this.state.activeExpedition.id);
         if (!exp) return Result.fail('error_expedition_not_found');
 
+        // If we are already in combat status, resume/return the ongoing combat state
+        if (this.state.activeExpedition.status === 'combat') {
+            const resumed = this.resumeActiveBattle();
+            if (resumed) {
+                return Result.ok({
+                    status: 'battle_started',
+                    expId: exp.id,
+                    expName: exp.name,
+                    battleContext: this.state.activeExpedition.battleContext
+                });
+            }
+        }
+
         const stage = exp.stages[this.state.activeExpedition.currentStage];
 
         if (stage.type === 'battle') {
@@ -282,84 +295,142 @@ export class ExpeditionService {
             // Calculate potential EXP
             const totalEnemyHp = enemies.reduce((sum, e) => sum + e.maxHp, 0);
             const expPerHero = Math.floor(totalEnemyHp / heroes.length);
-
-            // Execute combat
-            this.battleService.startBattle(heroes, enemies, true);
-            while (!this.battleService.isOver) {
-                this.battleService.nextTurn();
-            }
-
-            const isVictory = this.battleService.winner === 'heroes';
             const stageNum = this.state.activeExpedition.currentStage + 1;
             const stageTotal = exp.stages.length;
 
-            const combatLog = {
-                heroes: heroes.map(h => h.name),
-                enemies: enemies.map(e => e.name),
-                events: [...this.battleService.log],
-                summary: [],
-                isVictory
+            // Start battle (manual by default)
+            this.battleService.startBattle(heroes, enemies, false);
+
+            this.state.activeExpedition.status = 'combat';
+            this.state.activeExpedition.battleContext = {
+                enemies: enemies.map(e => e.toJSON()),
+                initialHp,
+                expPerHero,
+                totalEnemyHp,
+                stageNum,
+                stageTotal,
+                expName: exp.name
             };
+            this.save();
 
-            const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
-            const depletionProportion = totalEnemyHp > 0 ? totalDamageDone / totalEnemyHp : 0;
-
-            heroes.forEach(h => {
-                let leveledUp = false;
-                let expEarned = 0;
-
-                if (isVictory) {
-                    if (h.hp > 0) {
-                        const preLevel = h.level;
-                        h.addExperience(expPerHero);
-                        leveledUp = h.level > preLevel;
-                        expEarned = expPerHero;
-                    }
-                } else {
-                    const partialExp = Math.floor(expPerHero * depletionProportion * 0.5);
-                    if (partialExp > 0) {
-                        const preLevel = h.level;
-                        h.addExperience(partialExp);
-                        leveledUp = h.level > preLevel;
-                        expEarned = partialExp;
-                    }
-                }
-
-                const hpLost = initialHp[h.id] - h.hp;
-
-                combatLog.summary.push({
-                    heroId: h.id,
-                    heroName: h.name,
-                    expName: exp.name,
-                    stageNum,
-                    stageTotal,
-                    expEarned,
-                    leveledUp,
-                    hpLost
-                });
+            return Result.ok({
+                status: 'battle_started',
+                expId: exp.id,
+                expName: exp.name,
+                battleContext: this.state.activeExpedition.battleContext
             });
-
-            this.heroService.saveAll();
-
-            if (isVictory) {
-                this.state.activeExpedition.currentStage++;
-                if (this.state.activeExpedition.currentStage >= exp.stages.length) {
-                    const result = this._finishExpedition(exp);
-                    result.data.combatLog = combatLog;
-                    return result;
-                } else {
-                    this.save();
-                    return Result.ok({ status: 'progress', expId: exp.id, expName: exp.name, combatLog });
-                }
-            } else {
-                // Defeat resets the expedition completely and loses progress
-                this.state.activeExpedition = null;
-                this.save();
-                return Result.ok({ status: 'failed', expId: exp.id, expName: exp.name, combatLog });
-            }
         }
 
         return Result.fail('error_unknown_stage_type');
+    }
+
+    resumeActiveBattle() {
+        if (!this.state.activeExpedition || this.state.activeExpedition.status !== 'combat') {
+            return null;
+        }
+        const ctx = this.state.activeExpedition.battleContext;
+        const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
+        const enemies = ctx.enemies.map(eData => new Enemy(eData));
+        
+        this.battleService.startBattle(heroes, enemies, false);
+        return {
+            expId: this.state.activeExpedition.id,
+            expName: ctx.expName,
+            battleContext: ctx
+        };
+    }
+
+    resolveBattle() {
+        if (!this.state.activeExpedition || this.state.activeExpedition.status !== 'combat') {
+            return Result.fail('error_no_active_battle');
+        }
+        if (!this.battleService.isOver) {
+            return Result.fail('error_battle_not_over');
+        }
+
+        const exp = this.getExpeditions().find(e => e.id === this.state.activeExpedition.id);
+        if (!exp) return Result.fail('error_expedition_not_found');
+
+        const ctx = this.state.activeExpedition.battleContext;
+        const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
+        const enemies = this.battleService.enemies; // final state of enemies
+        
+        const isVictory = this.battleService.winner === 'heroes';
+        const stageNum = ctx.stageNum;
+        const stageTotal = ctx.stageTotal;
+
+        const combatLog = {
+            heroes: heroes.map(h => h.name),
+            enemies: enemies.map(e => e.name),
+            events: [...this.battleService.log],
+            summary: [],
+            isVictory
+        };
+
+        const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
+        const depletionProportion = ctx.totalEnemyHp > 0 ? totalDamageDone / ctx.totalEnemyHp : 0;
+
+        heroes.forEach(h => {
+            let leveledUp = false;
+            let expEarned = 0;
+
+            if (isVictory) {
+                if (h.hp > 0) {
+                    const preLevel = h.level;
+                    h.addExperience(ctx.expPerHero);
+                    leveledUp = h.level > preLevel;
+                    expEarned = ctx.expPerHero;
+                }
+            } else {
+                const partialExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+                if (partialExp > 0) {
+                    const preLevel = h.level;
+                    h.addExperience(partialExp);
+                    leveledUp = h.level > preLevel;
+                    expEarned = partialExp;
+                }
+            }
+
+            const hpLost = (ctx.initialHp[h.id] !== undefined ? ctx.initialHp[h.id] : h.maxHp) - h.hp;
+
+            combatLog.summary.push({
+                heroId: h.id,
+                heroName: h.name,
+                expName: exp.name,
+                stageNum,
+                stageTotal,
+                expEarned,
+                leveledUp,
+                hpLost
+            });
+        });
+
+        this.heroService.saveAll();
+
+        let finalResult;
+        if (isVictory) {
+            this.state.activeExpedition.currentStage++;
+            if (this.state.activeExpedition.currentStage >= exp.stages.length) {
+                const result = this._finishExpedition(exp);
+                result.data.combatLog = combatLog;
+                finalResult = result;
+            } else {
+                this.state.activeExpedition.status = 'assigned'; // back to assigned/idle until next day advance
+                delete this.state.activeExpedition.battleContext;
+                this.save();
+                finalResult = Result.ok({ status: 'progress', expId: exp.id, expName: exp.name, combatLog });
+            }
+        } else {
+            // Defeat resets the expedition completely and loses progress
+            this.state.activeExpedition = null;
+            this.save();
+            finalResult = Result.ok({ status: 'failed', expId: exp.id, expName: exp.name, combatLog });
+        }
+
+        // Reset battle service state
+        this.battleService.reset();
+
+        return finalResult;
     }
 
     _finishExpedition(exp) {

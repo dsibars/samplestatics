@@ -193,7 +193,7 @@ export class ExploreView extends BaseView {
                 <header class="building-profile-header">
                     <div class="profile-title-group">
                         <span class="profile-badge">${exp.isStory ? this.t('ui_exp_story') : this.t('ui_exp_exploration')}</span>
-                        <h2>${this.t(exp.id) || exp.name}</h2>
+                        <h2>${this.t(exp.id) !== exp.id ? this.t(exp.id) : exp.name}</h2>
                     </div>
                 </header>
                 <div class="exp-stats">
