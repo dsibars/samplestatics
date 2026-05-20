@@ -79,7 +79,7 @@
 | # | Gap | Severity | Notes |
 |---|-----|----------|-------|
 | 1 | **No Skill UI** | High | Heroes earn `skillPoints` but there's no interface to learn/upgrade skills |
-| 2 | **No Sell Resources** | Medium | Spec exists in `docs/village/shop_forge.md`. Sell wood/stone/grain for gold. Not implemented. |
+| 2 | **No Sell Resources** | Medium | ✅ **Implemented 2026-05-20**. Sell wood/stone/grain for gold via Resources tab in Shop. |
 | 3 | **No Sell Items** | Medium | ✅ **Implemented 2026-05-20**. Sell tab in Shop. Equipment & consumables at ~30% buy price. |
 | 4 | **Workers / Labor** | Medium | `population.assigned` exists but no worker entities, specializations, or assignment UI |
 | 5 | **Inert Buildings** | Medium | `explorer_guild` and `training_grounds` provide no gameplay effect |
@@ -117,7 +117,7 @@
 
 | # | Feature | Spec File | Implementation Files | Effort |
 |---|---------|-----------|----------------------|--------|
-| 1.1 | **Sell Resources panel** in Shop | `docs/village/shop_forge.md` (exists) | `ShopView.js`, `EngineAdapter.js`, `VillageService.js` | Small |
+| 1.1 | **Sell Resources panel** in Shop | `docs/village/shop_forge.md` (exists) | `ShopView.js`, `EngineAdapter.js` | Small ✅ |
 | 1.2 | **Sell Items** (equipment & consumables at ~30% buy price) | `docs/village/shop_forge.md` | `ShopView.js`, `GameEngine.js`, `EngineAdapter.js`, `pages/shop.html` | Small ✅ |
 | 1.3 | **Add RPG Village to Hub** | N/A | `src/hub/index.html` | Tiny |
 | 1.4 | **Skill Learning UI** | *NEW: `docs/heroes/skill_ui.md`* | `HeroesView.js`, `HeroService.js`, `EngineAdapter.js` | Medium |

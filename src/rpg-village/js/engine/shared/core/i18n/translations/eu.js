@@ -238,6 +238,7 @@ export const eu = {
     ui_forge_locked_desc: "Eraiki Aroztegi bat herrian forja desblokeatzeko.",
     ui_buy: "Erosi",
     ui_sell: "Saldu",
+    ui_resources: "Baliabideak",
     ui_purchased: "Erosita! ✓",
     ui_sold: "Saldua! ✓",
     ui_sell_price: "Salmenta Prezioa",

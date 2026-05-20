@@ -286,6 +286,7 @@ export const en = {
     ui_forge_locked_desc: "Build a Blacksmith in the village to unlock the Forge.",
     ui_buy: "Buy",
     ui_sell: "Sell",
+    ui_resources: "Resources",
     ui_purchased: "Purchased! ✓",
     ui_sold: "Sold! ✓",
     ui_sell_price: "Sell Price",

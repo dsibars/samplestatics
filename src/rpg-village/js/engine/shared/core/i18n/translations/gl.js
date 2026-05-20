@@ -238,6 +238,7 @@ export const gl = {
     ui_forge_locked_desc: "Constrúe unha Ferraría na aldea para desbloquear a Forxa.",
     ui_buy: "Mercar",
     ui_sell: "Vender",
+    ui_resources: "Recursos",
     ui_purchased: "Mercado! ✓",
     ui_sold: "Vendido! ✓",
     ui_sell_price: "Prezo de Venda",

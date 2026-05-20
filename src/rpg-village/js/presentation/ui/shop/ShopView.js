@@ -8,6 +8,7 @@ export class ShopView extends BaseView {
         this.currentTab = 'buy';
         this.selectedItemKey = null;
         this.selectedSellItemKey = null;
+        this.selectedResourceId = null;
         this.justBoughtKey = null;
         this.justBoughtTime = 0;
         this.justBoughtTimeout = null;
@@ -62,6 +63,7 @@ export class ShopView extends BaseView {
             heroesCount: state.heroes?.length || 0,
             selectedItemKey: this.selectedItemKey,
             selectedSellItemKey: this.selectedSellItemKey,
+            selectedResourceId: this.selectedResourceId,
             justBoughtKey: this.justBoughtKey,
             justSoldKey: this.justSoldKey,
             currentTab: this.currentTab
@@ -88,8 +90,10 @@ export class ShopView extends BaseView {
 
         if (this.currentTab === 'buy') {
             this._renderBuyTab(state);
-        } else {
+        } else if (this.currentTab === 'sell') {
             this._renderSellTab(state);
+        } else {
+            this._renderResourcesTab(state);
         }
     }
 
@@ -335,6 +339,135 @@ export class ShopView extends BaseView {
         }
 
         this._renderSellDetails(selectedItem, state);
+    }
+
+    _renderResourcesTab(state) {
+        const t = this.t.bind(this);
+        const inventory = state.inventory || {};
+        const materials = inventory.materials || {};
+        const food = inventory.food || {};
+
+        const resources = [
+            { id: 'food_raw_grain', price: 1, icon: '🌾' },
+            { id: 'material_wood', price: 2, icon: '🪵' },
+            { id: 'material_stone', price: 3, icon: '🪨' }
+        ];
+
+        // Render catalog (resource list)
+        if (this.elements.catalog) {
+            this.elements.catalog.innerHTML = resources.map(res => {
+                const count = res.id.startsWith('food_') ? (food[res.id] || 0) : (materials[res.id] || 0);
+                const activeClass = this.selectedResourceId === res.id ? 'active' : '';
+                const name = t(res.id) || res.id;
+
+                return `
+                    <div class="shop-item-row ${activeClass}" data-resource="${res.id}">
+                        <span class="list-item-title">${res.icon} ${name}</span>
+                        <div class="shop-item-meta">
+                            <span class="shop-item-owned-badge">${count}</span>
+                            <span class="shop-item-cost-badge">💰 ${res.price}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Bind click
+            this.$$('.shop-item-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    this.selectedResourceId = row.getAttribute('data-resource');
+                    this.ui.forceUpdate();
+                });
+            });
+        }
+
+        // Render detail pane
+        const selectedRes = resources.find(r => r.id === this.selectedResourceId);
+        this._renderResourceDetails(selectedRes, state);
+    }
+
+    _renderResourceDetails(resource, state) {
+        if (!this.elements.detailContent) return;
+        const t = this.t.bind(this);
+
+        if (!resource) {
+            this.elements.detailContent.innerHTML = `
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🌾</div>
+                    <p>${t('ui_select_item') || 'Select a resource to view details.'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        const inventory = state.inventory || {};
+        const materials = inventory.materials || {};
+        const food = inventory.food || {};
+        const count = resource.id.startsWith('food_') ? (food[resource.id] || 0) : (materials[resource.id] || 0);
+        const name = t(resource.id) || resource.id;
+        const desc = t('desc_' + resource.id) || '';
+
+        const quantities = [1, 10, 100];
+        const buttonsHtml = quantities.map(qty => {
+            const canSell = count >= qty;
+            const total = qty * resource.price;
+            const disabled = canSell ? '' : 'disabled';
+            const btnClass = canSell ? 'btn-primary' : 'btn-secondary';
+            return `
+                <button class="btn ${btnClass} btn-sell-resource" 
+                        data-resource="${resource.id}" 
+                        data-qty="${qty}" 
+                        data-price="${resource.price}"
+                        ${disabled}>
+                    ${t('ui_sell')} ${qty} (${total}g)
+                </button>
+            `;
+        }).join('');
+
+        this.elements.detailContent.innerHTML = `
+            <div class="shop-detail-header">
+                <div class="shop-title-group">
+                    <h2>${resource.icon} ${name}</h2>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">${t('ui_resources') || 'Resource'}</span>
+                </div>
+            </div>
+            <div class="shop-detail-body">
+                <div class="shop-preview-card">
+                    <span class="shop-preview-icon">${resource.icon}</span>
+                </div>
+                <p class="shop-desc-text">${desc}</p>
+                <div class="shop-stats-card">
+                    <h4>${t('ui_inventory') || 'Inventory'}</h4>
+                    <div class="shop-stat-row">
+                        <span class="shop-stat-label">${t('ui_owned') || 'Owned'}</span>
+                        <span class="shop-stat-value">${count}</span>
+                    </div>
+                    <div class="shop-stat-row">
+                        <span class="shop-stat-label">${t('ui_sell_price') || 'Sell Price'}</span>
+                        <span class="shop-stat-value">💰 ${resource.price}</span>
+                    </div>
+                </div>
+                <div class="shop-action-footer" style="flex-wrap: wrap; gap: 8px;">
+                    ${buttonsHtml}
+                </div>
+            </div>
+        `;
+
+        this._bindResourceSellButtons();
+    }
+
+    _bindResourceSellButtons() {
+        this.$$('.btn-sell-resource').forEach(btn => {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+
+            newBtn.addEventListener('click', () => {
+                const resourceId = newBtn.getAttribute('data-resource');
+                const qty = parseInt(newBtn.getAttribute('data-qty'));
+                const price = parseInt(newBtn.getAttribute('data-price'));
+
+                this.emit('sellResource', { resourceId, quantity: qty, pricePerUnit: price });
+            });
+        });
     }
 
     _calculateEquipmentSellPrice(eq) {

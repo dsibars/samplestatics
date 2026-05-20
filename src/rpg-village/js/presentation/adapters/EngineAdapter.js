@@ -113,6 +113,15 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
+                view.on('sellResource', (data) => {
+                    const result = this.engine.sellResource(data.resourceId, data.quantity);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    } else {
+                        this.ui.showToast(`+${result.data.goldEarned}g (${result.data.sold} ${this.engine.i18n.t(data.resourceId) || data.resourceId})`);
+                    }
+                    this.forceUpdate();
+                });
             }
 
             if (domain === 'forge') {

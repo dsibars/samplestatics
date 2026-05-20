@@ -267,6 +267,7 @@ export const es = {
     ui_forge_locked_desc: "Construye una Herrería en la aldea para desbloquear la Forja.",
     ui_buy: "Comprar",
     ui_sell: "Vender",
+    ui_resources: "Recursos",
     ui_purchased: "¡Comprado! ✓",
     ui_sold: "¡Vendido! ✓",
     ui_sell_price: "Precio de Venta",
