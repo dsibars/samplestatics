@@ -28,8 +28,8 @@ I18N en es ca eu gl
 
 [SPRINT_STATUS]
 A done balance enemy_rebalance rescued_catch_up defeat_min_exp
-B next enemy_scaling unlock_tiny_cave unlock_calmed_beach explorer_guild_fx training_grounds_fx
-C pending loot_drops affix_roll shop_tier_3_5
+B done enemy_scaling unlock_tiny_cave unlock_calmed_beach explorer_guild_fx training_grounds_fx
+C done loot_drops affix_roll shop_tier_3_5
 D pending builder_assignment concurrent_expeditions
 E pending skill_ui combat_ui_extract
 
@@ -49,9 +49,12 @@ training_grounds idle_heroes_plus_5pct_exp_per_day_per_level dead_heroes_exclude
 
 [SPRINT_C_PLAN]
 loot_drop_rate 0_40 equipment_on_expedition_completion
-tier_by_region greenfields_wooden cave_iron beach_steel
-affix_roll 0_10_one_affix 0_02_two_affixes
-shop_tiers steel gold mythril already_in_MATERIAL_TIERS
+loot_material region_baseLevel_maps_to_wooden_iron_steel_gold_mythril
+loot_type 0_50_weapon 0_50_armor
+affix_roll 0_10_one 0_02_two 0_88_none
+affix_pool vampire sage titan assassin phoenix
+shop_tiers steel gold mythril added_to_ShopCatalog_js
+shop_gating BS0_T1 BS1_T2 BS3_T3 BS5_T4 BS7_T5
 
 [SPRINT_D_PLAN]
 builders assign_villagers_as_builders consumes_1_food_per_day
@@ -65,7 +68,7 @@ mp_costs_bug UIController_hardcodes_3_4_6 instead_of_SKILLS_DATA
 
 [GAPS]
 SEV_HIGH skill_ui_no_interface
-SEV_MEDIUM inert_buildings_explorer_guild training_grounds no_affix_generation only_1_region_active enemy_level_scaling_not_implemented no_loot_drops single_expedition_only
+SEV_MEDIUM inert_buildings_explorer_guild training_grounds only_1_region_active single_expedition_only
 SEV_LOW combat_ui_monolith i18n_gaps test_coverage
 
 [POWER_CURVE]

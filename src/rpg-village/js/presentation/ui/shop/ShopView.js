@@ -99,7 +99,10 @@ export class ShopView extends BaseView {
 
     _renderBuyTab(state) {
         const blacksmithLevel = state.village?.infrastructure?.blacksmith || 0;
-        const maxTier = blacksmithLevel >= 1 ? 2 : 1;
+        const maxTier = blacksmithLevel >= 7 ? 5 :
+                        blacksmithLevel >= 5 ? 4 :
+                        blacksmithLevel >= 3 ? 3 :
+                        blacksmithLevel >= 1 ? 2 : 1;
         const playerGold = state.village?.gold || 0;
         const t = this.t.bind(this);
 

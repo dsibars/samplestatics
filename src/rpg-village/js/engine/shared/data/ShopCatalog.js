@@ -20,7 +20,22 @@ export const WEAPONS_CATALOG = [
     { type: 'weapon', material: 'iron', family: 'dagger', cost: 150, tier: 2 },
     { type: 'weapon', material: 'iron', family: 'broadsword', cost: 240, tier: 2 },
     { type: 'weapon', material: 'iron', family: 'battle_axe', cost: 360, tier: 2 },
-    { type: 'weapon', material: 'iron', family: 'wand', cost: 300, tier: 2 }
+    { type: 'weapon', material: 'iron', family: 'wand', cost: 300, tier: 2 },
+    // Tier 3 (Steel)
+    { type: 'weapon', material: 'steel', family: 'dagger', cost: 450, tier: 3 },
+    { type: 'weapon', material: 'steel', family: 'broadsword', cost: 720, tier: 3 },
+    { type: 'weapon', material: 'steel', family: 'battle_axe', cost: 1080, tier: 3 },
+    { type: 'weapon', material: 'steel', family: 'wand', cost: 900, tier: 3 },
+    // Tier 4 (Gold)
+    { type: 'weapon', material: 'gold', family: 'dagger', cost: 1350, tier: 4 },
+    { type: 'weapon', material: 'gold', family: 'broadsword', cost: 2160, tier: 4 },
+    { type: 'weapon', material: 'gold', family: 'battle_axe', cost: 3240, tier: 4 },
+    { type: 'weapon', material: 'gold', family: 'wand', cost: 2700, tier: 4 },
+    // Tier 5 (Mythril)
+    { type: 'weapon', material: 'mythril', family: 'dagger', cost: 4050, tier: 5 },
+    { type: 'weapon', material: 'mythril', family: 'broadsword', cost: 6480, tier: 5 },
+    { type: 'weapon', material: 'mythril', family: 'battle_axe', cost: 9720, tier: 5 },
+    { type: 'weapon', material: 'mythril', family: 'wand', cost: 8100, tier: 5 }
 ];
 
 export const ARMOR_CATALOG = [
@@ -49,7 +64,46 @@ export const ARMOR_CATALOG = [
     { type: 'armor', material: 'iron', archetype: 'robes', slot: 'head', cost: 130, tier: 2 },
     { type: 'armor', material: 'iron', archetype: 'robes', slot: 'body', cost: 260, tier: 2 },
     { type: 'armor', material: 'iron', archetype: 'robes', slot: 'legs', cost: 175, tier: 2 },
-    { type: 'armor', material: 'iron', archetype: 'robes', slot: 'rightHand', cost: 120, tier: 2 }
+    { type: 'armor', material: 'iron', archetype: 'robes', slot: 'rightHand', cost: 120, tier: 2 },
+    // Tier 3 (Steel)
+    { type: 'armor', material: 'steel', archetype: 'plate', slot: 'head', cost: 450, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'plate', slot: 'body', cost: 900, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'plate', slot: 'legs', cost: 600, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'plate', slot: 'rightHand', cost: 540, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'leather', slot: 'head', cost: 360, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'leather', slot: 'body', cost: 720, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'leather', slot: 'legs', cost: 480, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'leather', slot: 'rightHand', cost: 405, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'robes', slot: 'head', cost: 390, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'robes', slot: 'body', cost: 780, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'robes', slot: 'legs', cost: 525, tier: 3 },
+    { type: 'armor', material: 'steel', archetype: 'robes', slot: 'rightHand', cost: 360, tier: 3 },
+    // Tier 4 (Gold)
+    { type: 'armor', material: 'gold', archetype: 'plate', slot: 'head', cost: 1350, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'plate', slot: 'body', cost: 2700, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'plate', slot: 'legs', cost: 1800, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'plate', slot: 'rightHand', cost: 1620, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'leather', slot: 'head', cost: 1080, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'leather', slot: 'body', cost: 2160, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'leather', slot: 'legs', cost: 1440, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'leather', slot: 'rightHand', cost: 1215, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'robes', slot: 'head', cost: 1170, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'robes', slot: 'body', cost: 2340, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'robes', slot: 'legs', cost: 1575, tier: 4 },
+    { type: 'armor', material: 'gold', archetype: 'robes', slot: 'rightHand', cost: 1080, tier: 4 },
+    // Tier 5 (Mythril)
+    { type: 'armor', material: 'mythril', archetype: 'plate', slot: 'head', cost: 4050, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'plate', slot: 'body', cost: 8100, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'plate', slot: 'legs', cost: 5400, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'plate', slot: 'rightHand', cost: 4860, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'leather', slot: 'head', cost: 3240, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'leather', slot: 'body', cost: 6480, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'leather', slot: 'legs', cost: 4320, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'leather', slot: 'rightHand', cost: 3645, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'robes', slot: 'head', cost: 3510, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'robes', slot: 'body', cost: 7020, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'robes', slot: 'legs', cost: 4725, tier: 5 },
+    { type: 'armor', material: 'mythril', archetype: 'robes', slot: 'rightHand', cost: 3240, tier: 5 }
 ];
 
 /**

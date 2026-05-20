@@ -543,6 +543,12 @@ export class ExpeditionService {
                 this.villageService.addItemToInventory(id, qty);
             });
         }
+
+        // Loot drop
+        const loot = this._generateLootDrop(exp.regionId);
+        if (loot) {
+            this.inventoryService.addEquipment(loot);
+        }
         if (exp.reward.special) {
             const s = exp.reward.special;
             if (s.type === 'hero') {
@@ -611,6 +617,46 @@ export class ExpeditionService {
             availableNodes: [this._createProceduralNode(regionId, rData, 0)]
         };
         this.save();
+    }
+
+    _generateLootDrop(regionId) {
+        // 40% chance for equipment drop
+        if (Math.random() >= 0.40) return null;
+
+        const rData = this._getRegionData(regionId);
+        const materialTiers = ['wooden', 'iron', 'steel', 'gold', 'mythril'];
+        const material = materialTiers[Math.min(rData.baseLevel || 1, materialTiers.length) - 1];
+
+        const isWeapon = Math.random() < 0.5;
+        let item = {
+            type: isWeapon ? 'weapon' : 'armor',
+            material: material,
+            level: 0,
+            affixes: []
+        };
+
+        if (isWeapon) {
+            const families = ['dagger', 'broadsword', 'battle_axe', 'wand'];
+            item.family = families[Math.floor(Math.random() * families.length)];
+        } else {
+            const archetypes = ['plate', 'leather', 'robes'];
+            const slots = ['head', 'body', 'legs', 'rightHand'];
+            item.archetype = archetypes[Math.floor(Math.random() * archetypes.length)];
+            item.slot = slots[Math.floor(Math.random() * slots.length)];
+        }
+
+        // Affix roll
+        const affixPool = ['vampire', 'sage', 'titan', 'assassin', 'phoenix'];
+        const roll = Math.random();
+        const numAffixes = roll < 0.02 ? 2 : (roll < 0.12 ? 1 : 0);
+        for (let i = 0; i < numAffixes; i++) {
+            const affix = affixPool[Math.floor(Math.random() * affixPool.length)];
+            if (!item.affixes.includes(affix)) {
+                item.affixes.push(affix);
+            }
+        }
+
+        return item;
     }
 
     _createEnemy(templateId, isBoss, level = 1) {
