@@ -92,6 +92,27 @@ body {
     gap: var(--spacing-sm);
 }
 
+.global-day-cycle {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.global-day-cycle .day-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.global-day-cycle .day-value {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--accent-color);
+}
+@media (max-width: 600px) {
+    .global-day-cycle .hide-mobile {
+        display: none;
+    }
+}
+
 .stat-item {
     background: var(--bg-accent);
     padding: 6px 14px;

@@ -58,6 +58,7 @@ class UIController {
       goldCount: document.getElementById("gold-count"),
       villagerCount: document.getElementById("villager-count"),
       woodCount: document.getElementById("wood-count"),
+      globalDay: document.getElementById("global-day"),
       navItems: document.querySelectorAll(".nav-item"),
       shopNav: document.querySelector('.nav-item[data-view="shop"]'),
       forgeNav: document.querySelector('.nav-item[data-view="forge"]')
@@ -215,6 +216,7 @@ class UIController {
     this.lastState = state;
     this.updateNavLocks(state);
     if (state.village) {
+      if (this.elements.globalDay) this.elements.globalDay.textContent = state.village.day || 1;
       if (this.elements.goldCount) this.elements.goldCount.textContent = Math.floor(state.village.gold || 0);
       if (this.elements.villagerCount) {
         this.elements.villagerCount.textContent = ((_a = state.village.population) == null ? void 0 : _a.total) || 0;
@@ -703,12 +705,50 @@ class UIController {
       }
       const controlPanel = overlay.querySelector("#combat-control-panel");
       if (battle.isOver) {
-        battle.log.some((l) => l.type === "DAMAGE" && !l.actorIsHero && l.targetHp <= 0) || !battle.heroes.some((h) => h.hp > 0);
-        const resultColor = !battle.heroes.some((h) => h.hp > 0) ? "var(--danger)" : "var(--success)";
-        const resultText = !battle.heroes.some((h) => h.hp > 0) ? this.t("defeat") : this.t("victory");
+        const preview = this.engine.getBattleResolutionPreview();
+        const resultColor = preview && preview.isVictory ? "var(--success)" : "var(--danger)";
+        const resultText = preview && preview.isVictory ? this.t("victory") : this.t("defeat");
+        let summaryHtml = "";
+        if (preview && preview.summary) {
+          summaryHtml = preview.summary.map((s) => {
+            let text = `<strong>${s.heroName}</strong>: `;
+            if (s.hpLost > 0) text += `<span style="color: var(--danger); font-size: 0.9em;">-${s.hpLost} HP</span> | `;
+            else if (s.hpLost < 0) text += `<span style="color: var(--success); font-size: 0.9em;">+${-s.hpLost} HP</span> | `;
+            text += `<span style="color: #03a9f4; font-size: 0.9em;">+${s.expEarned} EXP</span>`;
+            if (s.leveledUp) text += ` <span style="color: #ffeb3b; font-weight: bold; font-size: 0.9em;">(LEVEL UP! 🎉)</span>`;
+            return `<div style="margin-bottom: 5px;">${text}</div>`;
+          }).join("");
+        }
+        let rewardsHtml = "";
+        if (preview && preview.isLastStage && preview.rewards) {
+          const rewards = [];
+          if (preview.rewards.gold) {
+            rewards.push(`💰 ${preview.rewards.gold} Gold`);
+          }
+          if (preview.rewards.items) {
+            for (const [itemId, qty] of Object.entries(preview.rewards.items)) {
+              const itemName = this.t(itemId) || itemId;
+              rewards.push(`📦 ${qty}x ${itemName}`);
+            }
+          }
+          if (rewards.length > 0) {
+            rewardsHtml = `
+                            <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 10px;">
+                                <h4 style="color: #ffeb3b; margin-top: 0; margin-bottom: 5px;">🏆 Expedition Rewards:</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; font-size: 0.95rem;">
+                                    ${rewards.map((r) => `<span class="badge badge-accent" style="background: rgba(255, 235, 59, 0.1); border: 1px solid rgba(255, 235, 59, 0.3); padding: 4px 8px; border-radius: 4px;">${r}</span>`).join("")}
+                                </div>
+                            </div>
+                        `;
+          }
+        }
         controlPanel.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <h3 style="color: ${resultColor}; font-size: 1.5rem; margin-bottom: 10px;">${resultText}</h3>
+                    <div style="text-align: center; margin-bottom: 15px; width: 100%;">
+                        <h3 style="color: ${resultColor}; font-size: 1.6rem; margin-top: 0; margin-bottom: 10px;">${resultText}</h3>
+                        <div class="combat-summary-container" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); padding: 10px; border-radius: 6px; text-align: left; max-height: 150px; overflow-y: auto; display: inline-block; width: 100%; box-sizing: border-box;">
+                            ${summaryHtml}
+                            ${rewardsHtml}
+                        </div>
                     </div>
                     <button class="btn btn-primary" id="btn-resolve-battle" style="width: 100%;">
                         ${this.t("ui_btn_close")}
@@ -2804,6 +2844,71 @@ class ExpeditionService {
       battleContext: ctx
     };
   }
+  getBattleResolutionPreview() {
+    if (!this.state.activeExpedition || this.state.activeExpedition.status !== "combat") {
+      return null;
+    }
+    if (!this.battleService.isOver) {
+      return null;
+    }
+    const exp = this.getExpeditions().find((e) => e.id === this.state.activeExpedition.id);
+    if (!exp) return null;
+    const ctx = this.state.activeExpedition.battleContext;
+    const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+    const enemies = this.battleService.enemies;
+    const isVictory = this.battleService.winner === "heroes";
+    const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
+    const depletionProportion = ctx.totalEnemyHp > 0 ? totalDamageDone / ctx.totalEnemyHp : 0;
+    const summary = [];
+    heroes.forEach((h) => {
+      let leveledUp = false;
+      let expEarned = 0;
+      if (isVictory) {
+        if (h.hp > 0) {
+          expEarned = ctx.expPerHero;
+        }
+      } else {
+        expEarned = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+      }
+      if (expEarned > 0) {
+        let currentExp = h.exp + expEarned;
+        let currentLevel = h.level;
+        while (true) {
+          const nextLevelExp = currentLevel * 20;
+          if (currentExp >= nextLevelExp) {
+            currentExp -= nextLevelExp;
+            currentLevel++;
+          } else {
+            break;
+          }
+        }
+        leveledUp = currentLevel > h.level;
+      }
+      const hpLost = (ctx.initialHp[h.id] !== void 0 ? ctx.initialHp[h.id] : h.maxHp) - h.hp;
+      summary.push({
+        heroId: h.id,
+        heroName: h.name,
+        expEarned,
+        leveledUp,
+        hpLost
+      });
+    });
+    let rewards = null;
+    let isLastStage = false;
+    if (isVictory) {
+      const nextStage = this.state.activeExpedition.currentStage + 1;
+      if (nextStage >= exp.stages.length) {
+        isLastStage = true;
+        rewards = exp.reward;
+      }
+    }
+    return {
+      isVictory,
+      summary,
+      isLastStage,
+      rewards
+    };
+  }
   resolveBattle() {
     if (!this.state.activeExpedition || this.state.activeExpedition.status !== "combat") {
       return Result.fail("error_no_active_battle");
@@ -4595,6 +4700,9 @@ class GameEngine {
     }
     return Result.ok({ skipped: true });
   }
+  getBattleResolutionPreview() {
+    return this.expeditionService.getBattleResolutionPreview();
+  }
   resolveBattle() {
     return this.expeditionService.resolveBattle();
   }
@@ -4658,27 +4766,30 @@ class EngineAdapter {
   init() {
     this.ui.engine = this.engine;
     this.ui.adapter = this;
-    this.ui.views.forEach((view, domain) => {
-      if (domain === "village") {
-        view.on("nextDay", () => {
-          const report = this.engine.nextDay();
-          if (report && report.expedition) {
-            if (report.expedition.status === "battle_started") {
-              this.ui.openCombatOverlay(report.expedition, () => {
-                this.forceUpdate();
-              });
-            } else if (report.expedition.combatLog) {
-              this.ui.playBattleLog(report.expedition.combatLog, () => {
-                this.forceUpdate();
-              });
-            } else {
+    const btnNextDay = document.getElementById("btn-global-next-day");
+    if (btnNextDay) {
+      btnNextDay.addEventListener("click", () => {
+        btnNextDay.style.transform = "scale(0.95)";
+        setTimeout(() => btnNextDay.style.transform = "", 100);
+        const report = this.engine.nextDay();
+        if (report && report.expedition) {
+          if (report.expedition.status === "battle_started") {
+            this.ui.openCombatOverlay(report.expedition, () => {
               this.forceUpdate();
-            }
+            });
+          } else if (report.expedition.combatLog) {
+            this.ui.playBattleLog(report.expedition.combatLog, () => {
+              this.forceUpdate();
+            });
           } else {
             this.forceUpdate();
           }
-        });
-      }
+        } else {
+          this.forceUpdate();
+        }
+      });
+    }
+    this.ui.views.forEach((view, domain) => {
       if (domain === "buildings") {
         view.on("startProject", (data) => {
           const result = this.engine.startProject(
@@ -4874,29 +4985,17 @@ class VillageView extends BaseView {
   }
   onMount() {
     this.elements = {
-      day: this.$("#village-day"),
       gold: this.$("#village-gold"),
       pop: this.$("#village-pop"),
       popAvail: this.$("#village-pop-avail"),
       storageText: this.$("#village-storage-text"),
       storageBar: this.$("#village-storage-bar"),
-      constructionList: this.$("#construction-list"),
-      btnNextDay: this.$("#btn-next-day")
+      constructionList: this.$("#construction-list")
     };
-    if (this.elements.btnNextDay) {
-      this.elements.btnNextDay.addEventListener("click", () => {
-        this.elements.btnNextDay.style.transform = "scale(0.95)";
-        setTimeout(() => {
-          this.elements.btnNextDay.style.transform = "";
-        }, 100);
-        this.emit("nextDay");
-      });
-    }
   }
   onUpdate(state) {
     const { village, inventory } = state;
     if (!village) return;
-    if (this.elements.day) this.elements.day.textContent = village.day;
     if (this.elements.gold) this.elements.gold.textContent = Math.floor(village.gold);
     if (this.elements.pop) {
       this.elements.pop.textContent = `${village.population.total} / ${village.population.max}`;
@@ -6668,6 +6767,27 @@ body {
     gap: var(--spacing-sm);
 }
 
+.global-day-cycle {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.global-day-cycle .day-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.global-day-cycle .day-value {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--accent-color);
+}
+@media (max-width: 600px) {
+    .global-day-cycle .hide-mobile {
+        display: none;
+    }
+}
+
 .stat-item {
     background: var(--bg-accent);
     padding: 6px 14px;
@@ -7677,6 +7797,13 @@ body {
             <div class="brand">
                 <h1>RPG Village</h1>
             </div>
+            <div class="global-day-cycle">
+                <span class="day-label" data-i18n="village_day">Day</span>
+                <span id="global-day" class="day-value">--</span>
+                <button id="btn-global-next-day" class="btn btn-primary btn-sm shine-effect" style="padding: 6px 12px; font-size: 0.85rem;">
+                    <span class="icon">☀️</span> <span data-i18n="btn_next_day" class="hide-mobile">Next Day</span>
+                </button>
+            </div>
             <div class="stats-bar">
                 <div class="stat-item" title="Gold">
                     <span class="icon">💰</span>
@@ -7788,20 +7915,7 @@ body {
 
         <!-- Right Column: Visual Center & Global Actions -->
         <div class="main-panel">
-            <!-- Day Cycle Controller (The "Big Button" Area) -->
-            <div class="card action-card" style="margin-top: 0; margin-bottom: 10px;">
-                <div class="day-cycle-info">
-                    <span class="day-label" data-i18n="village_day">Day</span>
-                    <span id="village-day" class="day-value">--</span>
-                </div>
-                
-                <div class="action-bar-centered">
-                    <button id="btn-next-day" class="btn btn-primary btn-lg shine-effect">
-                        <span class="icon">☀️</span>
-                        <span data-i18n="btn_next_day">Next Day</span>
-                    </button>
-                </div>
-            </div>
+
 
             <div id="daily-report-container"></div>
             

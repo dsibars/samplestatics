@@ -290,6 +290,10 @@ export class GameEngine {
         return Result.ok({ skipped: true });
     }
 
+    getBattleResolutionPreview() {
+        return this.expeditionService.getBattleResolutionPreview();
+    }
+
     resolveBattle() {
         return this.expeditionService.resolveBattle();
     }

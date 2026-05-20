@@ -10,26 +10,13 @@ export class VillageView extends BaseView {
 
     onMount() {
         this.elements = {
-            day: this.$('#village-day'),
             gold: this.$('#village-gold'),
             pop: this.$('#village-pop'),
             popAvail: this.$('#village-pop-avail'),
             storageText: this.$('#village-storage-text'),
             storageBar: this.$('#village-storage-bar'),
-            constructionList: this.$('#construction-list'),
-            btnNextDay: this.$('#btn-next-day')
+            constructionList: this.$('#construction-list')
         };
-
-        if (this.elements.btnNextDay) {
-            this.elements.btnNextDay.addEventListener('click', () => {
-                // Add click effect
-                this.elements.btnNextDay.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    this.elements.btnNextDay.style.transform = '';
-                }, 100);
-                this.emit('nextDay');
-            });
-        }
     }
 
     onUpdate(state) {
@@ -37,7 +24,6 @@ export class VillageView extends BaseView {
         if (!village) return;
 
         // Status Updates
-        if (this.elements.day) this.elements.day.textContent = village.day;
         if (this.elements.gold) this.elements.gold.textContent = Math.floor(village.gold);
         
         if (this.elements.pop) {

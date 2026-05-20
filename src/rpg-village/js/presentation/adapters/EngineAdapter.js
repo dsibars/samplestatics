@@ -14,31 +14,35 @@ export class EngineAdapter {
     init() {
         this.ui.engine = this.engine;
         this.ui.adapter = this;
-        
-        // Wire up view events
-        this.ui.views.forEach((view, domain) => {
-            if (domain === 'village') {
-                view.on('nextDay', () => {
-                    const report = this.engine.nextDay();
-                    if (report && report.expedition) {
-                        if (report.expedition.status === 'battle_started') {
-                            this.ui.openCombatOverlay(report.expedition, () => {
-                                this.forceUpdate();
-                            });
-                        } else if (report.expedition.combatLog) {
-                            this.ui.playBattleLog(report.expedition.combatLog, () => {
-                                this.forceUpdate();
-                            });
-                        } else {
+        // Setup Global UI Events
+        const btnNextDay = document.getElementById('btn-global-next-day');
+        if (btnNextDay) {
+            btnNextDay.addEventListener('click', () => {
+                // Add click effect
+                btnNextDay.style.transform = 'scale(0.95)';
+                setTimeout(() => btnNextDay.style.transform = '', 100);
+
+                const report = this.engine.nextDay();
+                if (report && report.expedition) {
+                    if (report.expedition.status === 'battle_started') {
+                        this.ui.openCombatOverlay(report.expedition, () => {
                             this.forceUpdate();
-                        }
+                        });
+                    } else if (report.expedition.combatLog) {
+                        this.ui.playBattleLog(report.expedition.combatLog, () => {
+                            this.forceUpdate();
+                        });
                     } else {
                         this.forceUpdate();
                     }
-                });
-            }
+                } else {
+                    this.forceUpdate();
+                }
+            });
+        }
 
-            if (domain === 'buildings') {
+        // Wire up view events
+        this.ui.views.forEach((view, domain) => {            if (domain === 'buildings') {
                 view.on('startProject', (data) => {
                     const result = this.engine.startProject(
                         data.buildingId,

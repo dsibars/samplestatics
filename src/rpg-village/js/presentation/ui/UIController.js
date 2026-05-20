@@ -11,6 +11,7 @@ export class UIController {
             goldCount: document.getElementById('gold-count'),
             villagerCount: document.getElementById('villager-count'),
             woodCount: document.getElementById('wood-count'),
+            globalDay: document.getElementById('global-day'),
             navItems: document.querySelectorAll('.nav-item'),
             shopNav: document.querySelector('.nav-item[data-view="shop"]'),
             forgeNav: document.querySelector('.nav-item[data-view="forge"]')
@@ -204,6 +205,7 @@ export class UIController {
 
         // Update Shell
         if (state.village) {
+            if (this.elements.globalDay) this.elements.globalDay.textContent = state.village.day || 1;
             if (this.elements.goldCount) this.elements.goldCount.textContent = Math.floor(state.village.gold || 0);
             if (this.elements.villagerCount) {
                 this.elements.villagerCount.textContent = state.village.population?.total || 0;
@@ -773,13 +775,53 @@ export class UIController {
             const controlPanel = overlay.querySelector('#combat-control-panel');
             
             if (battle.isOver) {
-                const isVictory = battle.log.some(l => l.type === 'DAMAGE' && !l.actorIsHero && l.targetHp <= 0) || !battle.heroes.some(h => h.hp > 0);
-                const resultColor = !battle.heroes.some(h => h.hp > 0) ? 'var(--danger)' : 'var(--success)';
-                const resultText = !battle.heroes.some(h => h.hp > 0) ? this.t('defeat') : this.t('victory');
+                const preview = this.engine.getBattleResolutionPreview();
+                const resultColor = (preview && preview.isVictory) ? 'var(--success)' : 'var(--danger)';
+                const resultText = (preview && preview.isVictory) ? this.t('victory') : this.t('defeat');
                 
+                let summaryHtml = '';
+                if (preview && preview.summary) {
+                    summaryHtml = preview.summary.map(s => {
+                        let text = `<strong>${s.heroName}</strong>: `;
+                        if (s.hpLost > 0) text += `<span style="color: var(--danger); font-size: 0.9em;">-${s.hpLost} HP</span> | `;
+                        else if (s.hpLost < 0) text += `<span style="color: var(--success); font-size: 0.9em;">+${-s.hpLost} HP</span> | `;
+                        text += `<span style="color: #03a9f4; font-size: 0.9em;">+${s.expEarned} EXP</span>`;
+                        if (s.leveledUp) text += ` <span style="color: #ffeb3b; font-weight: bold; font-size: 0.9em;">(LEVEL UP! 🎉)</span>`;
+                        return `<div style="margin-bottom: 5px;">${text}</div>`;
+                    }).join('');
+                }
+
+                let rewardsHtml = '';
+                if (preview && preview.isLastStage && preview.rewards) {
+                    const rewards = [];
+                    if (preview.rewards.gold) {
+                        rewards.push(`💰 ${preview.rewards.gold} Gold`);
+                    }
+                    if (preview.rewards.items) {
+                        for (const [itemId, qty] of Object.entries(preview.rewards.items)) {
+                            const itemName = this.t(itemId) || itemId;
+                            rewards.push(`📦 ${qty}x ${itemName}`);
+                        }
+                    }
+                    if (rewards.length > 0) {
+                        rewardsHtml = `
+                            <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 10px;">
+                                <h4 style="color: #ffeb3b; margin-top: 0; margin-bottom: 5px;">🏆 Expedition Rewards:</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; font-size: 0.95rem;">
+                                    ${rewards.map(r => `<span class="badge badge-accent" style="background: rgba(255, 235, 59, 0.1); border: 1px solid rgba(255, 235, 59, 0.3); padding: 4px 8px; border-radius: 4px;">${r}</span>`).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
                 controlPanel.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <h3 style="color: ${resultColor}; font-size: 1.5rem; margin-bottom: 10px;">${resultText}</h3>
+                    <div style="text-align: center; margin-bottom: 15px; width: 100%;">
+                        <h3 style="color: ${resultColor}; font-size: 1.6rem; margin-top: 0; margin-bottom: 10px;">${resultText}</h3>
+                        <div class="combat-summary-container" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); padding: 10px; border-radius: 6px; text-align: left; max-height: 150px; overflow-y: auto; display: inline-block; width: 100%; box-sizing: border-box;">
+                            ${summaryHtml}
+                            ${rewardsHtml}
+                        </div>
                     </div>
                     <button class="btn btn-primary" id="btn-resolve-battle" style="width: 100%;">
                         ${this.t('ui_btn_close')}

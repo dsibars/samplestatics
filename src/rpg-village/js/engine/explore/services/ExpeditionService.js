@@ -340,6 +340,82 @@ export class ExpeditionService {
         };
     }
 
+    getBattleResolutionPreview() {
+        if (!this.state.activeExpedition || this.state.activeExpedition.status !== 'combat') {
+            return null;
+        }
+        if (!this.battleService.isOver) {
+            return null;
+        }
+
+        const exp = this.getExpeditions().find(e => e.id === this.state.activeExpedition.id);
+        if (!exp) return null;
+
+        const ctx = this.state.activeExpedition.battleContext;
+        const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
+        const enemies = this.battleService.enemies;
+        
+        const isVictory = this.battleService.winner === 'heroes';
+        const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
+        const depletionProportion = ctx.totalEnemyHp > 0 ? totalDamageDone / ctx.totalEnemyHp : 0;
+
+        const summary = [];
+        heroes.forEach(h => {
+            let leveledUp = false;
+            let expEarned = 0;
+
+            if (isVictory) {
+                if (h.hp > 0) {
+                    expEarned = ctx.expPerHero;
+                }
+            } else {
+                expEarned = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+            }
+
+            if (expEarned > 0) {
+                let currentExp = h.exp + expEarned;
+                let currentLevel = h.level;
+                while (true) {
+                    const nextLevelExp = currentLevel * 20;
+                    if (currentExp >= nextLevelExp) {
+                        currentExp -= nextLevelExp;
+                        currentLevel++;
+                    } else {
+                        break;
+                    }
+                }
+                leveledUp = currentLevel > h.level;
+            }
+
+            const hpLost = (ctx.initialHp[h.id] !== undefined ? ctx.initialHp[h.id] : h.maxHp) - h.hp;
+
+            summary.push({
+                heroId: h.id,
+                heroName: h.name,
+                expEarned,
+                leveledUp,
+                hpLost
+            });
+        });
+
+        let rewards = null;
+        let isLastStage = false;
+        if (isVictory) {
+            const nextStage = this.state.activeExpedition.currentStage + 1;
+            if (nextStage >= exp.stages.length) {
+                isLastStage = true;
+                rewards = exp.reward;
+            }
+        }
+
+        return {
+            isVictory,
+            summary,
+            isLastStage,
+            rewards
+        };
+    }
+
     resolveBattle() {
         if (!this.state.activeExpedition || this.state.activeExpedition.status !== 'combat') {
             return Result.fail('error_no_active_battle');
