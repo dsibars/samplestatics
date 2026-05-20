@@ -157,6 +157,22 @@ export class GameEngine {
         return this.heroService.increaseHeroStat(heroId, statId);
     }
 
+    learnHeroSkill(heroId, skillId, unlockCost) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.learnHeroSkill(heroId, skillId, unlockCost);
+    }
+
+    upgradeHeroSkill(heroId, skillId, upgradeCost) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.upgradeHeroSkill(heroId, skillId, upgradeCost);
+    }
+
     equipHeroItem(heroId, slot, equipmentId) {
         const activityInfo = this.expeditionService.getHeroActivity(heroId);
         if (activityInfo && activityInfo.type === 'expedition') {

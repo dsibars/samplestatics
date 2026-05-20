@@ -1,5 +1,6 @@
 import { BaseView } from '../BaseView.js';
 import { getEquipmentName, getEquipmentStats } from '../shared/EquipmentHelper.js';
+import { SKILLS_DATA } from '../../../engine/shared/data/GameConstants.js';
 
 export class HeroesView extends BaseView {
     constructor() {
@@ -38,6 +39,19 @@ export class HeroesView extends BaseView {
                 if (slotBtn) {
                     const slot = slotBtn.dataset.slot;
                     this._openEquipModal(slot);
+                    return;
+                }
+
+                const learnBtn = e.target.closest('.btn-learn-skill');
+                if (learnBtn) {
+                    this.emit('learnSkill', { heroId: this.selectedHeroId, skillId: learnBtn.dataset.skill, unlockCost: parseInt(learnBtn.dataset.cost) });
+                    return;
+                }
+
+                const upgradeBtn = e.target.closest('.btn-upgrade-skill');
+                if (upgradeBtn) {
+                    this.emit('upgradeSkill', { heroId: this.selectedHeroId, skillId: upgradeBtn.dataset.skill, upgradeCost: 1 });
+                    return;
                 }
             });
         }
@@ -125,12 +139,48 @@ export class HeroesView extends BaseView {
             `;
         }).join('');
 
-        let skillsHtml = Object.keys(hero.skills).map(skillId => `
-            <div class="skill-item">
-                <span class="skill-name">${this.t(skillId)}</span>
-                <span class="skill-level">${this.t('ui_level') || 'Level'} ${hero.skills[skillId]}</span>
-            </div>
-        `).join('');
+        const hasSkillPoints = hero.skillPoints > 0;
+        const canManageSkills = hasSkillPoints && isIdle;
+
+        const allSkills = Object.values(SKILLS_DATA);
+        let skillsHtml = allSkills.map(skill => {
+            const skillId = skill.id;
+            const learned = hero.skills[skillId] !== undefined;
+            const level = learned ? hero.skills[skillId] : null;
+            const depMet = !skill.dependency || hero.skills[skill.dependency] !== undefined;
+            const canLearn = !learned && depMet && canManageSkills && hero.skillPoints >= skill.unlockCost;
+            const canUpgrade = learned && canManageSkills && hero.skillPoints >= 1 && level < 5;
+
+            let actionBtn = '';
+            if (learned && canUpgrade) {
+                actionBtn = `<button class="btn btn-primary btn-sm btn-upgrade-skill" data-skill="${skillId}">+1 (${this.t('ui_cost') || 'Cost'} 1)</button>`;
+            } else if (learned) {
+                actionBtn = `<span class="skill-max-label">${this.t('ui_max') || 'MAX'}</span>`;
+            } else if (canLearn) {
+                actionBtn = `<button class="btn btn-primary btn-sm btn-learn-skill" data-skill="${skillId}" data-cost="${skill.unlockCost}">${this.t('ui_unlock') || 'Unlock'} (${skill.unlockCost} SP)</button>`;
+            } else if (!depMet) {
+                actionBtn = `<span class="skill-locked-label">${this.t('ui_locked') || 'Locked'}</span>`;
+            } else {
+                actionBtn = `<span class="skill-locked-label">${skill.unlockCost} SP</span>`;
+            }
+
+            const categoryClass = `skill-cat-${skill.category}`;
+            const tierClass = `skill-tier-${skill.tier}`;
+            const learnedClass = learned ? 'skill-learned' : 'skill-locked';
+
+            return `
+                <div class="skill-item ${categoryClass} ${tierClass} ${learnedClass}">
+                    <div class="skill-info">
+                        <span class="skill-name">${this.t(skillId)}</span>
+                        <span class="skill-meta">${skill.mpCost > 0 ? skill.mpCost + ' MP' : '0 MP'} · ${this.t('cat_' + skill.category) || skill.category}</span>
+                    </div>
+                    <div class="skill-actions">
+                        ${learned ? `<span class="skill-level">Lv.${level}</span>` : ''}
+                        ${actionBtn}
+                    </div>
+                </div>
+            `;
+        }).join('');
 
         const hasStatPoints = hero.statPoints > 0;
         const canAllocate = hasStatPoints && isIdle;
@@ -173,6 +223,11 @@ export class HeroesView extends BaseView {
                         ${hasStatPoints ? `
                         <div class="stat-points-alert ${canAllocate ? '' : 'locked'}">
                             <strong>${statPointsText}</strong>
+                        </div>
+                        ` : ''}
+                        ${hero.skillPoints > 0 ? `
+                        <div class="stat-points-alert ${canManageSkills ? '' : 'locked'}" style="margin-top: 6px; background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">
+                            <strong>${this.t('ui_skill_points').replace('{amount}', hero.skillPoints)}${!canManageSkills ? ' (Cannot spend on expedition)' : ''}</strong>
                         </div>
                         ` : ''}
                     </div>

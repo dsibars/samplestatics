@@ -94,6 +94,20 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
+                view.on('learnSkill', (data) => {
+                    const result = this.engine.learnHeroSkill(data.heroId, data.skillId, data.unlockCost);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('upgradeSkill', (data) => {
+                    const result = this.engine.upgradeHeroSkill(data.heroId, data.skillId, data.upgradeCost);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
             }
 
             if (domain === 'shop') {

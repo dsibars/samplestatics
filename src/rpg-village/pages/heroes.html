@@ -166,4 +166,64 @@
         font-weight: 500;
         font-size: 0.9em;
     }
+
+    /* Skill tree styles */
+    .skill-item {
+        align-items: center;
+        padding: 8px 5px;
+        border-radius: var(--radius-sm);
+        transition: background 0.2s ease;
+    }
+    .skill-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .skill-item .skill-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .skill-item .skill-name {
+        font-weight: 600;
+        font-size: 0.9em;
+    }
+    .skill-item .skill-meta {
+        font-size: 0.75em;
+        color: var(--text-muted);
+        text-transform: capitalize;
+    }
+    .skill-item .skill-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .skill-item .skill-level {
+        color: var(--accent-color);
+        font-weight: 700;
+        font-size: 0.85em;
+    }
+    .skill-item.skill-locked .skill-name {
+        color: var(--text-muted);
+    }
+    .skill-item.skill-learned .skill-name {
+        color: var(--text-primary);
+    }
+    .skill-item.skill-cat-physical .skill-name { color: #ff8c69; }
+    .skill-item.skill-cat-magic .skill-name { color: #7eb8ff; }
+    .skill-item.skill-cat-support .skill-name { color: #7fffaa; }
+    .skill-item.skill-cat-tricker .skill-name { color: #da70d6; }
+    .skill-max-label {
+        font-size: 0.75em;
+        color: var(--accent-color);
+        font-weight: 700;
+        opacity: 0.7;
+    }
+    .skill-locked-label {
+        font-size: 0.75em;
+        color: var(--text-muted);
+    }
+    .btn-learn-skill, .btn-upgrade-skill {
+        padding: 3px 8px;
+        font-size: 0.75em;
+        min-width: auto;
+    }
 </style>
