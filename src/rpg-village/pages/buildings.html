@@ -2,7 +2,9 @@
     <div class="master-detail-layout">
         <!-- Master Pane: List of Buildings -->
         <aside class="master-pane card">
-            <h3 data-i18n="ui_available_buildings">Buildings</h3>
+            <div class="pane-header">
+                <h3 data-i18n="ui_available_buildings">Buildings</h3>
+            </div>
             <div id="buildings-list-container" class="list-container">
                 <!-- Building cards will be injected here -->
             </div>
@@ -34,30 +36,7 @@
 </section>
 
 <style>
-    .glass-pane {
-        background: rgba(22, 24, 33, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .detail-icon-bg {
-        font-size: 4rem;
-        opacity: 0.1;
-        margin-bottom: 20px;
-    }
-
-    .empty-detail {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        color: var(--text-muted);
-    }
-
-    /* Building Profile Styles */
+        /* Building Profile Styles */
     .building-profile-header {
         display: flex;
         justify-content: space-between;
