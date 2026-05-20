@@ -6617,6 +6617,59 @@ class SettingsView extends BaseView {
   onUpdate(state) {
   }
 }
+const CONSUMABLES_CATALOG = [
+  { id: "item_tiny_hp_potion", type: "consumable", cost: 10, i18n_name: "item_tiny_hp_potion", i18n_desc: "item_tiny_hp_potion_desc" },
+  { id: "item_tiny_mp_potion", type: "consumable", cost: 15, i18n_name: "item_tiny_mp_potion", i18n_desc: "item_tiny_mp_potion_desc" },
+  { id: "item_teleport_scroll", type: "consumable", cost: 50, i18n_name: "item_teleport_scroll", i18n_desc: "item_teleport_scroll_desc" }
+];
+const WEAPONS_CATALOG = [
+  // Tier 1 (Wooden)
+  { type: "weapon", material: "wooden", family: "dagger", cost: 50, tier: 1 },
+  { type: "weapon", material: "wooden", family: "broadsword", cost: 80, tier: 1 },
+  { type: "weapon", material: "wooden", family: "battle_axe", cost: 120, tier: 1 },
+  { type: "weapon", material: "wooden", family: "wand", cost: 100, tier: 1 },
+  // Tier 2 (Iron)
+  { type: "weapon", material: "iron", family: "dagger", cost: 150, tier: 2 },
+  { type: "weapon", material: "iron", family: "broadsword", cost: 240, tier: 2 },
+  { type: "weapon", material: "iron", family: "battle_axe", cost: 360, tier: 2 },
+  { type: "weapon", material: "iron", family: "wand", cost: 300, tier: 2 }
+];
+const ARMOR_CATALOG = [
+  // Tier 1 (Wooden / Basic)
+  { type: "armor", material: "wooden", archetype: "plate", slot: "head", cost: 50, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "plate", slot: "body", cost: 100, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "plate", slot: "legs", cost: 65, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "plate", slot: "rightHand", cost: 60, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "leather", slot: "head", cost: 40, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "leather", slot: "body", cost: 80, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "leather", slot: "legs", cost: 50, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "leather", slot: "rightHand", cost: 45, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "robes", slot: "head", cost: 45, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "robes", slot: "body", cost: 90, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "robes", slot: "legs", cost: 55, tier: 1 },
+  { type: "armor", material: "wooden", archetype: "robes", slot: "rightHand", cost: 40, tier: 1 },
+  // Tier 2 (Iron)
+  { type: "armor", material: "iron", archetype: "plate", slot: "head", cost: 150, tier: 2 },
+  { type: "armor", material: "iron", archetype: "plate", slot: "body", cost: 300, tier: 2 },
+  { type: "armor", material: "iron", archetype: "plate", slot: "legs", cost: 200, tier: 2 },
+  { type: "armor", material: "iron", archetype: "plate", slot: "rightHand", cost: 180, tier: 2 },
+  { type: "armor", material: "iron", archetype: "leather", slot: "head", cost: 120, tier: 2 },
+  { type: "armor", material: "iron", archetype: "leather", slot: "body", cost: 240, tier: 2 },
+  { type: "armor", material: "iron", archetype: "leather", slot: "legs", cost: 160, tier: 2 },
+  { type: "armor", material: "iron", archetype: "leather", slot: "rightHand", cost: 135, tier: 2 },
+  { type: "armor", material: "iron", archetype: "robes", slot: "head", cost: 130, tier: 2 },
+  { type: "armor", material: "iron", archetype: "robes", slot: "body", cost: 260, tier: 2 },
+  { type: "armor", material: "iron", archetype: "robes", slot: "legs", cost: 175, tier: 2 },
+  { type: "armor", material: "iron", archetype: "robes", slot: "rightHand", cost: 120, tier: 2 }
+];
+function getWeaponBaseCost(material, family) {
+  const item = WEAPONS_CATALOG.find((w) => w.material === material && w.family === family);
+  return item ? item.cost : 50;
+}
+function getArmorBaseCost(material, archetype, slot) {
+  const item = ARMOR_CATALOG.find((a) => a.material === material && a.archetype === archetype && a.slot === slot);
+  return item ? item.cost : 40;
+}
 class ShopView extends BaseView {
   constructor() {
     super("shop");
@@ -6629,56 +6682,9 @@ class ShopView extends BaseView {
     this.justSoldKey = null;
     this.justSoldTime = 0;
     this.justSoldTimeout = null;
-    this.consumablePrices = {
-      "item_tiny_hp_potion": 10,
-      "item_tiny_mp_potion": 15,
-      "item_teleport_scroll": 50
-    };
-    this.consumables = [
-      { id: "item_tiny_hp_potion", type: "consumable", cost: 10, i18n_name: "item_tiny_hp_potion", i18n_desc: "item_tiny_hp_potion_desc" },
-      { id: "item_tiny_mp_potion", type: "consumable", cost: 15, i18n_name: "item_tiny_mp_potion", i18n_desc: "item_tiny_mp_potion_desc" },
-      { id: "item_teleport_scroll", type: "consumable", cost: 50, i18n_name: "item_teleport_scroll", i18n_desc: "item_teleport_scroll_desc" }
-    ];
-    this.weapons = [
-      // Tier 1 (Wooden)
-      { type: "weapon", material: "wooden", family: "dagger", cost: 50, tier: 1 },
-      { type: "weapon", material: "wooden", family: "broadsword", cost: 80, tier: 1 },
-      { type: "weapon", material: "wooden", family: "battle_axe", cost: 120, tier: 1 },
-      { type: "weapon", material: "wooden", family: "wand", cost: 100, tier: 1 },
-      // Tier 2 (Iron)
-      { type: "weapon", material: "iron", family: "dagger", cost: 150, tier: 2 },
-      { type: "weapon", material: "iron", family: "broadsword", cost: 240, tier: 2 },
-      { type: "weapon", material: "iron", family: "battle_axe", cost: 360, tier: 2 },
-      { type: "weapon", material: "iron", family: "wand", cost: 300, tier: 2 }
-    ];
-    this.armor = [
-      // Tier 1 (Wooden / Basic)
-      { type: "armor", material: "wooden", archetype: "plate", slot: "head", cost: 50, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "plate", slot: "body", cost: 100, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "plate", slot: "legs", cost: 65, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "plate", slot: "rightHand", cost: 60, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "leather", slot: "head", cost: 40, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "leather", slot: "body", cost: 80, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "leather", slot: "legs", cost: 50, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "leather", slot: "rightHand", cost: 45, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "robes", slot: "head", cost: 45, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "robes", slot: "body", cost: 90, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "robes", slot: "legs", cost: 55, tier: 1 },
-      { type: "armor", material: "wooden", archetype: "robes", slot: "rightHand", cost: 40, tier: 1 },
-      // Tier 2 (Iron)
-      { type: "armor", material: "iron", archetype: "plate", slot: "head", cost: 150, tier: 2 },
-      { type: "armor", material: "iron", archetype: "plate", slot: "body", cost: 300, tier: 2 },
-      { type: "armor", material: "iron", archetype: "plate", slot: "legs", cost: 200, tier: 2 },
-      { type: "armor", material: "iron", archetype: "plate", slot: "rightHand", cost: 180, tier: 2 },
-      { type: "armor", material: "iron", archetype: "leather", slot: "head", cost: 120, tier: 2 },
-      { type: "armor", material: "iron", archetype: "leather", slot: "body", cost: 240, tier: 2 },
-      { type: "armor", material: "iron", archetype: "leather", slot: "legs", cost: 160, tier: 2 },
-      { type: "armor", material: "iron", archetype: "leather", slot: "rightHand", cost: 135, tier: 2 },
-      { type: "armor", material: "iron", archetype: "robes", slot: "head", cost: 130, tier: 2 },
-      { type: "armor", material: "iron", archetype: "robes", slot: "body", cost: 260, tier: 2 },
-      { type: "armor", material: "iron", archetype: "robes", slot: "legs", cost: 175, tier: 2 },
-      { type: "armor", material: "iron", archetype: "robes", slot: "rightHand", cost: 120, tier: 2 }
-    ];
+    this.consumables = CONSUMABLES_CATALOG;
+    this.weapons = WEAPONS_CATALOG;
+    this.armor = ARMOR_CATALOG;
   }
   onMount() {
     this.elements = {
@@ -6796,28 +6802,7 @@ class ShopView extends BaseView {
     if (!this.selectedItemKey && allItems.length > 0) {
       this.selectedItemKey = getItemKey(allItems[0]);
     }
-    const getOwnedCount = (item) => {
-      let ownedCount = 0;
-      if (item.type === "consumable") {
-        ownedCount = state.inventory && state.inventory.consumables ? state.inventory.consumables[item.id] || 0 : 0;
-      } else if (state.inventory) {
-        const matchingInv = (state.inventory.equipment || []).filter(
-          (eq) => eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)
-        ).length;
-        let matchingEq = 0;
-        if (state.heroes) {
-          state.heroes.forEach((h) => {
-            Object.values(h.equipment).forEach((eq) => {
-              if (eq && eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)) {
-                matchingEq++;
-              }
-            });
-          });
-        }
-        ownedCount = matchingInv + matchingEq;
-      }
-      return ownedCount;
-    };
+    const getOwnedCount = (item) => this._getOwnedCount(item, state);
     if (this.elements.catalog) {
       this.elements.catalog.innerHTML = groups.map((group) => {
         if (group.items.length === 0) return "";
@@ -6964,14 +6949,50 @@ class ShopView extends BaseView {
   _calculateEquipmentSellPrice(eq) {
     let baseCost = 0;
     if (eq.type === "weapon") {
-      const shopItem = this.weapons.find((w) => w.material === eq.material && w.family === eq.family);
-      baseCost = shopItem ? shopItem.cost : 50;
+      baseCost = getWeaponBaseCost(eq.material, eq.family);
     } else if (eq.type === "armor") {
-      const shopItem = this.armor.find((a) => a.material === eq.material && a.archetype === eq.archetype && a.slot === eq.slot);
-      baseCost = shopItem ? shopItem.cost : 40;
+      baseCost = getArmorBaseCost(eq.material, eq.archetype, eq.slot);
     }
     const level = eq.level || 0;
     return Math.floor(baseCost * 0.3 * Math.pow(1.1, level));
+  }
+  /**
+   * Get ownership breakdown for a shop catalog item.
+   * @param {Object} item - Shop catalog item
+   * @param {Object} state - Full engine state
+   * @returns {{total: number, inventory: number, equipped: number}}
+   */
+  _getOwnedBreakdown(item, state) {
+    if (item.type === "consumable") {
+      const count = state.inventory && state.inventory.consumables ? state.inventory.consumables[item.id] || 0 : 0;
+      return { total: count, inventory: count, equipped: 0 };
+    }
+    let inventory = 0;
+    let equipped = 0;
+    if (state.inventory) {
+      inventory = (state.inventory.equipment || []).filter(
+        (eq) => eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)
+      ).length;
+    }
+    if (state.heroes) {
+      state.heroes.forEach((h) => {
+        Object.values(h.equipment).forEach((eq) => {
+          if (eq && eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)) {
+            equipped++;
+          }
+        });
+      });
+    }
+    return { total: inventory + equipped, inventory, equipped };
+  }
+  /**
+   * Count how many of a given shop item the player owns (inventory + equipped).
+   * @param {Object} item - Shop catalog item
+   * @param {Object} state - Full engine state
+   * @returns {number} Total owned count
+   */
+  _getOwnedCount(item, state) {
+    return this._getOwnedBreakdown(item, state).total;
   }
   _renderSellDetails(item, state) {
     if (!this.elements.detailContent) return;
@@ -7125,24 +7146,9 @@ class ShopView extends BaseView {
         icon = item.slot === "head" ? "🪖" : item.slot === "rightHand" ? "🛡️" : "🧥";
       }
     }
-    let ownedInvCount = 0;
-    let ownedEqCount = 0;
-    if (item.type === "consumable") {
-      ownedInvCount = state.inventory && state.inventory.consumables ? state.inventory.consumables[item.id] || 0 : 0;
-    } else if (state.inventory) {
-      ownedInvCount = (state.inventory.equipment || []).filter(
-        (eq) => eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)
-      ).length;
-      if (state.heroes) {
-        state.heroes.forEach((h) => {
-          Object.values(h.equipment).forEach((eq) => {
-            if (eq && eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)) {
-              ownedEqCount++;
-            }
-          });
-        });
-      }
-    }
+    const ownedBreakdown = this._getOwnedBreakdown(item, state);
+    const ownedInvCount = ownedBreakdown.inventory;
+    const ownedEqCount = ownedBreakdown.equipped;
     const STAT_LABEL_MAP = {
       strength: "ui_stats_power",
       defense: "ui_stats_defense",

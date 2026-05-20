@@ -86,23 +86,23 @@
 | 6 | **No Affix Generation** | Medium | Affixes (`vampire`, `phoenix`, `sage`, `titan`, `assassin`) coded in stat calc but never rolled |
 | 7 | **Only 1 Region** | Medium | `reg_tiny_cave`, `reg_calmed_beach` defined in data but unreachable |
 | 8 | **Enemy Level Scaling** | Low | Spec says `Base * 1.1^(L-1)`; enemies use flat base stats |
-| 9 | **Not in Hub** | Low | App is built but no card in `src/hub/index.html` |
+| 9 | **Not in Hub** | Low | ✅ **Fixed 2026-05-20**. Card added to `src/hub/index.html` with i18n for all 5 languages. |
 
 ### Code Quality Issues
-| # | Issue | Location |
-|---|-------|----------|
-| 1 | **Combat UI monolith** | `UIController.js` has ~600 lines of inline combat HTML/CSS generation. Should be extracted to `CombatView.js` |
-| 2 | **Duplicate owned-count logic** | `ShopView.js` repeats the same inventory+equipped matching logic in 3+ places |
-| 3 | **Missing equipment affixes in shop** | Shop gear is always "clean" — no `affixes` array |
-| 4 | **Hard-coded prices in view** | Shop catalog prices live in `ShopView.js` instead of data/constants |
-| 5 | **Test coverage** | No tests for VillageService, ExpeditionService, UI views, construction queue |
-| 6 | **i18n completeness** | Some combat/log keys may fallback to English in non-EN translations |
-| 7 | **App description outdated** | `docs/app_description.md` still has placeholders for Hero System and Combat System |
+| # | Issue | Location | Status |
+|---|-------|----------|--------|
+| 1 | **Combat UI monolith** | `UIController.js` has ~600 lines of inline combat HTML/CSS generation. Should be extracted to `CombatView.js` | 🔴 Open |
+| 2 | **Duplicate owned-count logic** | `ShopView.js` repeats inventory+equipped matching logic | ✅ **Fixed 2026-05-20**. Extracted `_getOwnedBreakdown()` and `_getOwnedCount()` |
+| 3 | **Missing equipment affixes in shop** | Shop gear is always "clean" — no `affixes` array | 🔴 Open |
+| 4 | **Hard-coded prices in view** | Shop catalog prices live in `ShopView.js` instead of data/constants | ✅ **Fixed 2026-05-20**. Moved to `js/engine/shared/data/ShopCatalog.js` |
+| 5 | **Test coverage** | No tests for VillageService, ExpeditionService, UI views, building construction | 🔴 Open |
+| 6 | **i18n completeness** | Some combat/log keys may fallback to English or raw keys in non-EN translations | 🔴 Open |
+| 7 | **App description outdated** | `docs/app_description.md` still has placeholders for Hero System and Combat System | ✅ **Fixed 2026-05-20**. Rewrote to reflect all implemented systems |
 
 ### Docs Issues
 | # | Issue | Action |
 |---|-------|--------|
-| 1 | `app_description.md` has placeholders | Rewrite to reflect actual implemented systems |
+| 1 | `app_description.md` has placeholders | ✅ **Fixed 2026-05-20** |
 | 2 | No spec for "Sell Items" (equipment/consumables) | Create new spec or extend `shop_forge.md` |
 | 3 | No spec for Skill UI | Create `docs/heroes/skill_ui.md` |
 | 4 | No spec for Worker Assignment | Create `docs/village/workers.md` |
@@ -150,14 +150,14 @@
 
 | # | Task | Files | Effort |
 |---|------|-------|--------|
-| 4.1 | **Extract Combat UI from UIController** | New `CombatView.js`, refactor `UIController.js` | Medium |
-| 4.2 | **Refactor ShopView duplicate logic** | `ShopView.js` — extract `getOwnedCount()` helper | Small |
-| 4.3 | **Move shop catalog to data/constants** | `GameConstants.js` or new `ShopCatalog.js` | Small |
-| 4.4 | **Update `app_description.md`** | `docs/app_description.md` | Small |
-| 4.5 | **Add tests for VillageService** | `tests/rpg-village/unit/VillageService.test.js` | Medium |
-| 4.6 | **Add tests for ExpeditionService** | `tests/rpg-village/unit/ExpeditionService.test.js` | Medium |
-| 4.7 | **Combat UI accessibility / mobile polish** | `UIController.js` combat section | Small |
-| 4.8 | **Hub integration + PWA manifest consideration** | `src/hub/index.html`, maybe `manifest.json` | Small |
+| 4.1 | **Extract Combat UI from UIController** | New `CombatView.js`, refactor `UIController.js` | Medium 🔴 |
+| 4.2 | **Refactor ShopView duplicate logic** | `ShopView.js` — extract `getOwnedCount()` helper | Small ✅ |
+| 4.3 | **Move shop catalog to data/constants** | `GameConstants.js` or new `ShopCatalog.js` | Small ✅ |
+| 4.4 | **Update `app_description.md`** | `docs/app_description.md` | Small ✅ |
+| 4.5 | **Add tests for VillageService** | `tests/rpg-village/unit/VillageService.test.js` | Medium 🔴 |
+| 4.6 | **Add tests for ExpeditionService** | `tests/rpg-village/unit/ExpeditionService.test.js` | Medium 🔴 |
+| 4.7 | **Combat UI accessibility / mobile polish** | `UIController.js` combat section | Small 🔴 |
+| 4.8 | **Hub integration + PWA manifest consideration** | `src/hub/index.html`, maybe `manifest.json` | Small ✅ |
 
 ---
 
