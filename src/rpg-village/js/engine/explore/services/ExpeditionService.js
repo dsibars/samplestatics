@@ -68,9 +68,9 @@ export class ExpeditionService {
      */
     _getRegionData(regionId) {
         const REGIONS = {
-            reg_greenfields: { name: 'Greenfields', branching: 'low', minStages: 1, maxStages: 2, enemies: ['slime_green', 'wild_boar'] },
-            reg_tiny_cave: { name: 'Tiny Cave', branching: 'medium', minStages: 2, maxStages: 2, enemies: ['bat_small', 'spider_minor'] },
-            reg_calmed_beach: { name: 'Calmed Beach', branching: 'low', minStages: 3, maxStages: 3, enemies: ['crab_shell', 'water_spirit_minor'] }
+            reg_greenfields: { name: 'Greenfields', branching: 'low', minStages: 1, maxStages: 2, enemies: ['slime_green', 'wild_boar'], baseLevel: 1 },
+            reg_tiny_cave: { name: 'Tiny Cave', branching: 'medium', minStages: 2, maxStages: 2, enemies: ['bat_small', 'spider_minor'], baseLevel: 2 },
+            reg_calmed_beach: { name: 'Calmed Beach', branching: 'low', minStages: 3, maxStages: 3, enemies: ['crab_shell', 'water_spirit_minor'], baseLevel: 2 }
         };
         return REGIONS[regionId] || REGIONS['reg_greenfields'];
     }
@@ -127,7 +127,17 @@ export class ExpeditionService {
         const id = 'proc_' + crypto.randomUUID().split('-')[0];
         
         // Stage count complexity
-        const stagesCount = Math.max(rData.minStages, Math.min(rData.maxStages, rData.minStages + Math.floor(clears / 5)));
+        let stagesCount = Math.max(rData.minStages, Math.min(rData.maxStages, rData.minStages + Math.floor(clears / 5)));
+        
+        // Explorer Guild reduces stage count by 10% per level (min 1 stage)
+        const explorerGuildLevel = this.villageService.getState().infrastructure.explorer_guild || 0;
+        if (explorerGuildLevel > 0) {
+            stagesCount = Math.max(1, Math.ceil(stagesCount * (1 - (explorerGuildLevel * 0.10))));
+        }
+        
+        // Enemy level based on region base level + clears
+        const enemyLevel = (rData.baseLevel || 1) + Math.floor(clears / 3);
+        
         const stages = [];
         
         for (let i = 0; i < stagesCount; i++) {
@@ -137,7 +147,7 @@ export class ExpeditionService {
             for(let e=0; e<enemyCount; e++) {
                 encounter.push(rData.enemies[Math.floor(Math.random() * rData.enemies.length)]);
             }
-            stages.push({ type: 'battle', enemies: encounter, isBoss });
+            stages.push({ type: 'battle', enemies: encounter, isBoss, enemyLevel });
         }
 
         // Add region-specific material items
@@ -279,7 +289,8 @@ export class ExpeditionService {
             });
             const enemyIndices = {};
             const enemies = stage.enemies.map(eId => {
-                const enemy = this._createEnemy(eId, stage.isBoss);
+                const enemyLevel = stage.enemyLevel || 1;
+                const enemy = this._createEnemy(eId, stage.isBoss, enemyLevel);
                 if (enemyCounts[eId] > 1) {
                     enemyIndices[eId] = (enemyIndices[eId] || 0) + 1;
                     const suffix = String.fromCharCode(64 + enemyIndices[eId]); // A, B, C...
@@ -561,10 +572,48 @@ export class ExpeditionService {
         }
 
         this.save();
+        
+        // Check if any new regions should unlock
+        this._checkRegionUnlocks();
+        
         return Result.ok({ status: 'completed', expId: exp.id, expName: exp.name, reward: exp.reward });
     }
 
-    _createEnemy(templateId, isBoss) {
+    /**
+     * Public method for GameEngine to call during nextDay()
+     * to check building-based unlocks (e.g., Explorer Guild).
+     */
+    checkRegionUnlocks() {
+        this._checkRegionUnlocks();
+    }
+
+    _checkRegionUnlocks() {
+        // Tiny Cave: unlock after completing tutorial cave
+        if (this.state.completedIds.includes('exp_tutorial_cave') && !this.state.regions.reg_tiny_cave) {
+            this._seedRegion('reg_tiny_cave');
+        }
+
+        // Calmed Beach: unlock after 3 Greenfields clears OR Explorer Guild L1
+        const greenfields = this.state.regions.reg_greenfields;
+        const explorerGuildLevel = this.villageService.getState().infrastructure.explorer_guild || 0;
+        const beachUnlocked = greenfields.clears >= 3 || explorerGuildLevel >= 1;
+        
+        if (beachUnlocked && !this.state.regions.reg_calmed_beach) {
+            this._seedRegion('reg_calmed_beach');
+        }
+    }
+
+    _seedRegion(regionId) {
+        const rData = this._getRegionData(regionId);
+        this.state.regions[regionId] = {
+            clears: 0,
+            unlocked: true,
+            availableNodes: [this._createProceduralNode(regionId, rData, 0)]
+        };
+        this.save();
+    }
+
+    _createEnemy(templateId, isBoss, level = 1) {
         // Mock data registry for enemies
         const templates = {
             slime_green: { name: 'Green Slime', type: 'beast', maxHp: 20, strength: 3, defense: 2, speed: 2 },
@@ -573,9 +622,25 @@ export class ExpeditionService {
             goblin_scout: { name: 'Goblin Scout', type: 'humanoid', maxHp: 25, strength: 4, defense: 2, speed: 6 },
             goblin_grunt: { name: 'Goblin Grunt', type: 'humanoid', maxHp: 35, strength: 5, defense: 4, speed: 2 },
             goblin_brute: { name: 'Goblin Brute', type: 'humanoid', maxHp: 55, strength: 7, defense: 5, speed: 1 },
-            goblin_king: { name: 'Goblin King', type: 'humanoid', maxHp: 120, strength: 10, defense: 6, speed: 4, isBoss: true }
+            goblin_king: { name: 'Goblin King', type: 'humanoid', maxHp: 120, strength: 10, defense: 6, speed: 4, isBoss: true },
+            bat_small: { name: 'Small Bat', type: 'beast', maxHp: 22, strength: 4, defense: 2, speed: 7 },
+            spider_minor: { name: 'Minor Spider', type: 'beast', maxHp: 28, strength: 5, defense: 3, speed: 4 },
+            crab_shell: { name: 'Shell Crab', type: 'beast', maxHp: 35, strength: 5, defense: 5, speed: 2 },
+            water_spirit_minor: { name: 'Minor Water Spirit', type: 'elemental', maxHp: 25, strength: 4, defense: 2, speed: 5, element: 'water' }
         };
         const t = templates[templateId] || templates['slime_green'];
-        return new Enemy({ ...t, id: crypto.randomUUID(), isBoss });
+        
+        // Apply level scaling: Base * 1.1^(level - 1)
+        const levelMult = Math.pow(1.1, level - 1);
+        const scaled = {
+            ...t,
+            maxHp: Math.floor(t.maxHp * levelMult),
+            strength: Math.floor(t.strength * levelMult),
+            defense: Math.floor((t.defense || 1) * levelMult),
+            speed: t.speed, // Speed stays flat to preserve turn-order feel
+            level: level
+        };
+        
+        return new Enemy({ ...scaled, id: crypto.randomUUID(), isBoss });
     }
 }

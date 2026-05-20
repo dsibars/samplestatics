@@ -20,9 +20,10 @@ Once an expedition is generated (instantiated), it is **persistent**:
 ## 2. Progression & Scaling
 The difficulty of newly generated expeditions is governed by the Region's `Clears Count`.
 
-- **Difficulty Level**: `Base_Tier_Level + floor(Region.Clears / 3)`.
-- **Stat Inflation**: `Base_Stats * (1 + (Region.Clears * 0.05))`.
+- **Enemy Level**: `Base_Tier_Level + floor(Region.Clears / 3)`.
+- **Stat Scaling**: Enemies scale by `Base_Stat * 1.1^(Level - 1)`. Speed remains flat to preserve turn-order feel.
 - **Complexity Inflation**: As `Clears` increase, the generator favors more stages and higher boss frequency.
+- **Explorer Guild Bonus**: Reduces stage count by 10% per Explorer Guild level (minimum 1 stage).
 
 ---
 

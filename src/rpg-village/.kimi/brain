@@ -41,11 +41,11 @@ rescued_hero_gear wooden_broadsword wooden_leather_body
 defeat_exp_formula max floor_expPerHero_0_25 floor_expPerHero_damageRatio_0_5
 
 [SPRINT_B_PLAN]
-enemy_scaling region_clears_drives_level Base_1_1_pow_L_minus_1
-tiny_cave_unlock after_exp_tutorial_cave
+enemy_scaling enemyLevel_baseLevel_plus_floor_clears_div_3 stats_mult_1_1_pow_level_minus_1_speed_flat
+tiny_cave_unlock after_exp_tutorial_cave automatic
 calmed_beach_unlock after_3_greenfields_clears OR explorer_guild_L1
-explorer_guild L1_unlocks_cave L2_unlocks_beach L3_plus_reduces_stages_10pct_per_level
-training_grounds idle_heroes_plus_5pct_exp_per_day_per_level
+explorer_guild L1_unlocks_beach_early L2_plus_reduces_stages_10pct_per_level_total
+training_grounds idle_heroes_plus_5pct_exp_per_day_per_level dead_heroes_excluded
 
 [SPRINT_C_PLAN]
 loot_drop_rate 0_40 equipment_on_expedition_completion
@@ -78,6 +78,10 @@ ENEMY_GOBLIN_SCOUT 25hp 4str 2def 6spd
 ENEMY_GOBLIN_GRUNT 35hp 5str 4def 2spd
 ENEMY_GOBLIN_BRUTE 55hp 7str 5def 1spd
 ENEMY_GOBLIN_KING 120hp 10str 6def 4spd boss
+ENEMY_BAT_SMALL 22hp 4str 2def 7spd
+ENEMY_SPIDER_MINOR 28hp 5str 3def 4spd
+ENEMY_CRAB_SHELL 35hp 5str 5def 2spd
+ENEMY_WATER_SPIRIT_MINOR 25hp 4str 2def 5spd water
 
 [DAMAGE_FORMULA]
 baseStat max_1_entity_stat

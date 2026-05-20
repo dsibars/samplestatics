@@ -394,6 +394,10 @@ export class GameEngine {
     // --- Time & Construction ---
     nextDay() {
         const villageReport = this.villageService.nextDay();
+        
+        // Check for region unlocks based on buildings (e.g., Explorer Guild)
+        this.expeditionService.checkRegionUnlocks();
+        
         const expeditionResult = this.expeditionService.processDay();
         
         // --- Hero Recovery Phase ---
@@ -401,7 +405,7 @@ export class GameEngine {
         const healPercentage = 0.20 + (infirmaryLevel * 0.10);
         const maxHeroesHealed = 1 + Math.floor(infirmaryLevel / 2);
 
-        const heroesNeedingHeal = this.heroService.list().filter(h => h.hp < h.maxHp);
+        const heroesNeedingHeal = this.heroService.list().filter(h => h.hp > 0 && h.hp < h.maxHp && this.expeditionService.getHeroActivity(h.id).type === 'idle');
         // Sort by lowest hp percentage first
         heroesNeedingHeal.sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
 
@@ -415,14 +419,34 @@ export class GameEngine {
             healedLog.push({ heroName: hero.name, amount: actualHeal });
         });
 
-        if (heroesToHeal.length > 0) {
-            this.heroService.saveAll();
+        // --- Training Grounds Passive XP ---
+        const trainingGroundsLevel = this.villageService.getState().infrastructure.training_grounds || 0;
+        const xpGainRate = 0.05 * trainingGroundsLevel; // +5% per level
+        const xpLog = [];
+        
+        if (xpGainRate > 0) {
+            const idleHeroes = this.heroService.list().filter(h => h.hp > 0 && this.expeditionService.getHeroActivity(h.id).type === 'idle');
+            idleHeroes.forEach(hero => {
+                const expNeeded = hero.getExpToNextLevel();
+                const xpGain = Math.max(1, Math.floor(expNeeded * xpGainRate));
+                const preLevel = hero.level;
+                hero.addExperience(xpGain);
+                if (hero.level > preLevel) {
+                    xpLog.push({ heroName: hero.name, leveledUp: true, xpGain });
+                } else {
+                    xpLog.push({ heroName: hero.name, leveledUp: false, xpGain });
+                }
+            });
+            if (idleHeroes.length > 0) {
+                this.heroService.saveAll();
+            }
         }
 
         const dailyReport = {
             ...villageReport,
             expedition: expeditionResult.success ? expeditionResult.data : null,
-            recovery: healedLog
+            recovery: healedLog,
+            training: xpLog
         };
         
         this.villageService.setDailyReport(dailyReport);

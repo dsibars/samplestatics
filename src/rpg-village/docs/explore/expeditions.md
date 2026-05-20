@@ -66,6 +66,26 @@ An expedition is failed if all heroes are defeated during a daily combat resolut
 ### 4. Discovery on Success
 Failing an expedition **does not** trigger the Discovery Logic. New paths are only revealed when the final stage of an expedition is completed successfully.
 
+## Region Unlock Conditions
+
+Regions are unlocked dynamically as the player progresses:
+
+| Region | Unlock Condition |
+|--------|------------------|
+| **Greenfields** | Available from game start |
+| **Tiny Cave** | Automatically unlocked after completing `exp_tutorial_cave` |
+| **Calmed Beach** | Unlocked after completing **3 Greenfields expeditions** OR building **Explorer Guild Level 1** |
+
+## Building Effects on Expeditions
+
+### Explorer Guild
+- **Level 1**: Unlocks Calmed Beach immediately (bypasses the 3-clears requirement)
+- **Level 2+**: Reduces expedition stage count by **10% per level** (minimum 1 stage)
+
+### Training Grounds
+- **Level 1+**: Idle heroes gain **+5% passive EXP per day** per Training Grounds level
+- Only heroes that are alive, idle, and not on expeditions receive this bonus
+
 ## Data Registries
 - **[Regions Data](regions_data.md)**: Details on the 15 regions and their generation patterns.
 - **[Special Missions](expeditions_data.md)**: Registry of unique story-driven milestones.
