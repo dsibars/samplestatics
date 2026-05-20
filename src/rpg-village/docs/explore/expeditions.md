@@ -58,9 +58,9 @@ Expedition progression is tied to the village's day cycle. Battles and explorati
 An expedition is failed if all heroes are defeated during a daily combat resolution.
 - **Retreat (Unassign)**: Players can "Retire" by unassigning all heroes from an active expedition. If unassigned mid-expedition (Stage 1 or higher), the expedition is aborted and its progress resets to Stage 0. The players keep any rewards gained from previous full expeditions, but this specific instance resets.
 - **Defeat**: If defeated in battle, the expedition is immediately aborted and reset.
-- **Partial Experience on Defeat**: Even if defeated, heroes earn partial experience proportional to the damage dealt:
-  - `Exp Earned = Math.floor(Base Stage Exp * (Total Damage Done / Total Enemy Max HP) * 0.5)`
-  - This guarantees that near-wins provide up to 50% of the victory experience, keeping progression active while encouraging player retries.
+- **Partial Experience on Defeat**: Even if defeated, heroes earn partial experience. The game guarantees a minimum so that failed attempts still contribute to growth:
+  - `Exp Earned = max( floor(Base Stage Exp * 0.25), floor(Base Stage Exp * (Total Damage Done / Total Enemy Max HP) * 0.5) )`
+  - This guarantees at least 25% of victory EXP even on total defeat, and up to 50% for near-wins. Prevents the "death spiral" where underleveled heroes cannot catch up.
 - **Retry**: Procedural nodes can be retried as long as they remain in the "Available" pool.
 
 ### 4. Discovery on Success

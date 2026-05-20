@@ -7983,7 +7983,7 @@ body {
 .resource-item .value { display: block; font-size: 1.3rem; font-weight: 800; color: var(--accent-color); }
 
 .action-bar { margin-top: var(--spacing-lg); display: flex; justify-content: center; }
-.dashboard-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-md); padding: var(--spacing-md); }
+.dashboard-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-md); }
 
 @media (min-width: 768px) {
     .dashboard-grid { grid-template-columns: 350px 1fr; }
@@ -7995,7 +7995,11 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.domain-view { animation: fadeIn 0.4s ease-out; }
+.domain-view {
+    animation: fadeIn 0.4s ease-out;
+    padding: var(--spacing-md);
+    min-height: 100%;
+}
 
 /* Settings Specific */
 .btn-danger {
@@ -8351,10 +8355,40 @@ body {
     flex-direction: column;
 }
 
+.empty-detail {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.detail-icon-bg {
+    font-size: 4rem;
+    opacity: 0.1;
+    margin-bottom: 20px;
+}
+
+.pane-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.pane-header h3 { margin-bottom: 0; }
+
+.view-header { margin-bottom: var(--spacing-lg); }
+
 .master-detail-layout .detail-pane {
     flex: 1;
     display: flex;
     flex-direction: column;
+    background: rgba(22, 24, 33, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    min-height: 350px;
 }
 
 @media (max-width: 768px) {
@@ -8891,6 +8925,9 @@ body {
 
     <!-- View Templates (Inlined at build-time) -->
     <template id="tpl-village"><section id="village-view" class="domain-view">
+    <div class="view-header">
+        <h2 data-i18n="nav_village">Village</h2>
+    </div>
     <div class="dashboard-grid">
         <!-- Left Column: Status & Queue -->
         <div class="side-panel">
@@ -9011,7 +9048,9 @@ body {
     <div class="master-detail-layout">
         <!-- Master Pane: List of Buildings -->
         <aside class="master-pane card">
-            <h3 data-i18n="ui_available_buildings">Buildings</h3>
+            <div class="pane-header">
+                <h3 data-i18n="ui_available_buildings">Buildings</h3>
+            </div>
             <div id="buildings-list-container" class="list-container">
                 <!-- Building cards will be injected here -->
             </div>
@@ -9043,30 +9082,7 @@ body {
 </section>
 
 <style>
-    .glass-pane {
-        background: rgba(22, 24, 33, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .detail-icon-bg {
-        font-size: 4rem;
-        opacity: 0.1;
-        margin-bottom: 20px;
-    }
-
-    .empty-detail {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        color: var(--text-muted);
-    }
-
-    /* Building Profile Styles */
+        /* Building Profile Styles */
     .building-profile-header {
         display: flex;
         justify-content: space-between;
@@ -9145,6 +9161,7 @@ body {
         <main class="detail-pane card glass-pane">
             <div id="hero-detail-content">
                 <div class="empty-detail">
+                    <div class="detail-icon-bg">🦸</div>
                     <p data-i18n="ui_select_hero">Select a hero to view stats and equipment.</p>
                 </div>
             </div>
@@ -9163,13 +9180,6 @@ body {
 </section>
 
 <style>
-    .pane-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-md);
-    }
-    .pane-header h3 { margin-bottom: 0; }
     
     .stats-grid {
         display: grid;
@@ -9564,6 +9574,7 @@ body {
         <main class="detail-pane card glass-pane">
             <div id="expedition-detail-content">
                 <div class="empty-detail">
+                    <div class="detail-icon-bg">🗺️</div>
                     <p data-i18n="ui_select_expedition">Select an expedition node on the map.</p>
                 </div>
             </div>
@@ -9788,8 +9799,6 @@ body {
 <style>
 .shop-view {
     position: relative;
-    padding: var(--spacing-md);
-    min-height: 100%;
 }
 
 .lock-overlay {
@@ -9827,29 +9836,6 @@ body {
 }
 
 /* Layout Splits */
-.shop-view .detail-pane {
-    background: rgba(22, 24, 33, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    display: flex;
-    flex-direction: column;
-    min-height: 350px;
-}
-
-.shop-view .empty-detail {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    color: var(--text-muted);
-}
-
-.shop-view .detail-icon-bg {
-    font-size: 4rem;
-    opacity: 0.1;
-    margin-bottom: 20px;
-}
 
 /* Collapsible Categories */
 .shop-category-details summary::-webkit-details-marker {
@@ -10202,8 +10188,6 @@ body {
 <style>
 .forge-view {
     position: relative;
-    padding: var(--spacing-md);
-    min-height: 100%;
 }
 
 .forge-view .lock-overlay {
@@ -10236,29 +10220,7 @@ body {
     animation: pulse 2s infinite ease-in-out;
 }
 
-.forge-view .detail-pane {
-    background: rgba(22, 24, 33, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    display: flex;
-    flex-direction: column;
-    min-height: 350px;
-}
 
-.forge-view .empty-detail {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    color: var(--text-muted);
-}
-
-.forge-view .detail-icon-bg {
-    font-size: 4rem;
-    opacity: 0.1;
-    margin-bottom: 20px;
-}
 
 /* Forge Upgrade Pane Specifics */
 .forge-upgrade-header {

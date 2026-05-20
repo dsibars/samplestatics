@@ -23,7 +23,9 @@ Heroes are the defenders of the village and the primary means of progressing the
 
 ## Progression
 - **Leveling**: Every level grants `statPoints` (2-3) and `skillPoints` (1).
-- **Starting Points**: All newly recruited heroes (including the starting hero) begin at Level 1 with **5 unassigned stat points** by default, allowing the player to customize their initial attributes before deployment.
+- **Starting Points**: All newly recruited heroes begin at Level 1 with **5 unassigned stat points** by default, allowing the player to customize their initial attributes before deployment.
+- **Base Stats**: Level 1 heroes start with `HP: 30`, `MP: 15`, `STR: 8`, `DEF: 4`, `SPD: 4`, `MAG: 4`. These values ensure heroes feel competent from the first battle.
+- **Rescued Heroes**: Heroes obtained through story missions (e.g., Sir Valen) start at `max(1, average_party_level - 1)` and are equipped with a basic wooden weapon and leather armor so they can contribute immediately.
 - **Attributes**: Base HP/MP increase automatically on level up.
 - **Skills**: Heroes can learn and upgrade skills using `skillPoints`.
   - See [../shared/combat/hero_skills.md](../shared/combat/hero_skills.md) for logic and [../shared/combat/hero_skills_data.md](../shared/combat/hero_skills_data.md) for the registry.

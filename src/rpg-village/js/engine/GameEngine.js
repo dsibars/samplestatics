@@ -62,13 +62,7 @@ export class GameEngine {
                 origin: "origin_warrior",
                 avatar: "arthur.png",
                 level: 1,
-                statPoints: 5,
-                baseMaxHp: 10,
-                baseMaxMp: 5,
-                baseStrength: 1,
-                baseSpeed: 1,
-                baseDefense: 1,
-                baseMagicPower: 1
+                statPoints: 5
             });
         }
     }

@@ -85,7 +85,7 @@
 | 5 | **Inert Buildings** | Medium | `explorer_guild` and `training_grounds` provide no gameplay effect |
 | 6 | **No Affix Generation** | Medium | Affixes (`vampire`, `phoenix`, `sage`, `titan`, `assassin`) coded in stat calc but never rolled |
 | 7 | **Only 1 Region** | Medium | `reg_tiny_cave`, `reg_calmed_beach` defined in data but unreachable |
-| 8 | **Enemy Level Scaling** | Low | Spec says `Base * 1.1^(L-1)`; enemies use flat base stats |
+| 8 | **Enemy Level Scaling** | Low | Spec says `Base * 1.1^(L-1)`; enemies use flat base stats. Not yet implemented. |
 | 9 | **Not in Hub** | Low | ✅ **Fixed 2026-05-20**. Card added to `src/hub/index.html` with i18n for all 5 languages. |
 
 ### Code Quality Issues
@@ -110,6 +110,13 @@
 
 ---
 
+## 5.1 Completed This Session (Skeleton Balance)
+- ✅ **Hero base stats boosted** (HP 30, MP 15, STR 8, DEF 4, SPD 4, MAG 4) — heroes feel competent from level 1
+- ✅ **Enemy templates rebalanced** with defense values and clearer tier spectrum
+- ✅ **Rescued heroes catch up** — start at `max(1, avg_party_level - 1)` with basic wooden gear
+- ✅ **Defeat minimum EXP** — dead heroes guaranteed 25% of victory EXP, preventing death spirals
+- ✅ **Specs updated** — `hero.md`, `enemies_data.md`, `expeditions.md` reflect new balance
+
 ## 5. Roadmap
 
 ### Phase 1 — Foundation & Polish (Current Priority)
@@ -118,6 +125,7 @@
 | # | Feature | Spec File | Implementation Files | Effort |
 |---|---------|-----------|----------------------|--------|
 | 1.1 | **Sell Resources panel** in Shop | `docs/village/shop_forge.md` (exists) | `ShopView.js`, `EngineAdapter.js` | Small ✅ |
+| 1.1b | **Skeleton Balance Pass** | *NEW* | `Hero.js`, `ExpeditionService.js`, `hero.md`, `enemies_data.md`, `expeditions.md` | Small ✅ |
 | 1.2 | **Sell Items** (equipment & consumables at ~30% buy price) | `docs/village/shop_forge.md` | `ShopView.js`, `GameEngine.js`, `EngineAdapter.js`, `pages/shop.html` | Small ✅ |
 | 1.3 | **Add RPG Village to Hub** | N/A | `src/hub/index.html` | Tiny |
 | 1.4 | **Skill Learning UI** | *NEW: `docs/heroes/skill_ui.md`* | `HeroesView.js`, `HeroService.js`, `EngineAdapter.js` | Medium |

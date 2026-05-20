@@ -369,7 +369,9 @@ export class ExpeditionService {
                     expEarned = ctx.expPerHero;
                 }
             } else {
-                expEarned = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+                const minimumExp = Math.floor(ctx.expPerHero * 0.25);
+                const damageBasedExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+                expEarned = Math.max(minimumExp, damageBasedExp);
             }
 
             if (expEarned > 0) {
@@ -458,7 +460,9 @@ export class ExpeditionService {
                     expEarned = ctx.expPerHero;
                 }
             } else {
-                const partialExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+                const minimumExp = Math.floor(ctx.expPerHero * 0.25);
+                const damageBasedExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+                const partialExp = Math.max(minimumExp, damageBasedExp);
                 if (partialExp > 0) {
                     const preLevel = h.level;
                     h.addExperience(partialExp);
@@ -532,7 +536,25 @@ export class ExpeditionService {
             const s = exp.reward.special;
             if (s.type === 'hero') {
                 const avatar = s.value === 'Sir Valen' ? 'valen.png' : null;
-                this.heroService.add({ name: s.value, origin: 'origin_guard', avatar });
+                const existingHeroes = this.heroService.list();
+                const avgLevel = existingHeroes.length > 0
+                    ? Math.floor(existingHeroes.reduce((sum, h) => sum + h.level, 0) / existingHeroes.length)
+                    : 1;
+                const startLevel = Math.max(1, avgLevel - 1);
+
+                const result = this.heroService.add({ name: s.value, origin: 'origin_guard', avatar, level: startLevel });
+                if (result.success) {
+                    const newHero = result.data;
+                    // Level up to reach target (constructor doesn't auto-level)
+                    for (let i = 1; i < startLevel; i++) {
+                        newHero.levelUp();
+                    }
+                    // Give starting equipment so they're not naked
+                    newHero.equipment.leftHand = { type: 'weapon', material: 'wooden', family: 'broadsword', level: 0 };
+                    newHero.equipment.body = { type: 'armor', material: 'wooden', archetype: 'leather', slot: 'body', level: 0 };
+                    newHero.recalculateStats({});
+                    this.heroService.saveAll();
+                }
             } else if (s.type === 'villagers') {
                 this.villageService.addVillagers(s.value);
             }
@@ -545,13 +567,13 @@ export class ExpeditionService {
     _createEnemy(templateId, isBoss) {
         // Mock data registry for enemies
         const templates = {
-            slime_green: { name: 'Green Slime', type: 'beast', maxHp: 15, strength: 2, speed: 1 },
-            slime_fire: { name: 'Fire Slime', type: 'beast', maxHp: 20, strength: 3, speed: 2, element: 'fire' },
-            wild_boar: { name: 'Wild Boar', type: 'beast', maxHp: 25, strength: 4, speed: 3 },
-            goblin_scout: { name: 'Goblin Scout', type: 'humanoid', maxHp: 22, strength: 4, speed: 5 },
-            goblin_grunt: { name: 'Goblin Grunt', type: 'humanoid', maxHp: 30, strength: 5, speed: 2 },
-            goblin_brute: { name: 'Goblin Brute', type: 'humanoid', maxHp: 50, strength: 6, speed: 1 },
-            goblin_king: { name: 'Goblin King', type: 'humanoid', maxHp: 120, strength: 10, speed: 4, isBoss: true }
+            slime_green: { name: 'Green Slime', type: 'beast', maxHp: 20, strength: 3, defense: 2, speed: 2 },
+            slime_fire: { name: 'Fire Slime', type: 'beast', maxHp: 30, strength: 5, defense: 3, speed: 3, element: 'fire' },
+            wild_boar: { name: 'Wild Boar', type: 'beast', maxHp: 40, strength: 6, defense: 4, speed: 4 },
+            goblin_scout: { name: 'Goblin Scout', type: 'humanoid', maxHp: 25, strength: 4, defense: 2, speed: 6 },
+            goblin_grunt: { name: 'Goblin Grunt', type: 'humanoid', maxHp: 35, strength: 5, defense: 4, speed: 2 },
+            goblin_brute: { name: 'Goblin Brute', type: 'humanoid', maxHp: 55, strength: 7, defense: 5, speed: 1 },
+            goblin_king: { name: 'Goblin King', type: 'humanoid', maxHp: 120, strength: 10, defense: 6, speed: 4, isBoss: true }
         };
         const t = templates[templateId] || templates['slime_green'];
         return new Enemy({ ...t, id: crypto.randomUUID(), isBoss });

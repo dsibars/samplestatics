@@ -13,12 +13,12 @@ export class Hero {
         this.avatar = data.avatar || null;
 
         // Base stats
-        this.baseMaxHp = data.baseMaxHp || 10;
-        this.baseMaxMp = data.baseMaxMp || 5;
-        this.baseStrength = data.baseStrength || 1;
-        this.baseSpeed = data.baseSpeed || 1;
-        this.baseDefense = data.baseDefense || 1;
-        this.baseMagicPower = data.baseMagicPower || 1;
+        this.baseMaxHp = data.baseMaxHp || 30;
+        this.baseMaxMp = data.baseMaxMp || 15;
+        this.baseStrength = data.baseStrength || 8;
+        this.baseSpeed = data.baseSpeed || 4;
+        this.baseDefense = data.baseDefense || 4;
+        this.baseMagicPower = data.baseMagicPower || 4;
 
         // Dynamic state
         this.hp = data.hp ?? this.baseMaxHp;
