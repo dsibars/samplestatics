@@ -12,7 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     
     <!-- Styles -->
-  <script type="module" crossorigin>(function polyfill() {
+  <script type="module" crossorigin>var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+(function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) {
     return;
@@ -350,6 +353,30 @@ class UIController {
       close();
       if (onConfirm) onConfirm();
     });
+  }
+  /**
+   * Displays a transient in-game toast notification.
+   * @param {string} message  Translated message text to show.
+   * @param {'error'|'success'|'info'} type  Visual style. Defaults to 'error'.
+   * @param {number} duration  Auto-dismiss delay in ms. Defaults to 3500.
+   */
+  showToast(message, type = "error", duration = 3500) {
+    let container = document.getElementById("game-toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "game-toast-container";
+      container.className = "game-toast-container";
+      document.body.appendChild(container);
+    }
+    const icons = { error: "⚠️", success: "✅", info: "ℹ️" };
+    const toast = document.createElement("div");
+    toast.className = `game-toast toast-${type}`;
+    toast.innerHTML = `<span class="toast-icon">${icons[type] || "⚠️"}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add("toast-out");
+      setTimeout(() => toast.remove(), 400);
+    }, duration);
   }
   /**
    * Plays the battle log in a full-screen overlay dynamically imitating a turn-based combat log.
@@ -1004,6 +1031,11 @@ class UIController {
     };
     this.renderCombatOverlay = render;
     render();
+  }
+  forceUpdate() {
+    if (this.adapter) {
+      this.adapter.forceUpdate();
+    }
   }
 }
 class Result {
@@ -3194,6 +3226,9 @@ const en = {
   ui_settings_wipe_data: "Wipe All Data",
   ui_settings_wipe_confirm: "Are you absolutely sure? This will delete all your progress permanently.",
   ui_settings_wipe_success: "All data has been cleared. The game will now reload.",
+  ui_settings_dev_options: "Developer Options",
+  ui_settings_dev_cheat_desc: "Instantly gain 10k Gold, 10k Wood/Stone, Hero XP, and unlock the Shop.",
+  ui_settings_dev_cheat: "Activate Developer Cheat",
   // Intro Narrative
   intro_title: "A New Beginning",
   intro_lore: "In a world consumed by the flames of eternal war, a small group of survivors has fled the chaos. Led by a brave hero, they seek a remote valley to build a sanctuary of peace. The journey has been long, and resources are scarce, but hope remains.",
@@ -3235,6 +3270,28 @@ const en = {
   ui_select_heroes: "Select Heroes",
   ui_under_construction: "Under Construction",
   error_already_in_queue: "Building is already under construction.",
+  error_not_enough_gold: "Not enough gold to complete this action.",
+  error_not_enough_materials: "Not enough materials to complete this action.",
+  error_not_enough_items: "Not enough items available.",
+  error_storage_full: "Storage is full! Build a Warehouse to increase capacity.",
+  error_no_available_labor: "No idle workers available to start construction.",
+  error_hero_not_found: "Hero not found.",
+  error_hero_busy: "Hero is currently on an expedition and cannot perform this action.",
+  error_hero_dead: "Cannot assign a hero with 0 HP.",
+  error_item_not_found: "Item not found in inventory.",
+  error_invalid_slot: "That item cannot be equipped in this slot.",
+  error_invalid_item_type: "This item type cannot be equipped.",
+  error_slot_empty: "That equipment slot is already empty.",
+  error_inventory_not_linked: "Inventory system not available.",
+  error_expedition_unavailable: "This expedition is not currently available.",
+  error_other_expedition_active: "Another expedition is already active.",
+  error_expedition_locked: "This expedition is locked.",
+  error_expedition_not_found: "Expedition not found.",
+  error_no_active_expedition: "No active expedition to interact with.",
+  error_no_active_battle: "No battle is currently in progress.",
+  error_battle_not_over: "The battle has not ended yet.",
+  error_no_active_actor: "No active combatant for this turn.",
+  error_unknown_stage_type: "Unknown expedition stage type.",
   // Combat Log
   log_attack: "{attacker} attacks {target} for {damage} damage!",
   log_miss: "{attacker} missed {target}!",
@@ -3268,6 +3325,14 @@ const en = {
   ui_forge_locked: "Forge Locked",
   ui_forge_locked_desc: "Build a Blacksmith in the village to unlock the Forge.",
   ui_buy: "Buy",
+  ui_sell: "Sell",
+  ui_purchased: "Purchased! ✓",
+  ui_sold: "Sold! ✓",
+  ui_sell_price: "Sell Price",
+  ui_no_items_to_sell: "No items to sell.",
+  ui_cost: "Cost",
+  ui_inventory: "Inventory",
+  ui_stats: "Stats Bonus",
   ui_refine: "Refine",
   ui_refine_cost: "Upgrade Cost",
   ui_refine_max: "MAX LEVEL",
@@ -3483,6 +3548,9 @@ const es = {
   ui_settings_wipe_data: "Borrar Todos los Datos",
   ui_settings_wipe_confirm: "¿Estás absolutamente seguro? Esto borrará todo tu progreso permanentemente.",
   ui_settings_wipe_success: "Todos los datos han sido borrados. El juego se reiniciará ahora.",
+  ui_settings_dev_options: "Opciones de Desarrollador",
+  ui_settings_dev_cheat_desc: "Obtén instantáneamente 10k de Oro, 10k de Madera/Piedra, XP de Héroe y desbloquea la Tienda.",
+  ui_settings_dev_cheat: "Activar Trucos de Desarrollador",
   // Intro Narrative
   intro_title: "Un Nuevo Comienzo",
   intro_lore: "En un mundo consumido por las llamas de una guerra eterna, un pequeño grupo de supervivientes ha huido del caos. Guiados por un valiente héroe, buscan un valle remoto para construir un santuario de paz. El viaje ha sido largo y los recursos son escasos, pero la esperanza aún perdura.",
@@ -3524,6 +3592,28 @@ const es = {
   ui_select_heroes: "Seleccionar Héroes",
   ui_under_construction: "En Construcción",
   error_already_in_queue: "El edificio ya está en construcción.",
+  error_not_enough_gold: "No tienes suficiente oro para completar esta acción.",
+  error_not_enough_materials: "No tienes suficientes materiales para completar esta acción.",
+  error_not_enough_items: "No hay suficientes objetos disponibles.",
+  error_storage_full: "¡El almacén está lleno! Construye un Almacén para aumentar la capacidad.",
+  error_no_available_labor: "No hay trabajadores libres para iniciar la construcción.",
+  error_hero_not_found: "Héroe no encontrado.",
+  error_hero_busy: "El héroe está actualmente en una expedición y no puede realizar esta acción.",
+  error_hero_dead: "No se puede asignar a un héroe con 0 PS.",
+  error_item_not_found: "Objeto no encontrado en el inventario.",
+  error_invalid_slot: "Este objeto no se puede equipar en esta ranura.",
+  error_invalid_item_type: "Este tipo de objeto no se puede equipar.",
+  error_slot_empty: "Esa ranura de equipo ya está vacía.",
+  error_inventory_not_linked: "Sistema de inventario no disponible.",
+  error_expedition_unavailable: "Esta expedición no está disponible actualmente.",
+  error_other_expedition_active: "Ya hay otra expedición activa.",
+  error_expedition_locked: "Esta expedición está bloqueada.",
+  error_expedition_not_found: "Expedición no encontrada.",
+  error_no_active_expedition: "No hay ninguna expedición activa con la que interactuar.",
+  error_no_active_battle: "No hay ninguna batalla en curso.",
+  error_battle_not_over: "La batalla aún no ha terminado.",
+  error_no_active_actor: "No hay ningún combatiente activo en este turno.",
+  error_unknown_stage_type: "Tipo de etapa de expedición desconocido.",
   // Combat Log
   log_attack: "¡{attacker} ataca a {target} por {damage} de daño!",
   log_miss: "¡{attacker} falló el ataque contra {target}!",
@@ -3557,6 +3647,14 @@ const es = {
   ui_forge_locked: "Forja Bloqueada",
   ui_forge_locked_desc: "Construye una Herrería en la aldea para desbloquear la Forja.",
   ui_buy: "Comprar",
+  ui_sell: "Vender",
+  ui_purchased: "¡Comprado! ✓",
+  ui_sold: "¡Vendido! ✓",
+  ui_sell_price: "Precio de Venta",
+  ui_no_items_to_sell: "No hay objetos para vender.",
+  ui_cost: "Coste",
+  ui_inventory: "Inventario",
+  ui_stats: "Bonificaciones de Estadísticas",
   ui_refine: "Refinar",
   ui_refine_cost: "Coste de Mejora",
   ui_refine_max: "NIVEL MÁXIMO",
@@ -3789,6 +3887,28 @@ const ca = {
   ui_select_heroes: "Seleccionar Herois",
   ui_under_construction: "En Construcció",
   error_already_in_queue: "L'edifici ja està en construcció.",
+  error_not_enough_gold: "No tens prou or per completar aquesta acció.",
+  error_not_enough_materials: "No tens prou materials per completar aquesta acció.",
+  error_not_enough_items: "No hi ha prou objectes disponibles.",
+  error_storage_full: "El magatzem és ple! Construeix un Magatzem per augmentar la capacitat.",
+  error_no_available_labor: "No hi ha treballadors lliures per iniciar la construcció.",
+  error_hero_not_found: "Heroi no trobat.",
+  error_hero_busy: "L'heroi està actualment en una expedició i no pot realitzar aquesta acció.",
+  error_hero_dead: "No es pot assignar un heroi amb 0 PS.",
+  error_item_not_found: "Objecte no trobat a l'inventari.",
+  error_invalid_slot: "Aquest objecte no es pot equipar en aquesta ranura.",
+  error_invalid_item_type: "Aquest tipus d'objecte no es pot equipar.",
+  error_slot_empty: "Aquella ranura d'equip ja està buida.",
+  error_inventory_not_linked: "Sistema d'inventari no disponible.",
+  error_expedition_unavailable: "Aquesta expedició no està disponible actualment.",
+  error_other_expedition_active: "Ja hi ha una altra expedició activa.",
+  error_expedition_locked: "Aquesta expedició està bloquejada.",
+  error_expedition_not_found: "Expedició no trobada.",
+  error_no_active_expedition: "No hi ha cap expedició activa amb la qual interactuar.",
+  error_no_active_battle: "No hi ha cap batalla en curs.",
+  error_battle_not_over: "La batalla encara no ha acabat.",
+  error_no_active_actor: "No hi ha cap combatent actiu en aquest torn.",
+  error_unknown_stage_type: "Tipus d'etapa d'expedició desconegut.",
   // Combat Log
   log_attack: "{attacker} ataca {target} per {damage} de dany!",
   log_miss: "{attacker} ha fallat l'atac contra {target}!",
@@ -3822,6 +3942,14 @@ const ca = {
   ui_forge_locked: "Forja Bloqueada",
   ui_forge_locked_desc: "Construeix una Herreria a l'aldea per desbloquejar la Forja.",
   ui_buy: "Comprar",
+  ui_sell: "Vendre",
+  ui_purchased: "Comprat! ✓",
+  ui_sold: "Venut! ✓",
+  ui_sell_price: "Preu de Venda",
+  ui_no_items_to_sell: "No hi ha objectes per vendre.",
+  ui_cost: "Cost",
+  ui_inventory: "Inventari",
+  ui_stats: "Bonificacions d'Estadístiques",
   ui_refine: "Refinar",
   ui_refine_cost: "Cost de Millora",
   ui_refine_max: "NIVELL MÀXIM",
@@ -3885,6 +4013,18 @@ const ca = {
   desc_material_stone: "Un recurs de picapedrer resistent. Requerit per a construccions i fortificacions avançades del poble.",
   desc_material_iron: "Mineral refinat. Utilitzat per a la fabricació d'armament avançat i obres de forja.",
   desc_food_raw_grain: "Blat collit. Consumit diàriament pels aldeans per evitar la inanició. ¡Mantén existències!",
+  // Domain: Settings
+  ui_settings_title: "Ajustos del Joc",
+  ui_settings_language: "Idioma de la Interfície",
+  settings_language_label: "Tria el teu idioma:",
+  ui_settings_danger_zone: "Zona de Perill",
+  ui_settings_wipe_description: "Esborra permanentment tot el teu progrés i comença de nou.",
+  ui_settings_wipe_data: "Esborrar Totes les Dades",
+  ui_settings_wipe_confirm: "Estàs absolutament segur? Això esborrarà tot el teu progrés de manera permanent.",
+  ui_settings_wipe_success: "Totes les dades han estat esborrades. El joc es reiniciarà ara.",
+  ui_settings_dev_options: "Opcions de Desenvolupador",
+  ui_settings_dev_cheat_desc: "Obtén a l'instant 10k d'Or, 10k de Fusta/Pedra, XP d'Heroi i desbloqueja la Botiga.",
+  ui_settings_dev_cheat: "Activar Trucs de Desenvolupador",
   // Intro Narrative
   intro_title: "Un Nou Començament",
   intro_lore: "En un món consumit per les flames d'una guerra eterna, un petit grup de supervivents ha fugit del caos. Guiats per un heroi valent, busquen una vall remota per construir un santuari de pau. El viatge ha estat llarg i els recursos són escassos, però l'esperança encara perdura.",
@@ -4066,6 +4206,28 @@ const eu = {
   ui_select_heroes: "Heroiak Aukeratu",
   ui_under_construction: "Eraikitzen",
   error_already_in_queue: "Eraikina jada eraikitzen ari da.",
+  error_not_enough_gold: "Ez duzu urre nahikorik ekintza hau osatzeko.",
+  error_not_enough_materials: "Ez dituzu material nahikoak ekintza hau osatzeko.",
+  error_not_enough_items: "Ez dago objektu nahikorik eskuragarri.",
+  error_storage_full: "Biltegiak beteta daude! Eraiki Biltegi bat edukiera handitzeko.",
+  error_no_available_labor: "Ez dago langile librerik eraikuntza hasteko.",
+  error_hero_not_found: "Heroia ez da aurkitu.",
+  error_hero_busy: "Heroia une honetan espedizio batean dago eta ezin du ekintza hau egin.",
+  error_hero_dead: "Ezin da 0 OS dituen heroi bat esleitu.",
+  error_item_not_found: "Objektua ez da inbentarioan aurkitu.",
+  error_invalid_slot: "Objektu hau ezin da zirrikitu honetan ekipatu.",
+  error_invalid_item_type: "Objektu mota hau ezin da ekipatu.",
+  error_slot_empty: "Ekipo zirrikitu hori jada hutsik dago.",
+  error_inventory_not_linked: "Inbentario sistema ez dago eskuragarri.",
+  error_expedition_unavailable: "Espedizio hau ez dago eskuragarri orain.",
+  error_other_expedition_active: "Beste espedizio bat aktibo dago jada.",
+  error_expedition_locked: "Espedizio hau blokeatuta dago.",
+  error_expedition_not_found: "Espedizioa ez da aurkitu.",
+  error_no_active_expedition: "Ez dago espedizio aktiborik elkarreragiteko.",
+  error_no_active_battle: "Ez dago borrokarik martxan.",
+  error_battle_not_over: "Borroka oraindik ez da amaitu.",
+  error_no_active_actor: "Ez dago txanda honetako aktore aktiborik.",
+  error_unknown_stage_type: "Espedizio etapa mota ezezaguna.",
   // Combat Log
   log_attack: "{attacker}(e)k {target} eraso du {damage} min emanez!",
   log_miss: "{attacker}(e)k huts egin du {target} erasotzean!",
@@ -4099,6 +4261,14 @@ const eu = {
   ui_forge_locked: "Forja Blokeatuta",
   ui_forge_locked_desc: "Eraiki Aroztegi bat herrian forja desblokeatzeko.",
   ui_buy: "Erosi",
+  ui_sell: "Saldu",
+  ui_purchased: "Erosita! ✓",
+  ui_sold: "Saldua! ✓",
+  ui_sell_price: "Salmenta Prezioa",
+  ui_no_items_to_sell: "Ez dago saldu beharreko elementurik.",
+  ui_cost: "Kostua",
+  ui_inventory: "Inbentarioa",
+  ui_stats: "Estatistika-Hobetzeak",
   ui_refine: "Findu",
   ui_refine_cost: "Hobekuntza Kostua",
   ui_refine_max: "GEHIENEKO MAILA",
@@ -4162,6 +4332,18 @@ const eu = {
   desc_material_stone: "Hargintza sendoa. Herriko eraikuntza eta gotorleku aurreratuagoetarako beharrezkoa da.",
   desc_material_iron: "Mea findua. Burdinazko armamentu aurreratua egiteko eta forja berritzeko lanetarako erabiltzen da.",
   desc_food_raw_grain: "Biltzen den zereala. Herritarrek egunero jaten dute gosea saihesteko. Mantendu stock handia!",
+  // Domain: Settings
+  ui_settings_title: "Jokoaren Ezarpenak",
+  ui_settings_language: "Interfazearen Hizkuntza",
+  settings_language_label: "Aukeratu zure hizkuntza:",
+  ui_settings_danger_zone: "Arrisku Eremua",
+  ui_settings_wipe_description: "Ezabatu betirako zure aurrerapen guztia eta hasi berriro.",
+  ui_settings_wipe_data: "Datu Guztiak Garbitu",
+  ui_settings_wipe_confirm: "Guztiz ziur zaude? Honek zure aurrerapen guztia betiko ezabatuko du.",
+  ui_settings_wipe_success: "Datu guztiak ezabatu dira. Jokoa berrabiarazi egingo da orain.",
+  ui_settings_dev_options: "Garatzaile-Aukerak",
+  ui_settings_dev_cheat_desc: "Lortu berehala 10k Urre, 10k Zur/Harri, Heroi XP eta desblokeatu Denda.",
+  ui_settings_dev_cheat: "Garatzaileen Tranpa Aktibatu",
   // Intro Narrative
   intro_title: "Hasiera Berri Bat",
   intro_lore: "Betiereko gerra baten sugarrek suntsitutako mundu batean, bizirik atera den talde txiki batek ihes egin dio kaosari. Heroi kementsu batek gidatuta, haran urrun bat bilatzen dute bakezko babesleku bat eraikitzeko. Bidaia luzea izan da eta baliabideak urriak dira, baina itxaropenak bizirik dirau.",
@@ -4343,6 +4525,28 @@ const gl = {
   ui_select_heroes: "Seleccionar Heroes",
   ui_under_construction: "En Construción",
   error_already_in_queue: "O edificio xa está en construción.",
+  error_not_enough_gold: "Non tes ouro suficiente para completar esta acción.",
+  error_not_enough_materials: "Non tes materiais suficientes para completar esta acción.",
+  error_not_enough_items: "Non hai obxectos suficientes dispoñibles.",
+  error_storage_full: "O almacén está cheo! Constrúe un Almacén para aumentar a capacidade.",
+  error_no_available_labor: "Non hai traballadores libres para iniciar a construción.",
+  error_hero_not_found: "Heroe non atopado.",
+  error_hero_busy: "O heroe está actualmente nunha expedición e non pode realizar esta acción.",
+  error_hero_dead: "Non se pode asignar un heroe con 0 PS.",
+  error_item_not_found: "Obxecto non atopado no inventario.",
+  error_invalid_slot: "Este obxecto non se pode equipar nesta ranura.",
+  error_invalid_item_type: "Este tipo de obxecto non se pode equipar.",
+  error_slot_empty: "Esa ranura de equipamento xa está baleira.",
+  error_inventory_not_linked: "Sistema de inventario non dispoñible.",
+  error_expedition_unavailable: "Esta expedición non está dispoñible actualmente.",
+  error_other_expedition_active: "Xa hai outra expedición activa.",
+  error_expedition_locked: "Esta expedición está bloqueada.",
+  error_expedition_not_found: "Expedición non atopada.",
+  error_no_active_expedition: "Non hai ningunha expedición activa coa que interactuar.",
+  error_no_active_battle: "Non hai ningunha batalla en curso.",
+  error_battle_not_over: "A batalla aínda non rematou.",
+  error_no_active_actor: "Non hai ningún combatente activo neste turno.",
+  error_unknown_stage_type: "Tipo de etapa de expedición descoñecido.",
   // Combat Log
   log_attack: "¡{attacker} ataca a {target} por {damage} de dano!",
   log_miss: "¡{attacker} fallou o ataque contra {target}!",
@@ -4376,6 +4580,14 @@ const gl = {
   ui_forge_locked: "Forxa Bloqueada",
   ui_forge_locked_desc: "Constrúe unha Ferraría na aldea para desbloquear a Forxa.",
   ui_buy: "Mercar",
+  ui_sell: "Vender",
+  ui_purchased: "Mercado! ✓",
+  ui_sold: "Vendido! ✓",
+  ui_sell_price: "Prezo de Venda",
+  ui_no_items_to_sell: "Non hai obxectos para vender.",
+  ui_cost: "Custo",
+  ui_inventory: "Inventario",
+  ui_stats: "Bonificacións de Estatísticas",
   ui_refine: "Refinar",
   ui_refine_cost: "Coste de Mellora",
   ui_refine_max: "NIVEL MÁXIMO",
@@ -4439,6 +4651,18 @@ const gl = {
   desc_material_stone: "Un recurso de cantería resistente. Requirido para construcións e fortificacións avanzadas do pobo.",
   desc_material_iron: "Mineral refinado. Utilizado para a fabricación de armamento avanzado e obras de forxa.",
   desc_food_raw_grain: "Trigo colleitado. Consumido diariamente polos aldeáns para evitar la inanición. ¡Mantén existencias!",
+  // Domain: Settings
+  ui_settings_title: "Axustes do Xogo",
+  ui_settings_language: "Idioma da Interface",
+  settings_language_label: "Escolle o teu idioma:",
+  ui_settings_danger_zone: "Zona de Perigo",
+  ui_settings_wipe_description: "Borra permanentemente todo o teu progreso e comeza de novo.",
+  ui_settings_wipe_data: "Borrar Todos os Datos",
+  ui_settings_wipe_confirm: "Estás absolutamente seguro? Isto borrará todo o teu progreso permanentemente.",
+  ui_settings_wipe_success: "Todos os datos foron borrados. O xogo reiniciarase agora.",
+  ui_settings_dev_options: "Opcións de Desenvolvedor",
+  ui_settings_dev_cheat_desc: "Obtén instantaneamente 10k de Ouro, 10k de Madeira/Pedra, XP de Heroe e desbloquea a Tenda.",
+  ui_settings_dev_cheat: "Activar Trucos de Desenvolvedor",
   // Intro Narrative
   intro_title: "Un Novo Comezo",
   intro_lore: "Nun mundo consumido polas chamas dunha guerra eterna, un pequeno grupo de superviventes fuxiu do caos. Guiados por un valente heroe, buscan un val remoto para construír un santuario de paz. O viaxe foi longo e os recursos son escasos, pero a esperanza aínda perdura.",
@@ -4478,7 +4702,7 @@ class I18nService {
   }
 }
 const i18n = new I18nService();
-class GameEngine {
+const _GameEngine = class _GameEngine {
   constructor() {
     this.STORAGE_KEY = "village_state";
     this.inventoryService = new InventoryService();
@@ -4524,6 +4748,31 @@ class GameEngine {
         baseMagicPower: 1
       });
     }
+  }
+  activateDeveloperCheat() {
+    console.warn("🚀 Engine: Developer Cheat Activated!");
+    this.villageService.addGold(1e4);
+    this.villageService.save();
+    const inv = this.inventoryService;
+    inv.data.materials["material_wood"] = (inv.data.materials["material_wood"] || 0) + 1e4;
+    inv.data.materials["material_stone"] = (inv.data.materials["material_stone"] || 0) + 1e4;
+    inv.save();
+    this.heroService.heroes.forEach((hero) => {
+      hero.addExperience(5e3);
+    });
+    this.heroService.saveAll();
+    const expState = this.expeditionService.state;
+    if (!expState.completedIds.includes("exp_tutorial_cave")) {
+      expState.completedIds.push("exp_tutorial_cave");
+      const region = expState.regions["reg_greenfields"];
+      if (region) {
+        region.availableNodes = region.availableNodes.filter((n) => n.id !== "exp_tutorial_cave");
+        region.clears = (region.clears || 0) + 1;
+        this.expeditionService._generateNextNodes("reg_greenfields");
+      }
+      this.expeditionService.save();
+    }
+    return Result.ok();
   }
   update() {
     const activeExpedition = this.expeditionService.state.activeExpedition;
@@ -4584,7 +4833,6 @@ class GameEngine {
     }
     return this.heroService.unequipItem(heroId, slot);
   }
-  // --- Shop & Forge Facade ---
   buyItem(itemData, costGold) {
     if (this.villageService.state.gold < costGold) {
       return Result.fail("error_not_enough_gold");
@@ -4601,6 +4849,43 @@ class GameEngine {
       this.inventoryService.addEquipment(itemData);
     }
     return Result.ok();
+  }
+  /**
+   * Sell a raw resource (food, wood, stone) for gold.
+   * @param {string} resourceId  - e.g. 'material_wood'
+   * @param {number} quantity    - number of units to sell (1 / 10 / 100)
+   */
+  sellResource(resourceId, quantity) {
+    const pricePerUnit = _GameEngine.SELL_PRICES[resourceId];
+    if (!pricePerUnit) {
+      return Result.fail("error_item_not_found");
+    }
+    const available = this.inventoryService.getItemCount(resourceId);
+    const toSell = Math.min(quantity, available);
+    if (toSell <= 0) {
+      return Result.fail("error_not_enough_items");
+    }
+    this.inventoryService.useItem(resourceId, toSell);
+    const goldEarned = toSell * pricePerUnit;
+    this.villageService.addGold(goldEarned);
+    return Result.ok({ sold: toSell, goldEarned });
+  }
+  /**
+   * Sell an inventory item (equipment or consumable) for gold.
+   * @param {string} itemId    - Unique item ID or consumable ID
+   * @param {string} itemType  - 'consumable' | 'equipment'
+   * @param {number} sellPrice - Calculated sell price (gold)
+   */
+  sellItem(itemId, itemType, sellPrice) {
+    if (itemType === "consumable") {
+      const result = this.inventoryService.useItem(itemId, 1);
+      if (!result.success) return result;
+    } else {
+      const result = this.inventoryService.removeEquipment(itemId);
+      if (!result.success) return result;
+    }
+    this.villageService.addGold(sellPrice);
+    return Result.ok({ goldEarned: sellPrice });
   }
   getRefineCost(item) {
     const L = item.level || 0;
@@ -4754,7 +5039,15 @@ class GameEngine {
   retireExpedition() {
     return this.expeditionService.retire();
   }
-}
+};
+// --- Shop & Forge Facade ---
+// Sell prices per unit (intentionally low)
+__publicField(_GameEngine, "SELL_PRICES", {
+  "food_raw_grain": 1,
+  "material_wood": 2,
+  "material_stone": 3
+});
+let GameEngine = _GameEngine;
 class EngineAdapter {
   constructor(engine, ui) {
     this.engine = engine;
@@ -4800,7 +5093,7 @@ class EngineAdapter {
             data.duration
           );
           if (!result.success) {
-            alert(this.engine.i18n.t(result.error));
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
           this.forceUpdate();
         });
@@ -4809,7 +5102,7 @@ class EngineAdapter {
         view.on("assignExpedition", (data) => {
           const result = this.engine.assignExpedition(data.expId, data.heroIds);
           if (!result.success) {
-            alert(this.engine.i18n.t(result.error));
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
           this.forceUpdate();
         });
@@ -4822,21 +5115,21 @@ class EngineAdapter {
         view.on("increaseStat", (data) => {
           const result = this.engine.increaseHeroStat(data.heroId, data.statId);
           if (!result.success) {
-            alert(this.engine.i18n.t(result.error));
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
           this.forceUpdate();
         });
         view.on("equipItem", (data) => {
           const result = this.engine.equipHeroItem(data.heroId, data.slot, data.itemId);
           if (!result.success) {
-            alert(this.engine.i18n.t(result.error));
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
           this.forceUpdate();
         });
         view.on("unequipItem", (data) => {
           const result = this.engine.unequipHeroItem(data.heroId, data.slot);
           if (!result.success) {
-            alert(this.engine.i18n.t(result.error));
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
           this.forceUpdate();
         });
@@ -4845,7 +5138,16 @@ class EngineAdapter {
         view.on("buyItem", (data) => {
           const result = this.engine.buyItem(data.itemData, data.costGold);
           if (!result.success) {
-            alert(this.engine.i18n.t(result.error));
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("sellItem", (data) => {
+          const result = this.engine.sellItem(data.itemId, data.itemType, data.sellPrice);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          } else {
+            this.ui.showToast(`+${result.data.goldEarned}g`);
           }
           this.forceUpdate();
         });
@@ -4854,8 +5156,15 @@ class EngineAdapter {
         view.on("refineItem", (data) => {
           const result = this.engine.refineEquipment(data.itemId);
           if (!result.success) {
-            alert(this.engine.i18n.t(result.error));
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
+          this.forceUpdate();
+        });
+      }
+      if (domain === "settings") {
+        view.on("devCheatActivate", () => {
+          console.log("EngineAdapter: devCheatActivate received");
+          this.engine.activateDeveloperCheat();
           this.forceUpdate();
         });
       }
@@ -4971,6 +5280,12 @@ class BaseView {
    */
   $(selector) {
     return this.root ? this.root.querySelector(selector) : null;
+  }
+  /**
+   * Helper to find all elements within the view root.
+   */
+  $$(selector) {
+    return this.root ? this.root.querySelectorAll(selector) : [];
   }
   /**
    * Helper for translations.
@@ -6257,7 +6572,8 @@ class SettingsView extends BaseView {
   onMount() {
     this.elements = {
       langSelect: this.$("#lang-select"),
-      btnWipe: this.$("#btn-wipe-data")
+      btnWipe: this.$("#btn-wipe-data"),
+      btnDevCheat: this.$("#btn-dev-cheat")
     };
     if (this.elements.langSelect) {
       this.elements.langSelect.value = this.ui.i18n.currentLang;
@@ -6284,6 +6600,19 @@ class SettingsView extends BaseView {
         });
       });
     }
+    if (this.elements.btnDevCheat) {
+      this.elements.btnDevCheat.addEventListener("click", () => {
+        console.log("SettingsView: Dev Cheat button clicked");
+        this.emit("devCheatActivate", {});
+        const btn = this.elements.btnDevCheat;
+        btn.textContent = "✓ Done!";
+        btn.disabled = true;
+        setTimeout(() => {
+          btn.innerHTML = '<span class="icon">⚡</span><span>' + (this.t("ui_settings_dev_cheat") || "Activate Developer Cheat") + "</span>";
+          btn.disabled = false;
+        }, 1500);
+      });
+    }
   }
   onUpdate(state) {
   }
@@ -6291,6 +6620,20 @@ class SettingsView extends BaseView {
 class ShopView extends BaseView {
   constructor() {
     super("shop");
+    this.currentTab = "buy";
+    this.selectedItemKey = null;
+    this.selectedSellItemKey = null;
+    this.justBoughtKey = null;
+    this.justBoughtTime = 0;
+    this.justBoughtTimeout = null;
+    this.justSoldKey = null;
+    this.justSoldTime = 0;
+    this.justSoldTimeout = null;
+    this.consumablePrices = {
+      "item_tiny_hp_potion": 10,
+      "item_tiny_mp_potion": 15,
+      "item_teleport_scroll": 50
+    };
     this.consumables = [
       { id: "item_tiny_hp_potion", type: "consumable", cost: 10, i18n_name: "item_tiny_hp_potion", i18n_desc: "item_tiny_hp_potion_desc" },
       { id: "item_tiny_mp_potion", type: "consumable", cost: 15, i18n_name: "item_tiny_mp_potion", i18n_desc: "item_tiny_mp_potion_desc" },
@@ -6340,10 +6683,48 @@ class ShopView extends BaseView {
   onMount() {
     this.elements = {
       lockOverlay: this.$("#shop-lock-overlay"),
-      consumablesList: this.$("#shop-consumables-list"),
-      weaponsList: this.$("#shop-weapons-list"),
-      armorList: this.$("#shop-armor-list")
+      catalog: this.$("#shop-catalog-container"),
+      detailContent: this.$("#shop-detail-content")
     };
+    this.$$(".shop-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const mode = tab.getAttribute("data-tab");
+        if (mode !== this.currentTab) {
+          this.currentTab = mode;
+          this.$$(".shop-tab").forEach((t) => t.classList.toggle("active", t.getAttribute("data-tab") === mode));
+          this.ui.forceUpdate();
+        }
+      });
+    });
+  }
+  update(state) {
+    var _a, _b, _c, _d, _e;
+    if (!state) return;
+    const completed = state.completedExpeditions || [];
+    const isUnlocked = completed.includes("exp_tutorial_cave");
+    const blacksmithLevel = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
+    const playerGold = ((_c = state.village) == null ? void 0 : _c.gold) || 0;
+    const invStr = state.inventory ? JSON.stringify({
+      equipmentCount: ((_d = state.inventory.equipment) == null ? void 0 : _d.length) || 0,
+      gold: playerGold,
+      blacksmithLevel,
+      isUnlocked
+    }) : "";
+    const stateString = JSON.stringify({
+      completed: completed.length,
+      invStr,
+      heroesCount: ((_e = state.heroes) == null ? void 0 : _e.length) || 0,
+      selectedItemKey: this.selectedItemKey,
+      selectedSellItemKey: this.selectedSellItemKey,
+      justBoughtKey: this.justBoughtKey,
+      justSoldKey: this.justSoldKey,
+      currentTab: this.currentTab
+    });
+    if (this.lastRenderedState === stateString) {
+      return;
+    }
+    this.onUpdate(state);
+    this.lastRenderedState = stateString;
   }
   onUpdate(state) {
     const completed = state.completedExpeditions || [];
@@ -6353,72 +6734,492 @@ class ShopView extends BaseView {
       return;
     }
     if (this.elements.lockOverlay) this.elements.lockOverlay.style.display = "none";
-    const blacksmithLevel = state.village.infrastructure.blacksmith || 0;
-    const maxTier = blacksmithLevel >= 1 ? 2 : 1;
-    if (this.elements.consumablesList) {
-      this.elements.consumablesList.innerHTML = this.consumables.map((item) => this._renderShopItem(item, state)).join("");
-    }
-    if (this.elements.weaponsList) {
-      this.elements.weaponsList.innerHTML = this.weapons.filter((w) => w.tier <= maxTier).map((item) => this._renderShopItem(item, state)).join("");
-    }
-    if (this.elements.armorList) {
-      this.elements.armorList.innerHTML = this.armor.filter((a) => a.tier <= maxTier).map((item) => this._renderShopItem(item, state)).join("");
-    }
-    this._bindBuyButtons();
-  }
-  _renderShopItem(item, state) {
-    const playerGold = state.village.gold;
-    let name = "";
-    let desc = "";
-    const t = this.t.bind(this);
-    if (item.type === "consumable") {
-      name = t(item.i18n_name);
-      desc = t(item.i18n_desc);
+    if (this.currentTab === "buy") {
+      this._renderBuyTab(state);
     } else {
-      name = getEquipmentName(item, t);
-      desc = getFormattedStats(item, t);
+      this._renderSellTab(state);
     }
-    let ownedCount = 0;
-    if (item.type === "consumable") {
-      ownedCount = state.inventory && state.inventory.consumables ? state.inventory.consumables[item.id] || 0 : 0;
-    } else if (state.inventory) {
-      const matchingInv = (state.inventory.equipment || []).filter(
-        (eq) => eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)
-      ).length;
-      let matchingEq = 0;
-      if (state.heroes) {
-        state.heroes.forEach((h) => {
-          Object.values(h.equipment).forEach((eq) => {
-            if (eq && eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)) {
-              matchingEq++;
-            }
+  }
+  _renderBuyTab(state) {
+    var _a, _b, _c;
+    const blacksmithLevel = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
+    const maxTier = blacksmithLevel >= 1 ? 2 : 1;
+    const playerGold = ((_c = state.village) == null ? void 0 : _c.gold) || 0;
+    const t = this.t.bind(this);
+    const groups = [
+      {
+        id: "consumables",
+        title: t("ui_consumables") || "Consumables",
+        icon: "🧪",
+        items: this.consumables
+      },
+      {
+        id: "weapons",
+        title: t("ui_equipment") || "Weapons",
+        icon: "⚔️",
+        items: this.weapons.filter((w) => w.tier <= maxTier)
+      },
+      {
+        id: "helmets",
+        title: t("slot_name_head") || "Helmets",
+        icon: "🪖",
+        items: this.armor.filter((a) => a.slot === "head" && a.tier <= maxTier)
+      },
+      {
+        id: "armors",
+        title: t("slot_name_body") || "Armors",
+        icon: "🧥",
+        items: this.armor.filter((a) => a.slot === "body" && a.tier <= maxTier)
+      },
+      {
+        id: "legwear",
+        title: t("slot_name_legs") || "Legwear",
+        icon: "👖",
+        items: this.armor.filter((a) => a.slot === "legs" && a.tier <= maxTier)
+      },
+      {
+        id: "shields",
+        title: t("slot_name_rightHand") || "Shields",
+        icon: "🛡️",
+        items: this.armor.filter((a) => a.slot === "rightHand" && a.tier <= maxTier)
+      }
+    ];
+    const getItemKey = (item) => {
+      return item.id || `${item.type}_${item.material}_${item.family || item.archetype}_${item.slot || ""}`;
+    };
+    const allItems = [];
+    groups.forEach((g) => {
+      g.items.forEach((item) => {
+        allItems.push(item);
+      });
+    });
+    if (!this.selectedItemKey && allItems.length > 0) {
+      this.selectedItemKey = getItemKey(allItems[0]);
+    }
+    const getOwnedCount = (item) => {
+      let ownedCount = 0;
+      if (item.type === "consumable") {
+        ownedCount = state.inventory && state.inventory.consumables ? state.inventory.consumables[item.id] || 0 : 0;
+      } else if (state.inventory) {
+        const matchingInv = (state.inventory.equipment || []).filter(
+          (eq) => eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)
+        ).length;
+        let matchingEq = 0;
+        if (state.heroes) {
+          state.heroes.forEach((h) => {
+            Object.values(h.equipment).forEach((eq) => {
+              if (eq && eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)) {
+                matchingEq++;
+              }
+            });
+          });
+        }
+        ownedCount = matchingInv + matchingEq;
+      }
+      return ownedCount;
+    };
+    if (this.elements.catalog) {
+      this.elements.catalog.innerHTML = groups.map((group) => {
+        if (group.items.length === 0) return "";
+        const containsSelected = group.items.some((item) => getItemKey(item) === this.selectedItemKey);
+        const isOpenAttr = containsSelected || group.id === "consumables" && !this.selectedItemKey ? "open" : "";
+        const itemsHtml = group.items.map((item) => {
+          const itemKey = getItemKey(item);
+          const activeClass = this.selectedItemKey === itemKey ? "active" : "";
+          const ownedCount = getOwnedCount(item);
+          const canAfford = playerGold >= item.cost;
+          const costBadgeClass = canAfford ? "shop-item-cost-badge" : "shop-item-cost-badge insufficient";
+          let displayName = "";
+          if (item.type === "consumable") {
+            displayName = t(item.i18n_name);
+          } else {
+            displayName = getEquipmentName(item, t);
+          }
+          return `
+                        <div class="shop-item-row ${activeClass}" data-key="${itemKey}">
+                            <span class="list-item-title">${displayName}</span>
+                            <div class="shop-item-meta">
+                                <span class="shop-item-owned-badge">${ownedCount}</span>
+                                <span class="${costBadgeClass}">💰 ${item.cost}</span>
+                            </div>
+                        </div>
+                    `;
+        }).join("");
+        return `
+                    <details class="shop-category-details" ${isOpenAttr}>
+                        <summary>
+                            <span>${group.icon} ${group.title}</span>
+                            <span class="arrow">▼</span>
+                        </summary>
+                        <div class="shop-item-list">
+                            ${itemsHtml}
+                        </div>
+                    </details>
+                `;
+      }).join("");
+      this.$$(".shop-item-row").forEach((row) => {
+        row.addEventListener("click", () => {
+          this.selectedItemKey = row.getAttribute("data-key");
+          this.ui.forceUpdate();
+        });
+      });
+    }
+    const selectedItem = allItems.find((item) => getItemKey(item) === this.selectedItemKey);
+    this._renderDetails(selectedItem, state);
+  }
+  _renderSellTab(state) {
+    const t = this.t.bind(this);
+    const inventory = state.inventory || {};
+    const consumables = inventory.consumables || {};
+    const equipment = inventory.equipment || [];
+    const groups = [];
+    const consumableItems = Object.entries(consumables).filter(([_, count]) => count > 0).map(([id, count]) => {
+      const shopItem = this.consumables.find((c) => c.id === id);
+      const basePrice = shopItem ? shopItem.cost : 0;
+      return {
+        id,
+        type: "consumable",
+        count,
+        i18n_name: shopItem ? shopItem.i18n_name : id,
+        i18n_desc: shopItem ? shopItem.i18n_desc : id,
+        sellPrice: Math.floor(basePrice * 0.3)
+      };
+    });
+    if (consumableItems.length > 0) {
+      groups.push({
+        id: "consumables",
+        title: t("ui_consumables") || "Consumables",
+        icon: "🧪",
+        items: consumableItems
+      });
+    }
+    const eqGroups = [
+      { id: "weapons", title: t("ui_equipment") || "Weapons", icon: "⚔️", filter: (eq) => eq.type === "weapon" },
+      { id: "helmets", title: t("slot_name_head") || "Helmets", icon: "🪖", filter: (eq) => eq.type === "armor" && eq.slot === "head" },
+      { id: "armors", title: t("slot_name_body") || "Armors", icon: "🧥", filter: (eq) => eq.type === "armor" && eq.slot === "body" },
+      { id: "legwear", title: t("slot_name_legs") || "Legwear", icon: "👖", filter: (eq) => eq.type === "armor" && eq.slot === "legs" },
+      { id: "shields", title: t("slot_name_rightHand") || "Shields", icon: "🛡️", filter: (eq) => eq.type === "armor" && eq.slot === "rightHand" }
+    ];
+    eqGroups.forEach((g) => {
+      const items = equipment.filter(g.filter).map((eq) => ({
+        ...eq,
+        type: "equipment",
+        sellPrice: this._calculateEquipmentSellPrice(eq)
+      }));
+      if (items.length > 0) {
+        groups.push({ ...g, items });
+      }
+    });
+    if (this.elements.catalog) {
+      if (groups.length === 0) {
+        this.elements.catalog.innerHTML = `
+                    <div class="empty-detail" style="padding: var(--spacing-lg);">
+                        <p style="color: var(--text-muted);">${t("ui_no_items_to_sell") || "No items to sell."}</p>
+                    </div>
+                `;
+      } else {
+        this.elements.catalog.innerHTML = groups.map((group) => {
+          const containsSelected = group.items.some((item) => item.id === this.selectedSellItemKey);
+          const isOpenAttr = containsSelected || group.id === "consumables" ? "open" : "";
+          const itemsHtml = group.items.map((item) => {
+            const activeClass = this.selectedSellItemKey === item.id ? "active" : "";
+            const displayName = item.type === "consumable" ? t(item.i18n_name) : getEquipmentName(item, t);
+            const countBadge = item.type === "consumable" ? `×${item.count}` : "";
+            return `
+                            <div class="shop-item-row ${activeClass}" data-key="${item.id}">
+                                <span class="list-item-title">${displayName} ${countBadge}</span>
+                                <div class="shop-item-meta">
+                                    <span class="shop-item-cost-badge">💰 ${item.sellPrice}</span>
+                                </div>
+                            </div>
+                        `;
+          }).join("");
+          return `
+                        <details class="shop-category-details" ${isOpenAttr}>
+                            <summary>
+                                <span>${group.icon} ${group.title}</span>
+                                <span class="arrow">▼</span>
+                            </summary>
+                            <div class="shop-item-list">
+                                ${itemsHtml}
+                            </div>
+                        </details>
+                    `;
+        }).join("");
+        this.$$(".shop-item-row").forEach((row) => {
+          row.addEventListener("click", () => {
+            this.selectedSellItemKey = row.getAttribute("data-key");
+            this.ui.forceUpdate();
           });
         });
       }
-      ownedCount = matchingInv + matchingEq;
     }
-    const canAfford = playerGold >= item.cost;
-    const btnClass = canAfford ? "btn-primary" : "btn-secondary";
-    return `
-            <div class="shop-item-card">
-                <div class="shop-item-header">
-                    <span class="shop-item-name">
-                        ${name}
-                        <span class="shop-item-owned" style="color: var(--text-muted); font-size: 0.75rem; font-weight: normal; margin-left: 5px;">(${t("ui_owned") || "Owned"}: ${ownedCount})</span>
-                    </span>
-                    <span class="shop-item-cost">💰 ${item.cost}</span>
+    let selectedItem = null;
+    for (const g of groups) {
+      selectedItem = g.items.find((i) => i.id === this.selectedSellItemKey);
+      if (selectedItem) break;
+    }
+    this._renderSellDetails(selectedItem, state);
+  }
+  _calculateEquipmentSellPrice(eq) {
+    let baseCost = 0;
+    if (eq.type === "weapon") {
+      const shopItem = this.weapons.find((w) => w.material === eq.material && w.family === eq.family);
+      baseCost = shopItem ? shopItem.cost : 50;
+    } else if (eq.type === "armor") {
+      const shopItem = this.armor.find((a) => a.material === eq.material && a.archetype === eq.archetype && a.slot === eq.slot);
+      baseCost = shopItem ? shopItem.cost : 40;
+    }
+    const level = eq.level || 0;
+    return Math.floor(baseCost * 0.3 * Math.pow(1.1, level));
+  }
+  _renderSellDetails(item, state) {
+    if (!this.elements.detailContent) return;
+    const t = this.t.bind(this);
+    if (!item) {
+      this.elements.detailContent.innerHTML = `
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">💰</div>
+                    <p>${t("ui_select_item") || "Select an item to view details."}</p>
                 </div>
-                <div class="shop-item-details">
-                    <span class="shop-item-stats">${desc}</span>
-                    <button class="btn ${btnClass} btn-sm btn-buy-action" 
-                            data-item='${JSON.stringify(item)}' 
-                            data-cost="${item.cost}" 
-                            ${canAfford ? "" : "disabled"}>
-                        ${t("ui_buy")}
+            `;
+      return;
+    }
+    const isJustSold = this.justSoldKey === item.id && Date.now() - this.justSoldTime < 600;
+    let name = "";
+    let desc = "";
+    let icon = "🛡️";
+    if (item.type === "consumable") {
+      name = t(item.i18n_name);
+      desc = t(item.i18n_desc);
+      icon = item.id.includes("potion") ? "🧪" : "📜";
+    } else {
+      name = getEquipmentName(item, t);
+      desc = getFormattedStats(item, t);
+      if (item.type === "weapon") {
+        icon = item.family === "wand" ? "🪄" : "⚔️";
+      } else {
+        icon = item.slot === "head" ? "🪖" : item.slot === "rightHand" ? "🛡️" : "🧥";
+      }
+    }
+    const STAT_LABEL_MAP = {
+      strength: "ui_stats_power",
+      defense: "ui_stats_defense",
+      maxHp: "ui_stats_hp",
+      maxMp: "ui_stats_mp",
+      magicPower: "ui_stats_magic",
+      speed: "ui_stats_speed",
+      evasion: "ui_stats_evasion",
+      mpCostReduction: "ui_stats_mpreduce"
+    };
+    const statsHtml = item.type !== "consumable" ? `
+            <div class="shop-stats-card">
+                <h4>${t("ui_stats") || "Stats Bonus"}</h4>
+                ${Object.entries(getEquipmentStats(item)).map(([stat, val]) => {
+      if (!val) return "";
+      const sign = val > 0 ? "+" : "";
+      const label = t(STAT_LABEL_MAP[stat]) || stat;
+      return `
+                        <div class="shop-stat-row">
+                            <span class="shop-stat-label">${label}</span>
+                            <span class="shop-stat-value">${sign}${val}</span>
+                        </div>
+                    `;
+    }).join("")}
+            </div>
+        ` : "";
+    const btnClassFinal = isJustSold ? "btn-success bought" : "btn-primary";
+    const btnText = isJustSold ? t("ui_sold") || "Sold! ✓" : t("ui_sell");
+    const btnDisabled = isJustSold ? "disabled" : "";
+    this.elements.detailContent.innerHTML = `
+            <div class="shop-detail-header">
+                <div class="shop-title-group">
+                    <h2>${name}</h2>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        ${item.type === "consumable" ? t("ui_consumables") || "Consumable" : t("slot_name_" + item.slot) || item.type}
+                    </span>
+                </div>
+                ${item.level !== void 0 ? `<span class="shop-tier-badge">+${item.level}</span>` : ""}
+            </div>
+            <div class="shop-detail-body">
+                <div class="shop-preview-card">
+                    <span class="shop-preview-icon">${icon}</span>
+                </div>
+                
+                <p class="shop-desc-text">${desc}</p>
+                
+                ${statsHtml}
+                
+                <div class="shop-cost-section">
+                    <h4>${t("ui_sell_price") || "Sell Price"}</h4>
+                    <div class="shop-cost-grid">
+                        <div class="shop-cost-item">
+                            <span class="label">GOLD</span>
+                            <span class="value">💰 ${item.sellPrice}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="shop-action-footer">
+                    <button class="btn ${btnClassFinal} btn-sell-action" 
+                            data-id="${item.id}" 
+                            data-type="${item.type}"
+                            data-price="${item.sellPrice}" 
+                            ${btnDisabled}>
+                        ${btnText}
                     </button>
                 </div>
             </div>
         `;
+    this._bindSellButtons();
+  }
+  _bindSellButtons() {
+    this.$$(".btn-sell-action").forEach((btn) => {
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newBtn.addEventListener("click", () => {
+        const itemId = newBtn.getAttribute("data-id");
+        const itemType = newBtn.getAttribute("data-type");
+        const sellPrice = parseInt(newBtn.getAttribute("data-price"));
+        this.justSoldKey = itemId;
+        this.justSoldTime = Date.now();
+        if (this.justSoldTimeout) clearTimeout(this.justSoldTimeout);
+        this.justSoldTimeout = setTimeout(() => {
+          this.justSoldKey = null;
+          this.ui.forceUpdate();
+        }, 600);
+        this.emit("sellItem", { itemId, itemType, sellPrice });
+      });
+    });
+  }
+  _renderDetails(item, state) {
+    var _a;
+    if (!this.elements.detailContent) return;
+    const t = this.t.bind(this);
+    if (!item) {
+      this.elements.detailContent.innerHTML = `
+                <div class="empty-detail">
+                    <div class="detail-icon-bg">🛒</div>
+                    <p data-i18n="ui_select_item">${t("ui_select_item") || "Select an item to view details."}</p>
+                </div>
+            `;
+      return;
+    }
+    const playerGold = ((_a = state.village) == null ? void 0 : _a.gold) || 0;
+    const canAfford = playerGold >= item.cost;
+    const itemKey = item.id || `${item.type}_${item.material}_${item.family || item.archetype}_${item.slot || ""}`;
+    const isJustBought = this.justBoughtKey === itemKey && Date.now() - this.justBoughtTime < 600;
+    let name = "";
+    let desc = "";
+    let icon = "🛡️";
+    if (item.type === "consumable") {
+      name = t(item.i18n_name);
+      desc = t(item.i18n_desc);
+      icon = item.id.includes("potion") ? "🧪" : "📜";
+    } else {
+      name = getEquipmentName(item, t);
+      desc = getFormattedStats(item, t);
+      if (item.type === "weapon") {
+        icon = item.family === "wand" ? "🪄" : "⚔️";
+      } else {
+        icon = item.slot === "head" ? "🪖" : item.slot === "rightHand" ? "🛡️" : "🧥";
+      }
+    }
+    let ownedInvCount = 0;
+    let ownedEqCount = 0;
+    if (item.type === "consumable") {
+      ownedInvCount = state.inventory && state.inventory.consumables ? state.inventory.consumables[item.id] || 0 : 0;
+    } else if (state.inventory) {
+      ownedInvCount = (state.inventory.equipment || []).filter(
+        (eq) => eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)
+      ).length;
+      if (state.heroes) {
+        state.heroes.forEach((h) => {
+          Object.values(h.equipment).forEach((eq) => {
+            if (eq && eq.type === item.type && eq.material === item.material && (item.type === "weapon" ? eq.family === item.family : eq.archetype === item.archetype && eq.slot === item.slot)) {
+              ownedEqCount++;
+            }
+          });
+        });
+      }
+    }
+    const STAT_LABEL_MAP = {
+      strength: "ui_stats_power",
+      defense: "ui_stats_defense",
+      maxHp: "ui_stats_hp",
+      maxMp: "ui_stats_mp",
+      magicPower: "ui_stats_magic",
+      speed: "ui_stats_speed",
+      evasion: "ui_stats_evasion",
+      mpCostReduction: "ui_stats_mpreduce"
+    };
+    const statsHtml = item.type !== "consumable" ? `
+            <div class="shop-stats-card">
+                <h4>${t("ui_stats") || "Stats Bonus"}</h4>
+                ${Object.entries(getEquipmentStats(item)).map(([stat, val]) => {
+      if (!val) return "";
+      const sign = val > 0 ? "+" : "";
+      const label = t(STAT_LABEL_MAP[stat]) || stat;
+      return `
+                        <div class="shop-stat-row">
+                            <span class="shop-stat-label">${label}</span>
+                            <span class="shop-stat-value">${sign}${val}</span>
+                        </div>
+                    `;
+    }).join("")}
+            </div>
+        ` : "";
+    const costClass = canAfford ? "shop-cost-item" : "shop-cost-item insufficient";
+    const btnClassFinal = isJustBought ? "btn-success bought" : canAfford ? "btn-primary" : "btn-secondary";
+    const btnText = isJustBought ? t("ui_purchased") || "Purchased! ✓" : t("ui_buy");
+    const btnDisabled = isJustBought || !canAfford ? "disabled" : "";
+    this.elements.detailContent.innerHTML = `
+            <div class="shop-detail-header">
+                <div class="shop-title-group">
+                    <h2>${name}</h2>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        ${item.type === "consumable" ? t("ui_consumables") || "Consumable" : t("slot_name_" + item.slot) || item.type}
+                    </span>
+                </div>
+                ${item.tier ? `<span class="shop-tier-badge">Tier ${item.tier}</span>` : ""}
+            </div>
+            <div class="shop-detail-body">
+                <div class="shop-preview-card">
+                    <span class="shop-preview-icon">${icon}</span>
+                </div>
+                
+                <p class="shop-desc-text">${desc}</p>
+                
+                ${statsHtml}
+                
+                <div class="shop-owned-breakdown">
+                    <span>${t("ui_owned") || "Owned"}: ${ownedInvCount + ownedEqCount}</span>
+                    <span style="color: var(--text-muted);">
+                        (${t("ui_inventory") || "Inventory"}: ${ownedInvCount} | ${t("ui_equipped") || "Equipped"}: ${ownedEqCount})
+                    </span>
+                </div>
+                
+                <div class="shop-cost-section">
+                    <h4>${t("ui_cost") || "Cost"}</h4>
+                    <div class="shop-cost-grid">
+                        <div class="${costClass}">
+                            <span class="label">GOLD</span>
+                            <span class="value">💰 ${item.cost}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="shop-action-footer">
+                    <button class="btn ${btnClassFinal} btn-buy-action" 
+                            data-item='${JSON.stringify(item)}' 
+                            data-cost="${item.cost}" 
+                            ${btnDisabled}>
+                        ${btnText}
+                    </button>
+                </div>
+            </div>
+        `;
+    this._bindBuyButtons();
   }
   _bindBuyButtons() {
     this.$$(".btn-buy-action").forEach((btn) => {
@@ -6427,6 +7228,14 @@ class ShopView extends BaseView {
       newBtn.addEventListener("click", () => {
         const itemData = JSON.parse(newBtn.getAttribute("data-item"));
         const cost = parseInt(newBtn.getAttribute("data-cost"));
+        const itemKey = itemData.id || `${itemData.type}_${itemData.material}_${itemData.family || itemData.archetype}_${itemData.slot || ""}`;
+        this.justBoughtKey = itemKey;
+        this.justBoughtTime = Date.now();
+        if (this.justBoughtTimeout) clearTimeout(this.justBoughtTimeout);
+        this.justBoughtTimeout = setTimeout(() => {
+          this.justBoughtKey = null;
+          this.ui.forceUpdate();
+        }, 600);
         this.emit("buyItem", { itemData, costGold: cost });
       });
     });
@@ -6443,6 +7252,24 @@ class ForgeView extends BaseView {
       itemsList: this.$("#forge-items-list"),
       detailContent: this.$("#forge-detail-content")
     };
+  }
+  update(state) {
+    var _a, _b, _c, _d, _e, _f;
+    if (!state) return;
+    const blacksmithLevel = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
+    const playerGold = ((_c = state.village) == null ? void 0 : _c.gold) || 0;
+    const stateString = JSON.stringify({
+      blacksmithLevel,
+      playerGold,
+      equipmentCount: ((_e = (_d = state.inventory) == null ? void 0 : _d.equipment) == null ? void 0 : _e.length) || 0,
+      heroesCount: ((_f = state.heroes) == null ? void 0 : _f.length) || 0,
+      selectedItemId: this.selectedItemId
+    });
+    if (this.lastRenderedState === stateString) {
+      return;
+    }
+    this.onUpdate(state);
+    this.lastRenderedState = stateString;
   }
   onUpdate(state) {
     const blacksmithLevel = state.village.infrastructure.blacksmith || 0;
@@ -7158,6 +7985,69 @@ body {
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(50px) scale(0.95); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ========================================
+   In-Game Toast Notifications
+   ======================================== */
+.game-toast-container {
+    position: fixed;
+    top: 80px;
+    right: var(--spacing-lg);
+    z-index: 9998;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    pointer-events: none;
+}
+
+.game-toast {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: var(--bg-secondary);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    max-width: 340px;
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+    animation: toastIn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.game-toast.toast-error {
+    border-color: rgba(231, 76, 60, 0.5);
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), var(--bg-secondary));
+}
+
+.game-toast.toast-success {
+    border-color: rgba(46, 204, 113, 0.5);
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.12), var(--bg-secondary));
+}
+
+.game-toast.toast-info {
+    border-color: rgba(52, 152, 219, 0.5);
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.12), var(--bg-secondary));
+}
+
+.game-toast .toast-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.game-toast.toast-out {
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(60px); }
+    to   { opacity: 1; transform: translateX(0); }
 }
 
 /* Stat Assignment & Allocation UI */
@@ -8677,6 +9567,18 @@ body {
                 </div>
             </div>
 
+            <!-- Developer Options -->
+            <div class="card settings-group">
+                <h3 data-i18n="ui_settings_dev_options">Developer Options</h3>
+                <div class="settings-body">
+                    <p class="settings-label" data-i18n="ui_settings_dev_cheat_desc">Instantly gain 10k Gold, 10k Wood/Stone, Hero XP, and unlock the Shop.</p>
+                    <button id="btn-dev-cheat" class="btn btn-danger btn-lg" style="background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);">
+                        <span class="icon">⚡</span>
+                        <span data-i18n="ui_settings_dev_cheat">Activate Developer Cheat</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Danger Zone -->
             <div class="card danger-zone settings-group">
                 <h3 data-i18n="ui_settings_danger_zone">Danger Zone</h3>
@@ -8718,23 +9620,31 @@ body {
         <div class="shop-header-pane">
             <h2 data-i18n="ui_shop_title">Village Shop</h2>
             <p class="subtitle" style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 4px;">Purchase supplies, weaponry, and protective gear for your heroes.</p>
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-tab="buy" data-i18n="ui_buy">Buy</button>
+                <button class="shop-tab" data-tab="sell" data-i18n="ui_sell">Sell</button>
+            </div>
         </div>
-        <div class="shop-grid">
-            <!-- Consumables -->
-            <div class="card shop-category">
-                <h3><span class="icon">🧪</span><span data-i18n="ui_consumables">Consumables</span></h3>
-                <div class="shop-item-list" id="shop-consumables-list"></div>
-            </div>
-            <!-- Weapons -->
-            <div class="card shop-category">
-                <h3><span class="icon">⚔️</span><span data-i18n="ui_equipment">Weapons</span></h3>
-                <div class="shop-item-list" id="shop-weapons-list"></div>
-            </div>
-            <!-- Armor -->
-            <div class="card shop-category">
-                <h3><span class="icon">🛡️</span><span data-i18n="ui_equipment">Armor</span></h3>
-                <div class="shop-item-list" id="shop-armor-list"></div>
-            </div>
+        <div class="master-detail-layout">
+            <!-- Master Pane: Collapsible Categories and Item List -->
+            <aside class="master-pane card">
+                <div class="pane-header" style="margin-bottom: var(--spacing-sm);">
+                    <h3 data-i18n="ui_shop_catalog">Shop Catalog</h3>
+                </div>
+                <div id="shop-catalog-container" class="list-container">
+                    <!-- Collapsible details and summary lists will be injected here -->
+                </div>
+            </aside>
+
+            <!-- Detail Pane: Stats, Owned Count & Buy Button -->
+            <main class="detail-pane card glass-pane">
+                <div id="shop-detail-content">
+                    <div class="empty-detail">
+                        <div class="detail-icon-bg">🛒</div>
+                        <p data-i18n="ui_select_item">Select an item to view details.</p>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 </section>
@@ -8780,85 +9690,344 @@ body {
     margin-bottom: var(--spacing-lg);
 }
 
-.shop-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
-}
-
-@media (min-width: 992px) {
-    .shop-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-.shop-category {
+/* Layout Splits */
+.shop-view .detail-pane {
+    background: rgba(22, 24, 33, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
+    min-height: 350px;
 }
 
-.shop-item-list {
+.shop-view .empty-detail {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm);
-    margin-top: var(--spacing-sm);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
 }
 
-.shop-item-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
+.shop-view .detail-icon-bg {
+    font-size: 4rem;
+    opacity: 0.1;
+    margin-bottom: 20px;
+}
+
+/* Collapsible Categories */
+.shop-category-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.shop-category-details summary {
+    list-style: none;
+    outline: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 700;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.shop-category-details summary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(90, 105, 250, 0.3);
+}
+
+.shop-category-details[open] summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: 0;
+    border-color: rgba(90, 105, 250, 0.2);
+}
+
+.shop-category-details .shop-item-list {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--glass-border);
+    border-top: none;
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+    margin-top: 0;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
-    transition: all 0.2s ease;
+    margin-bottom: var(--spacing-sm);
 }
 
-.shop-item-card:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: var(--accent-color);
+.shop-category-details .arrow {
+    transition: transform 0.2s ease;
+    font-size: 0.8rem;
+    color: var(--text-muted);
 }
 
-.shop-item-header {
+.shop-category-details[open] .arrow {
+    transform: rotate(180deg);
+}
+
+/* Master Item Row */
+.shop-item-row {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.shop-item-name {
+.shop-item-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(90, 105, 250, 0.3);
+}
+
+.shop-item-row.active {
+    background: rgba(90, 105, 250, 0.15);
+    border-color: var(--accent-color, #5a69fa);
+    box-shadow: 0 0 10px rgba(90, 105, 250, 0.1);
+}
+
+.shop-item-row .list-item-title {
+    font-weight: 600;
+}
+
+.shop-item-row .shop-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shop-item-row .shop-item-owned-badge {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.shop-item-row .shop-item-cost-badge {
+    font-size: 0.85rem;
     font-weight: 700;
+    color: var(--warning);
+}
+
+.shop-item-row .shop-item-cost-badge.insufficient {
+    color: var(--danger);
+}
+
+/* Detail View Layout */
+.shop-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.shop-title-group h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem;
     color: var(--text-primary);
 }
 
-.shop-item-cost {
-    color: var(--warning);
+.shop-tier-badge {
+    background: var(--accent-color, #5a69fa);
+    color: white;
+    padding: 4px 12px;
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
     font-weight: 800;
+}
+
+.shop-detail-body {
     display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.shop-preview-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 4px;
+    min-height: 120px;
+}
+
+.shop-preview-icon {
+    font-size: 4rem;
+}
+
+.shop-desc-text {
+    line-height: 1.5;
+    color: var(--text-secondary);
     font-size: 0.95rem;
 }
 
-.shop-item-details {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.shop-stats-card {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
 }
 
-.shop-item-stats {
-    font-size: 0.8rem;
+.shop-stats-card h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.shop-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.shop-stat-row:last-child {
+    border-bottom: none;
+}
+
+.shop-stat-label {
     color: var(--text-secondary);
 }
 
-.btn-buy {
-    padding: 6px 12px;
-    font-size: 0.8rem;
+.shop-stat-value {
+    font-weight: 700;
+}
+
+.shop-owned-breakdown {
+    background: rgba(255, 255, 255, 0.01);
+    padding: 10px 15px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+}
+
+.shop-cost-section {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+}
+
+.shop-cost-section h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.shop-cost-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+}
+
+.shop-cost-item {
+    background: var(--bg-accent, #1e2230);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.shop-cost-item.insufficient {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.shop-cost-item .value {
+    font-weight: 700;
+}
+
+.shop-action-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-buy-action.bought {
+    background-color: var(--success) !important;
+    border-color: var(--success) !important;
+    color: white !important;
+    animation: pop 0.4s ease;
+}
+
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
 }
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
+}
+
+/* Shop Tabs */
+.shop-tabs {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-md);
+    border-bottom: 2px solid var(--glass-border);
+    padding-bottom: 2px;
+}
+
+.shop-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 8px 20px;
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.shop-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.shop-tab.active {
+    color: var(--accent-color, #5a69fa);
+    background: rgba(90, 105, 250, 0.08);
+}
+
+.shop-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-color, #5a69fa);
+    border-radius: 2px;
 }
 </style>
 </template>

@@ -12,7 +12,8 @@ export class SettingsView extends BaseView {
     onMount() {
         this.elements = {
             langSelect: this.$('#lang-select'),
-            btnWipe: this.$('#btn-wipe-data')
+            btnWipe: this.$('#btn-wipe-data'),
+            btnDevCheat: this.$('#btn-dev-cheat')
         };
 
         // Initialize Select with current language
@@ -45,6 +46,23 @@ export class SettingsView extends BaseView {
                         }, 100);
                     }
                 });
+            });
+        }
+
+        // Developer Cheat logic
+        if (this.elements.btnDevCheat) {
+            this.elements.btnDevCheat.addEventListener('click', () => {
+                console.log('SettingsView: Dev Cheat button clicked');
+                this.emit('devCheatActivate', {});
+
+                // Brief visual feedback on the button
+                const btn = this.elements.btnDevCheat;
+                btn.textContent = '✓ Done!';
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.innerHTML = '<span class="icon">⚡</span><span>' + (this.t('ui_settings_dev_cheat') || 'Activate Developer Cheat') + '</span>';
+                    btn.disabled = false;
+                }, 1500);
             });
         }
     }

@@ -13,23 +13,31 @@
         <div class="shop-header-pane">
             <h2 data-i18n="ui_shop_title">Village Shop</h2>
             <p class="subtitle" style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 4px;">Purchase supplies, weaponry, and protective gear for your heroes.</p>
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-tab="buy" data-i18n="ui_buy">Buy</button>
+                <button class="shop-tab" data-tab="sell" data-i18n="ui_sell">Sell</button>
+            </div>
         </div>
-        <div class="shop-grid">
-            <!-- Consumables -->
-            <div class="card shop-category">
-                <h3><span class="icon">🧪</span><span data-i18n="ui_consumables">Consumables</span></h3>
-                <div class="shop-item-list" id="shop-consumables-list"></div>
-            </div>
-            <!-- Weapons -->
-            <div class="card shop-category">
-                <h3><span class="icon">⚔️</span><span data-i18n="ui_equipment">Weapons</span></h3>
-                <div class="shop-item-list" id="shop-weapons-list"></div>
-            </div>
-            <!-- Armor -->
-            <div class="card shop-category">
-                <h3><span class="icon">🛡️</span><span data-i18n="ui_equipment">Armor</span></h3>
-                <div class="shop-item-list" id="shop-armor-list"></div>
-            </div>
+        <div class="master-detail-layout">
+            <!-- Master Pane: Collapsible Categories and Item List -->
+            <aside class="master-pane card">
+                <div class="pane-header" style="margin-bottom: var(--spacing-sm);">
+                    <h3 data-i18n="ui_shop_catalog">Shop Catalog</h3>
+                </div>
+                <div id="shop-catalog-container" class="list-container">
+                    <!-- Collapsible details and summary lists will be injected here -->
+                </div>
+            </aside>
+
+            <!-- Detail Pane: Stats, Owned Count & Buy Button -->
+            <main class="detail-pane card glass-pane">
+                <div id="shop-detail-content">
+                    <div class="empty-detail">
+                        <div class="detail-icon-bg">🛒</div>
+                        <p data-i18n="ui_select_item">Select an item to view details.</p>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 </section>
@@ -75,84 +83,343 @@
     margin-bottom: var(--spacing-lg);
 }
 
-.shop-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
-}
-
-@media (min-width: 992px) {
-    .shop-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-.shop-category {
+/* Layout Splits */
+.shop-view .detail-pane {
+    background: rgba(22, 24, 33, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
+    min-height: 350px;
 }
 
-.shop-item-list {
+.shop-view .empty-detail {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm);
-    margin-top: var(--spacing-sm);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
 }
 
-.shop-item-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
+.shop-view .detail-icon-bg {
+    font-size: 4rem;
+    opacity: 0.1;
+    margin-bottom: 20px;
+}
+
+/* Collapsible Categories */
+.shop-category-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.shop-category-details summary {
+    list-style: none;
+    outline: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 700;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.shop-category-details summary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(90, 105, 250, 0.3);
+}
+
+.shop-category-details[open] summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: 0;
+    border-color: rgba(90, 105, 250, 0.2);
+}
+
+.shop-category-details .shop-item-list {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--glass-border);
+    border-top: none;
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+    margin-top: 0;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
-    transition: all 0.2s ease;
+    margin-bottom: var(--spacing-sm);
 }
 
-.shop-item-card:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: var(--accent-color);
+.shop-category-details .arrow {
+    transition: transform 0.2s ease;
+    font-size: 0.8rem;
+    color: var(--text-muted);
 }
 
-.shop-item-header {
+.shop-category-details[open] .arrow {
+    transform: rotate(180deg);
+}
+
+/* Master Item Row */
+.shop-item-row {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.shop-item-name {
+.shop-item-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(90, 105, 250, 0.3);
+}
+
+.shop-item-row.active {
+    background: rgba(90, 105, 250, 0.15);
+    border-color: var(--accent-color, #5a69fa);
+    box-shadow: 0 0 10px rgba(90, 105, 250, 0.1);
+}
+
+.shop-item-row .list-item-title {
+    font-weight: 600;
+}
+
+.shop-item-row .shop-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shop-item-row .shop-item-owned-badge {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.shop-item-row .shop-item-cost-badge {
+    font-size: 0.85rem;
     font-weight: 700;
+    color: var(--warning);
+}
+
+.shop-item-row .shop-item-cost-badge.insufficient {
+    color: var(--danger);
+}
+
+/* Detail View Layout */
+.shop-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.shop-title-group h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem;
     color: var(--text-primary);
 }
 
-.shop-item-cost {
-    color: var(--warning);
+.shop-tier-badge {
+    background: var(--accent-color, #5a69fa);
+    color: white;
+    padding: 4px 12px;
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
     font-weight: 800;
+}
+
+.shop-detail-body {
     display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.shop-preview-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 4px;
+    min-height: 120px;
+}
+
+.shop-preview-icon {
+    font-size: 4rem;
+}
+
+.shop-desc-text {
+    line-height: 1.5;
+    color: var(--text-secondary);
     font-size: 0.95rem;
 }
 
-.shop-item-details {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.shop-stats-card {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
 }
 
-.shop-item-stats {
-    font-size: 0.8rem;
+.shop-stats-card h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.shop-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.shop-stat-row:last-child {
+    border-bottom: none;
+}
+
+.shop-stat-label {
     color: var(--text-secondary);
 }
 
-.btn-buy {
-    padding: 6px 12px;
-    font-size: 0.8rem;
+.shop-stat-value {
+    font-weight: 700;
+}
+
+.shop-owned-breakdown {
+    background: rgba(255, 255, 255, 0.01);
+    padding: 10px 15px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+}
+
+.shop-cost-section {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+}
+
+.shop-cost-section h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.shop-cost-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+}
+
+.shop-cost-item {
+    background: var(--bg-accent, #1e2230);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.shop-cost-item.insufficient {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.shop-cost-item .value {
+    font-weight: 700;
+}
+
+.shop-action-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-buy-action.bought {
+    background-color: var(--success) !important;
+    border-color: var(--success) !important;
+    color: white !important;
+    animation: pop 0.4s ease;
+}
+
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
 }
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
+}
+
+/* Shop Tabs */
+.shop-tabs {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-md);
+    border-bottom: 2px solid var(--glass-border);
+    padding-bottom: 2px;
+}
+
+.shop-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 8px 20px;
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.shop-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.shop-tab.active {
+    color: var(--accent-color, #5a69fa);
+    background: rgba(90, 105, 250, 0.08);
+}
+
+.shop-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-color, #5a69fa);
+    border-radius: 2px;
 }
 </style>

@@ -73,6 +73,43 @@ export class GameEngine {
         }
     }
 
+    activateDeveloperCheat() {
+        console.warn('🚀 Engine: Developer Cheat Activated!');
+
+        // 1. Add 10,000 gold
+        this.villageService.addGold(10000);
+        this.villageService.save();
+
+        // 2. Add 10,000 wood and 10,000 stone (bypass storage limits)
+        const inv = this.inventoryService;
+        inv.data.materials['material_wood'] = (inv.data.materials['material_wood'] || 0) + 10000;
+        inv.data.materials['material_stone'] = (inv.data.materials['material_stone'] || 0) + 10000;
+        inv.save();
+
+        // 3. Grant 5,000 XP to all heroes (causes level ups)
+        this.heroService.heroes.forEach(hero => {
+            hero.addExperience(5000);
+        });
+        this.heroService.saveAll();
+
+        // 4. Unlock the shop by marking tutorial cave as completed (if not already)
+        const expState = this.expeditionService.state;
+        if (!expState.completedIds.includes('exp_tutorial_cave')) {
+            expState.completedIds.push('exp_tutorial_cave');
+            // Remove tutorial cave from available nodes so it isn't shown as available
+            const region = expState.regions['reg_greenfields'];
+            if (region) {
+                region.availableNodes = region.availableNodes.filter(n => n.id !== 'exp_tutorial_cave');
+                region.clears = (region.clears || 0) + 1;
+                // Generate next story/procedural nodes
+                this.expeditionService._generateNextNodes('reg_greenfields');
+            }
+            this.expeditionService.save();
+        }
+
+        return Result.ok();
+    }
+
     update() {
         const now = Date.now();
         const activeExpedition = this.expeditionService.state.activeExpedition;
@@ -143,6 +180,14 @@ export class GameEngine {
     }
 
     // --- Shop & Forge Facade ---
+
+    // Sell prices per unit (intentionally low)
+    static SELL_PRICES = {
+        'food_raw_grain':  1,
+        'material_wood':   2,
+        'material_stone':  3
+    };
+
     buyItem(itemData, costGold) {
         if (this.villageService.state.gold < costGold) {
             return Result.fail('error_not_enough_gold');
@@ -165,6 +210,52 @@ export class GameEngine {
         }
 
         return Result.ok();
+    }
+
+    /**
+     * Sell a raw resource (food, wood, stone) for gold.
+     * @param {string} resourceId  - e.g. 'material_wood'
+     * @param {number} quantity    - number of units to sell (1 / 10 / 100)
+     */
+    sellResource(resourceId, quantity) {
+        const pricePerUnit = GameEngine.SELL_PRICES[resourceId];
+        if (!pricePerUnit) {
+            return Result.fail('error_item_not_found');
+        }
+
+        const available = this.inventoryService.getItemCount(resourceId);
+        const toSell = Math.min(quantity, available);
+        if (toSell <= 0) {
+            return Result.fail('error_not_enough_items');
+        }
+
+        // Remove resources
+        this.inventoryService.useItem(resourceId, toSell);
+
+        // Grant gold
+        const goldEarned = toSell * pricePerUnit;
+        this.villageService.addGold(goldEarned);
+
+        return Result.ok({ sold: toSell, goldEarned });
+    }
+
+    /**
+     * Sell an inventory item (equipment or consumable) for gold.
+     * @param {string} itemId    - Unique item ID or consumable ID
+     * @param {string} itemType  - 'consumable' | 'equipment'
+     * @param {number} sellPrice - Calculated sell price (gold)
+     */
+    sellItem(itemId, itemType, sellPrice) {
+        if (itemType === 'consumable') {
+            const result = this.inventoryService.useItem(itemId, 1);
+            if (!result.success) return result;
+        } else {
+            const result = this.inventoryService.removeEquipment(itemId);
+            if (!result.success) return result;
+        }
+
+        this.villageService.addGold(sellPrice);
+        return Result.ok({ goldEarned: sellPrice });
     }
 
     getRefineCost(item) {

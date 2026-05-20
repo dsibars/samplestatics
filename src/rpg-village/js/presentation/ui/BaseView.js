@@ -79,6 +79,13 @@ export class BaseView {
     }
 
     /**
+     * Helper to find all elements within the view root.
+     */
+    $$(selector) {
+        return this.root ? this.root.querySelectorAll(selector) : [];
+    }
+
+    /**
      * Helper for translations.
      */
     t(key) {

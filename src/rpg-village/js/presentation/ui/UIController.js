@@ -363,6 +363,35 @@ export class UIController {
     }
 
     /**
+     * Displays a transient in-game toast notification.
+     * @param {string} message  Translated message text to show.
+     * @param {'error'|'success'|'info'} type  Visual style. Defaults to 'error'.
+     * @param {number} duration  Auto-dismiss delay in ms. Defaults to 3500.
+     */
+    showToast(message, type = 'error', duration = 3500) {
+        // Ensure container exists
+        let container = document.getElementById('game-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'game-toast-container';
+            container.className = 'game-toast-container';
+            document.body.appendChild(container);
+        }
+
+        const icons = { error: '⚠️', success: '✅', info: 'ℹ️' };
+        const toast = document.createElement('div');
+        toast.className = `game-toast toast-${type}`;
+        toast.innerHTML = `<span class="toast-icon">${icons[type] || '⚠️'}</span><span>${message}</span>`;
+        container.appendChild(toast);
+
+        // Auto-dismiss
+        setTimeout(() => {
+            toast.classList.add('toast-out');
+            setTimeout(() => toast.remove(), 400);
+        }, duration);
+    }
+
+    /**
      * Plays the battle log in a full-screen overlay dynamically imitating a turn-based combat log.
      */
     playBattleLog(combatLog, onComplete) {
@@ -1112,5 +1141,11 @@ export class UIController {
 
         this.renderCombatOverlay = render;
         render();
+    }
+
+    forceUpdate() {
+        if (this.adapter) {
+            this.adapter.forceUpdate();
+        }
     }
 }

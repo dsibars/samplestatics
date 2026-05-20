@@ -52,7 +52,7 @@ export class EngineAdapter {
                         data.duration
                     );
                     if (!result.success) {
-                        alert(this.engine.i18n.t(result.error));
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
                     }
                     this.forceUpdate();
                 });
@@ -62,7 +62,7 @@ export class EngineAdapter {
                 view.on('assignExpedition', (data) => {
                     const result = this.engine.assignExpedition(data.expId, data.heroIds);
                     if (!result.success) {
-                        alert(this.engine.i18n.t(result.error));
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
                     }
                     this.forceUpdate();
                 });
@@ -76,21 +76,21 @@ export class EngineAdapter {
                 view.on('increaseStat', (data) => {
                     const result = this.engine.increaseHeroStat(data.heroId, data.statId);
                     if (!result.success) {
-                        alert(this.engine.i18n.t(result.error));
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
                     }
                     this.forceUpdate();
                 });
                 view.on('equipItem', (data) => {
                     const result = this.engine.equipHeroItem(data.heroId, data.slot, data.itemId);
                     if (!result.success) {
-                        alert(this.engine.i18n.t(result.error));
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
                     }
                     this.forceUpdate();
                 });
                 view.on('unequipItem', (data) => {
                     const result = this.engine.unequipHeroItem(data.heroId, data.slot);
                     if (!result.success) {
-                        alert(this.engine.i18n.t(result.error));
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
                     }
                     this.forceUpdate();
                 });
@@ -100,7 +100,16 @@ export class EngineAdapter {
                 view.on('buyItem', (data) => {
                     const result = this.engine.buyItem(data.itemData, data.costGold);
                     if (!result.success) {
-                        alert(this.engine.i18n.t(result.error));
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('sellItem', (data) => {
+                    const result = this.engine.sellItem(data.itemId, data.itemType, data.sellPrice);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    } else {
+                        this.ui.showToast(`+${result.data.goldEarned}g`);
                     }
                     this.forceUpdate();
                 });
@@ -110,8 +119,16 @@ export class EngineAdapter {
                 view.on('refineItem', (data) => {
                     const result = this.engine.refineEquipment(data.itemId);
                     if (!result.success) {
-                        alert(this.engine.i18n.t(result.error));
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
                     }
+                    this.forceUpdate();
+                });
+            }
+
+            if (domain === 'settings') {
+                view.on('devCheatActivate', () => {
+                    console.log('EngineAdapter: devCheatActivate received');
+                    this.engine.activateDeveloperCheat();
                     this.forceUpdate();
                 });
             }

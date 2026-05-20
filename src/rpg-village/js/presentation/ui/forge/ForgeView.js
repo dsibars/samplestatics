@@ -15,6 +15,28 @@ export class ForgeView extends BaseView {
         };
     }
 
+    update(state) {
+        if (!state) return;
+        
+        const blacksmithLevel = state.village?.infrastructure?.blacksmith || 0;
+        const playerGold = state.village?.gold || 0;
+        
+        const stateString = JSON.stringify({
+            blacksmithLevel,
+            playerGold,
+            equipmentCount: state.inventory?.equipment?.length || 0,
+            heroesCount: state.heroes?.length || 0,
+            selectedItemId: this.selectedItemId
+        });
+
+        if (this.lastRenderedState === stateString) {
+            return;
+        }
+
+        this.onUpdate(state);
+        this.lastRenderedState = stateString;
+    }
+
     onUpdate(state) {
         const blacksmithLevel = state.village.infrastructure.blacksmith || 0;
         const isUnlocked = blacksmithLevel >= 1;
