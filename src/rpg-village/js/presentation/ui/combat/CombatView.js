@@ -35,7 +35,7 @@ export class CombatView {
     const content = document.createElement('div');
     content.style.cssText = 'max-width:600px;width:90%;text-align:center;';
     const title = document.createElement('h2');
-    title.textContent = this.t('combat.battle_log');
+    title.textContent = this.t('combat_battle_log');
     title.style.marginBottom = '16px';
     content.appendChild(title);
     const logContainer = document.createElement('div');
@@ -51,11 +51,12 @@ export class CombatView {
         clearInterval(interval);
         const summary = document.createElement('div');
         summary.style.cssText = 'margin-top:12px;font-weight:bold;color:#ffd700;';
-        summary.textContent = this.t('combat.battle_finished');
+        summary.textContent = this.t('combat_battle_finished');
         content.appendChild(summary);
         const closeBtn = document.createElement('button');
-        closeBtn.textContent = this.t('ui.close');
-        closeBtn.style.cssText = 'margin-top:16px;padding:8px 24px;font-size:1rem;cursor:pointer;';
+        closeBtn.textContent = this.t('ui_btn_close');
+        closeBtn.className = 'btn btn-secondary';
+        closeBtn.style.marginTop = '16px';
         closeBtn.addEventListener('click', () => {
           overlay.remove();
           if (onComplete) onComplete();
@@ -105,12 +106,12 @@ export class CombatView {
       const header = document.createElement('div');
       header.className = 'combat-header';
       const title = document.createElement('h2');
-      title.textContent = this.t('combat.battle_title');
+      title.textContent = this.t('combat_battle_title');
       header.appendChild(title);
       const controls = document.createElement('div');
       controls.className = 'combat-header-controls';
       const autoBtn = document.createElement('button');
-      autoBtn.textContent = this.t('combat.auto');
+      autoBtn.textContent = this.t('btn_auto_combat');
       autoBtn.className = 'btn btn-secondary btn-sm';
       autoBtn.addEventListener('click', () => {
         if (this.engine && this.engine.battleService) {
@@ -120,7 +121,7 @@ export class CombatView {
       });
       controls.appendChild(autoBtn);
       const skipBtn = document.createElement('button');
-      skipBtn.textContent = this.t('combat.skip');
+      skipBtn.textContent = this.t('btn_skip_combat');
       skipBtn.className = 'btn btn-secondary btn-sm';
       skipBtn.addEventListener('click', () => {
         if (this.engine && this.engine.skipBattle) {
@@ -146,7 +147,7 @@ export class CombatView {
       const heroesCol = document.createElement('div');
       heroesCol.className = 'combat-column';
       const heroesTitle = document.createElement('h3');
-      heroesTitle.textContent = this.t('combat.heroes');
+      heroesTitle.textContent = this.t('combat_heroes');
       heroesCol.appendChild(heroesTitle);
       const activeActor = battle.turnOrder[battle.currentTurnIndex];
       const isActiveActor = (actor) => activeActor && actor.id === activeActor.id;
@@ -211,7 +212,7 @@ export class CombatView {
       const centerCol = document.createElement('div');
       centerCol.className = 'combat-column combat-log-column';
       const logTitle = document.createElement('h3');
-      logTitle.textContent = this.t('combat.log');
+      logTitle.textContent = this.t('combat_log');
       centerCol.appendChild(logTitle);
       const logBox = document.createElement('div');
       logBox.id = 'combat-log-box';
@@ -279,7 +280,7 @@ export class CombatView {
       const enemiesCol = document.createElement('div');
       enemiesCol.className = 'combat-column';
       const enemiesTitle = document.createElement('h3');
-      enemiesTitle.textContent = this.t('combat.enemies');
+      enemiesTitle.textContent = this.t('combat_enemies');
       enemiesCol.appendChild(enemiesTitle);
       (battle.enemies || []).forEach(enemy => {
         const card = document.createElement('div');
@@ -320,7 +321,7 @@ export class CombatView {
     const resolution = document.createElement('div');
     resolution.style.cssText = 'text-align:center;padding:20px;background:rgba(255,255,255,0.1);border-radius:8px;';
     const resultTitle = document.createElement('h2');
-    resultTitle.textContent = battle.victory ? this.t('combat.victory') : this.t('combat.defeat');
+    resultTitle.textContent = battle.victory ? this.t('victory') : this.t('defeat');
     resultTitle.style.color = battle.victory ? '#4caf50' : '#f44336';
     resolution.appendChild(resultTitle);
 
@@ -328,29 +329,30 @@ export class CombatView {
       const rewardsDiv = document.createElement('div');
       rewardsDiv.style.cssText = 'margin-top:12px;';
       const rewardsTitle = document.createElement('h3');
-      rewardsTitle.textContent = this.t('combat.rewards');
+      rewardsTitle.textContent = this.t('combat_rewards');
       rewardsDiv.appendChild(rewardsTitle);
       if (battle.rewards.xp) {
         const xpLine = document.createElement('div');
-        xpLine.textContent = this.t('combat.xp_reward', { xp: battle.rewards.xp });
+        xpLine.textContent = this.t('combat_xp_reward', { xp: battle.rewards.xp });
         rewardsDiv.appendChild(xpLine);
       }
       if (battle.rewards.gold) {
         const goldLine = document.createElement('div');
-        goldLine.textContent = this.t('combat.gold_reward', { gold: battle.rewards.gold });
+        goldLine.textContent = this.t('combat_gold_reward', { gold: battle.rewards.gold });
         rewardsDiv.appendChild(goldLine);
       }
       if (battle.rewards.items && battle.rewards.items.length) {
         const itemsLine = document.createElement('div');
-        itemsLine.textContent = this.t('combat.items_reward', { items: battle.rewards.items.join(', ') });
+        itemsLine.textContent = this.t('combat_items_reward', { items: battle.rewards.items.join(', ') });
         rewardsDiv.appendChild(itemsLine);
       }
       resolution.appendChild(rewardsDiv);
     }
 
     const closeBtn = document.createElement('button');
-    closeBtn.textContent = this.t('ui.close');
-    closeBtn.style.cssText = 'margin-top:16px;padding:8px 24px;font-size:1rem;cursor:pointer;';
+    closeBtn.textContent = this.t('ui_btn_close');
+    closeBtn.className = 'btn btn-secondary';
+    closeBtn.style.marginTop = '16px';
     closeBtn.addEventListener('click', () => {
       if (this.overlay) this.overlay.remove();
       this.isCombatOverlayOpen = false;
@@ -366,22 +368,28 @@ export class CombatView {
     const menu = document.createElement('div');
     menu.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
     const attackBtn = document.createElement('button');
-    attackBtn.textContent = this.t('combat.attack');
-    attackBtn.style.cssText = 'flex:1;min-width:80px;padding:8px;cursor:pointer;';
+    attackBtn.textContent = this.t('basic_attack');
+    attackBtn.className = 'btn btn-primary';
+    attackBtn.style.flex = '1';
+    attackBtn.style.minWidth = '80px';
     attackBtn.addEventListener('click', () => {
       if (onAttack) onAttack();
     });
     menu.appendChild(attackBtn);
     const skillsBtn = document.createElement('button');
-    skillsBtn.textContent = this.t('combat.skills');
-    skillsBtn.style.cssText = 'flex:1;min-width:80px;padding:8px;cursor:pointer;';
+    skillsBtn.textContent = this.t('ui_skills');
+    skillsBtn.className = 'btn btn-secondary';
+    skillsBtn.style.flex = '1';
+    skillsBtn.style.minWidth = '80px';
     skillsBtn.addEventListener('click', () => {
       if (onSkills) onSkills();
     });
     menu.appendChild(skillsBtn);
     const itemsBtn = document.createElement('button');
-    itemsBtn.textContent = this.t('combat.items');
-    itemsBtn.style.cssText = 'flex:1;min-width:80px;padding:8px;cursor:pointer;';
+    itemsBtn.textContent = this.t('combat_items');
+    itemsBtn.className = 'btn btn-secondary';
+    itemsBtn.style.flex = '1';
+    itemsBtn.style.minWidth = '80px';
     itemsBtn.addEventListener('click', () => {
       if (onItems) onItems();
     });
@@ -392,19 +400,23 @@ export class CombatView {
   _renderSkillsMenu(actionsBox, battle, onSelect, onBack) {
     const activeActor = battle.turnOrder && battle.turnOrder[battle.currentTurnIndex];
     const currentHero = activeActor && battle.heroes ? battle.heroes.find(h => h.id === activeActor.id) : null;
-    const skills = currentHero && currentHero.skills ? currentHero.skills : [];
+    // hero.skills is an object like { basic_attack: 0, fireball: 2 }
+    const skills = currentHero && currentHero.skills ? Object.keys(currentHero.skills) : [];
     const menu = document.createElement('div');
     menu.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
     const title = document.createElement('div');
     title.style.fontWeight = 'bold';
-    title.textContent = this.t('combat.select_skill');
+    title.textContent = this.t('combat_select_skill');
     menu.appendChild(title);
     skills.forEach(skillId => {
       const skillData = SKILLS_DATA[skillId];
       const mpCost = skillData ? skillData.mpCost : 0;
       const btn = document.createElement('button');
-      btn.textContent = `${skillData ? skillData.name : skillId} (${mpCost} MP)`;
-      btn.style.cssText = 'padding:6px;cursor:pointer;text-align:left;';
+      // Use i18n key for skill name; SKILLS_DATA has no 'name' field
+      const skillName = this.t(skillId) || skillId;
+      btn.textContent = `${skillName} (${mpCost} MP)`;
+      btn.className = 'btn btn-secondary btn-sm';
+      btn.style.textAlign = 'left';
       const canUse = currentHero && currentHero.mp >= mpCost;
       if (!canUse) {
         btn.disabled = true;
@@ -416,8 +428,8 @@ export class CombatView {
       menu.appendChild(btn);
     });
     const backBtn = document.createElement('button');
-    backBtn.textContent = this.t('ui.back');
-    backBtn.style.cssText = 'padding:6px;cursor:pointer;';
+    backBtn.textContent = this.t('btn_back');
+    backBtn.className = 'btn btn-secondary btn-sm';
     backBtn.addEventListener('click', onBack);
     menu.appendChild(backBtn);
     actionsBox.appendChild(menu);
@@ -425,29 +437,32 @@ export class CombatView {
 
   _renderItemsMenu(actionsBox, onSelect, onBack) {
     const inventory = this.lastState && this.lastState.inventory ? this.lastState.inventory : {};
-    const consumables = Object.entries(inventory).filter(([_, item]) => item && item.type === 'consumable');
+    // consumables is a flat object: { item_tiny_hp_potion: 5, ... }
+    const consumables = Object.entries(inventory.consumables || {}).filter(([_, count]) => count > 0);
     const menu = document.createElement('div');
     menu.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
     const title = document.createElement('div');
     title.style.fontWeight = 'bold';
-    title.textContent = this.t('combat.select_item');
+    title.textContent = this.t('combat_select_item');
     menu.appendChild(title);
     if (consumables.length === 0) {
       const none = document.createElement('div');
       none.style.cssText = 'opacity:0.6;';
-      none.textContent = this.t('combat.no_items');
+      none.textContent = this.t('ui_no_items');
       menu.appendChild(none);
     }
-    consumables.forEach(([itemId, item]) => {
+    consumables.forEach(([itemId, count]) => {
       const btn = document.createElement('button');
-      btn.textContent = `${item.name || itemId} x${item.quantity || 1}`;
-      btn.style.cssText = 'padding:6px;cursor:pointer;text-align:left;';
+      const itemName = this.t(itemId) || itemId;
+      btn.textContent = `${itemName} x${count}`;
+      btn.className = 'btn btn-secondary btn-sm';
+      btn.style.textAlign = 'left';
       btn.addEventListener('click', () => onSelect(itemId));
       menu.appendChild(btn);
     });
     const backBtn = document.createElement('button');
-    backBtn.textContent = this.t('ui.back');
-    backBtn.style.cssText = 'padding:6px;cursor:pointer;';
+    backBtn.textContent = this.t('btn_back');
+    backBtn.className = 'btn btn-secondary btn-sm';
     backBtn.addEventListener('click', onBack);
     menu.appendChild(backBtn);
     actionsBox.appendChild(menu);
@@ -458,19 +473,20 @@ export class CombatView {
     menu.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
     const title = document.createElement('div');
     title.style.fontWeight = 'bold';
-    title.textContent = targetMode === 'friendly' ? this.t('combat.select_ally') : this.t('combat.select_enemy');
+    title.textContent = this.t('ui_choose_target');
     menu.appendChild(title);
     const targets = targetMode === 'friendly' ? (battle.heroes || []) : (battle.enemies || []);
     targets.forEach(target => {
       const btn = document.createElement('button');
       btn.textContent = target.name;
-      btn.style.cssText = 'padding:6px;cursor:pointer;text-align:left;';
+      btn.className = 'btn btn-secondary btn-sm';
+      btn.style.textAlign = 'left';
       btn.addEventListener('click', () => onSelect(target.id));
       menu.appendChild(btn);
     });
     const backBtn = document.createElement('button');
-    backBtn.textContent = this.t('ui.back');
-    backBtn.style.cssText = 'padding:6px;cursor:pointer;';
+    backBtn.textContent = this.t('btn_back');
+    backBtn.className = 'btn btn-secondary btn-sm';
     backBtn.addEventListener('click', onBack);
     menu.appendChild(backBtn);
     actionsBox.appendChild(menu);

@@ -437,4 +437,19 @@ export const gl = {
     ui_report_raid_victory: "🛡️ ¡Incursión repelida! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Gañado {gold}g.",
     ui_report_raid_defeat: "⚠️ ¡A incursión atravesou as defensas! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Perdido {wood} madeira, {stone} pedra.{damaged}",
     ui_report_raid_damaged: " ¡O edificio {building} foi danado!",
+
+    // Combat UI
+    combat_items: "Obxectos",
+    combat_select_skill: "Seleccionar Habilidade",
+    combat_select_item: "Seleccionar Obxecto",
+    combat_battle_title: "Batalla",
+    combat_heroes: "Herois",
+    combat_enemies: "Inimigos",
+    combat_log: "Rexistro de Combate",
+    combat_rewards: "Recompensas",
+    combat_xp_reward: "+{xp} EXP",
+    combat_gold_reward: "+{gold} Ouro",
+    combat_items_reward: "Obxectos: {items}",
+    combat_battle_log: "Rexistro de Batalla",
+    combat_battle_finished: "Batalla Rematada!",
 };

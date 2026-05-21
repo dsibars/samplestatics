@@ -439,4 +439,19 @@ export const ca = {
     ui_report_raid_victory: "🛡️ ¡Incursió repel·lida! Poder de Defensa: {defense} vs Poder d'Incursió: {raid}. Guanyat {gold}g.",
     ui_report_raid_defeat: "⚠️ ¡La incursió va travessar les defenses! Poder de Defensa: {defense} vs Poder d'Incursió: {raid}. Perdut {wood} fusta, {stone} pedra.{damaged}",
     ui_report_raid_damaged: " ¡L'edifici {building} va ser danyat!",
+
+    // Combat UI
+    combat_items: "Objectes",
+    combat_select_skill: "Seleccionar Habilitat",
+    combat_select_item: "Seleccionar Objecte",
+    combat_battle_title: "Batalla",
+    combat_heroes: "Herois",
+    combat_enemies: "Enemics",
+    combat_log: "Registre de Combat",
+    combat_rewards: "Recompenses",
+    combat_xp_reward: "+{xp} EXP",
+    combat_gold_reward: "+{gold} Or",
+    combat_items_reward: "Objectes: {items}",
+    combat_battle_log: "Registre de Batalla",
+    combat_battle_finished: "Batalla Acabada!",
 };

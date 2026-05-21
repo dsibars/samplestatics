@@ -471,4 +471,19 @@ export const en = {
     ui_report_raid_victory: "🛡️ Raid repelled! Defense Power: {defense} vs Raid Power: {raid}. Earned {gold}g.",
     ui_report_raid_defeat: "⚠️ Raid broke through! Defense Power: {defense} vs Raid Power: {raid}. Lost {wood} wood, {stone} stone.{damaged}",
     ui_report_raid_damaged: " Building {building} was damaged!",
+
+    // Combat UI
+    combat_items: "Items",
+    combat_select_skill: "Select Skill",
+    combat_select_item: "Select Item",
+    combat_battle_title: "Battle",
+    combat_heroes: "Heroes",
+    combat_enemies: "Enemies",
+    combat_log: "Combat Log",
+    combat_rewards: "Rewards",
+    combat_xp_reward: "+{xp} XP",
+    combat_gold_reward: "+{gold} Gold",
+    combat_items_reward: "Items: {items}",
+    combat_battle_log: "Battle Log",
+    combat_battle_finished: "Battle Finished!",
 };

@@ -440,4 +440,19 @@ export const eu = {
     ui_report_raid_victory: "🛡️ Erasoa uxitu da! Defentsa Indarra: {defense} vs Eraso Indarra: {raid}. Irabazitako {gold}g.",
     ui_report_raid_defeat: "⚠️ Erasoak zeharkatu du! Defentsa Indarra: {defense} vs Eraso Indarra: {raid}. Galdu {wood} egur, {stone} harri.{damaged}",
     ui_report_raid_damaged: " {building} eraikina kaltetu da!",
+
+    // Combat UI
+    combat_items: "Items",
+    combat_select_skill: "Select Skill",
+    combat_select_item: "Select Item",
+    combat_battle_title: "Battle",
+    combat_heroes: "Heroes",
+    combat_enemies: "Enemies",
+    combat_log: "Combat Log",
+    combat_rewards: "Rewards",
+    combat_xp_reward: "+{xp} XP",
+    combat_gold_reward: "+{gold} Gold",
+    combat_items_reward: "Items: {items}",
+    combat_battle_log: "Battle Log",
+    combat_battle_finished: "Battle Finished!",
 };
