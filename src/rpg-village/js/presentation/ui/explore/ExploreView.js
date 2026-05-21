@@ -155,13 +155,14 @@ export class ExploreView extends BaseView {
         });
         
         let heroListHtml = '';
+        let availableHeroes = [];
         
         if (isLocked) {
             const lvlLabel = this.t('ui_level') || 'Level';
             heroListHtml = `<p>${this.t('ui_roster_locked')}</p>
                 <ul>${assignedHeroes.map(h => `<li>${h.name} (${lvlLabel} ${h.level})</li>`).join('')}</ul>`;
         } else {
-            const availableHeroes = [...assignedHeroes, ...idleHeroes].filter(h => !busyHeroIds.has(h.id));
+            availableHeroes = [...assignedHeroes, ...idleHeroes].filter(h => !busyHeroIds.has(h.id));
             if (availableHeroes.length === 0) {
                 heroListHtml = `<p>${this.t('ui_no_idle_heroes')}</p>`;
             } else {

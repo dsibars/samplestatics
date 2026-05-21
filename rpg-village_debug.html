@@ -8487,17 +8487,18 @@ class ExploreView extends BaseView {
       }
     });
     let heroListHtml = "";
+    let availableHeroes = [];
     if (isLocked) {
       const lvlLabel = this.t("ui_level") || "Level";
       heroListHtml = `<p>${this.t("ui_roster_locked")}</p>
                 <ul>${assignedHeroes.map((h) => `<li>${h.name} (${lvlLabel} ${h.level})</li>`).join("")}</ul>`;
     } else {
-      const availableHeroes2 = [...assignedHeroes, ...idleHeroes].filter((h) => !busyHeroIds.has(h.id));
-      if (availableHeroes2.length === 0) {
+      availableHeroes = [...assignedHeroes, ...idleHeroes].filter((h) => !busyHeroIds.has(h.id));
+      if (availableHeroes.length === 0) {
         heroListHtml = `<p>${this.t("ui_no_idle_heroes")}</p>`;
       } else {
         heroListHtml = `<div class="hero-checkbox-list">
-                    ${availableHeroes2.map((h) => {
+                    ${availableHeroes.map((h) => {
           const isAssigned = isActiveNode && activeExp.heroIds.includes(h.id);
           const isChecked = this.selectedHeroIds.has(h.id) || isAssigned && !this.selectedHeroIds.size;
           if (isChecked) this.selectedHeroIds.add(h.id);
