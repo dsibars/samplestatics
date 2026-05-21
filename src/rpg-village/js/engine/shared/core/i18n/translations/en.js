@@ -486,4 +486,13 @@ export const en = {
     combat_items_reward: "Items: {items}",
     combat_battle_log: "Battle Log",
     combat_battle_finished: "Battle Finished!",
+    ui_select_expedition: "Select an expedition node on the map.",
+    ui_shop_catalog: "Shop Catalog",
+    eq_weapon: "Weapon",
+    eq_armor: "Armor",
+    el_fire: "Fire",
+    el_water: "Water",
+    el_wind: "Wind",
+    el_storm: "Storm",
+    el_neutral: "Neutral",
 };

@@ -301,7 +301,9 @@ export class InventoryView extends BaseView {
         if (item.type === 'equipment' && item.rawEquipment) {
             const eq = item.rawEquipment;
             categoryLabel = this.t('ui_equipment');
-            description = this.t('desc_' + eq.type + '_' + eq.material) || `${this.t('material_' + eq.material)} ${this.t('eq_' + eq.type)}.`;
+            const descKey = 'desc_' + eq.type + '_' + eq.material;
+            const descVal = this.t(descKey);
+            description = descVal !== descKey ? descVal : `${this.t('tier_' + eq.material)} ${this.t('eq_' + eq.type)}.`;
             
             // Format stats block
             const formattedStats = getFormattedStats(eq, this.t.bind(this));

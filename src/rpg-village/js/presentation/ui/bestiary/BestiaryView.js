@@ -73,7 +73,9 @@ export class BestiaryView extends BaseView {
 
                 const elDiv = card.querySelector('.bestiary-element');
                 const elColor = ELEMENT_COLORS[t.element] || ELEMENT_COLORS.neutral;
-                elDiv.innerHTML = `<span style="color:${elColor};">●</span> ${this.t('el_' + t.element) || t.element}`;
+                const elKey = 'el_' + t.element;
+                const elVal = this.t(elKey);
+                elDiv.innerHTML = `<span style="color:${elColor};">●</span> ${elVal !== elKey ? elVal : t.element}`;
             } else {
                 card.querySelector('.bestiary-hp').textContent = '?';
                 card.querySelector('.bestiary-str').textContent = '?';
