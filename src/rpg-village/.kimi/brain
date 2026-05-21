@@ -21,9 +21,9 @@
 - [x] **A9** Wire up equipment affixes in `CombatCalculator` ✅ 2026-05-21
 
 ### Batch B — Medium Features (UX + Gameplay)
-- [ ] **B1** Refactor `CombatView` inline styles to CSS classes
-- [ ] **B2** Add equipment comparison in equip modal
-- [ ] **B3** Add proactive storage warning toast
+- [x] **B1** Refactor `CombatView` inline styles to CSS classes ✅ 2026-05-21
+- [x] **B2** Add equipment comparison in equip modal ✅ 2026-05-21
+- [x] **B3** Add proactive storage warning toast ✅ 2026-05-21
 - [ ] **B4** Add view transition animations
 - [ ] **B5** Implement Tavern building for gold-based hero recruitment
 - [ ] **B6** Add Bestiary tab

@@ -74,9 +74,9 @@ export class CombatView {
     this.onCombatComplete = onComplete;
     const overlay = document.createElement('div');
     overlay.id = 'combat-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;overflow:auto;';
+    overlay.className = 'combat-overlay';
     const container = document.createElement('div');
-    container.style.cssText = 'width:95%;max-width:1100px;display:flex;flex-direction:column;gap:12px;';
+    container.className = 'combat-container';
     overlay.appendChild(container);
     document.body.appendChild(overlay);
     this.overlay = overlay;
@@ -100,15 +100,15 @@ export class CombatView {
 
       // Header
       const header = document.createElement('div');
-      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+      header.className = 'combat-header';
       const title = document.createElement('h2');
       title.textContent = this.t('combat.battle_title');
       header.appendChild(title);
       const controls = document.createElement('div');
-      controls.style.cssText = 'display:flex;gap:8px;';
+      controls.className = 'combat-header-controls';
       const autoBtn = document.createElement('button');
       autoBtn.textContent = this.t('combat.auto');
-      autoBtn.style.cssText = 'padding:4px 12px;cursor:pointer;';
+      autoBtn.className = 'btn btn-secondary btn-sm';
       autoBtn.addEventListener('click', () => {
         if (this.engine && this.engine.executeBattleAction) {
           this.engine.executeBattleAction('auto');
@@ -117,7 +117,7 @@ export class CombatView {
       controls.appendChild(autoBtn);
       const skipBtn = document.createElement('button');
       skipBtn.textContent = this.t('combat.skip');
-      skipBtn.style.cssText = 'padding:4px 12px;cursor:pointer;';
+      skipBtn.className = 'btn btn-secondary btn-sm';
       skipBtn.addEventListener('click', () => {
         if (this.engine && this.engine.executeBattleAction) {
           this.engine.executeBattleAction('skip');
@@ -136,11 +136,11 @@ export class CombatView {
 
       // Three columns
       const columns = document.createElement('div');
-      columns.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;';
+      columns.className = 'combat-grid';
 
       // Heroes column
       const heroesCol = document.createElement('div');
-      heroesCol.style.cssText = 'flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;';
+      heroesCol.className = 'combat-column';
       const heroesTitle = document.createElement('h3');
       heroesTitle.textContent = this.t('combat.heroes');
       heroesCol.appendChild(heroesTitle);
@@ -151,9 +151,10 @@ export class CombatView {
         if (!entity.statusEffects || entity.statusEffects.length === 0) return;
         const statusMap = { poison: '🟣', burn: '🟠', haste: '🔵', sleep: '💤', stun: '💤' };
         const statusDiv = document.createElement('div');
-        statusDiv.style.cssText = 'display:flex;gap:4px;margin-top:4px;font-size:0.75rem;';
+        statusDiv.className = 'combat-card-statuses';
         entity.statusEffects.forEach(eff => {
           const badge = document.createElement('span');
+          badge.className = 'combat-status-badge';
           badge.textContent = statusMap[eff.type] || eff.type;
           badge.title = eff.type;
           statusDiv.appendChild(badge);
@@ -164,33 +165,36 @@ export class CombatView {
       (battle.heroes || []).forEach(hero => {
         const card = document.createElement('div');
         card.dataset.heroId = hero.id;
-        const activeHighlight = isActiveActor(hero) ? 'border:2px solid #6366f1;box-shadow:0 0 15px rgba(99,102,241,0.4);' : '';
-        card.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;' + activeHighlight;
+        card.className = 'combat-card' + (isActiveActor(hero) ? ' active' : '');
         const name = document.createElement('div');
-        name.style.fontWeight = 'bold';
+        name.className = 'combat-card-name';
         name.textContent = hero.name;
         card.appendChild(name);
         const hpBar = document.createElement('div');
-        hpBar.style.cssText = 'height:8px;background:#333;border-radius:4px;margin-top:4px;overflow:hidden;';
+        hpBar.className = 'combat-bar-container';
+        hpBar.style.height = '8px';
         const hpFill = document.createElement('div');
         const hpPct = hero.maxHp ? (hero.hp / hero.maxHp) * 100 : 0;
-        hpFill.style.cssText = `height:100%;width:${hpPct}%;background:${hpPct > 50 ? '#4caf50' : hpPct > 25 ? '#ff9800' : '#f44336'};transition:width 0.3s;`;
+        const hpColorClass = hpPct > 50 ? 'combat-bar-hp-high' : hpPct > 25 ? 'combat-bar-hp-mid' : 'combat-bar-hp-low';
+        hpFill.className = `combat-bar ${hpColorClass}`;
+        hpFill.style.width = `${hpPct}%`;
         hpBar.appendChild(hpFill);
         card.appendChild(hpBar);
         const hpText = document.createElement('div');
-        hpText.style.cssText = 'font-size:0.75rem;margin-top:2px;';
+        hpText.className = 'combat-bar-text';
         hpText.textContent = `${hero.hp}/${hero.maxHp} HP`;
         card.appendChild(hpText);
         if (hero.maxMp > 0) {
           const mpBar = document.createElement('div');
-          mpBar.style.cssText = 'height:6px;background:#333;border-radius:3px;margin-top:4px;overflow:hidden;';
+          mpBar.className = 'combat-bar-container';
           const mpFill = document.createElement('div');
           const mpPct = hero.maxMp ? (hero.mp / hero.maxMp) * 100 : 0;
-          mpFill.style.cssText = `height:100%;width:${mpPct}%;background:#2196f3;transition:width 0.3s;`;
+          mpFill.className = 'combat-bar combat-bar-mp';
+          mpFill.style.width = `${mpPct}%`;
           mpBar.appendChild(mpFill);
           card.appendChild(mpBar);
           const mpText = document.createElement('div');
-          mpText.style.cssText = 'font-size:0.75rem;margin-top:2px;';
+          mpText.className = 'combat-bar-text';
           mpText.textContent = `${hero.mp}/${hero.maxMp} MP`;
           card.appendChild(mpText);
         }
@@ -201,13 +205,13 @@ export class CombatView {
 
       // Center column: log + actions
       const centerCol = document.createElement('div');
-      centerCol.style.cssText = 'flex:1.5;min-width:280px;display:flex;flex-direction:column;gap:8px;';
+      centerCol.className = 'combat-column combat-log-column';
       const logTitle = document.createElement('h3');
       logTitle.textContent = this.t('combat.log');
       centerCol.appendChild(logTitle);
       const logBox = document.createElement('div');
       logBox.id = 'combat-log-box';
-      logBox.style.cssText = 'background:rgba(0,0,0,0.4);border-radius:6px;padding:8px;max-height:180px;overflow-y:auto;font-size:0.85rem;flex:1;';
+      logBox.className = 'combat-log-console';
       (battle.log || []).forEach(entry => {
         const line = document.createElement('div');
         line.textContent = entry;
@@ -218,7 +222,7 @@ export class CombatView {
 
       // Actions menu
       const actionsBox = document.createElement('div');
-      actionsBox.style.cssText = 'background:rgba(255,255,255,0.05);border-radius:6px;padding:10px;';
+      actionsBox.className = 'combat-control-panel';
       if (currentMenu === 'main') {
         this._renderMainMenu(actionsBox, () => render());
       } else if (currentMenu === 'skills') {
@@ -265,28 +269,30 @@ export class CombatView {
 
       // Enemies column
       const enemiesCol = document.createElement('div');
-      enemiesCol.style.cssText = 'flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;';
+      enemiesCol.className = 'combat-column';
       const enemiesTitle = document.createElement('h3');
       enemiesTitle.textContent = this.t('combat.enemies');
       enemiesCol.appendChild(enemiesTitle);
       (battle.enemies || []).forEach(enemy => {
         const card = document.createElement('div');
         card.dataset.enemyId = enemy.id;
-        const activeHighlight = isActiveActor(enemy) ? 'border:2px solid #6366f1;box-shadow:0 0 15px rgba(99,102,241,0.4);' : '';
-        card.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;' + activeHighlight;
+        card.className = 'combat-card' + (isActiveActor(enemy) ? ' active' : '');
         const name = document.createElement('div');
-        name.style.fontWeight = 'bold';
+        name.className = 'combat-card-name';
         name.textContent = enemy.name;
         card.appendChild(name);
         const hpBar = document.createElement('div');
-        hpBar.style.cssText = 'height:8px;background:#333;border-radius:4px;margin-top:4px;overflow:hidden;';
+        hpBar.className = 'combat-bar-container';
+        hpBar.style.height = '8px';
         const hpFill = document.createElement('div');
         const hpPct = enemy.maxHp ? (enemy.hp / enemy.maxHp) * 100 : 0;
-        hpFill.style.cssText = `height:100%;width:${hpPct}%;background:${hpPct > 50 ? '#4caf50' : hpPct > 25 ? '#ff9800' : '#f44336'};transition:width 0.3s;`;
+        const hpColorClass = hpPct > 50 ? 'combat-bar-hp-high' : hpPct > 25 ? 'combat-bar-hp-mid' : 'combat-bar-hp-low';
+        hpFill.className = `combat-bar ${hpColorClass}`;
+        hpFill.style.width = `${hpPct}%`;
         hpBar.appendChild(hpFill);
         card.appendChild(hpBar);
         const hpText = document.createElement('div');
-        hpText.style.cssText = 'font-size:0.75rem;margin-top:2px;';
+        hpText.className = 'combat-bar-text';
         hpText.textContent = `${enemy.hp}/${enemy.maxHp} HP`;
         card.appendChild(hpText);
         renderStatusEffects(enemy, card);

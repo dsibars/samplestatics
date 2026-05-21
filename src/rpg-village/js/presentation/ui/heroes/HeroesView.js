@@ -323,6 +323,15 @@ export class HeroesView extends BaseView {
 
         const t = this.t.bind(this);
 
+        const currentStats = currentItem ? getEquipmentStats(currentItem) : {};
+
+        const formatDelta = (val, label) => {
+            if (val === 0) return '';
+            const color = val > 0 ? 'var(--success)' : 'var(--danger)';
+            const sign = val > 0 ? '+' : '';
+            return `<span style="color:${color}; font-weight:700;">${sign}${val} ${label}</span>`;
+        };
+
         let itemsHtml = '';
         if (eligibleItems.length === 0) {
             itemsHtml = `<div style="text-align:center; padding: 25px; color: var(--text-muted); font-size: 0.95rem;">${t('ui_no_items')}</div>`;
@@ -330,20 +339,41 @@ export class HeroesView extends BaseView {
             itemsHtml = eligibleItems.map(item => {
                 const statsObj = getEquipmentStats(item);
                 const statLines = [];
-                if (statsObj.strength) statLines.push(`+${statsObj.strength} ${t('ui_stats_power') || 'STR'}`);
-                if (statsObj.defense) statLines.push(`+${statsObj.defense} DEF`);
-                if (statsObj.maxHp) statLines.push(`+${statsObj.maxHp} HP`);
-                if (statsObj.maxMp) statLines.push(`+${statsObj.maxMp} MP`);
-                if (statsObj.magicPower) statLines.push(`+${statsObj.magicPower} MAG`);
-                if (statsObj.speed) statLines.push(`${statsObj.speed} SPD`);
-                if (statsObj.evasion) statLines.push(`${statsObj.evasion > 0 ? '+' : ''}${statsObj.evasion}% EVA`);
+                const deltaLines = [];
+
+                const pushStat = (key, label) => {
+                    const val = statsObj[key] || 0;
+                    const cur = currentStats[key] || 0;
+                    if (val || cur) {
+                        statLines.push(`${val > 0 ? '+' : ''}${val} ${label}`);
+                        const delta = val - cur;
+                        if (delta !== 0) deltaLines.push(formatDelta(delta, label));
+                    }
+                };
+
+                pushStat('strength', t('ui_stats_power') || 'STR');
+                pushStat('defense', 'DEF');
+                pushStat('maxHp', 'HP');
+                pushStat('maxMp', 'MP');
+                pushStat('magicPower', 'MAG');
+                pushStat('speed', 'SPD');
+                if (statsObj.evasion || currentStats.evasion) {
+                    const eva = statsObj.evasion || 0;
+                    const curEva = currentStats.evasion || 0;
+                    statLines.push(`${eva > 0 ? '+' : ''}${eva}% EVA`);
+                    const delta = eva - curEva;
+                    if (delta !== 0) deltaLines.push(formatDelta(delta, '% EVA'));
+                }
+
                 const desc = statLines.join(', ');
+                const deltas = deltaLines.join(' ');
 
                 return `
                     <div class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; cursor: default;">
                         <div style="flex: 1; text-align: left; padding-right: 10px;">
                             <div style="font-weight:700; color: var(--text-primary);">${getEquipmentName(item, t)}</div>
                             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top: 2px;">${desc}</div>
+                            ${deltas ? `<div style="font-size:0.75rem; margin-top: 2px;">${deltas}</div>` : ''}
                         </div>
                         <button class="btn btn-primary btn-sm btn-select-equip" data-id="${item.id}" style="min-width: 70px;">
                             ${t('ui_equip') || 'Equip'}

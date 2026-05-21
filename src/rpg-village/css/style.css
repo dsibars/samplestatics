@@ -930,7 +930,16 @@ body {
     padding: 20px;
     font-family: 'Inter', sans-serif;
     color: var(--text-primary);
-    overflow: hidden;
+    overflow: auto;
+}
+
+.combat-container {
+    width: 95%;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .combat-header {
@@ -1121,6 +1130,18 @@ body {
 
 .combat-bar-mp {
     background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.combat-bar-hp-high {
+    background: linear-gradient(90deg, #4caf50, #81c784);
+}
+
+.combat-bar-hp-mid {
+    background: linear-gradient(90deg, #ff9800, #ffb74d);
+}
+
+.combat-bar-hp-low {
+    background: linear-gradient(90deg, #f44336, #e57373);
 }
 
 .combat-bar-text {

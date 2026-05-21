@@ -216,6 +216,19 @@ export class UIController {
             }
         }
 
+        // Proactive storage warning
+        if (state.inventory && state.village) {
+            const used = state.inventory.totalUsed || 0;
+            const max = state.village.maxStorage || 100;
+            const pct = used / max;
+            if (pct >= 0.95 && !this._storageWarningShown) {
+                this.showToast(this.t('error_storage_full') || 'Storage is full!', 'error', 4000);
+                this._storageWarningShown = true;
+            } else if (pct < 0.8) {
+                this._storageWarningShown = false;
+            }
+        }
+
         // Delegate combat UI to CombatView
         this.combatView.update(state);
 

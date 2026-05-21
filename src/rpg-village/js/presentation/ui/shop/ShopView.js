@@ -105,6 +105,9 @@ export class ShopView extends BaseView {
                         blacksmithLevel >= 1 ? 2 : 1;
         const playerGold = state.village?.gold || 0;
         const t = this.t.bind(this);
+        const used = state.inventory?.totalUsed || 0;
+        const maxStorage = state.village?.maxStorage || 100;
+        const storageFull = used >= maxStorage;
 
         // Group items:
         const groups = [
@@ -166,7 +169,13 @@ export class ShopView extends BaseView {
 
         // Render catalog
         if (this.elements.catalog) {
-            this.elements.catalog.innerHTML = groups.map(group => {
+            const storageWarning = storageFull
+                ? `<div class="alert alert-warning" style="margin-bottom: 15px; padding: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: var(--radius-md); color: var(--danger); font-weight: 600;">⚠️ ${t('error_storage_full') || 'Storage is full!'} (${used} / ${maxStorage})</div>`
+                : (used / maxStorage >= 0.9
+                    ? `<div class="alert alert-warning" style="margin-bottom: 15px; padding: 10px; background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); border-radius: var(--radius-md); color: var(--warning); font-weight: 600;">⚠️ ${t('inv_full') || 'Storage nearly full!'} (${used} / ${maxStorage})</div>`
+                    : '');
+
+            this.elements.catalog.innerHTML = storageWarning + groups.map(group => {
                 if (group.items.length === 0) return '';
                 
                 // Determine if this category contains the selected item
@@ -684,6 +693,9 @@ export class ShopView extends BaseView {
 
         const playerGold = state.village?.gold || 0;
         const canAfford = playerGold >= item.cost;
+        const used = state.inventory?.totalUsed || 0;
+        const maxStorage = state.village?.maxStorage || 100;
+        const storageFull = used >= maxStorage;
         const itemKey = item.id || `${item.type}_${item.material}_${item.family || item.archetype}_${item.slot || ''}`;
         const isJustBought = this.justBoughtKey === itemKey && (Date.now() - this.justBoughtTime) < 600;
 
@@ -739,9 +751,13 @@ export class ShopView extends BaseView {
         ` : '';
 
         const costClass = canAfford ? 'shop-cost-item' : 'shop-cost-item insufficient';
-        const btnClassFinal = isJustBought ? 'btn-success bought' : (canAfford ? 'btn-primary' : 'btn-secondary');
-        const btnText = isJustBought ? (t('ui_purchased') || 'Purchased! ✓') : t('ui_buy');
-        const btnDisabled = isJustBought || !canAfford ? 'disabled' : '';
+        const btnClassFinal = isJustBought ? 'btn-success bought' : (canAfford && !storageFull ? 'btn-primary' : 'btn-secondary');
+        const btnText = isJustBought
+            ? (t('ui_purchased') || 'Purchased! ✓')
+            : (storageFull
+                ? (t('error_storage_full') || 'Storage Full')
+                : t('ui_buy'));
+        const btnDisabled = isJustBought || !canAfford || storageFull ? 'disabled' : '';
 
         this.elements.detailContent.innerHTML = `
             <div class="shop-detail-header">
