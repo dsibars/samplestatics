@@ -14,6 +14,8 @@ export class EngineAdapter {
     init() {
         this.ui.engine = this.engine;
         this.ui.adapter = this;
+        this.ui.combatView.engine = this.engine;
+        this.ui.combatView.adapter = this;
         // Setup Global UI Events
         const btnNextDay = document.getElementById('btn-global-next-day');
         if (btnNextDay) {
