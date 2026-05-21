@@ -140,6 +140,8 @@ export const ca = {
     ui_recruit_success: "Reclutat",
     ui_hero: "Her00f2i",
     error_tavern_required: "Construeix una Taverna primer",
+    nav_bestiary: "Bestiari",
+    ui_bestiary_empty: "Encara no hi ha criatures catalogades. Envieu herois a expedicions per descobrir nous enemics!",
     ui_select_hero: "Selecciona un heroi per veure stats i equip.",
 
     // Domain: Inventory

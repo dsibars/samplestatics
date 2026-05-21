@@ -137,7 +137,9 @@ export class GameEngine {
             activeExpeditions,
             maxConcurrentExpeditions,
             completedExpeditions: this.expeditionService.state.completedIds || [],
-            activeBattle
+            activeBattle,
+            bestiary: this.expeditionService.getBestiary(),
+            enemyTemplates: this.expeditionService.getEnemyTemplates()
         };
     }
 

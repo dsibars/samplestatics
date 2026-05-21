@@ -1,0 +1,93 @@
+<section id="bestiary-view" class="domain-view">
+    <div class="card glass-pane" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
+        <div class="pane-header" style="margin-bottom: 15px;">
+            <h3 data-i18n="nav_bestiary">Bestiary</h3>
+            <span id="bestiary-count" class="hero-level-text" style="margin-left: auto;"></span>
+        </div>
+        <div id="bestiary-grid" class="bestiary-grid">
+            <!-- Enemy cards injected here -->
+        </div>
+    </div>
+
+    <template id="tpl-bestiary-card">
+        <div class="bestiary-card">
+            <div class="bestiary-card-header">
+                <span class="bestiary-type-badge"></span>
+                <span class="bestiary-name"></span>
+            </div>
+            <div class="bestiary-stats">
+                <div class="bestiary-stat"><span>HP</span><span class="bestiary-hp"></span></div>
+                <div class="bestiary-stat"><span>STR</span><span class="bestiary-str"></span></div>
+                <div class="bestiary-stat"><span>DEF</span><span class="bestiary-def"></span></div>
+                <div class="bestiary-stat"><span>SPD</span><span class="bestiary-spd"></span></div>
+            </div>
+            <div class="bestiary-element"></div>
+        </div>
+    </template>
+</section>
+
+<style>
+    .bestiary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 15px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    .bestiary-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: var(--radius-md);
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .bestiary-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-color);
+    }
+    .bestiary-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    .bestiary-type-badge {
+        font-size: 1.4rem;
+    }
+    .bestiary-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+    }
+    .bestiary-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 10px;
+    }
+    .bestiary-stat {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+    .bestiary-stat span:last-child {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .bestiary-element {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    .bestiary-empty {
+        text-align: center;
+        color: var(--text-muted);
+        padding: 40px 20px;
+        font-size: 0.95rem;
+    }
+</style>

@@ -24,6 +24,7 @@ export class ExpeditionService {
             activeExpeditions: [],
             expeditionTurnIndex: 0,
             activeCombatExpeditionId: null,
+            bestiary: [],
             regions: {
                 reg_greenfields: {
                     clears: 0,
@@ -54,6 +55,7 @@ export class ExpeditionService {
         }
         if (!loaded.activeExpeditions) loaded.activeExpeditions = [];
         if (loaded.expeditionTurnIndex === undefined) loaded.expeditionTurnIndex = 0;
+        if (!loaded.bestiary) loaded.bestiary = [];
 
         return loaded;
     }
@@ -383,6 +385,9 @@ export class ExpeditionService {
             const expPerHero = Math.floor(totalEnemyHp / heroes.length);
             const stageNum = activeExp.currentStage + 1;
             const stageTotal = exp.stages.length;
+
+            // Track encountered enemies for bestiary
+            stage.enemies.forEach(eId => this._trackBestiary(eId));
 
             // Start battle (manual by default)
             this.battleService.startBattle(heroes, enemies, false);
@@ -750,6 +755,33 @@ export class ExpeditionService {
         }
 
         return item;
+    }
+
+    _trackBestiary(templateId) {
+        if (!this.state.bestiary.includes(templateId)) {
+            this.state.bestiary.push(templateId);
+            this.save();
+        }
+    }
+
+    getBestiary() {
+        return this.state.bestiary || [];
+    }
+
+    getEnemyTemplates() {
+        return {
+            slime_green: { name: 'Green Slime', type: 'beast', maxHp: 20, strength: 3, defense: 2, speed: 2, element: 'neutral' },
+            slime_fire: { name: 'Fire Slime', type: 'beast', maxHp: 30, strength: 5, defense: 3, speed: 3, element: 'fire' },
+            wild_boar: { name: 'Wild Boar', type: 'beast', maxHp: 40, strength: 6, defense: 4, speed: 4, element: 'neutral' },
+            goblin_scout: { name: 'Goblin Scout', type: 'humanoid', maxHp: 25, strength: 4, defense: 2, speed: 6, element: 'neutral' },
+            goblin_grunt: { name: 'Goblin Grunt', type: 'humanoid', maxHp: 35, strength: 5, defense: 4, speed: 2, element: 'neutral' },
+            goblin_brute: { name: 'Goblin Brute', type: 'humanoid', maxHp: 55, strength: 7, defense: 5, speed: 1, element: 'neutral' },
+            goblin_king: { name: 'Goblin King', type: 'humanoid', maxHp: 120, strength: 10, defense: 6, speed: 4, element: 'neutral', isBoss: true },
+            bat_small: { name: 'Small Bat', type: 'beast', maxHp: 22, strength: 4, defense: 2, speed: 7, element: 'neutral' },
+            spider_minor: { name: 'Minor Spider', type: 'beast', maxHp: 28, strength: 5, defense: 3, speed: 4, element: 'neutral' },
+            crab_shell: { name: 'Shell Crab', type: 'beast', maxHp: 35, strength: 5, defense: 5, speed: 2, element: 'neutral' },
+            water_spirit_minor: { name: 'Minor Water Spirit', type: 'elemental', maxHp: 25, strength: 4, defense: 2, speed: 5, element: 'water' }
+        };
     }
 
     _createEnemy(templateId, isBoss, level = 1) {

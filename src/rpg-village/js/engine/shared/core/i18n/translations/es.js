@@ -141,6 +141,8 @@ export const es = {
     ui_recruit_success: "Reclutado",
     ui_hero: "H00e9roe",
     error_tavern_required: "Construye una Taberna primero",
+    nav_bestiary: "Bestiario",
+    ui_bestiary_empty: "A00fan no hay criaturas catalogadas. 00a1Env00eda h00e9roes a expediciones para descubrir nuevos enemigos!",
     ui_select_hero: "Selecciona un héroe para ver stats y equipo.",
 
     // Domain: Inventory

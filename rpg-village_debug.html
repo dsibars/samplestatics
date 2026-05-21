@@ -2518,6 +2518,7 @@ class ExpeditionService {
       activeExpeditions: [],
       expeditionTurnIndex: 0,
       activeCombatExpeditionId: null,
+      bestiary: [],
       regions: {
         reg_greenfields: {
           clears: 0,
@@ -2546,6 +2547,7 @@ class ExpeditionService {
     }
     if (!loaded.activeExpeditions) loaded.activeExpeditions = [];
     if (loaded.expeditionTurnIndex === void 0) loaded.expeditionTurnIndex = 0;
+    if (!loaded.bestiary) loaded.bestiary = [];
     return loaded;
   }
   save() {
@@ -2816,6 +2818,7 @@ class ExpeditionService {
       const expPerHero = Math.floor(totalEnemyHp / heroes.length);
       const stageNum = activeExp.currentStage + 1;
       const stageTotal = exp.stages.length;
+      stage.enemies.forEach((eId) => this._trackBestiary(eId));
       this.battleService.startBattle(heroes, enemies, false);
       activeExp.status = "combat";
       activeExp.battleContext = {
@@ -3116,6 +3119,30 @@ class ExpeditionService {
     }
     return item;
   }
+  _trackBestiary(templateId) {
+    if (!this.state.bestiary.includes(templateId)) {
+      this.state.bestiary.push(templateId);
+      this.save();
+    }
+  }
+  getBestiary() {
+    return this.state.bestiary || [];
+  }
+  getEnemyTemplates() {
+    return {
+      slime_green: { name: "Green Slime", type: "beast", maxHp: 20, strength: 3, defense: 2, speed: 2, element: "neutral" },
+      slime_fire: { name: "Fire Slime", type: "beast", maxHp: 30, strength: 5, defense: 3, speed: 3, element: "fire" },
+      wild_boar: { name: "Wild Boar", type: "beast", maxHp: 40, strength: 6, defense: 4, speed: 4, element: "neutral" },
+      goblin_scout: { name: "Goblin Scout", type: "humanoid", maxHp: 25, strength: 4, defense: 2, speed: 6, element: "neutral" },
+      goblin_grunt: { name: "Goblin Grunt", type: "humanoid", maxHp: 35, strength: 5, defense: 4, speed: 2, element: "neutral" },
+      goblin_brute: { name: "Goblin Brute", type: "humanoid", maxHp: 55, strength: 7, defense: 5, speed: 1, element: "neutral" },
+      goblin_king: { name: "Goblin King", type: "humanoid", maxHp: 120, strength: 10, defense: 6, speed: 4, element: "neutral", isBoss: true },
+      bat_small: { name: "Small Bat", type: "beast", maxHp: 22, strength: 4, defense: 2, speed: 7, element: "neutral" },
+      spider_minor: { name: "Minor Spider", type: "beast", maxHp: 28, strength: 5, defense: 3, speed: 4, element: "neutral" },
+      crab_shell: { name: "Shell Crab", type: "beast", maxHp: 35, strength: 5, defense: 5, speed: 2, element: "neutral" },
+      water_spirit_minor: { name: "Minor Water Spirit", type: "elemental", maxHp: 25, strength: 4, defense: 2, speed: 5, element: "water" }
+    };
+  }
   _createEnemy(templateId, isBoss, level = 1) {
     const templates = {
       slime_green: { name: "Green Slime", type: "beast", maxHp: 20, strength: 3, defense: 2, speed: 2 },
@@ -3284,6 +3311,8 @@ const en = {
   ui_recruit_success: "Recruited",
   ui_hero: "Hero",
   error_tavern_required: "Build a Tavern first",
+  nav_bestiary: "Bestiary",
+  ui_bestiary_empty: "No creatures catalogued yet. Send heroes on expeditions to discover new enemies!",
   ui_select_hero: "Select a hero to view stats and equipment.",
   ui_experience: "Experience",
   ui_skills: "Skills",
@@ -3492,6 +3521,7 @@ const en = {
   ui_effect_storage: "Max Storage",
   ui_effect_forge: "Forge Features",
   ui_effect_heal: "Passive Healing",
+  ui_effect_recruit: "Recruitment",
   ui_select_item: "Select an item to view details.",
   ui_all: "All",
   desc_material_wood: "A core building material. Gathered during expeditions or produced by the Farm. Used for constructions.",
@@ -3644,6 +3674,8 @@ const es = {
   ui_recruit_success: "Reclutado",
   ui_hero: "H00e9roe",
   error_tavern_required: "Construye una Taberna primero",
+  nav_bestiary: "Bestiario",
+  ui_bestiary_empty: "A00fan no hay criaturas catalogadas. 00a1Env00eda h00e9roes a expediciones para descubrir nuevos enemigos!",
   ui_select_hero: "Selecciona un héroe para ver stats y equipo.",
   // Domain: Inventory
   ui_all: "Todo",
@@ -3994,6 +4026,8 @@ const ca = {
   ui_recruit_success: "Reclutat",
   ui_hero: "Her00f2i",
   error_tavern_required: "Construeix una Taverna primer",
+  nav_bestiary: "Bestiari",
+  ui_bestiary_empty: "Encara no hi ha criatures catalogades. Envieu herois a expedicions per descobrir nous enemics!",
   ui_select_hero: "Selecciona un heroi per veure stats i equip.",
   // Domain: Inventory
   ui_all: "Tot",
@@ -4342,6 +4376,8 @@ const eu = {
   ui_recruit_success: "Kontratatuta",
   ui_hero: "Heroia",
   error_tavern_required: "Eraiki Taberna lehenik",
+  nav_bestiary: "Entziklopedia",
+  ui_bestiary_empty: "Oraindik ez dago izaki katalogaturik. Bidali heroia espedizioetara etsai berriak aurkitzera!",
   ui_select_hero: "Hautatu heroi bat estatistikak eta ekipamendua ikusteko.",
   // Domain: Inventory
   ui_all: "Guztiak",
@@ -4515,6 +4551,7 @@ const eu = {
   ui_effect_storage: "Biltegi Max",
   ui_effect_forge: "Burdinolako Funtzioak",
   ui_effect_heal: "Sendatze Pasiboa",
+  ui_effect_recruit: "Kontratazioa",
   ui_select_item: "Hautatu elementu bat xehetasunak ikusteko.",
   ui_all: "Guztiak",
   desc_material_wood: "Eraikuntzarako oinarrizko lehengaia. Espedizioetan bildutakoa edo Baserriak ekoitzia. Eraikuntzetarako erabiltzen da.",
@@ -5027,7 +5064,9 @@ const _GameEngine = class _GameEngine {
       activeExpeditions,
       maxConcurrentExpeditions,
       completedExpeditions: this.expeditionService.state.completedIds || [],
-      activeBattle
+      activeBattle,
+      bestiary: this.expeditionService.getBestiary(),
+      enemyTemplates: this.expeditionService.getEnemyTemplates()
     };
   }
   // --- Hero Facade ---
@@ -8118,6 +8157,78 @@ class ForgeView extends BaseView {
     }
   }
 }
+const TYPE_ICONS = {
+  beast: "🐺",
+  humanoid: "👺",
+  elemental: "💧",
+  undead: "💀",
+  dragon: "🐉"
+};
+const ELEMENT_COLORS = {
+  fire: "#ff6b6b",
+  water: "#4dabf7",
+  earth: "#8ce99a",
+  wind: "#74c0fc",
+  neutral: "#adb5bd"
+};
+class BestiaryView extends BaseView {
+  constructor() {
+    super("bestiary");
+  }
+  onMount() {
+    this.elements = {
+      grid: this.$("#bestiary-grid"),
+      count: this.$("#bestiary-count"),
+      cardTemplate: this.$("#tpl-bestiary-card")
+    };
+  }
+  onUpdate(state) {
+    this.renderBestiary(state);
+  }
+  renderBestiary(state) {
+    const grid = this.elements.grid;
+    const countEl = this.elements.count;
+    const template = this.elements.cardTemplate;
+    if (!grid || !template) return;
+    const discovered = state.bestiary || [];
+    const templates = state.enemyTemplates || {};
+    const allIds = Object.keys(templates);
+    if (countEl) {
+      countEl.textContent = `${discovered.length} / ${allIds.length}`;
+    }
+    grid.innerHTML = "";
+    if (allIds.length === 0) {
+      grid.innerHTML = `<div class="bestiary-empty">${this.t("ui_bestiary_empty") || "No creatures catalogued yet."}</div>`;
+      return;
+    }
+    allIds.forEach((id) => {
+      const t = templates[id];
+      const isDiscovered = discovered.includes(id);
+      const card = template.content.cloneNode(true).querySelector(".bestiary-card");
+      const icon = TYPE_ICONS[t.type] || "❓";
+      const name = isDiscovered ? t.name : "???";
+      card.querySelector(".bestiary-type-badge").textContent = icon;
+      card.querySelector(".bestiary-name").textContent = name;
+      if (isDiscovered) {
+        card.querySelector(".bestiary-hp").textContent = t.maxHp;
+        card.querySelector(".bestiary-str").textContent = t.strength;
+        card.querySelector(".bestiary-def").textContent = t.defense;
+        card.querySelector(".bestiary-spd").textContent = t.speed;
+        const elDiv = card.querySelector(".bestiary-element");
+        const elColor = ELEMENT_COLORS[t.element] || ELEMENT_COLORS.neutral;
+        elDiv.innerHTML = `<span style="color:${elColor};">●</span> ${this.t("el_" + t.element) || t.element}`;
+      } else {
+        card.querySelector(".bestiary-hp").textContent = "?";
+        card.querySelector(".bestiary-str").textContent = "?";
+        card.querySelector(".bestiary-def").textContent = "?";
+        card.querySelector(".bestiary-spd").textContent = "?";
+        card.querySelector(".bestiary-element").textContent = "";
+        card.style.opacity = "0.45";
+      }
+      grid.appendChild(card);
+    });
+  }
+}
 document.addEventListener("DOMContentLoaded", () => {
   console.log("RPG Village Initializing...");
   const engine = new GameEngine();
@@ -8132,6 +8243,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ui.registerView("settings", new SettingsView());
   ui.registerView("shop", new ShopView());
   ui.registerView("forge", new ForgeView());
+  ui.registerView("bestiary", new BestiaryView());
   ui.switchView("village");
   if (engine.isNewGame) {
     ui.showIntroDialog();
@@ -9457,6 +9569,10 @@ body {
             <button class="nav-item" data-view="forge">
                 <span class="nav-icon">🔥</span>
                 <span class="nav-label" data-i18n="nav_forge">Forge</span>
+            </button>
+            <button class="nav-item" data-view="bestiary">
+                <span class="nav-icon">📖</span>
+                <span class="nav-label" data-i18n="nav_bestiary">Bestiary</span>
             </button>
             <button class="nav-item" data-view="settings">
                 <span class="nav-icon">⚙️</span>
@@ -10951,6 +11067,100 @@ body {
     display: flex;
     justify-content: flex-end;
 }
+</style>
+</template>
+    <template id="tpl-bestiary"><section id="bestiary-view" class="domain-view">
+    <div class="card glass-pane" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
+        <div class="pane-header" style="margin-bottom: 15px;">
+            <h3 data-i18n="nav_bestiary">Bestiary</h3>
+            <span id="bestiary-count" class="hero-level-text" style="margin-left: auto;"></span>
+        </div>
+        <div id="bestiary-grid" class="bestiary-grid">
+            <!-- Enemy cards injected here -->
+        </div>
+    </div>
+
+    <template id="tpl-bestiary-card">
+        <div class="bestiary-card">
+            <div class="bestiary-card-header">
+                <span class="bestiary-type-badge"></span>
+                <span class="bestiary-name"></span>
+            </div>
+            <div class="bestiary-stats">
+                <div class="bestiary-stat"><span>HP</span><span class="bestiary-hp"></span></div>
+                <div class="bestiary-stat"><span>STR</span><span class="bestiary-str"></span></div>
+                <div class="bestiary-stat"><span>DEF</span><span class="bestiary-def"></span></div>
+                <div class="bestiary-stat"><span>SPD</span><span class="bestiary-spd"></span></div>
+            </div>
+            <div class="bestiary-element"></div>
+        </div>
+    </template>
+</section>
+
+<style>
+    .bestiary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 15px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    .bestiary-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: var(--radius-md);
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .bestiary-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-color);
+    }
+    .bestiary-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    .bestiary-type-badge {
+        font-size: 1.4rem;
+    }
+    .bestiary-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+    }
+    .bestiary-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 10px;
+    }
+    .bestiary-stat {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+    .bestiary-stat span:last-child {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .bestiary-element {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    .bestiary-empty {
+        text-align: center;
+        color: var(--text-muted);
+        padding: 40px 20px;
+        font-size: 0.95rem;
+    }
 </style>
 </template>
 

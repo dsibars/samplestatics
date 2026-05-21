@@ -11,6 +11,7 @@ import { ExploreView } from './presentation/ui/explore/ExploreView.js';
 import { SettingsView } from './presentation/ui/settings/SettingsView.js';
 import { ShopView } from './presentation/ui/shop/ShopView.js';
 import { ForgeView } from './presentation/ui/forge/ForgeView.js';
+import { BestiaryView } from './presentation/ui/bestiary/BestiaryView.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('RPG Village Initializing...');
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.registerView('settings', new SettingsView());
     ui.registerView('shop', new ShopView());
     ui.registerView('forge', new ForgeView());
+    ui.registerView('bestiary', new BestiaryView());
 
     // Set initial view
     ui.switchView('village');

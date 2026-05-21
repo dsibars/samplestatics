@@ -151,6 +151,8 @@ export const en = {
     ui_recruit_success: "Recruited",
     ui_hero: "Hero",
     error_tavern_required: "Build a Tavern first",
+    nav_bestiary: "Bestiary",
+    ui_bestiary_empty: "No creatures catalogued yet. Send heroes on expeditions to discover new enemies!",
     ui_select_hero: "Select a hero to view stats and equipment.",
     ui_experience: "Experience",
     ui_skills: "Skills",

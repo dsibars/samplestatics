@@ -140,6 +140,8 @@ export const eu = {
     ui_recruit_success: "Kontratatuta",
     ui_hero: "Heroia",
     error_tavern_required: "Eraiki Taberna lehenik",
+    nav_bestiary: "Entziklopedia",
+    ui_bestiary_empty: "Oraindik ez dago izaki katalogaturik. Bidali heroia espedizioetara etsai berriak aurkitzera!",
     ui_select_hero: "Hautatu heroi bat estatistikak eta ekipamendua ikusteko.",
 
     // Domain: Inventory
