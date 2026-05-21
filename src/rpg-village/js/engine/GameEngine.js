@@ -7,6 +7,7 @@ import { BattleService } from './shared/combat/services/BattleService.js';
 import { InventoryService } from './shared/inventory/services/InventoryService.js';
 import { VillageService } from './village/services/VillageService.js';
 import { ExpeditionService } from './explore/services/ExpeditionService.js';
+import { DailyObjectivesService } from './daily/services/DailyObjectivesService.js';
 import { persistence } from './shared/core/Persistence.js';
 import { i18n } from './shared/core/i18n/I18nService.js';
 import { Result } from './shared/core/Result.js';
@@ -27,6 +28,7 @@ export class GameEngine {
             this.villageService, 
             this.inventoryService
         );
+        this.dailyObjectivesService = new DailyObjectivesService(this.inventoryService);
         this.i18n = i18n;
         
         // New Game Experience
@@ -139,7 +141,8 @@ export class GameEngine {
             completedExpeditions: this.expeditionService.state.completedIds || [],
             activeBattle,
             bestiary: this.expeditionService.getBestiary(),
-            enemyTemplates: this.expeditionService.getEnemyTemplates()
+            enemyTemplates: this.expeditionService.getEnemyTemplates(),
+            dailyObjectives: this.dailyObjectivesService.getState()
         };
     }
 
@@ -185,6 +188,8 @@ export class GameEngine {
         });
 
         if (result.success) {
+            this.dailyObjectivesService.track('recruit_hero', 1);
+            this.dailyObjectivesService.track('spend_gold', cost);
             return Result.ok({ hero: result.data, cost });
         }
         return result;
@@ -252,6 +257,7 @@ export class GameEngine {
         // Deduct Gold
         this.villageService.state.gold -= costGold;
         this.villageService.save();
+        this.dailyObjectivesService.track('spend_gold', costGold);
 
         // Deliver item
         if (itemData.type === 'consumable') {
@@ -353,6 +359,8 @@ export class GameEngine {
         // Spend resources
         this.villageService.state.gold -= cost.gold;
         this.villageService.save();
+        this.dailyObjectivesService.track('spend_gold', cost.gold);
+        this.dailyObjectivesService.track('craft_items', 1);
 
         for (const [matId, qty] of Object.entries(cost.materials)) {
             this.inventoryService.useItem(matId, qty);
@@ -421,6 +429,9 @@ export class GameEngine {
 
     // --- Time & Construction ---
     nextDay() {
+        const villageState = this.villageService.getState();
+        this.dailyObjectivesService.generateForDay(villageState.day);
+
         const villageReport = this.villageService.nextDay();
         
         // Check for region unlocks based on buildings (e.g., Explorer Guild)
@@ -470,6 +481,17 @@ export class GameEngine {
             }
         }
 
+        // Track expedition completions and enemy defeats for daily objectives
+        if (expeditionResult.success && expeditionResult.data) {
+            const expData = expeditionResult.data;
+            if (expData.status === 'completed') {
+                this.dailyObjectivesService.track('complete_expeditions', 1);
+            }
+            if (expData.combatLog && expData.combatLog.isVictory && expData.combatLog.enemies) {
+                this.dailyObjectivesService.track('defeat_enemies', expData.combatLog.enemies.length);
+            }
+        }
+
         const dailyReport = {
             ...villageReport,
             expedition: expeditionResult.success ? expeditionResult.data : null,
@@ -482,7 +504,12 @@ export class GameEngine {
     }
 
     startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
-        return this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
+        const result = this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
+        if (result.success) {
+            this.dailyObjectivesService.track('spend_gold', costGold);
+            this.dailyObjectivesService.track('upgrade_building', 1);
+        }
+        return result;
     }
 
     // --- Explore Facade ---

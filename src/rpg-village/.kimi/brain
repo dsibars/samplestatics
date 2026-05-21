@@ -24,9 +24,9 @@
 - [x] **B1** Refactor `CombatView` inline styles to CSS classes ✅ 2026-05-21
 - [x] **B2** Add equipment comparison in equip modal ✅ 2026-05-21
 - [x] **B3** Add proactive storage warning toast ✅ 2026-05-21
-- [ ] **B4** Add view transition animations
-- [ ] **B5** Implement Tavern building for gold-based hero recruitment
-- [ ] **B6** Add Bestiary tab
+- [x] **B4** Add view transition animations ✅ 2026-05-21
+- [x] **B5** Implement Tavern building for gold-based hero recruitment ✅ 2026-05-21
+- [x] **B6** Add Bestiary tab ✅ 2026-05-21
 - [ ] **B7** Add Daily Objectives system
 - [ ] **B8** Implement equipment set bonuses
 

@@ -368,4 +368,13 @@ export const gl = {
     ui_report_training: "{count} heroes adestraron no campo",
     ui_report_training_level: "¡{heroes} subiron de nivel adestrando!",
 
+    ui_daily_objectives: "Obxectivos Diarios",
+    ui_no_objectives: "Non hai obxectivos hoxe.",
+    ui_all_objectives_done: "¡Todos os obxectivos completados! Recompensas bonus concedidas.",
+    obj_defeat_enemies: "Derrota {target} inimigos",
+    obj_spend_gold: "Gasta {target} de ouro",
+    obj_complete_expeditions: "Completa {target} expedicions",
+    obj_upgrade_building: "Mellora un edificio",
+    obj_recruit_hero: "Recluta un heroe",
+    obj_craft_items: "Fabrica {target} obxectos",
 };

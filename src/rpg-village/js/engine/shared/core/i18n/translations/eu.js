@@ -371,4 +371,13 @@ export const eu = {
     ui_report_training: "{count} heroik entrenatu dute zelaian",
     ui_report_training_level: "{heroes}-ek maila igo dute entrenamenduan!",
 
+    ui_daily_objectives: "Eguneko Helburuak",
+    ui_no_objectives: "Ez dago helbururik gaur.",
+    ui_all_objectives_done: "Helburu guztiak beteta! Sari gehigarriak eman dira.",
+    obj_defeat_enemies: "Garaitu {target} etsai",
+    obj_spend_gold: "Gastatu {target} urre",
+    obj_complete_expeditions: "Bete {target} espedizio",
+    obj_upgrade_building: "Eraikina hobetu",
+    obj_recruit_hero: "Kontrata heroi bat",
+    obj_craft_items: "Sortu {target} objektu",
 };

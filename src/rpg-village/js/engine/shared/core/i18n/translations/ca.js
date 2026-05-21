@@ -370,4 +370,13 @@ export const ca = {
     ui_report_training: "{count} herois van entrenar al camp",
     ui_report_training_level: "¡{heroes} han pujat de nivell entrenant!",
 
+    ui_daily_objectives: "Objectius Diaris",
+    ui_no_objectives: "No hi ha objectius avui.",
+    ui_all_objectives_done: "Tots els objectius completats! Recompenses bonus concedides.",
+    obj_defeat_enemies: "Derrota {target} enemics",
+    obj_spend_gold: "Gasta {target} d'or",
+    obj_complete_expeditions: "Completa {target} expedicions",
+    obj_upgrade_building: "Millora un edifici",
+    obj_recruit_hero: "Recluta un heroi",
+    obj_craft_items: "Fabrica {target} objectes",
 };

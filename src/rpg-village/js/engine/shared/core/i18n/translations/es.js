@@ -373,4 +373,13 @@ export const es = {
     ui_report_training: "{count} héroes entrenaron en el campo",
     ui_report_training_level: "¡{heroes} subieron de nivel entrenando!",
 
+    ui_daily_objectives: "Objetivos Diarios",
+    ui_no_objectives: "No hay objetivos hoy.",
+    ui_all_objectives_done: "¡Todos los objetivos completados! Recompensas bonus concedidas.",
+    obj_defeat_enemies: "Derrota a {target} enemigos",
+    obj_spend_gold: "Gasta {target} de oro",
+    obj_complete_expeditions: "Completa {target} expediciones",
+    obj_upgrade_building: "Mejora un edificio",
+    obj_recruit_hero: "Recluta un héroe",
+    obj_craft_items: "Fabrica {target} objetos",
 };

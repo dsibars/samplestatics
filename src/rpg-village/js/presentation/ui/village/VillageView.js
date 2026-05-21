@@ -17,7 +17,8 @@ export class VillageView extends BaseView {
             builderAvail: this.$('#village-builder-avail'),
             storageText: this.$('#village-storage-text'),
             storageBar: this.$('#village-storage-bar'),
-            constructionList: this.$('#construction-list')
+            constructionList: this.$('#construction-list'),
+            objectivesList: this.$('#daily-objectives-list')
         };
 
         const builderControls = this.$('.builder-controls');
@@ -76,6 +77,9 @@ export class VillageView extends BaseView {
 
         // Construction Queue
         this.renderConstructionQueue(village.constructionQueue);
+
+        // Daily Objectives
+        this.renderDailyObjectives(state.dailyObjectives);
 
         // Daily Report
         this.renderDailyReport(village.lastDailyReport);
@@ -236,6 +240,47 @@ export class VillageView extends BaseView {
                 </div>
             </div>
         `;
+    }
+
+    renderDailyObjectives(dailyObj) {
+        if (!this.elements.objectivesList) return;
+
+        if (!dailyObj || !dailyObj.objectives || dailyObj.objectives.length === 0) {
+            this.elements.objectivesList.innerHTML = `
+                <div class="empty-state" data-i18n="ui_no_objectives">${this.t('ui_no_objectives')}</div>`;
+            return;
+        }
+
+        const allDone = dailyObj.allCompleted;
+
+        let html = dailyObj.objectives.map(obj => {
+            const pct = Math.min(100, Math.floor((obj.progress / obj.target) * 100));
+            const isDone = obj.completed;
+            const label = (this.t(obj.label) || obj.label).replace('{target}', obj.target);
+
+            return `
+                <div class="objective-item ${isDone ? 'completed' : ''}">
+                    <div class="objective-header">
+                        <span class="objective-check">${isDone ? '✅' : '⬜'}</span>
+                        <span class="objective-label">${label}</span>
+                        <span class="objective-progress">${obj.progress} / ${obj.target}</span>
+                    </div>
+                    <div class="progress-container" style="margin-top: 6px;">
+                        <div class="progress-bar ${isDone ? 'success' : ''}" style="width: ${pct}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (allDone) {
+            html += `
+                <div class="objective-all-completed">
+                    <span>🎉</span> ${this.t('ui_all_objectives_done') || 'All objectives completed! Bonus rewards granted.'}
+                </div>
+            `;
+        }
+
+        this.elements.objectivesList.innerHTML = html;
     }
 
     renderConstructionQueue(queue) {

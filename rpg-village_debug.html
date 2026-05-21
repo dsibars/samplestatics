@@ -3171,6 +3171,107 @@ class ExpeditionService {
     return new Enemy({ ...scaled, id: crypto.randomUUID(), isBoss });
   }
 }
+const OBJECTIVE_TYPES = [
+  { id: "defeat_enemies", label: "obj_defeat_enemies", target: [3, 5, 8], reward: { gold: 50, material_wood: 10 } },
+  { id: "spend_gold", label: "obj_spend_gold", target: [100, 200, 500], reward: { gold: 30, material_stone: 5 } },
+  { id: "complete_expeditions", label: "obj_complete_expeditions", target: [1, 2, 3], reward: { gold: 80, material_iron: 3 } },
+  { id: "upgrade_building", label: "obj_upgrade_building", target: [1], reward: { gold: 40, material_wood: 15 } },
+  { id: "recruit_hero", label: "obj_recruit_hero", target: [1], reward: { gold: 60, material_stone: 10 } },
+  { id: "craft_items", label: "obj_craft_items", target: [1, 2, 3], reward: { gold: 35, material_iron: 5 } }
+];
+class DailyObjectivesService {
+  constructor(inventoryService) {
+    this.inventoryService = inventoryService;
+    this.STORAGE_KEY = "daily_objectives_state";
+    this.state = this._load();
+  }
+  _load() {
+    const defaultState = {
+      day: 1,
+      objectives: [],
+      allCompletedDay: null
+    };
+    return persistence.load(this.STORAGE_KEY, defaultState);
+  }
+  save() {
+    persistence.save(this.STORAGE_KEY, this.state);
+  }
+  generateForDay(day) {
+    if (this.state.day === day && this.state.objectives.length > 0) {
+      return;
+    }
+    this.state.day = day;
+    this.state.allCompletedDay = null;
+    const count = 2 + Math.floor(Math.random() * 2);
+    const shuffled = [...OBJECTIVE_TYPES].sort(() => Math.random() - 0.5);
+    const picked = shuffled.slice(0, count);
+    this.state.objectives = picked.map((type) => {
+      const target = type.target[Math.floor(Math.random() * type.target.length)];
+      return {
+        id: type.id,
+        label: type.label,
+        target,
+        progress: 0,
+        completed: false,
+        reward: { ...type.reward }
+      };
+    });
+    this.save();
+  }
+  track(type, amount = 1) {
+    let anyCompleted = false;
+    this.state.objectives.forEach((obj) => {
+      if (obj.completed || obj.id !== type) return;
+      obj.progress = Math.min(obj.target, obj.progress + amount);
+      if (obj.progress >= obj.target) {
+        obj.completed = true;
+        anyCompleted = true;
+      }
+    });
+    if (anyCompleted) {
+      this._checkAllCompleted();
+    }
+    this.save();
+    return anyCompleted;
+  }
+  _checkAllCompleted() {
+    const allDone = this.state.objectives.every((o) => o.completed);
+    if (allDone && this.state.allCompletedDay === null) {
+      this.state.allCompletedDay = this.state.day;
+      this.inventoryService.addItem("material_wood", 20);
+      this.inventoryService.addItem("material_stone", 10);
+    }
+  }
+  getObjectives() {
+    return this.state.objectives;
+  }
+  getState() {
+    return {
+      day: this.state.day,
+      objectives: this.state.objectives,
+      allCompleted: this.state.allCompletedDay === this.state.day
+    };
+  }
+  claimReward(objectiveId) {
+    const obj = this.state.objectives.find((o) => o.id === objectiveId);
+    if (!obj || !obj.completed || obj.claimed) {
+      return Result.fail("error_reward_not_available");
+    }
+    obj.claimed = true;
+    if (obj.reward.gold) ;
+    if (obj.reward.material_wood) {
+      this.inventoryService.addItem("material_wood", obj.reward.material_wood);
+    }
+    if (obj.reward.material_stone) {
+      this.inventoryService.addItem("material_stone", obj.reward.material_stone);
+    }
+    if (obj.reward.material_iron) {
+      this.inventoryService.addItem("material_iron", obj.reward.material_iron);
+    }
+    this.save();
+    return Result.ok({ reward: obj.reward });
+  }
+}
 const en = {
   // UI General
   btn_back: "BACK",
@@ -3313,6 +3414,15 @@ const en = {
   error_tavern_required: "Build a Tavern first",
   nav_bestiary: "Bestiary",
   ui_bestiary_empty: "No creatures catalogued yet. Send heroes on expeditions to discover new enemies!",
+  ui_daily_objectives: "Daily Objectives",
+  ui_no_objectives: "No objectives today.",
+  ui_all_objectives_done: "All objectives completed! Bonus rewards granted.",
+  obj_defeat_enemies: "Defeat {target} enemies",
+  obj_spend_gold: "Spend {target} gold",
+  obj_complete_expeditions: "Complete {target} expeditions",
+  obj_upgrade_building: "Upgrade a building",
+  obj_recruit_hero: "Recruit a hero",
+  obj_craft_items: "Craft {target} items",
   ui_select_hero: "Select a hero to view stats and equipment.",
   ui_experience: "Experience",
   ui_skills: "Skills",
@@ -3542,7 +3652,16 @@ const en = {
   ui_retire_title: "Retire Expedition?",
   ui_retire_message: "Retiring will abort this expedition and reset its progress. Are you sure?",
   ui_report_training: "{count} heroes trained at the grounds",
-  ui_report_training_level: "{heroes} leveled up from training!"
+  ui_report_training_level: "{heroes} leveled up from training!",
+  ui_daily_objectives: "Daily Objectives",
+  ui_no_objectives: "No objectives today.",
+  ui_all_objectives_done: "All objectives completed! Bonus rewards granted.",
+  obj_defeat_enemies: "Defeat {target} enemies",
+  obj_spend_gold: "Spend {target} gold",
+  obj_complete_expeditions: "Complete {target} expeditions",
+  obj_upgrade_building: "Upgrade a building",
+  obj_recruit_hero: "Recruit a hero",
+  obj_craft_items: "Craft {target} items"
 };
 const es = {
   // UI General
@@ -3895,7 +4014,16 @@ const es = {
   ui_retire_title: "¿Retirar Expedición?",
   ui_retire_message: "Retirarse abortará esta expedición y reiniciará su progreso. ¿Estás seguro?",
   ui_report_training: "{count} héroes entrenaron en el campo",
-  ui_report_training_level: "¡{heroes} subieron de nivel entrenando!"
+  ui_report_training_level: "¡{heroes} subieron de nivel entrenando!",
+  ui_daily_objectives: "Objetivos Diarios",
+  ui_no_objectives: "No hay objetivos hoy.",
+  ui_all_objectives_done: "¡Todos los objetivos completados! Recompensas bonus concedidas.",
+  obj_defeat_enemies: "Derrota a {target} enemigos",
+  obj_spend_gold: "Gasta {target} de oro",
+  obj_complete_expeditions: "Completa {target} expediciones",
+  obj_upgrade_building: "Mejora un edificio",
+  obj_recruit_hero: "Recluta un héroe",
+  obj_craft_items: "Fabrica {target} objetos"
 };
 const ca = {
   // UI General
@@ -4245,7 +4373,16 @@ const ca = {
   ui_retire_title: "¿Retirar Expedició?",
   ui_retire_message: "Retirar-se avortarà aquesta expedició i reiniciarà el seu progrés. N'estàs segur?",
   ui_report_training: "{count} herois van entrenar al camp",
-  ui_report_training_level: "¡{heroes} han pujat de nivell entrenant!"
+  ui_report_training_level: "¡{heroes} han pujat de nivell entrenant!",
+  ui_daily_objectives: "Objectius Diaris",
+  ui_no_objectives: "No hi ha objectius avui.",
+  ui_all_objectives_done: "Tots els objectius completats! Recompenses bonus concedides.",
+  obj_defeat_enemies: "Derrota {target} enemics",
+  obj_spend_gold: "Gasta {target} d'or",
+  obj_complete_expeditions: "Completa {target} expedicions",
+  obj_upgrade_building: "Millora un edifici",
+  obj_recruit_hero: "Recluta un heroi",
+  obj_craft_items: "Fabrica {target} objectes"
 };
 const eu = {
   // UI General
@@ -4596,7 +4733,16 @@ const eu = {
   ui_retire_title: "Espedizioa Utzi?",
   ui_retire_message: "Uztek espedizio hau abortatuko du eta bere aurrerapena berrezarriko du. Ziur zaude?",
   ui_report_training: "{count} heroik entrenatu dute zelaian",
-  ui_report_training_level: "{heroes}-ek maila igo dute entrenamenduan!"
+  ui_report_training_level: "{heroes}-ek maila igo dute entrenamenduan!",
+  ui_daily_objectives: "Eguneko Helburuak",
+  ui_no_objectives: "Ez dago helbururik gaur.",
+  ui_all_objectives_done: "Helburu guztiak beteta! Sari gehigarriak eman dira.",
+  obj_defeat_enemies: "Garaitu {target} etsai",
+  obj_spend_gold: "Gastatu {target} urre",
+  obj_complete_expeditions: "Bete {target} espedizio",
+  obj_upgrade_building: "Eraikina hobetu",
+  obj_recruit_hero: "Kontrata heroi bat",
+  obj_craft_items: "Sortu {target} objektu"
 };
 const gl = {
   // UI General
@@ -4944,7 +5090,16 @@ const gl = {
   ui_retire_title: "¿Retirar Expedición?",
   ui_retire_message: "Retirarse abortará esta expedición e reiniciará o seu progreso. Estás seguro?",
   ui_report_training: "{count} heroes adestraron no campo",
-  ui_report_training_level: "¡{heroes} subiron de nivel adestrando!"
+  ui_report_training_level: "¡{heroes} subiron de nivel adestrando!",
+  ui_daily_objectives: "Obxectivos Diarios",
+  ui_no_objectives: "Non hai obxectivos hoxe.",
+  ui_all_objectives_done: "¡Todos os obxectivos completados! Recompensas bonus concedidas.",
+  obj_defeat_enemies: "Derrota {target} inimigos",
+  obj_spend_gold: "Gasta {target} de ouro",
+  obj_complete_expeditions: "Completa {target} expedicions",
+  obj_upgrade_building: "Mellora un edificio",
+  obj_recruit_hero: "Recluta un heroe",
+  obj_craft_items: "Fabrica {target} obxectos"
 };
 class I18nService {
   constructor() {
@@ -4982,6 +5137,7 @@ const _GameEngine = class _GameEngine {
       this.villageService,
       this.inventoryService
     );
+    this.dailyObjectivesService = new DailyObjectivesService(this.inventoryService);
     this.i18n = i18n;
     const hasHeroes = persistence.load("heroes_data", null) !== null;
     const hasVillage = persistence.load("village_state", null) !== null;
@@ -5066,7 +5222,8 @@ const _GameEngine = class _GameEngine {
       completedExpeditions: this.expeditionService.state.completedIds || [],
       activeBattle,
       bestiary: this.expeditionService.getBestiary(),
-      enemyTemplates: this.expeditionService.getEnemyTemplates()
+      enemyTemplates: this.expeditionService.getEnemyTemplates(),
+      dailyObjectives: this.dailyObjectivesService.getState()
     };
   }
   // --- Hero Facade ---
@@ -5109,6 +5266,8 @@ const _GameEngine = class _GameEngine {
       statPoints: 5
     });
     if (result.success) {
+      this.dailyObjectivesService.track("recruit_hero", 1);
+      this.dailyObjectivesService.track("spend_gold", cost);
       return Result.ok({ hero: result.data, cost });
     }
     return result;
@@ -5158,6 +5317,7 @@ const _GameEngine = class _GameEngine {
     }
     this.villageService.state.gold -= costGold;
     this.villageService.save();
+    this.dailyObjectivesService.track("spend_gold", costGold);
     if (itemData.type === "consumable") {
       this.inventoryService.addItem(itemData.id, 1);
     } else {
@@ -5234,6 +5394,8 @@ const _GameEngine = class _GameEngine {
     }
     this.villageService.state.gold -= cost.gold;
     this.villageService.save();
+    this.dailyObjectivesService.track("spend_gold", cost.gold);
+    this.dailyObjectivesService.track("craft_items", 1);
     for (const [matId, qty] of Object.entries(cost.materials)) {
       this.inventoryService.useItem(matId, qty);
     }
@@ -5289,6 +5451,8 @@ const _GameEngine = class _GameEngine {
   }
   // --- Time & Construction ---
   nextDay() {
+    const villageState = this.villageService.getState();
+    this.dailyObjectivesService.generateForDay(villageState.day);
     const villageReport = this.villageService.nextDay();
     this.expeditionService.checkRegionUnlocks();
     const expeditionResult = this.expeditionService.processDay();
@@ -5325,6 +5489,15 @@ const _GameEngine = class _GameEngine {
         this.heroService.saveAll();
       }
     }
+    if (expeditionResult.success && expeditionResult.data) {
+      const expData = expeditionResult.data;
+      if (expData.status === "completed") {
+        this.dailyObjectivesService.track("complete_expeditions", 1);
+      }
+      if (expData.combatLog && expData.combatLog.isVictory && expData.combatLog.enemies) {
+        this.dailyObjectivesService.track("defeat_enemies", expData.combatLog.enemies.length);
+      }
+    }
     const dailyReport = {
       ...villageReport,
       expedition: expeditionResult.success ? expeditionResult.data : null,
@@ -5335,7 +5508,12 @@ const _GameEngine = class _GameEngine {
     return dailyReport;
   }
   startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
-    return this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
+    const result = this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
+    if (result.success) {
+      this.dailyObjectivesService.track("spend_gold", costGold);
+      this.dailyObjectivesService.track("upgrade_building", 1);
+    }
+    return result;
   }
   // --- Explore Facade ---
   assignExpedition(expeditionId, heroIds) {
@@ -5661,7 +5839,8 @@ class VillageView extends BaseView {
       builderAvail: this.$("#village-builder-avail"),
       storageText: this.$("#village-storage-text"),
       storageBar: this.$("#village-storage-bar"),
-      constructionList: this.$("#construction-list")
+      constructionList: this.$("#construction-list"),
+      objectivesList: this.$("#daily-objectives-list")
     };
     const builderControls = this.$(".builder-controls");
     if (builderControls) {
@@ -5707,6 +5886,7 @@ class VillageView extends BaseView {
     }
     this.renderVillageCanvas(village);
     this.renderConstructionQueue(village.constructionQueue);
+    this.renderDailyObjectives(state.dailyObjectives);
     this.renderDailyReport(village.lastDailyReport);
   }
   renderVillageCanvas(village) {
@@ -5850,6 +6030,40 @@ class VillageView extends BaseView {
                 </div>
             </div>
         `;
+  }
+  renderDailyObjectives(dailyObj) {
+    if (!this.elements.objectivesList) return;
+    if (!dailyObj || !dailyObj.objectives || dailyObj.objectives.length === 0) {
+      this.elements.objectivesList.innerHTML = `
+                <div class="empty-state" data-i18n="ui_no_objectives">${this.t("ui_no_objectives")}</div>`;
+      return;
+    }
+    const allDone = dailyObj.allCompleted;
+    let html = dailyObj.objectives.map((obj) => {
+      const pct = Math.min(100, Math.floor(obj.progress / obj.target * 100));
+      const isDone = obj.completed;
+      const label = (this.t(obj.label) || obj.label).replace("{target}", obj.target);
+      return `
+                <div class="objective-item ${isDone ? "completed" : ""}">
+                    <div class="objective-header">
+                        <span class="objective-check">${isDone ? "✅" : "⬜"}</span>
+                        <span class="objective-label">${label}</span>
+                        <span class="objective-progress">${obj.progress} / ${obj.target}</span>
+                    </div>
+                    <div class="progress-container" style="margin-top: 6px;">
+                        <div class="progress-bar ${isDone ? "success" : ""}" style="width: ${pct}%"></div>
+                    </div>
+                </div>
+            `;
+    }).join("");
+    if (allDone) {
+      html += `
+                <div class="objective-all-completed">
+                    <span>🎉</span> ${this.t("ui_all_objectives_done") || "All objectives completed! Bonus rewards granted."}
+                </div>
+            `;
+    }
+    this.elements.objectivesList.innerHTML = html;
   }
   renderConstructionQueue(queue) {
     if (!this.elements.constructionList) return;
@@ -9643,6 +9857,14 @@ body {
                     </div>
                 </div>
             </div>
+
+            <!-- Daily Objectives Widget -->
+            <div class="card widget objectives-widget">
+                <h3 data-i18n="ui_daily_objectives">Daily Objectives</h3>
+                <div id="daily-objectives-list">
+                    <div class="empty-state" data-i18n="ui_no_objectives">No objectives today.</div>
+                </div>
+            </div>
         </div>
 
         <!-- Right Column: Visual Center & Global Actions -->
@@ -9710,6 +9932,16 @@ body {
     .report-section.success { border-left: 3px solid #4CAF50; }
     .report-section.danger { border-left: 3px solid #f44336; color: #f44336; }
     .report-icon { font-size: 1.2rem; }
+
+    .objective-item { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .objective-item:last-child { border-bottom: none; }
+    .objective-item.completed .objective-label { text-decoration: line-through; opacity: 0.6; }
+    .objective-header { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+    .objective-check { font-size: 1rem; }
+    .objective-label { flex: 1; color: var(--text-primary); }
+    .objective-progress { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
+    .objective-all-completed { margin-top: 10px; padding: 10px; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: var(--radius-sm); text-align: center; font-size: 0.9rem; color: #2ecc71; }
+    .progress-bar.success { background: linear-gradient(90deg, #2ecc71, #27ae60); }
 
     @media (max-width: 767px) {
         .action-card { flex-direction: column; gap: var(--spacing-md); text-align: center; }
