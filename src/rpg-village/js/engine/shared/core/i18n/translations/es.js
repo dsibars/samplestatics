@@ -387,4 +387,13 @@ export const es = {
     set_steel: "Conjunto de Acero",
     set_gold: "Conjunto de Oro",
     set_mythril: "Conjunto de Mythril",
+    reg_dark_forest: "Bosque Oscuro",
+    reg_goblin_camp: "Campamento Goblin",
+    reg_mystic_ruins: "Ruinas Místicas",
+    reg_frozen_peaks: "Picos Helados",
+    goblin_shaman: "Chamán Goblin",
+    skeleton_warrior: "Guerrero Esqueleto",
+    ghost_wisp: "Resplandor Fantasmal",
+    ice_elemental: "Elemental de Hielo",
+    young_drake: "Draco Joven",
 };

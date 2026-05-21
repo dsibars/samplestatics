@@ -382,4 +382,13 @@ export const gl = {
     set_steel: "Conxunto de Aceiro",
     set_gold: "Conxunto de Ouro",
     set_mythril: "Conxunto de Mythril",
+    reg_dark_forest: "Bosque Escuro",
+    reg_goblin_camp: "Campamento Goblin",
+    reg_mystic_ruins: "Ruínas Místicas",
+    reg_frozen_peaks: "Picos Xeados",
+    goblin_shaman: "Chamán Goblin",
+    skeleton_warrior: "Guerreiro Esqueleto",
+    ghost_wisp: "Resplandor Fantasmal",
+    ice_elemental: "Elemental de Xeo",
+    young_drake: "Draco Novo",
 };

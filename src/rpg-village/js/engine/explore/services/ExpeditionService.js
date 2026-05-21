@@ -90,8 +90,12 @@ export class ExpeditionService {
     _getRegionData(regionId) {
         const REGIONS = {
             reg_greenfields: { name: 'Greenfields', branching: 'low', minStages: 1, maxStages: 2, enemies: ['slime_green', 'wild_boar'], baseLevel: 1 },
-            reg_tiny_cave: { name: 'Tiny Cave', branching: 'medium', minStages: 2, maxStages: 2, enemies: ['bat_small', 'spider_minor'], baseLevel: 2 },
-            reg_calmed_beach: { name: 'Calmed Beach', branching: 'low', minStages: 3, maxStages: 3, enemies: ['crab_shell', 'water_spirit_minor'], baseLevel: 2 }
+            reg_tiny_cave: { name: 'Tiny Cave', branching: 'medium', minStages: 2, maxStages: 3, enemies: ['bat_small', 'spider_minor'], baseLevel: 2 },
+            reg_calmed_beach: { name: 'Calmed Beach', branching: 'low', minStages: 2, maxStages: 3, enemies: ['crab_shell', 'water_spirit_minor'], baseLevel: 2 },
+            reg_dark_forest: { name: 'Dark Forest', branching: 'medium', minStages: 2, maxStages: 4, enemies: ['goblin_scout', 'goblin_grunt', 'wild_boar'], baseLevel: 3 },
+            reg_goblin_camp: { name: 'Goblin Camp', branching: 'high', minStages: 3, maxStages: 5, enemies: ['goblin_scout', 'goblin_grunt', 'goblin_brute'], baseLevel: 4 },
+            reg_mystic_ruins: { name: 'Mystic Ruins', branching: 'low', minStages: 2, maxStages: 4, enemies: ['skeleton_warrior', 'ghost_wisp', 'water_spirit_minor'], baseLevel: 4 },
+            reg_frozen_peaks: { name: 'Frozen Peaks', branching: 'medium', minStages: 3, maxStages: 5, enemies: ['ice_elemental', 'young_drake', 'goblin_brute'], baseLevel: 5 }
         };
         return REGIONS[regionId] || REGIONS['reg_greenfields'];
     }
@@ -705,6 +709,32 @@ export class ExpeditionService {
         if (beachUnlocked && !this.state.regions.reg_calmed_beach) {
             this._seedRegion('reg_calmed_beach');
         }
+
+        // Dark Forest: unlock after 2 Tiny Cave clears
+        const tinyCave = this.state.regions.reg_tiny_cave;
+        if (tinyCave && tinyCave.clears >= 2 && !this.state.regions.reg_dark_forest) {
+            this._seedRegion('reg_dark_forest');
+        }
+
+        // Goblin Camp: unlock after 3 Dark Forest clears OR Explorer Guild L2
+        const darkForest = this.state.regions.reg_dark_forest;
+        const goblinCampUnlocked = (darkForest && darkForest.clears >= 3) || explorerGuildLevel >= 2;
+        if (goblinCampUnlocked && !this.state.regions.reg_goblin_camp) {
+            this._seedRegion('reg_goblin_camp');
+        }
+
+        // Mystic Ruins: unlock after Explorer Guild L2 OR 5 total clears across all regions
+        const totalClears = Object.values(this.state.regions).reduce((sum, r) => sum + (r.clears || 0), 0);
+        const ruinsUnlocked = explorerGuildLevel >= 2 || totalClears >= 5;
+        if (ruinsUnlocked && !this.state.regions.reg_mystic_ruins) {
+            this._seedRegion('reg_mystic_ruins');
+        }
+
+        // Frozen Peaks: unlock after 8 total clears across all regions OR Explorer Guild L3
+        const peaksUnlocked = explorerGuildLevel >= 3 || totalClears >= 8;
+        if (peaksUnlocked && !this.state.regions.reg_frozen_peaks) {
+            this._seedRegion('reg_frozen_peaks');
+        }
     }
 
     _seedRegion(regionId) {
@@ -777,10 +807,15 @@ export class ExpeditionService {
             goblin_grunt: { name: 'Goblin Grunt', type: 'humanoid', maxHp: 35, strength: 5, defense: 4, speed: 2, element: 'neutral' },
             goblin_brute: { name: 'Goblin Brute', type: 'humanoid', maxHp: 55, strength: 7, defense: 5, speed: 1, element: 'neutral' },
             goblin_king: { name: 'Goblin King', type: 'humanoid', maxHp: 120, strength: 10, defense: 6, speed: 4, element: 'neutral', isBoss: true },
+            goblin_shaman: { name: 'Goblin Shaman', type: 'humanoid', maxHp: 40, strength: 5, defense: 3, speed: 5, element: 'storm' },
             bat_small: { name: 'Small Bat', type: 'beast', maxHp: 22, strength: 4, defense: 2, speed: 7, element: 'neutral' },
             spider_minor: { name: 'Minor Spider', type: 'beast', maxHp: 28, strength: 5, defense: 3, speed: 4, element: 'neutral' },
             crab_shell: { name: 'Shell Crab', type: 'beast', maxHp: 35, strength: 5, defense: 5, speed: 2, element: 'neutral' },
-            water_spirit_minor: { name: 'Minor Water Spirit', type: 'elemental', maxHp: 25, strength: 4, defense: 2, speed: 5, element: 'water' }
+            water_spirit_minor: { name: 'Minor Water Spirit', type: 'elemental', maxHp: 25, strength: 4, defense: 2, speed: 5, element: 'water' },
+            skeleton_warrior: { name: 'Skeleton Warrior', type: 'undead', maxHp: 35, strength: 5, defense: 3, speed: 3, element: 'neutral' },
+            ghost_wisp: { name: 'Ghost Wisp', type: 'undead', maxHp: 20, strength: 3, defense: 1, speed: 8, element: 'wind' },
+            ice_elemental: { name: 'Ice Elemental', type: 'elemental', maxHp: 45, strength: 6, defense: 5, speed: 2, element: 'water' },
+            young_drake: { name: 'Young Drake', type: 'dragon', maxHp: 70, strength: 8, defense: 6, speed: 4, element: 'fire' }
         };
     }
 
@@ -794,10 +829,15 @@ export class ExpeditionService {
             goblin_grunt: { name: 'Goblin Grunt', type: 'humanoid', maxHp: 35, strength: 5, defense: 4, speed: 2 },
             goblin_brute: { name: 'Goblin Brute', type: 'humanoid', maxHp: 55, strength: 7, defense: 5, speed: 1 },
             goblin_king: { name: 'Goblin King', type: 'humanoid', maxHp: 120, strength: 10, defense: 6, speed: 4, isBoss: true },
+            goblin_shaman: { name: 'Goblin Shaman', type: 'humanoid', maxHp: 40, strength: 5, defense: 3, speed: 5, element: 'storm' },
             bat_small: { name: 'Small Bat', type: 'beast', maxHp: 22, strength: 4, defense: 2, speed: 7 },
             spider_minor: { name: 'Minor Spider', type: 'beast', maxHp: 28, strength: 5, defense: 3, speed: 4 },
             crab_shell: { name: 'Shell Crab', type: 'beast', maxHp: 35, strength: 5, defense: 5, speed: 2 },
-            water_spirit_minor: { name: 'Minor Water Spirit', type: 'elemental', maxHp: 25, strength: 4, defense: 2, speed: 5, element: 'water' }
+            water_spirit_minor: { name: 'Minor Water Spirit', type: 'elemental', maxHp: 25, strength: 4, defense: 2, speed: 5, element: 'water' },
+            skeleton_warrior: { name: 'Skeleton Warrior', type: 'undead', maxHp: 35, strength: 5, defense: 3, speed: 3 },
+            ghost_wisp: { name: 'Ghost Wisp', type: 'undead', maxHp: 20, strength: 3, defense: 1, speed: 8, element: 'wind' },
+            ice_elemental: { name: 'Ice Elemental', type: 'elemental', maxHp: 45, strength: 6, defense: 5, speed: 2, element: 'water' },
+            young_drake: { name: 'Young Drake', type: 'dragon', maxHp: 70, strength: 8, defense: 6, speed: 4, element: 'fire' }
         };
         const t = templates[templateId] || templates['slime_green'];
         

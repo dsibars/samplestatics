@@ -27,8 +27,8 @@
 - [x] **B4** Add view transition animations ✅ 2026-05-21
 - [x] **B5** Implement Tavern building for gold-based hero recruitment ✅ 2026-05-21
 - [x] **B6** Add Bestiary tab ✅ 2026-05-21
-- [ ] **B7** Add Daily Objectives system
-- [ ] **B8** Implement equipment set bonuses
+- [x] **B7** Add Daily Objectives system ✅ 2026-05-21
+- [x] **B8** Implement equipment set bonuses ✅ 2026-05-21
 
 ### Batch C — Large Features / Content
 - [ ] **C1** Separate structured combat events from formatted log strings

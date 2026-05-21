@@ -416,4 +416,13 @@ export const en = {
     set_steel: "Steel Set",
     set_gold: "Gold Set",
     set_mythril: "Mythril Set",
+    reg_dark_forest: "Dark Forest",
+    reg_goblin_camp: "Goblin Camp",
+    reg_mystic_ruins: "Mystic Ruins",
+    reg_frozen_peaks: "Frozen Peaks",
+    goblin_shaman: "Goblin Shaman",
+    skeleton_warrior: "Skeleton Warrior",
+    ghost_wisp: "Ghost Wisp",
+    ice_elemental: "Ice Elemental",
+    young_drake: "Young Drake",
 };

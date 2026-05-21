@@ -385,4 +385,13 @@ export const eu = {
     set_steel: "Altzairuzko Sorta",
     set_gold: "Urrezko Sorta",
     set_mythril: "Mythril Sorta",
+    reg_dark_forest: "Baso Ilun",
+    reg_goblin_camp: "Goblin Kanpamentua",
+    reg_mystic_ruins: "Ruina Mistikoak",
+    reg_frozen_peaks: "Tontor Izoztuak",
+    goblin_shaman: "Goblin Xamana",
+    skeleton_warrior: "Hezurrezko Gudaria",
+    ghost_wisp: "Mamu Argia",
+    ice_elemental: "Izotz Elementala",
+    young_drake: "Drake Gaztea",
 };

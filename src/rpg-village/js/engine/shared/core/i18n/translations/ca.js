@@ -384,4 +384,13 @@ export const ca = {
     set_steel: "Conjunt d'Acer",
     set_gold: "Conjunt d'Or",
     set_mythril: "Conjunt de Mythril",
+    reg_dark_forest: "Bosc Fosc",
+    reg_goblin_camp: "Campament Goblin",
+    reg_mystic_ruins: "Ruïnes Místiques",
+    reg_frozen_peaks: "Cims Gelats",
+    goblin_shaman: "Xamà Goblin",
+    skeleton_warrior: "Guerrer Esquelet",
+    ghost_wisp: "Lluïssor Fantasmal",
+    ice_elemental: "Elemental de Gel",
+    young_drake: "Drac Jove",
 };
