@@ -32,7 +32,7 @@ B done enemy_scaling unlock_tiny_cave unlock_calmed_beach explorer_guild_fx trai
 C done loot_drops affix_roll shop_tier_3_5
 D pending builder_assignment concurrent_expeditions
 E_1 done skill_ui_learn_upgrade_all_25_skills category_colors_dependency_tree
-E_2 pending combat_ui_extract
+E_2 done combat_ui_extract_mp_cost_bug_fixed
 
 [SPRINT_A_DETAILS]
 hero_l1_base 30 15 8 4 4 4
@@ -69,12 +69,15 @@ upgrade_cost_1_per_level max_Lv5
 skill_points_alert_banner_shows_when_gt0
 i18n_ui_skill_points_ui_unlock_ui_upgrade_ui_max_ui_locked_ui_cost_cat_*_error_no_skill_points_error_skill_already_unlocked_error_skill_locked
 
-[SPRINT_E_2_PLAN]
-combat_ui_extract from_UIController_600_lines to_CombatView.js
-mp_costs_bug UIController_hardcodes_3_4_6 instead_of_SKILLS_DATA
+[SPRINT_E_2_DETAILS]
+combat_ui_extract UIController_1151_lines_to_415_lines CombatView_512_lines_created
+playBattleLog_145_lines openCombatOverlay_597_lines extracted
+proxy_pattern getters_setters isCombatOverlayOpen renderCombatOverlay playBattleLog openCombatOverlay
+EngineAdapter_wires engine_and_adapter into combatView
+mp_cost_bug_fixed SKILLS_DATA_skillId_mpCost replaces hardcoded skillMeta map
 
 [GAPS]
-SEV_HIGH combat_ui_extract_from_UIController_600_lines
+SEV_HIGH none_all_major_gaps_closed
 SEV_MEDIUM inert_buildings_explorer_guild training_grounds only_1_region_active single_expedition_only
 SEV_LOW combat_ui_monolith i18n_gaps test_coverage
 
