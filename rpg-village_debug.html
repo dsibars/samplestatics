@@ -593,7 +593,19 @@ class CombatView {
       this.openCombatOverlay(state.activeBattle);
     }
     if (this.isCombatOverlayOpen && this.renderCombatOverlay) {
-      this.renderCombatOverlay();
+      const battle = state.activeBattle;
+      const battleString = battle ? JSON.stringify({
+        isOver: battle.isOver,
+        currentTurnIndex: battle.currentTurnIndex,
+        logLen: (battle.log || []).length,
+        heroesHp: (battle.heroes || []).map((h) => h.hp).join(","),
+        enemiesHp: (battle.enemies || []).map((e) => e.hp).join(","),
+        itemUsedThisTurn: battle.itemUsedThisTurn
+      }) : "null";
+      if (this.lastBattleState !== battleString) {
+        this.lastBattleState = battleString;
+        this.renderCombatOverlay();
+      }
     }
   }
   playBattleLog(combatLog, onComplete) {
@@ -694,7 +706,7 @@ class CombatView {
       controls.appendChild(skipBtn);
       header.appendChild(controls);
       container.appendChild(header);
-      if (battle.resolved) {
+      if (battle.isOver || battle.resolved) {
         this._renderBattleResolution(battle, container);
         this._animateLastEvents(battle);
         return;
@@ -879,28 +891,40 @@ class CombatView {
     const resolution = document.createElement("div");
     resolution.style.cssText = "text-align:center;padding:20px;background:rgba(255,255,255,0.1);border-radius:8px;";
     const resultTitle = document.createElement("h2");
-    resultTitle.textContent = battle.victory ? this.t("victory") : this.t("defeat");
-    resultTitle.style.color = battle.victory ? "#4caf50" : "#f44336";
+    const isVictory = battle.victory !== void 0 ? battle.victory : battle.winner === "heroes";
+    resultTitle.textContent = isVictory ? this.t("victory") : this.t("defeat");
+    resultTitle.style.color = isVictory ? "#4caf50" : "#f44336";
     resolution.appendChild(resultTitle);
+    if (battle.summary && battle.summary.length > 0) {
+      const summaryDiv = document.createElement("div");
+      summaryDiv.style.cssText = "margin-top:12px;text-align:left;";
+      const summaryTitle = document.createElement("h3");
+      summaryTitle.textContent = this.t("combat_heroes");
+      summaryDiv.appendChild(summaryTitle);
+      battle.summary.forEach((s) => {
+        const line = document.createElement("div");
+        line.style.cssText = "margin-bottom:4px;";
+        const levelUpText = s.leveledUp ? " ⬆️" : "";
+        line.textContent = `${s.heroName}: +${s.expEarned} XP${levelUpText} | HP Lost: ${s.hpLost}`;
+        summaryDiv.appendChild(line);
+      });
+      resolution.appendChild(summaryDiv);
+    }
     if (battle.rewards) {
       const rewardsDiv = document.createElement("div");
       rewardsDiv.style.cssText = "margin-top:12px;";
       const rewardsTitle = document.createElement("h3");
       rewardsTitle.textContent = this.t("combat_rewards");
       rewardsDiv.appendChild(rewardsTitle);
-      if (battle.rewards.xp) {
-        const xpLine = document.createElement("div");
-        xpLine.textContent = this.t("combat_xp_reward", { xp: battle.rewards.xp });
-        rewardsDiv.appendChild(xpLine);
-      }
       if (battle.rewards.gold) {
         const goldLine = document.createElement("div");
         goldLine.textContent = this.t("combat_gold_reward", { gold: battle.rewards.gold });
         rewardsDiv.appendChild(goldLine);
       }
-      if (battle.rewards.items && battle.rewards.items.length) {
+      if (battle.rewards.items && Object.keys(battle.rewards.items).length > 0) {
+        const itemsText = Object.entries(battle.rewards.items).map(([id, qty]) => `${this.t(id) || id} x${qty}`).join(", ");
         const itemsLine = document.createElement("div");
-        itemsLine.textContent = this.t("combat_items_reward", { items: battle.rewards.items.join(", ") });
+        itemsLine.textContent = this.t("combat_items_reward", { items: itemsText });
         rewardsDiv.appendChild(itemsLine);
       }
       resolution.appendChild(rewardsDiv);
@@ -914,6 +938,7 @@ class CombatView {
       this.isCombatOverlayOpen = false;
       this.renderCombatOverlay = null;
       this.overlay = null;
+      this.lastBattleState = null;
       if (this.onCombatComplete) this.onCombatComplete();
     });
     resolution.appendChild(closeBtn);
@@ -6190,16 +6215,28 @@ const _GameEngine = class _GameEngine {
       }
       return dto;
     });
-    const activeBattle = this.battleService.heroes && this.battleService.heroes.length > 0 ? {
-      heroes: this.battleService.heroes.map((h) => h.toJSON()),
-      enemies: this.battleService.enemies.map((e) => e.toJSON()),
-      turnOrder: this.battleService.turnOrder.map((e) => ({ id: e.id, name: e.name, type: e.origin !== void 0 || e.type === "Hero" ? "Hero" : "Enemy" })),
-      currentTurnIndex: this.battleService.currentTurnIndex,
-      log: [...this.battleService.log],
-      isOver: this.battleService.isOver,
-      autoBattle: this.battleService.autoBattle,
-      itemUsedThisTurn: this.battleService.itemUsedThisTurn
-    } : null;
+    let activeBattle = null;
+    if (this.battleService.heroes && this.battleService.heroes.length > 0) {
+      activeBattle = {
+        heroes: this.battleService.heroes.map((h) => h.toJSON()),
+        enemies: this.battleService.enemies.map((e) => e.toJSON()),
+        turnOrder: this.battleService.turnOrder.map((e) => ({ id: e.id, name: e.name, type: e.origin !== void 0 || e.type === "Hero" ? "Hero" : "Enemy" })),
+        currentTurnIndex: this.battleService.currentTurnIndex,
+        log: [...this.battleService.log],
+        isOver: this.battleService.isOver,
+        autoBattle: this.battleService.autoBattle,
+        itemUsedThisTurn: this.battleService.itemUsedThisTurn
+      };
+      if (this.battleService.isOver) {
+        const preview = this.expeditionService.getBattleResolutionPreview();
+        if (preview) {
+          activeBattle.resolved = true;
+          activeBattle.victory = preview.isVictory;
+          activeBattle.summary = preview.summary;
+          activeBattle.rewards = preview.rewards;
+        }
+      }
+    }
     const currentDay = this.villageService.getState().day || 1;
     return {
       village: this.villageService.getState(),
@@ -6585,6 +6622,7 @@ class EngineAdapter {
         if (report && report.expedition) {
           if (report.expedition.status === "battle_started") {
             this.ui.openCombatOverlay(report.expedition, () => {
+              this.engine.resolveBattle();
               this.forceUpdate();
             });
           } else if (report.expedition.combatLog) {
