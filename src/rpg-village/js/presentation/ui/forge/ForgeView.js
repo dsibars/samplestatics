@@ -1,5 +1,6 @@
 import { BaseView } from '../BaseView.js';
 import { getEquipmentName, getEquipmentStats } from '../shared/EquipmentHelper.js';
+import { getRefineCost } from '../../../engine/shared/data/GameConstants.js';
 
 export class ForgeView extends BaseView {
     constructor() {
@@ -168,7 +169,7 @@ export class ForgeView extends BaseView {
         let canAfford = true;
 
         if (!isMaxLevel) {
-            const cost = this._getRefineCost(selectedItem);
+            const cost = getRefineCost(selectedItem);
             const playerGold = state.village.gold;
             const goldClass = playerGold >= cost.gold ? '' : 'insufficient';
             if (playerGold < cost.gold) canAfford = false;
@@ -247,36 +248,5 @@ export class ForgeView extends BaseView {
         }
     }
 
-    _getRefineCost(item) {
-        const L = item.level || 0;
-        const nextLevel = L + 1;
-        const mat = item.material;
-        
-        const cost = {
-            gold: 0,
-            materials: {}
-        };
-        
-        if (mat === 'wooden') {
-            cost.gold = 30 * nextLevel;
-            cost.materials.material_wood = 10 * nextLevel;
-        } else if (mat === 'iron') {
-            cost.gold = 75 * nextLevel;
-            cost.materials.material_wood = 5 * nextLevel;
-            cost.materials.material_stone = 5 * nextLevel;
-            cost.materials.material_iron_ore = 3 * nextLevel;
-        } else if (mat === 'steel') {
-            cost.gold = 150 * nextLevel;
-            cost.materials.material_stone = 10 * nextLevel;
-            cost.materials.material_steel_ingot = 3 * nextLevel;
-        } else if (mat === 'gold') {
-            cost.gold = 300 * nextLevel;
-            cost.materials.material_stone = 15 * nextLevel;
-        } else if (mat === 'mythril') {
-            cost.gold = 500 * nextLevel;
-            cost.materials.material_mythril = 2 * nextLevel;
-        }
-        
-        return cost;
-    }
+
 }

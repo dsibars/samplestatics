@@ -1,148 +1,79 @@
-# Kimi Brain — RPG Village Session Memory
-# Format: KEY value value... (space-separated lists)
-# Sections in [BRACKETS]. Comments start with #.
-# This file is NOT human-facing. Delete before merging to main.
+# RPG Village — Live Improvement Plan
 
-META branch app/project-rpg-village
-META date 2026-05-21
-META format v1
+**Last Updated:** 2026-05-21  
+**Current Session Branch:** `app/project-rpg-village`  
+**Next Action Pending:** User confirmation after Stage 1 commit  
+**Context Resume Clue:** If resuming, check `git log --oneline -5` to see last completed stage, then pick next unchecked item below.
 
-[PHILOSOPHY]
-GAME_TYPE active_turn_based_not_idle
-PACING civilization_style_next_day_manual
-SCOPE endless_with_branching_expeditions
-RULE skeleton_first_3_regions_before_15
-BUILDERS generic_villagers specialization_is_late_game
-EXPEDITIONS round_robin_resolution_now
-EXPEDITION_INTERACTION heroes_same_area_helping_each_other is_late_iteration
-PRINCIPLE quality_over_quantity
-PRINCIPLE commit_push_test_between_milestones
-PRINCIPLE spec_first_then_engine_then_adapter_then_ui
+---
 
-[ARCHITECTURE]
-LAYER_1 pres js/presentation/ui/*View.js BaseView UIController diffing
-LAYER_2 adap js/presentation/adapters/EngineAdapter.js events RAF_10fps
-LAYER_3 eng js/engine/ GameEngine.js VillageService.js HeroService.js InventoryService.js ExpeditionService.js BattleService.js
-PERSIST localStorage village_state heroes_data inventory_data expedition_state settings_lang
-I18N en es ca eu gl
+## Stage Tracker
 
-[SPRINT_STATUS]
-A done balance enemy_rebalance rescued_catch_up defeat_min_exp
-B done enemy_scaling unlock_tiny_cave unlock_calmed_beach explorer_guild_fx training_grounds_fx
-C done loot_drops affix_roll shop_tier_3_5
-D done builder_assignment concurrent_expeditions construction_queue_multiple_builders
-E_1 done skill_ui_learn_upgrade_all_25_skills category_colors_dependency_tree
-E_2 done combat_ui_extract_mp_cost_bug_fixed
+### Batch A — Quick Wins (Tech Debt + Small UX)
+- [x] **A1** Remove `getRefineCost` duplication from `ForgeView` (delegate to engine) ✅ 2026-05-21
+- [x] **A2** Remove duplicate `this.i18n = i18n` in `GameEngine` ✅ 2026-05-21
+- [x] **A3** Fix `VillageService.startProject` to use `getItemCount` instead of `getConsumableCount` for materials ✅ 2026-05-21
+- [ ] **A4** Add activity badge to hero list cards
+- [ ] **A5** Add "Recommended Level" to expedition nodes
+- [ ] **A6** Add confirm dialog before expedition retire
+- [ ] **A7** Add combat turn-active highlight CSS
+- [ ] **A8** Add status effect badges to combat cards
+- [ ] **A9** Wire up equipment affixes in `CombatCalculator`
 
-[SPRINT_A_DETAILS]
-hero_l1_base 30 15 8 4 4 4
-enemy_templates_rebalanced defense_added
-rescued_hero_level max_1_avg_party_minus_1
-rescued_hero_gear wooden_broadsword wooden_leather_body
-defeat_exp_formula max floor_expPerHero_0_25 floor_expPerHero_damageRatio_0_5
+### Batch B — Medium Features (UX + Gameplay)
+- [ ] **B1** Refactor `CombatView` inline styles to CSS classes
+- [ ] **B2** Add equipment comparison in equip modal
+- [ ] **B3** Add proactive storage warning toast
+- [ ] **B4** Add view transition animations
+- [ ] **B5** Implement Tavern building for gold-based hero recruitment
+- [ ] **B6** Add Bestiary tab
+- [ ] **B7** Add Daily Objectives system
+- [ ] **B8** Implement equipment set bonuses
 
-[SPRINT_B_PLAN]
-enemy_scaling enemyLevel_baseLevel_plus_floor_clears_div_3 stats_mult_1_1_pow_level_minus_1_speed_flat
-tiny_cave_unlock after_exp_tutorial_cave automatic
-calmed_beach_unlock after_3_greenfields_clears OR explorer_guild_L1
-explorer_guild L1_unlocks_beach_early L2_plus_reduces_stages_10pct_per_level_total
-training_grounds idle_heroes_plus_5pct_exp_per_day_per_level dead_heroes_excluded
+### Batch C — Large Features / Content
+- [ ] **C1** Separate structured combat events from formatted log strings
+- [ ] **C2** Expand region pool to 6-8 regions
+- [ ] **C3** Implement worker specialization
+- [ ] **C4** Add food crafting / meal buffs
+- [ ] **C5** Implement Calendar & Defense events
 
-[SPRINT_C_PLAN]
-loot_drop_rate 0_40 equipment_on_expedition_completion
-loot_material region_baseLevel_maps_to_wooden_iron_steel_gold_mythril
-loot_type 0_50_weapon 0_50_armor
-affix_roll 0_10_one 0_02_two 0_88_none
-affix_pool vampire sage titan assassin phoenix
-shop_tiers steel gold mythril added_to_ShopCatalog_js
-shop_gating BS0_T1 BS1_T2 BS3_T3 BS5_T4 BS7_T5
+---
 
-[SPRINT_D_PLAN]
-builders assign_villagers_as_builders consumes_1_food_per_day
-builder_ui village_view plus_minus_buttons
-concurrent_expeditions max_1_plus_explorer_guild_level
-construction_queue multiple_projects_if_multiple_builders
-round_robin expeditionTurnIndex advances_each_day
+## Reference: Status by Domain
 
-[SPRINT_E_1_DETAILS]
-skill_ui_all_25_skills_from_SKILLS_DATA rendered_in_heroes_view
-learn_unlockCost_from_SKILLS_DATA dependency_check idle_only
-upgrade_cost_1_per_level max_Lv5
-skill_points_alert_banner_shows_when_gt0
-i18n_ui_skill_points_ui_unlock_ui_upgrade_ui_max_ui_locked_ui_cost_cat_*_error_no_skill_points_error_skill_already_unlocked_error_skill_locked
+| Domain | Status | Notes |
+|--------|--------|-------|
+| Village (Day Cycle, Buildings) | ✅ Solid | Builder assignment minimal |
+| Heroes (Stats, Skills, Equipment) | ✅ Solid | 6 slots, skill trees, origins |
+| Combat (Turn-based) | ✅ Solid | AI, consumables, auto-battle |
+| Expeditions | ✅ Functional | 3 regions, procedural + story |
+| Inventory | ✅ Functional | Storage limits enforced |
+| Shop & Forge | ✅ Functional | Refine up to +10 |
+| Settings & I18n | ✅ Good | 5 languages |
+| Tests | ⚠️ Partial | Unit tests exist; UI untested |
 
-[SPRINT_E_2_DETAILS]
-combat_ui_extract UIController_1151_lines_to_415_lines CombatView_512_lines_created
-playBattleLog_145_lines openCombatOverlay_597_lines extracted
-proxy_pattern getters_setters isCombatOverlayOpen renderCombatOverlay playBattleLog openCombatOverlay
-EngineAdapter_wires engine_and_adapter into combatView
-mp_cost_bug_fixed SKILLS_DATA_skillId_mpCost replaces hardcoded skillMeta map
+---
 
-[GAPS]
-SEV_HIGH none_all_major_gaps_closed
-SEV_MEDIUM none_first_iteration_complete
-SEV_LOW i18n_completeness test_coverage
+## Reference: Key Files Map
 
-[POWER_CURVE]
-HERO_L1_NO_GEAR 30hp 15mp 8str 4def 4spd 4mag
-HERO_L1_WARRIOR 30hp 15mp 8str 4def 4spd 4mag origin_mults_apply
-ENEMY_SLIME_GREEN 20hp 3str 2def 2spd
-ENEMY_SLIME_FIRE 30hp 5str 3def 3spd fire
-ENEMY_WILD_BOAR 40hp 6str 4def 4spd
-ENEMY_GOBLIN_SCOUT 25hp 4str 2def 6spd
-ENEMY_GOBLIN_GRUNT 35hp 5str 4def 2spd
-ENEMY_GOBLIN_BRUTE 55hp 7str 5def 1spd
-ENEMY_GOBLIN_KING 120hp 10str 6def 4spd boss
-ENEMY_BAT_SMALL 22hp 4str 2def 7spd
-ENEMY_SPIDER_MINOR 28hp 5str 3def 4spd
-ENEMY_CRAB_SHELL 35hp 5str 5def 2spd
-ENEMY_WATER_SPIRIT_MINOR 25hp 4str 2def 5spd water
+- **Engine Facade:** `js/engine/GameEngine.js`
+- **Village:** `js/engine/village/services/VillageService.js`
+- **Heroes:** `js/engine/heroes/services/HeroService.js` + `js/presentation/ui/heroes/HeroesView.js`
+- **Combat:** `js/engine/shared/combat/services/BattleService.js` + `js/presentation/ui/combat/CombatView.js`
+- **Expeditions:** `js/engine/explore/services/ExpeditionService.js` + `js/presentation/ui/explore/ExploreView.js`
+- **Inventory:** `js/engine/shared/inventory/services/InventoryService.js` + `js/presentation/ui/inventory/InventoryView.js`
+- **Shop:** `js/engine/shared/data/ShopCatalog.js` + `js/presentation/ui/shop/ShopView.js`
+- **Forge:** `js/presentation/ui/forge/ForgeView.js`
+- **Buildings:** `js/presentation/ui/buildings/BuildingsView.js`
+- **CSS:** `css/style.css`
+- **Tests:** `tests/rpg-village/`
 
-[DAMAGE_FORMULA]
-baseStat max_1_entity_stat
-raw baseStat_skillMultiplier_1_plus_0_005_tier_skillLevel
-R rawDamage_defense
-defMult R_lt_1 R_0_5 R_1to2 0_5_plus_R_minus1_0_25 R_2to4 0_75_plus_R_minus2_0_075 R_4to5 0_9_plus_R_minus4_0_1 R_5to10 1_0 R_gte_10 R_div_10
-element fire_beats_wind wind_beats_storm storm_beats_water water_beats_fire strong_1_5 weak_0_5
-final max_1_floor_raw_defMult_elementMult
+---
 
-[LEVELING]
-exp_to_next level_times_20
-stat_points_per_level 2_or_3_every_5th_level_gives_3
-skill_points_per_level 1
-hp_gain_per_level 5
-mp_gain_per_level 2
-stat_allocation hp_plus3 mp_plus2 others_plus1
+## Resume Instructions (for future sessions)
 
-[BUILD_FORGE]
-CMD_BUILD make build APP=rpg-village
-CMD_TEST make test-rpg-village
-CMD_LOCAL make local-build APP=rpg-village
-
-[CONVENTIONS]
-SPEC_FIRST docs_before_code
-RESULT_PATTERN success_data_error
-SMART_DIFFING serialize_state_skip_unchanged
-MOBILE_DEBOUNCE performance_now_minus_openTime_lt_300
-
-[KEY_FILES]
-ENTRY src/rpg-village/index.html
-OUTPUT rpg-village.html
-GAME_ENGINE src/rpg-village/js/engine/GameEngine.js
-HERO_MODEL src/rpg-village/js/engine/heroes/models/Hero.js
-EXPEDITION_SVC src/rpg-village/js/engine/explore/services/ExpeditionService.js
-BATTLE_SVC src/rpg-village/js/engine/shared/combat/services/BattleService.js
-COMBAT_CALC src/rpg-village/js/engine/shared/combat/core/CombatCalculator.js
-SHOP_VIEW src/rpg-village/js/presentation/ui/shop/ShopView.js
-UI_CTRL src/rpg-village/js/presentation/ui/UIController.js
-
-[NOTES]
-Arthur_created_by_GameEngine_initNewGame_no_longer_hardcodes_old_base_stats
-CombatFlow_test_updated_to_handle_2_stage_tutorial_expedition_correctly
-Spec_first_is_aspiration_not_always_reality_some_features_implemented_before_specs
-User_is_from_Spain_Basque_Country_or_nearby_5_i18n_including_eu_gl
-User_prefers_slow_loving_iteration_manual_testing_between_commits
-Never_implement_worker_specialization_or_expedition_hero_interaction_without_explicit_approval
-First_iteration_complete_2026_05_21_all_sprints_A_through_E_done
-Concurrent_expeditions_max_1_plus_explorer_guild_level_round_robin_resolution
-Builder_assignment_explicit_UI_village_view_plus_minus_controls
+If this plan is resumed after context loss:
+1. Read the last few git commits (`git log --oneline -5`).
+2. Cross-reference with the Stage Tracker above to find the first unchecked item.
+3. Re-read only the files affected by that stage before editing.
+4. Run `make local-build APP=rpg-village` before manual testing.

@@ -52,1006 +52,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     fetch(link.href, fetchOpts);
   }
 })();
-class UIController {
-  constructor(i18n2) {
-    this.i18n = i18n2;
-    this.elements = {
-      mainContent: document.getElementById("main-content"),
-      loader: document.getElementById("main-loader"),
-      goldCount: document.getElementById("gold-count"),
-      villagerCount: document.getElementById("villager-count"),
-      woodCount: document.getElementById("wood-count"),
-      globalDay: document.getElementById("global-day"),
-      navItems: document.querySelectorAll(".nav-item"),
-      shopNav: document.querySelector('.nav-item[data-view="shop"]'),
-      forgeNav: document.querySelector('.nav-item[data-view="forge"]')
-    };
-    this.isShopUnlocked = false;
-    this.isForgeUnlocked = false;
-    this.lastState = null;
-    this.isCombatOverlayOpen = false;
-    this.views = /* @__PURE__ */ new Map();
-    this.activeView = null;
-    this.activeDomain = null;
-    this.setupEventListeners();
-    this.translateView(document.body);
-  }
-  /**
-   * Registers a view controller for a specific domain.
-   */
-  registerView(domain, viewController) {
-    viewController.ui = this;
-    this.views.set(domain, viewController);
-  }
-  setupEventListeners() {
-    this.elements.navItems.forEach((item) => {
-      item.addEventListener("click", () => {
-        const domain = item.getAttribute("data-view");
-        if (domain === "shop" && !this.isShopUnlocked) return;
-        if (domain === "forge" && !this.isForgeUnlocked) return;
-        this.switchView(domain);
-      });
-    });
-  }
-  /**
-   * Transitions to a new domain view.
-   */
-  async switchView(domain) {
-    if (domain === "shop" && !this.isShopUnlocked) return;
-    if (domain === "forge" && !this.isForgeUnlocked) return;
-    if (this.activeDomain === domain) return;
-    console.log(`Switching to domain: ${domain}`);
-    this.elements.navItems.forEach((item) => {
-      if (item.getAttribute("data-view") === domain) {
-        item.classList.add("active");
-      } else {
-        item.classList.remove("active");
-      }
-    });
-    this.elements.loader.style.display = "flex";
-    try {
-      const template = document.getElementById(`tpl-${domain}`);
-      if (!template) throw new Error(`Template not found: tpl-${domain}`);
-      const content = template.content.cloneNode(true);
-      this.elements.mainContent.innerHTML = "";
-      this.elements.mainContent.appendChild(content);
-      this.translateView(this.elements.mainContent);
-      this.activeDomain = domain;
-      this.activeView = this.views.get(domain);
-      if (this.activeView) {
-        this.activeView.mount(this.elements.mainContent.querySelector(".domain-view"), this);
-      }
-    } catch (error) {
-      console.error(error);
-      this.elements.mainContent.innerHTML = `<div class="error-state">Error loading view: ${domain}</div>`;
-    } finally {
-      setTimeout(() => {
-        this.elements.loader.style.display = "none";
-      }, 50);
-    }
-  }
-  /**
-   * Scans a container for elements with data-i18n and translates them.
-   */
-  translateView(container) {
-    if (!this.i18n) return;
-    const elements = container.querySelectorAll("[data-i18n]");
-    elements.forEach((el) => this.translateElement(el));
-  }
-  /**
-   * Translates a single element based on its data-i18n attribute.
-   */
-  translateElement(element) {
-    const key = element.getAttribute("data-i18n");
-    if (key) {
-      element.textContent = this.t(key);
-    }
-  }
-  /**
-   * Helper to get translated string.
-   */
-  t(key) {
-    return this.i18n ? this.i18n.t(key) : key;
-  }
-  /**
-   * Changes the current language and re-translates the entire UI.
-   */
-  setLanguage(lang) {
-    if (this.i18n.setLanguage(lang)) {
-      this.translateView(document.body);
-      if (this.lastState) {
-        this.updateNavLocks(this.lastState);
-      }
-      return true;
-    }
-    return false;
-  }
-  updateNavLocks(state) {
-    var _a, _b;
-    const completed = state.completedExpeditions || [];
-    this.isShopUnlocked = completed.includes("exp_tutorial_cave");
-    const blacksmithLvl = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
-    this.isForgeUnlocked = blacksmithLvl >= 1;
-    if (this.elements.shopNav) {
-      const iconEl = this.elements.shopNav.querySelector(".nav-icon");
-      const labelEl = this.elements.shopNav.querySelector(".nav-label");
-      if (this.isShopUnlocked) {
-        this.elements.shopNav.classList.remove("nav-locked");
-        if (iconEl) iconEl.textContent = "🛒";
-        if (labelEl) {
-          labelEl.textContent = this.t("nav_shop");
-          labelEl.setAttribute("data-i18n", "nav_shop");
-        }
-      } else {
-        this.elements.shopNav.classList.add("nav-locked");
-        if (iconEl) iconEl.textContent = "🔒";
-        if (labelEl) {
-          labelEl.textContent = "???";
-          labelEl.removeAttribute("data-i18n");
-        }
-      }
-    }
-    if (this.elements.forgeNav) {
-      const iconEl = this.elements.forgeNav.querySelector(".nav-icon");
-      const labelEl = this.elements.forgeNav.querySelector(".nav-label");
-      if (this.isForgeUnlocked) {
-        this.elements.forgeNav.classList.remove("nav-locked");
-        if (iconEl) iconEl.textContent = "🔥";
-        if (labelEl) {
-          labelEl.textContent = this.t("nav_forge");
-          labelEl.setAttribute("data-i18n", "nav_forge");
-        }
-      } else {
-        this.elements.forgeNav.classList.add("nav-locked");
-        if (iconEl) iconEl.textContent = "🔒";
-        if (labelEl) {
-          labelEl.textContent = "???";
-          labelEl.removeAttribute("data-i18n");
-        }
-      }
-    }
-  }
-  /**
-   * Updates the global shell stats and the active view.
-   */
-  update(state) {
-    var _a, _b;
-    this.lastState = state;
-    this.updateNavLocks(state);
-    if (state.village) {
-      if (this.elements.globalDay) this.elements.globalDay.textContent = state.village.day || 1;
-      if (this.elements.goldCount) this.elements.goldCount.textContent = Math.floor(state.village.gold || 0);
-      if (this.elements.villagerCount) {
-        this.elements.villagerCount.textContent = ((_a = state.village.population) == null ? void 0 : _a.total) || 0;
-      }
-      if (this.elements.woodCount && state.inventory) {
-        this.elements.woodCount.textContent = ((_b = state.inventory.materials) == null ? void 0 : _b.material_wood) || 0;
-      }
-    }
-    if (state.activeBattle && !this.isCombatOverlayOpen) {
-      this.openCombatOverlay(state.activeBattle);
-    }
-    if (this.isCombatOverlayOpen && this.renderCombatOverlay) {
-      this.renderCombatOverlay();
-    }
-    if (this.activeView) {
-      this.activeView.update(state);
-    }
-  }
-  // Compatibility method for current main.js
-  onInitialize(callback) {
-    this.initCallback = callback;
-  }
-  /**
-   * Displays the introductory narrative modal.
-   */
-  showIntroDialog() {
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    document.body.appendChild(overlay);
-    const slides = [
-      {
-        image: "assets/story/prologue_1.png",
-        titleKey: "prologue_title_1",
-        loreKey: "prologue_lore_1"
-      },
-      {
-        image: "assets/story/prologue_2.png",
-        titleKey: "prologue_title_2",
-        loreKey: "prologue_lore_2"
-      },
-      {
-        image: "assets/story/prologue_3.png",
-        titleKey: "prologue_title_3",
-        loreKey: "prologue_lore_3"
-      }
-    ];
-    let currentSlide = 0;
-    const renderSlide = () => {
-      const slide = slides[currentSlide];
-      overlay.innerHTML = `
-                <div class="intro-modal story-slideshow">
-                    <div class="prologue-illustration-container">
-                        <img class="prologue-illustration-img" src="${slide.image}" alt="Prologue Illustration">
-                    </div>
-                    <div class="prologue-text-container">
-                        <h2 data-i18n="${slide.titleKey}">${this.t(slide.titleKey)}</h2>
-                        <p data-i18n="${slide.loreKey}">${this.t(slide.loreKey)}</p>
-                    </div>
-                    <div class="prologue-controls">
-                        <button class="btn btn-secondary btn-sm" id="btn-prologue-back" ${currentSlide === 0 ? 'style="visibility: hidden;"' : ""}>
-                            <span data-i18n="prologue_btn_back">${this.t("prologue_btn_back")}</span>
-                        </button>
-                        <div class="prologue-dots">
-                            ${slides.map((_, i) => `<span class="prologue-dot ${i === currentSlide ? "active" : ""}"></span>`).join("")}
-                        </div>
-                        <button class="btn btn-primary btn-sm" id="btn-prologue-next">
-                            <span data-i18n="${currentSlide === slides.length - 1 ? "intro_btn" : "prologue_btn_next"}">
-                                ${currentSlide === slides.length - 1 ? this.t("intro_btn") : this.t("prologue_btn_next")}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            `;
-      const backBtn = overlay.querySelector("#btn-prologue-back");
-      if (backBtn && currentSlide > 0) {
-        backBtn.addEventListener("click", () => {
-          currentSlide--;
-          renderSlide();
-        });
-      }
-      const nextBtn = overlay.querySelector("#btn-prologue-next");
-      if (nextBtn) {
-        nextBtn.addEventListener("click", () => {
-          if (currentSlide < slides.length - 1) {
-            currentSlide++;
-            renderSlide();
-          } else {
-            overlay.style.opacity = "0";
-            overlay.style.transition = "opacity 0.5s ease";
-            setTimeout(() => {
-              overlay.remove();
-            }, 500);
-          }
-        });
-      }
-    };
-    renderSlide();
-  }
-  /**
-   * Displays a generic confirmation dialog.
-   */
-  showConfirmDialog({ title, message, onConfirm }) {
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    overlay.innerHTML = `
-            <div class="modal-body">
-                <div class="modal-header">
-                    <h3 data-i18n="${title}">${this.t(title)}</h3>
-                </div>
-                <div class="modal-text">
-                    <p data-i18n="${message}">${this.t(message)}</p>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-secondary" id="modal-btn-cancel">
-                        <span data-i18n="ui_btn_cancel">${this.t("ui_btn_cancel")}</span>
-                    </button>
-                    <button class="btn btn-danger" id="modal-btn-confirm">
-                        <span data-i18n="ui_btn_confirm">${this.t("ui_btn_confirm")}</span>
-                    </button>
-                </div>
-            </div>
-        `;
-    document.body.appendChild(overlay);
-    const close = () => {
-      overlay.style.opacity = "0";
-      overlay.style.transition = "opacity 0.3s ease";
-      setTimeout(() => overlay.remove(), 300);
-    };
-    overlay.querySelector("#modal-btn-cancel").addEventListener("click", close);
-    overlay.querySelector("#modal-btn-confirm").addEventListener("click", () => {
-      close();
-      if (onConfirm) onConfirm();
-    });
-  }
-  /**
-   * Displays a transient in-game toast notification.
-   * @param {string} message  Translated message text to show.
-   * @param {'error'|'success'|'info'} type  Visual style. Defaults to 'error'.
-   * @param {number} duration  Auto-dismiss delay in ms. Defaults to 3500.
-   */
-  showToast(message, type = "error", duration = 3500) {
-    let container = document.getElementById("game-toast-container");
-    if (!container) {
-      container = document.createElement("div");
-      container.id = "game-toast-container";
-      container.className = "game-toast-container";
-      document.body.appendChild(container);
-    }
-    const icons = { error: "⚠️", success: "✅", info: "ℹ️" };
-    const toast = document.createElement("div");
-    toast.className = `game-toast toast-${type}`;
-    toast.innerHTML = `<span class="toast-icon">${icons[type] || "⚠️"}</span><span>${message}</span>`;
-    container.appendChild(toast);
-    setTimeout(() => {
-      toast.classList.add("toast-out");
-      setTimeout(() => toast.remove(), 400);
-    }, duration);
-  }
-  /**
-   * Plays the battle log in a full-screen overlay dynamically imitating a turn-based combat log.
-   */
-  playBattleLog(combatLog, onComplete) {
-    const overlay = document.createElement("div");
-    overlay.className = "battle-overlay";
-    overlay.style.position = "fixed";
-    overlay.style.top = "0";
-    overlay.style.left = "0";
-    overlay.style.width = "100vw";
-    overlay.style.height = "100vh";
-    overlay.style.backgroundColor = "rgba(10, 10, 15, 0.95)";
-    overlay.style.zIndex = "9999";
-    overlay.style.display = "flex";
-    overlay.style.flexDirection = "column";
-    overlay.style.alignItems = "center";
-    overlay.style.padding = "20px";
-    overlay.style.overflowY = "hidden";
-    overlay.style.fontFamily = '"Fira Code", monospace';
-    const headerHtml = `
-            <div style="display: flex; justify-content: space-between; width: 100%; max-width: 800px; border-bottom: 2px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px;">
-                <div style="color: var(--primary-color);">
-                    <h3 style="margin: 0;">Heroes</h3>
-                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${combatLog.heroes.join(", ")}</p>
-                </div>
-                <div style="text-align: right; color: var(--danger-color);">
-                    <h3 style="margin: 0;">Enemies</h3>
-                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${combatLog.enemies.join(", ")}</p>
-                </div>
-            </div>
-        `;
-    const logContainerHtml = `
-            <div id="battle-log-container" style="flex: 1; width: 100%; max-width: 800px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);">
-            </div>
-        `;
-    const footerHtml = `
-            <div id="battle-log-footer" style="width: 100%; max-width: 800px; text-align: center; min-height: 50px;">
-                \x3C!-- Summary and Close button will appear here -->
-            </div>
-        `;
-    overlay.innerHTML = headerHtml + logContainerHtml + footerHtml;
-    document.body.appendChild(overlay);
-    const logContainer = overlay.querySelector("#battle-log-container");
-    const footer = overlay.querySelector("#battle-log-footer");
-    let eventIndex = 0;
-    const events = combatLog.events;
-    const formatEventLog = (ev) => {
-      let text = "";
-      let color = "#aaa";
-      if (ev.type === "DAMAGE") {
-        const isMiss = ev.isMiss ? this.t("log_miss").replace("{attacker}", ev.actorName).replace("{target}", ev.targetName) : null;
-        const hitText = this.t("log_attack").replace("{attacker}", ev.actorName).replace("{target}", ev.targetName).replace("{damage}", ev.amount);
-        text = isMiss || hitText;
-        if (ev.isCrit) text = `🔥 CRITICAL! ${text}`;
-        color = ev.actorIsHero ? "#4caf50" : "#f44336";
-      } else if (ev.type === "HEAL") {
-        text = this.t("log_heal").replace("{attacker}", ev.actorName).replace("{target}", ev.targetName).replace("{amount}", ev.amount);
-        color = "#03a9f4";
-      } else if (ev.type === "STATUS_TICK") {
-        if (ev.effectType === "poison") {
-          text = this.t("log_poison").replace("{target}", ev.targetName).replace("{damage}", ev.damage);
-          color = "#9c27b0";
-        } else if (ev.effectType === "burn") {
-          text = this.t("log_burn").replace("{target}", ev.targetName).replace("{damage}", ev.damage);
-          color = "#ff9800";
-        }
-      } else if (ev.type === "TRAIT_REGEN") {
-        text = this.t("log_regen").replace("{target}", ev.targetName).replace("{amount}", ev.amount);
-        color = "#8bc34a";
-      } else if (ev.type === "USE_CONSUMABLE") {
-        const itemName = this.t(ev.consumableId) || ev.consumableId;
-        const statName = ev.healType === "HEAL_HP" ? "HP" : "MP";
-        text = (this.t("log_use_consumable") || "{attacker} used {item} on {target}, restoring {amount} {stat}.").replace("{attacker}", ev.actorName).replace("{item}", itemName).replace("{target}", ev.targetName).replace("{amount}", ev.amount).replace("{stat}", statName);
-        color = "#00bcd4";
-      }
-      let hpSuffix = "";
-      if (ev.targetHp !== void 0 && ev.targetMaxHp !== void 0) {
-        if (ev.targetHp <= 0) {
-          hpSuffix = ` <span style="color: #ff3b30; font-size: 0.85em; font-weight: bold;">(DEAD 💀)</span>`;
-        } else {
-          hpSuffix = ` <span style="color: #8e8e93; font-size: 0.85em;">(HP: ${ev.targetHp}/${ev.targetMaxHp})</span>`;
-        }
-      }
-      return `<p style="margin: 5px 0; color: ${color}; opacity: 0; animation: fadeIn 0.3s forwards;">${text}${hpSuffix}</p>`;
-    };
-    const timer = setInterval(() => {
-      if (eventIndex < events.length) {
-        const ev = events[eventIndex];
-        const logHtml = formatEventLog(ev);
-        if (logHtml.includes("<p")) {
-          logContainer.insertAdjacentHTML("beforeend", logHtml);
-          logContainer.scrollTop = logContainer.scrollHeight;
-        }
-        eventIndex++;
-      } else {
-        clearInterval(timer);
-        const summaryHtml = combatLog.summary.map((s) => {
-          let text = `<strong>${s.heroName}</strong>: `;
-          if (s.hpLost > 0) text += `<span style="color: #f44336;">-${s.hpLost} HP</span> | `;
-          else if (s.hpLost < 0) text += `<span style="color: #4caf50;">+${-s.hpLost} HP</span> | `;
-          text += `<span style="color: #03a9f4;">+${s.expEarned} EXP</span>`;
-          if (s.leveledUp) text += ` <span style="color: #ffeb3b; font-weight: bold;">(LEVEL UP!)</span>`;
-          return `<div>${text}</div>`;
-        }).join("");
-        const resultText = combatLog.isVictory ? this.t("log_battle_won") : this.t("log_battle_lost");
-        const resultColor = combatLog.isVictory ? "#4caf50" : "#f44336";
-        footer.innerHTML = `
-                    <div style="margin-bottom: 15px; font-size: 1.1rem;">
-                        <div style="color: ${resultColor}; font-weight: bold; margin-bottom: 10px;">${resultText}</div>
-                        ${summaryHtml}
-                    </div>
-                    <button class="btn btn-primary" id="btn-close-battle">
-                        ${this.t("ui_btn_close")}
-                    </button>
-                `;
-        footer.querySelector("#btn-close-battle").addEventListener("click", () => {
-          overlay.style.opacity = "0";
-          overlay.style.transition = "opacity 0.3s ease";
-          setTimeout(() => {
-            overlay.remove();
-            if (onComplete) onComplete();
-          }, 300);
-        });
-      }
-    }, 500);
-  }
-  /**
-   * Opens the interactive turn-based combat overlay.
-   */
-  openCombatOverlay(battleContext, onComplete) {
-    if (this.isCombatOverlayOpen) return;
-    this.isCombatOverlayOpen = true;
-    this.lastLogLength = 0;
-    const overlay = document.createElement("div");
-    overlay.className = "combat-overlay";
-    document.body.appendChild(overlay);
-    const render = () => {
-      const state = this.lastState;
-      if (!state || !state.activeBattle) {
-        overlay.remove();
-        this.isCombatOverlayOpen = false;
-        if (onComplete) onComplete();
-        return;
-      }
-      const battle = state.activeBattle;
-      const activeExp = state.activeExpedition;
-      const currentStageNum = activeExp ? activeExp.currentStage + 1 : 1;
-      const stageText = `${this.t("exp_stage")} ${currentStageNum}`;
-      const currentHash = JSON.stringify(battle) + (overlay.menuState || "main") + (overlay.selectedAction ? overlay.selectedAction.id : "");
-      if (overlay.lastRenderHash === currentHash) {
-        return;
-      }
-      overlay.lastRenderHash = currentHash;
-      animateLastEvents();
-      let headerHtml = `
-                <div class="combat-header">
-                    <div>
-                        <h2>${activeExp ? this.t(activeExp.id) !== activeExp.id ? this.t(activeExp.id) : activeExp.name : "Combat"}</h2>
-                        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px;">
-                            ${stageText}
-                        </div>
-                    </div>
-                    <div class="combat-header-controls">
-                        <button class="btn btn-sm ${battle.autoBattle ? "btn-primary" : "btn-secondary"}" id="btn-toggle-auto">
-                            ${this.t("btn_auto_combat")} ${battle.autoBattle ? "(ON)" : "(OFF)"}
-                        </button>
-                        <button class="btn btn-secondary btn-sm" id="btn-skip-combat">
-                            ${this.t("btn_skip_combat")}
-                        </button>
-                    </div>
-                </div>
-            `;
-      let heroesHtml = `<div class="combat-column">
-                <div class="combat-column-title">Heroes</div>`;
-      battle.heroes.forEach((hero, index) => {
-        var _a;
-        const isCurrentTurn = ((_a = battle.turnOrder[battle.currentTurnIndex]) == null ? void 0 : _a.id) === hero.id;
-        const hpPercent = Math.max(0, Math.min(100, hero.hp / hero.maxHp * 100));
-        const mpPercent = Math.max(0, Math.min(100, hero.mp / hero.maxMp * 100));
-        const isDead = hero.hp <= 0;
-        const statusBadges = (hero.statuses || []).map((st) => {
-          const icon = st.type === "poison" ? "🤢" : st.type === "burn" ? "🔥" : st.type === "regen" ? "💚" : "⭐";
-          return `<span class="combat-status-badge" title="${st.type} (${st.duration} turns)">${icon}</span>`;
-        }).join("");
-        let avatarHtml = "⚔️";
-        if (isDead) {
-          avatarHtml = "💀";
-        } else {
-          let avatarSrc = "assets/heroes/arthur.png";
-          if (hero.avatar) {
-            avatarSrc = `assets/heroes/${hero.avatar}`;
-          } else {
-            const fallbackMap = {
-              origin_warrior: "arthur.png",
-              origin_guard: "valen.png",
-              origin_thief: "origin_thief.png",
-              origin_monk: "origin_monk.png",
-              origin_clown: "origin_clown.png",
-              origin_poet: "origin_poet.png"
-            };
-            const mapped = fallbackMap[hero.origin] || "arthur.png";
-            avatarSrc = `assets/heroes/${mapped}`;
-          }
-          avatarHtml = `<img src="${avatarSrc}" alt="${hero.name}" class="combat-avatar-img" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-        }
-        heroesHtml += `
-                    <div class="combat-card hero-card ${isCurrentTurn ? "active" : ""} ${isDead ? "dead" : ""}" data-hero-id="${hero.id}" data-hero-index="${index}">
-                        <div class="combat-card-avatar">${avatarHtml}</div>
-                        <div class="combat-card-info">
-                            <div class="combat-card-header">
-                                <span class="combat-card-name">${hero.name}</span>
-                                <span class="combat-card-level">Lv.${hero.level}</span>
-                            </div>
-                            <div class="combat-bar-container">
-                                <div class="combat-bar combat-bar-hp" style="width: ${hpPercent}%"></div>
-                            </div>
-                            <div class="combat-bar-text">
-                                <span>HP</span>
-                                <span>${hero.hp}/${hero.maxHp}</span>
-                            </div>
-                            <div class="combat-bar-container" style="height: 4px;">
-                                <div class="combat-bar combat-bar-mp" style="width: ${mpPercent}%"></div>
-                            </div>
-                            <div class="combat-bar-text" style="font-size: 0.7rem;">
-                                <span>MP</span>
-                                <span>${hero.mp}/${hero.maxMp}</span>
-                            </div>
-                            <div class="combat-card-statuses">${statusBadges}</div>
-                        </div>
-                        <div class="combat-effects-container" id="effects-hero-${hero.id}"></div>
-                    </div>
-                `;
-      });
-      heroesHtml += `</div>`;
-      let enemiesHtml = `<div class="combat-column">
-                <div class="combat-column-title">Enemies</div>`;
-      battle.enemies.forEach((enemy, index) => {
-        var _a;
-        const isCurrentTurn = ((_a = battle.turnOrder[battle.currentTurnIndex]) == null ? void 0 : _a.id) === enemy.id;
-        const hpPercent = Math.max(0, Math.min(100, enemy.hp / enemy.maxHp * 100));
-        const isDead = enemy.hp <= 0;
-        const statusBadges = (enemy.statuses || []).map((st) => {
-          const icon = st.type === "poison" ? "🤢" : st.type === "burn" ? "🔥" : st.type === "regen" ? "💚" : "⭐";
-          return `<span class="combat-status-badge" title="${st.type} (${st.duration} turns)">${icon}</span>`;
-        }).join("");
-        const enemyName = this.t(enemy.name) || enemy.name;
-        enemiesHtml += `
-                    <div class="combat-card enemy-card ${isCurrentTurn ? "active" : ""} ${isDead ? "dead" : ""}" data-enemy-index="${index}">
-                        <div class="combat-card-avatar">${enemy.hp <= 0 ? "💀" : "👾"}</div>
-                        <div class="combat-card-info">
-                            <div class="combat-card-header">
-                                <span class="combat-card-name">${enemyName}</span>
-                                <span class="combat-card-level">Lv.${enemy.level || 1}</span>
-                            </div>
-                            <div class="combat-bar-container">
-                                <div class="combat-bar combat-bar-hp" style="width: ${hpPercent}%"></div>
-                            </div>
-                            <div class="combat-bar-text">
-                                <span>HP</span>
-                                <span>${enemy.hp}/${enemy.maxHp}</span>
-                            </div>
-                            <div class="combat-card-statuses">${statusBadges}</div>
-                        </div>
-                        <div class="combat-effects-container" id="effects-enemy-${index}"></div>
-                    </div>
-                `;
-      });
-      enemiesHtml += `</div>`;
-      const formatEventLog = (ev) => {
-        let text = "";
-        let color = "#aaa";
-        if (ev.type === "DAMAGE") {
-          const attackerName = ev.actorName;
-          const targetName = ev.targetName;
-          const isMiss = ev.isMiss ? this.t("log_miss").replace("{attacker}", attackerName).replace("{target}", targetName) : null;
-          const hitText = this.t("log_attack").replace("{attacker}", attackerName).replace("{target}", targetName).replace("{damage}", ev.amount);
-          text = isMiss || hitText;
-          if (ev.isCrit) text = `🔥 ${this.t("crit")} ${text}`;
-          color = ev.actorIsHero ? "#4caf50" : "#f44336";
-        } else if (ev.type === "HEAL") {
-          const attackerName = ev.actorName;
-          const targetName = ev.targetName;
-          text = this.t("log_heal").replace("{attacker}", attackerName).replace("{target}", targetName).replace("{amount}", ev.amount);
-          color = "#03a9f4";
-        } else if (ev.type === "STATUS_TICK") {
-          const targetName = ev.targetName;
-          if (ev.effectType === "poison") {
-            text = this.t("log_poison").replace("{target}", targetName).replace("{damage}", ev.damage);
-            color = "#9c27b0";
-          } else if (ev.effectType === "burn") {
-            text = this.t("log_burn").replace("{target}", targetName).replace("{damage}", ev.damage);
-            color = "#ff9800";
-          }
-        } else if (ev.type === "TRAIT_REGEN") {
-          const targetName = ev.targetName;
-          text = this.t("log_regen").replace("{target}", targetName).replace("{amount}", ev.amount);
-          color = "#8bc34a";
-        } else if (ev.type === "USE_CONSUMABLE") {
-          const attackerName = ev.actorName;
-          const itemName = this.t(ev.consumableId) || ev.consumableId;
-          const targetName = ev.targetName;
-          const statName = ev.healType === "HEAL_HP" ? "HP" : "MP";
-          text = (this.t("log_use_consumable") || "{attacker} used {item} on {target}, restoring {amount} {stat}.").replace("{attacker}", attackerName).replace("{item}", itemName).replace("{target}", targetName).replace("{amount}", ev.amount).replace("{stat}", statName);
-          color = "#00bcd4";
-        }
-        let hpSuffix = "";
-        if (ev.targetHp !== void 0 && ev.targetMaxHp !== void 0) {
-          if (ev.targetHp <= 0) {
-            hpSuffix = ` <span style="color: #ff3b30; font-size: 0.85em; font-weight: bold;">(DEAD 💀)</span>`;
-          } else {
-            hpSuffix = ` <span style="color: #8e8e93; font-size: 0.85em;">(HP: ${ev.targetHp}/${ev.targetMaxHp})</span>`;
-          }
-        }
-        return `<div style="color: ${color}; margin-bottom: 4px; line-height: 1.4;">${text}${hpSuffix}</div>`;
-      };
-      const logLines = battle.log.slice(-12).map(formatEventLog).join("");
-      const activeActor = battle.turnOrder[battle.currentTurnIndex];
-      const activeActorName = activeActor ? this.t(activeActor.name) || activeActor.name : "Unknown";
-      const currentTurnText = activeActor ? `${activeActorName}'s Turn` : "Thinking...";
-      let middleHtml = `
-                <div class="combat-log-column">
-                    <div class="combat-column-title">Battle Log</div>
-                    <div class="combat-log-console" id="combat-log-console">
-                        ${logLines}
-                    </div>
-                    <div class="combat-current-turn-banner">
-                        ${currentTurnText}
-                    </div>
-                    <div class="combat-control-panel" id="combat-control-panel">
-                        \x3C!-- Action UI goes here -->
-                    </div>
-                </div>
-            `;
-      overlay.innerHTML = headerHtml + `
-                <div class="combat-grid">
-                    ${heroesHtml}
-                    ${middleHtml}
-                    ${enemiesHtml}
-                </div>
-            `;
-      overlay.querySelector("#btn-toggle-auto").addEventListener("click", () => {
-        this.engine.battleService.autoBattle = !this.engine.battleService.autoBattle;
-        this.adapter.forceUpdate();
-      });
-      overlay.querySelector("#btn-skip-combat").addEventListener("click", () => {
-        this.engine.skipBattle();
-        this.adapter.forceUpdate();
-      });
-      const consoleEl = overlay.querySelector("#combat-log-console");
-      if (consoleEl) {
-        consoleEl.scrollTop = consoleEl.scrollHeight;
-      }
-      const controlPanel = overlay.querySelector("#combat-control-panel");
-      if (battle.isOver) {
-        const preview = this.engine.getBattleResolutionPreview();
-        const resultColor = preview && preview.isVictory ? "var(--success)" : "var(--danger)";
-        const resultText = preview && preview.isVictory ? this.t("victory") : this.t("defeat");
-        let summaryHtml = "";
-        if (preview && preview.summary) {
-          summaryHtml = preview.summary.map((s) => {
-            let text = `<strong>${s.heroName}</strong>: `;
-            if (s.hpLost > 0) text += `<span style="color: var(--danger); font-size: 0.9em;">-${s.hpLost} HP</span> | `;
-            else if (s.hpLost < 0) text += `<span style="color: var(--success); font-size: 0.9em;">+${-s.hpLost} HP</span> | `;
-            text += `<span style="color: #03a9f4; font-size: 0.9em;">+${s.expEarned} EXP</span>`;
-            if (s.leveledUp) text += ` <span style="color: #ffeb3b; font-weight: bold; font-size: 0.9em;">(LEVEL UP! 🎉)</span>`;
-            return `<div style="margin-bottom: 5px;">${text}</div>`;
-          }).join("");
-        }
-        let rewardsHtml = "";
-        if (preview && preview.isLastStage && preview.rewards) {
-          const rewards = [];
-          if (preview.rewards.gold) {
-            rewards.push(`💰 ${preview.rewards.gold} Gold`);
-          }
-          if (preview.rewards.items) {
-            for (const [itemId, qty] of Object.entries(preview.rewards.items)) {
-              const itemName = this.t(itemId) || itemId;
-              rewards.push(`📦 ${qty}x ${itemName}`);
-            }
-          }
-          if (rewards.length > 0) {
-            rewardsHtml = `
-                            <div style="margin-top: 15px; border-top: 1px solid var(--glass-border); padding-top: 10px;">
-                                <h4 style="color: #ffeb3b; margin-top: 0; margin-bottom: 5px;">🏆 Expedition Rewards:</h4>
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; font-size: 0.95rem;">
-                                    ${rewards.map((r) => `<span class="badge badge-accent" style="background: rgba(255, 235, 59, 0.1); border: 1px solid rgba(255, 235, 59, 0.3); padding: 4px 8px; border-radius: 4px;">${r}</span>`).join("")}
-                                </div>
-                            </div>
-                        `;
-          }
-        }
-        controlPanel.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 15px; width: 100%;">
-                        <h3 style="color: ${resultColor}; font-size: 1.6rem; margin-top: 0; margin-bottom: 10px;">${resultText}</h3>
-                        <div class="combat-summary-container" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); padding: 10px; border-radius: 6px; text-align: left; max-height: 150px; overflow-y: auto; display: inline-block; width: 100%; box-sizing: border-box;">
-                            ${summaryHtml}
-                            ${rewardsHtml}
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" id="btn-resolve-battle" style="width: 100%;">
-                        ${this.t("ui_btn_close")}
-                    </button>
-                `;
-        controlPanel.querySelector("#btn-resolve-battle").addEventListener("click", () => {
-          this.engine.resolveBattle();
-          overlay.style.opacity = "0";
-          overlay.style.transition = "opacity 0.3s ease";
-          setTimeout(() => {
-            overlay.remove();
-            this.isCombatOverlayOpen = false;
-            if (onComplete) onComplete();
-            this.adapter.forceUpdate();
-          }, 300);
-        });
-        return;
-      }
-      const isHeroTurn = activeActor && activeActor.type === "Hero";
-      if (!isHeroTurn || battle.autoBattle) {
-        controlPanel.innerHTML = `
-                    <div class="combat-control-message">
-                        ${battle.autoBattle ? "Running Auto-Combat..." : "Enemy is planning action..."}
-                    </div>
-                `;
-        return;
-      }
-      const currentHero = battle.heroes.find((h) => h.id === activeActor.id);
-      if (!currentHero) return;
-      const menuState = overlay.menuState || "main";
-      const selectedAction = overlay.selectedAction || null;
-      if (menuState === "main") {
-        controlPanel.innerHTML = `
-                    <div class="combat-control-buttons">
-                        <button class="btn btn-secondary" id="btn-action-attack" style="flex: 1 1 120px;">
-                            ⚔️ ${this.t("basic_attack")}
-                        </button>
-                        <button class="btn btn-secondary" id="btn-action-skills" style="flex: 1 1 120px;" ${!currentHero.skills || Object.keys(currentHero.skills).length === 0 ? "disabled" : ""}>
-                            ✨ ${this.t("ui_skills")}
-                        </button>
-                        <button class="btn btn-secondary" id="btn-action-items" style="flex: 1 1 120px;" ${battle.itemUsedThisTurn ? "disabled" : ""}>
-                            🎒 ${this.t("ui_consumables")} ${battle.itemUsedThisTurn ? "(1/Turn)" : ""}
-                        </button>
-                    </div>
-                `;
-        controlPanel.querySelector("#btn-action-attack").addEventListener("click", () => {
-          overlay.menuState = "targeting";
-          overlay.selectedAction = { type: "attack", id: "basic_attack", name: this.t("basic_attack") };
-          render();
-        });
-        const btnSkills = controlPanel.querySelector("#btn-action-skills");
-        if (btnSkills) {
-          btnSkills.addEventListener("click", () => {
-            overlay.menuState = "skills";
-            render();
-          });
-        }
-        const btnItems = controlPanel.querySelector("#btn-action-items");
-        if (btnItems) {
-          btnItems.addEventListener("click", () => {
-            overlay.menuState = "items";
-            render();
-          });
-        }
-      } else if (menuState === "skills") {
-        let skillsButtons = Object.keys(currentHero.skills || {}).map((skillId) => {
-          const skillName = this.t(skillId) || skillId;
-          const skillMeta = {
-            "double_attack": { mp: 3 },
-            "triple_attack": { mp: 6 },
-            "whirlwind": { mp: 4 },
-            "small_fire_ball": { mp: 3 },
-            "small_heal": { mp: 3 },
-            "haste": { mp: 4 }
-          }[skillId] || { mp: 0 };
-          const canAfford = currentHero.mp >= skillMeta.mp;
-          return `
-                        <button class="btn btn-secondary" data-skill-id="${skillId}" ${!canAfford ? "disabled" : ""} style="flex: 1 1 140px;">
-                            ${skillName} <span style="font-size: 0.8rem; opacity: 0.8;">(${skillMeta.mp} MP)</span>
-                        </button>
-                    `;
-        }).join("");
-        controlPanel.innerHTML = `
-                    <div class="combat-control-back">
-                        <button class="btn btn-secondary btn-sm" id="btn-skill-back">◀ ${this.t("btn_back")}</button>
-                    </div>
-                    <div class="combat-control-buttons">
-                        ${skillsButtons || '<div style="color: var(--text-muted);">No skills available.</div>'}
-                    </div>
-                `;
-        controlPanel.querySelector("#btn-skill-back").addEventListener("click", () => {
-          overlay.menuState = "main";
-          render();
-        });
-        controlPanel.querySelectorAll("[data-skill-id]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const skillId = btn.getAttribute("data-skill-id");
-            overlay.menuState = "targeting";
-            overlay.selectedAction = { type: "skill", id: skillId, name: this.t(skillId) };
-            render();
-          });
-        });
-      } else if (menuState === "items") {
-        const inventory = state.inventory || {};
-        const consumables = inventory.consumables || {};
-        let itemsButtons = Object.keys(consumables).filter((itemId) => consumables[itemId] > 0).map((itemId) => {
-          const itemName = this.t(itemId) || itemId;
-          const count = consumables[itemId];
-          return `
-                        <button class="btn btn-secondary" data-item-id="${itemId}" style="flex: 1 1 140px;">
-                            ${itemName} x${count}
-                        </button>
-                    `;
-        }).join("");
-        controlPanel.innerHTML = `
-                    <div class="combat-control-back">
-                        <button class="btn btn-secondary btn-sm" id="btn-item-back">◀ ${this.t("btn_back")}</button>
-                    </div>
-                    <div class="combat-control-buttons">
-                        ${itemsButtons || '<div style="color: var(--text-muted);">No consumables in inventory.</div>'}
-                    </div>
-                `;
-        controlPanel.querySelector("#btn-item-back").addEventListener("click", () => {
-          overlay.menuState = "main";
-          render();
-        });
-        controlPanel.querySelectorAll("[data-item-id]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const itemId = btn.getAttribute("data-item-id");
-            overlay.menuState = "targeting";
-            overlay.selectedAction = { type: "item", id: itemId, name: this.t(itemId) };
-            render();
-          });
-        });
-      } else if (menuState === "targeting") {
-        controlPanel.innerHTML = `
-                    <div class="combat-control-back">
-                        <button class="btn btn-secondary btn-sm" id="btn-target-back">◀ ${this.t("btn_back")}</button>
-                    </div>
-                    <div class="combat-control-message" style="color: var(--success); font-weight: 700;">
-                        ${this.t("ui_choose_target")} - ${selectedAction.name}
-                    </div>
-                `;
-        controlPanel.querySelector("#btn-target-back").addEventListener("click", () => {
-          if (selectedAction.type === "skill") {
-            overlay.menuState = "skills";
-          } else if (selectedAction.type === "item") {
-            overlay.menuState = "items";
-          } else {
-            overlay.menuState = "main";
-          }
-          render();
-        });
-        const isFriendlyTarget = selectedAction.id === "small_heal" || selectedAction.type === "item" && selectedAction.id.includes("potion");
-        if (isFriendlyTarget) {
-          overlay.querySelectorAll(".hero-card").forEach((card) => {
-            const idx = parseInt(card.getAttribute("data-hero-index"));
-            const targetHero = battle.heroes[idx];
-            if (targetHero && targetHero.hp > 0) {
-              card.classList.add("targetable");
-              card.addEventListener("click", () => executeTargetAction(idx, targetHero.id));
-            }
-          });
-        } else {
-          overlay.querySelectorAll(".enemy-card").forEach((card) => {
-            const idx = parseInt(card.getAttribute("data-enemy-index"));
-            const targetEnemy = battle.enemies[idx];
-            if (targetEnemy && targetEnemy.hp > 0) {
-              card.classList.add("targetable");
-              card.addEventListener("click", () => executeTargetAction(idx, targetEnemy.id));
-            }
-          });
-        }
-      }
-    };
-    const executeTargetAction = (targetIndex, targetId) => {
-      const overlay2 = document.querySelector(".combat-overlay");
-      if (!overlay2) return;
-      const selectedAction = overlay2.selectedAction;
-      let result;
-      if (selectedAction.type === "attack") {
-        result = this.engine.executeBattleAction("basic_attack", targetIndex);
-      } else if (selectedAction.type === "skill") {
-        result = this.engine.executeBattleAction(selectedAction.id, targetIndex);
-      } else if (selectedAction.type === "item") {
-        result = this.engine.useBattleConsumable(selectedAction.id, targetId);
-      }
-      if (result && !result.success) {
-        alert(this.t(result.error));
-        return;
-      }
-      overlay2.menuState = "main";
-      overlay2.selectedAction = null;
-      this.adapter.forceUpdate();
-    };
-    const animateLastEvents = () => {
-      const state = this.lastState;
-      if (!state || !state.activeBattle) return;
-      if (this.lastLogLength !== void 0 && state.activeBattle.log.length > this.lastLogLength) {
-        const newEvents = state.activeBattle.log.slice(this.lastLogLength);
-        newEvents.forEach((ev) => {
-          const targetName = ev.targetName;
-          if (!targetName) return;
-          if (ev.type === "DAMAGE") {
-            const text = ev.isMiss ? this.t("miss") : `-${ev.amount}`;
-            const type = ev.isMiss ? "miss" : "damage";
-            triggerVisualEffect(targetName, text, type);
-          } else if (ev.type === "HEAL") {
-            triggerVisualEffect(targetName, `+${ev.amount}`, "heal");
-          } else if (ev.type === "STATUS_TICK") {
-            triggerVisualEffect(targetName, `-${ev.damage}`, "damage");
-          } else if (ev.type === "TRAIT_REGEN") {
-            triggerVisualEffect(targetName, `+${ev.amount}`, "heal");
-          } else if (ev.type === "USE_CONSUMABLE") {
-            const label = ev.healType === "HEAL_HP" ? "HP" : "MP";
-            triggerVisualEffect(targetName, `+${ev.amount} ${label}`, "heal");
-          }
-        });
-      }
-      this.lastLogLength = state.activeBattle.log.length;
-    };
-    const triggerVisualEffect = (targetName, text, type) => {
-      const overlay2 = document.querySelector(".combat-overlay");
-      if (!overlay2) return;
-      const cards = overlay2.querySelectorAll(".combat-card");
-      let card = null;
-      cards.forEach((c) => {
-        const nameEl = c.querySelector(".combat-card-name");
-        if (nameEl && nameEl.textContent.trim() === targetName) {
-          card = c;
-        }
-      });
-      if (card) {
-        if (type === "damage") {
-          card.classList.add("hit-shake");
-          setTimeout(() => card.classList.remove("hit-shake"), 400);
-        }
-        const effectContainer = card.querySelector(".combat-effects-container");
-        if (effectContainer) {
-          const numEl = document.createElement("div");
-          numEl.className = "floating-num";
-          numEl.textContent = text;
-          let color = "#ff3b30";
-          if (type === "heal") color = "#34c759";
-          if (type === "miss") color = "#ffcc00";
-          numEl.style.color = color;
-          numEl.style.left = "50%";
-          numEl.style.top = "20%";
-          effectContainer.appendChild(numEl);
-          setTimeout(() => numEl.remove(), 1e3);
-        }
-      }
-    };
-    this.renderCombatOverlay = render;
-    render();
-  }
-  forceUpdate() {
-    if (this.adapter) {
-      this.adapter.forceUpdate();
-    }
-  }
-}
-class Result {
-  constructor(success, data = null, error = null, context = {}) {
-    this.success = success;
-    this.data = data;
-    this.error = error;
-    this.context = context;
-  }
-  static ok(data = null) {
-    return new Result(true, data);
-  }
-  static fail(error, context = {}) {
-    return new Result(false, null, error, context);
-  }
-}
 const SKILLS_DATA = {
   basic_attack: {
     id: "basic_attack",
@@ -1367,6 +367,833 @@ const ARMOR_ARCHETYPES = {
   leather: { id: "leather", defMult: 1, evaBonus: 10, spdPenalty: 0 },
   robes: { id: "robes", defMult: 0.5, mpMult: 1.5, magMult: 1.2, spdPenalty: 0 }
 };
+function getRefineCost(item) {
+  const L = item.level || 0;
+  const nextLevel = L + 1;
+  const mat = item.material;
+  const cost = { gold: 0, materials: {} };
+  if (mat === "wooden") {
+    cost.gold = 30 * nextLevel;
+    cost.materials.material_wood = 10 * nextLevel;
+  } else if (mat === "iron") {
+    cost.gold = 75 * nextLevel;
+    cost.materials.material_wood = 5 * nextLevel;
+    cost.materials.material_stone = 5 * nextLevel;
+    cost.materials.material_iron_ore = 3 * nextLevel;
+  } else if (mat === "steel") {
+    cost.gold = 150 * nextLevel;
+    cost.materials.material_stone = 10 * nextLevel;
+    cost.materials.material_steel_ingot = 3 * nextLevel;
+  } else if (mat === "gold") {
+    cost.gold = 300 * nextLevel;
+    cost.materials.material_stone = 15 * nextLevel;
+  } else if (mat === "mythril") {
+    cost.gold = 500 * nextLevel;
+    cost.materials.material_mythril = 2 * nextLevel;
+  }
+  return cost;
+}
+class CombatView {
+  constructor({ i18n: i18n2 }) {
+    this.i18n = i18n2;
+    this.engine = null;
+    this.adapter = null;
+    this.lastState = null;
+    this.isCombatOverlayOpen = false;
+    this.lastLogLength = 0;
+    this.renderCombatOverlay = null;
+    this.overlay = null;
+    this.onCombatComplete = null;
+  }
+  t(key, opts) {
+    return this.i18n.t(key, opts);
+  }
+  update(state) {
+    this.lastState = state;
+    if (state.activeBattle && !this.isCombatOverlayOpen) {
+      this.openCombatOverlay(state.activeBattle);
+    }
+    if (this.isCombatOverlayOpen && this.renderCombatOverlay) {
+      this.renderCombatOverlay();
+    }
+  }
+  playBattleLog(combatLog, onComplete) {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;";
+    const content = document.createElement("div");
+    content.style.cssText = "max-width:600px;width:90%;text-align:center;";
+    const title = document.createElement("h2");
+    title.textContent = this.t("combat.battle_log");
+    title.style.marginBottom = "16px";
+    content.appendChild(title);
+    const logContainer = document.createElement("div");
+    logContainer.style.cssText = "min-height:120px;margin-bottom:16px;text-align:left;";
+    content.appendChild(logContainer);
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index >= combatLog.length) {
+        clearInterval(interval);
+        const summary = document.createElement("div");
+        summary.style.cssText = "margin-top:12px;font-weight:bold;color:#ffd700;";
+        summary.textContent = this.t("combat.battle_finished");
+        content.appendChild(summary);
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = this.t("ui.close");
+        closeBtn.style.cssText = "margin-top:16px;padding:8px 24px;font-size:1rem;cursor:pointer;";
+        closeBtn.addEventListener("click", () => {
+          overlay.remove();
+          if (onComplete) onComplete();
+        });
+        content.appendChild(closeBtn);
+        return;
+      }
+      const entry = document.createElement("div");
+      entry.textContent = combatLog[index];
+      entry.style.cssText = "margin-bottom:4px;opacity:0;transition:opacity 0.3s;";
+      logContainer.appendChild(entry);
+      requestAnimationFrame(() => {
+        entry.style.opacity = "1";
+      });
+      index++;
+    }, 600);
+  }
+  openCombatOverlay(battleContext, onComplete) {
+    this.isCombatOverlayOpen = true;
+    this.onCombatComplete = onComplete;
+    const overlay = document.createElement("div");
+    overlay.id = "combat-overlay";
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;overflow:auto;";
+    const container = document.createElement("div");
+    container.style.cssText = "width:95%;max-width:1100px;display:flex;flex-direction:column;gap:12px;";
+    overlay.appendChild(container);
+    document.body.appendChild(overlay);
+    this.overlay = overlay;
+    const render = () => {
+      container.innerHTML = "";
+      const battle = this.lastState && this.lastState.activeBattle;
+      if (!battle) {
+        overlay.remove();
+        this.isCombatOverlayOpen = false;
+        this.renderCombatOverlay = null;
+        this.overlay = null;
+        if (this.onCombatComplete) this.onCombatComplete();
+        return;
+      }
+      const header = document.createElement("div");
+      header.style.cssText = "display:flex;justify-content:space-between;align-items:center;";
+      const title = document.createElement("h2");
+      title.textContent = this.t("combat.battle_title");
+      header.appendChild(title);
+      const controls = document.createElement("div");
+      controls.style.cssText = "display:flex;gap:8px;";
+      const autoBtn = document.createElement("button");
+      autoBtn.textContent = this.t("combat.auto");
+      autoBtn.style.cssText = "padding:4px 12px;cursor:pointer;";
+      autoBtn.addEventListener("click", () => {
+        if (this.engine && this.engine.executeBattleAction) {
+          this.engine.executeBattleAction("auto");
+        }
+      });
+      controls.appendChild(autoBtn);
+      const skipBtn = document.createElement("button");
+      skipBtn.textContent = this.t("combat.skip");
+      skipBtn.style.cssText = "padding:4px 12px;cursor:pointer;";
+      skipBtn.addEventListener("click", () => {
+        if (this.engine && this.engine.executeBattleAction) {
+          this.engine.executeBattleAction("skip");
+        }
+      });
+      controls.appendChild(skipBtn);
+      header.appendChild(controls);
+      container.appendChild(header);
+      if (battle.resolved) {
+        this._renderBattleResolution(battle, container);
+        this._animateLastEvents(battle);
+        return;
+      }
+      const columns = document.createElement("div");
+      columns.style.cssText = "display:flex;gap:12px;flex-wrap:wrap;";
+      const heroesCol = document.createElement("div");
+      heroesCol.style.cssText = "flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;";
+      const heroesTitle = document.createElement("h3");
+      heroesTitle.textContent = this.t("combat.heroes");
+      heroesCol.appendChild(heroesTitle);
+      (battle.heroes || []).forEach((hero) => {
+        const card = document.createElement("div");
+        card.dataset.heroId = hero.id;
+        card.style.cssText = "background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;";
+        const name = document.createElement("div");
+        name.style.fontWeight = "bold";
+        name.textContent = hero.name;
+        card.appendChild(name);
+        const hpBar = document.createElement("div");
+        hpBar.style.cssText = "height:8px;background:#333;border-radius:4px;margin-top:4px;overflow:hidden;";
+        const hpFill = document.createElement("div");
+        const hpPct = hero.maxHp ? hero.hp / hero.maxHp * 100 : 0;
+        hpFill.style.cssText = `height:100%;width:${hpPct}%;background:${hpPct > 50 ? "#4caf50" : hpPct > 25 ? "#ff9800" : "#f44336"};transition:width 0.3s;`;
+        hpBar.appendChild(hpFill);
+        card.appendChild(hpBar);
+        const hpText = document.createElement("div");
+        hpText.style.cssText = "font-size:0.75rem;margin-top:2px;";
+        hpText.textContent = `${hero.hp}/${hero.maxHp} HP`;
+        card.appendChild(hpText);
+        if (hero.maxMp > 0) {
+          const mpBar = document.createElement("div");
+          mpBar.style.cssText = "height:6px;background:#333;border-radius:3px;margin-top:4px;overflow:hidden;";
+          const mpFill = document.createElement("div");
+          const mpPct = hero.maxMp ? hero.mp / hero.maxMp * 100 : 0;
+          mpFill.style.cssText = `height:100%;width:${mpPct}%;background:#2196f3;transition:width 0.3s;`;
+          mpBar.appendChild(mpFill);
+          card.appendChild(mpBar);
+          const mpText = document.createElement("div");
+          mpText.style.cssText = "font-size:0.75rem;margin-top:2px;";
+          mpText.textContent = `${hero.mp}/${hero.maxMp} MP`;
+          card.appendChild(mpText);
+        }
+        heroesCol.appendChild(card);
+      });
+      columns.appendChild(heroesCol);
+      const centerCol = document.createElement("div");
+      centerCol.style.cssText = "flex:1.5;min-width:280px;display:flex;flex-direction:column;gap:8px;";
+      const logTitle = document.createElement("h3");
+      logTitle.textContent = this.t("combat.log");
+      centerCol.appendChild(logTitle);
+      const logBox = document.createElement("div");
+      logBox.id = "combat-log-box";
+      logBox.style.cssText = "background:rgba(0,0,0,0.4);border-radius:6px;padding:8px;max-height:180px;overflow-y:auto;font-size:0.85rem;flex:1;";
+      (battle.log || []).forEach((entry) => {
+        const line = document.createElement("div");
+        line.textContent = entry;
+        line.style.cssText = "margin-bottom:2px;";
+        logBox.appendChild(line);
+      });
+      centerCol.appendChild(logBox);
+      const actionsBox = document.createElement("div");
+      actionsBox.style.cssText = "background:rgba(255,255,255,0.05);border-radius:6px;padding:10px;";
+      {
+        this._renderMainMenu(actionsBox, () => render());
+      }
+      centerCol.appendChild(actionsBox);
+      columns.appendChild(centerCol);
+      const enemiesCol = document.createElement("div");
+      enemiesCol.style.cssText = "flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;";
+      const enemiesTitle = document.createElement("h3");
+      enemiesTitle.textContent = this.t("combat.enemies");
+      enemiesCol.appendChild(enemiesTitle);
+      (battle.enemies || []).forEach((enemy) => {
+        const card = document.createElement("div");
+        card.dataset.enemyId = enemy.id;
+        card.style.cssText = "background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;";
+        const name = document.createElement("div");
+        name.style.fontWeight = "bold";
+        name.textContent = enemy.name;
+        card.appendChild(name);
+        const hpBar = document.createElement("div");
+        hpBar.style.cssText = "height:8px;background:#333;border-radius:4px;margin-top:4px;overflow:hidden;";
+        const hpFill = document.createElement("div");
+        const hpPct = enemy.maxHp ? enemy.hp / enemy.maxHp * 100 : 0;
+        hpFill.style.cssText = `height:100%;width:${hpPct}%;background:${hpPct > 50 ? "#4caf50" : hpPct > 25 ? "#ff9800" : "#f44336"};transition:width 0.3s;`;
+        hpBar.appendChild(hpFill);
+        card.appendChild(hpBar);
+        const hpText = document.createElement("div");
+        hpText.style.cssText = "font-size:0.75rem;margin-top:2px;";
+        hpText.textContent = `${enemy.hp}/${enemy.maxHp} HP`;
+        card.appendChild(hpText);
+        enemiesCol.appendChild(card);
+      });
+      columns.appendChild(enemiesCol);
+      container.appendChild(columns);
+      this._animateLastEvents(battle);
+    };
+    this.renderCombatOverlay = render;
+    render();
+  }
+  _renderBattleResolution(battle, container) {
+    const resolution = document.createElement("div");
+    resolution.style.cssText = "text-align:center;padding:20px;background:rgba(255,255,255,0.1);border-radius:8px;";
+    const resultTitle = document.createElement("h2");
+    resultTitle.textContent = battle.victory ? this.t("combat.victory") : this.t("combat.defeat");
+    resultTitle.style.color = battle.victory ? "#4caf50" : "#f44336";
+    resolution.appendChild(resultTitle);
+    if (battle.rewards) {
+      const rewardsDiv = document.createElement("div");
+      rewardsDiv.style.cssText = "margin-top:12px;";
+      const rewardsTitle = document.createElement("h3");
+      rewardsTitle.textContent = this.t("combat.rewards");
+      rewardsDiv.appendChild(rewardsTitle);
+      if (battle.rewards.xp) {
+        const xpLine = document.createElement("div");
+        xpLine.textContent = this.t("combat.xp_reward", { xp: battle.rewards.xp });
+        rewardsDiv.appendChild(xpLine);
+      }
+      if (battle.rewards.gold) {
+        const goldLine = document.createElement("div");
+        goldLine.textContent = this.t("combat.gold_reward", { gold: battle.rewards.gold });
+        rewardsDiv.appendChild(goldLine);
+      }
+      if (battle.rewards.items && battle.rewards.items.length) {
+        const itemsLine = document.createElement("div");
+        itemsLine.textContent = this.t("combat.items_reward", { items: battle.rewards.items.join(", ") });
+        rewardsDiv.appendChild(itemsLine);
+      }
+      resolution.appendChild(rewardsDiv);
+    }
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = this.t("ui.close");
+    closeBtn.style.cssText = "margin-top:16px;padding:8px 24px;font-size:1rem;cursor:pointer;";
+    closeBtn.addEventListener("click", () => {
+      if (this.overlay) this.overlay.remove();
+      this.isCombatOverlayOpen = false;
+      this.renderCombatOverlay = null;
+      this.overlay = null;
+      if (this.onCombatComplete) this.onCombatComplete();
+    });
+    resolution.appendChild(closeBtn);
+    container.appendChild(resolution);
+  }
+  _renderMainMenu(actionsBox, rerender) {
+    const menu = document.createElement("div");
+    menu.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;";
+    const attackBtn = document.createElement("button");
+    attackBtn.textContent = this.t("combat.attack");
+    attackBtn.style.cssText = "flex:1;min-width:80px;padding:8px;cursor:pointer;";
+    attackBtn.addEventListener("click", () => {
+      if (this.engine && this.engine.executeBattleAction) {
+        this.engine.executeBattleAction("attack");
+      }
+      rerender();
+    });
+    menu.appendChild(attackBtn);
+    const skillsBtn = document.createElement("button");
+    skillsBtn.textContent = this.t("combat.skills");
+    skillsBtn.style.cssText = "flex:1;min-width:80px;padding:8px;cursor:pointer;";
+    skillsBtn.addEventListener("click", () => {
+      const event = new CustomEvent("combat-menu-change", { detail: { menu: "skills" } });
+      document.dispatchEvent(event);
+    });
+    menu.appendChild(skillsBtn);
+    const itemsBtn = document.createElement("button");
+    itemsBtn.textContent = this.t("combat.items");
+    itemsBtn.style.cssText = "flex:1;min-width:80px;padding:8px;cursor:pointer;";
+    itemsBtn.addEventListener("click", () => {
+      const event = new CustomEvent("combat-menu-change", { detail: { menu: "items" } });
+      document.dispatchEvent(event);
+    });
+    menu.appendChild(itemsBtn);
+    actionsBox.appendChild(menu);
+    document.addEventListener("combat-menu-change", (e) => {
+    }, { once: true });
+  }
+  _renderSkillsMenu(actionsBox, battle, onSelect, onBack) {
+    const currentHero = battle.heroes && battle.heroes[battle.currentHeroIndex || 0];
+    const skills = currentHero && currentHero.skills ? currentHero.skills : [];
+    const menu = document.createElement("div");
+    menu.style.cssText = "display:flex;flex-direction:column;gap:6px;";
+    const title = document.createElement("div");
+    title.style.fontWeight = "bold";
+    title.textContent = this.t("combat.select_skill");
+    menu.appendChild(title);
+    skills.forEach((skillId) => {
+      const skillData = SKILLS_DATA[skillId];
+      const mpCost = skillData ? skillData.mpCost : 0;
+      const btn = document.createElement("button");
+      btn.textContent = `${skillData ? skillData.name : skillId} (${mpCost} MP)`;
+      btn.style.cssText = "padding:6px;cursor:pointer;text-align:left;";
+      const canUse = currentHero && currentHero.mp >= mpCost;
+      if (!canUse) {
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+      }
+      btn.addEventListener("click", () => {
+        if (canUse) onSelect(skillId);
+      });
+      menu.appendChild(btn);
+    });
+    const backBtn = document.createElement("button");
+    backBtn.textContent = this.t("ui.back");
+    backBtn.style.cssText = "padding:6px;cursor:pointer;";
+    backBtn.addEventListener("click", onBack);
+    menu.appendChild(backBtn);
+    actionsBox.appendChild(menu);
+  }
+  _renderItemsMenu(actionsBox, onSelect, onBack) {
+    const inventory = this.lastState && this.lastState.inventory ? this.lastState.inventory : {};
+    const consumables = Object.entries(inventory).filter(([_, item]) => item && item.type === "consumable");
+    const menu = document.createElement("div");
+    menu.style.cssText = "display:flex;flex-direction:column;gap:6px;";
+    const title = document.createElement("div");
+    title.style.fontWeight = "bold";
+    title.textContent = this.t("combat.select_item");
+    menu.appendChild(title);
+    if (consumables.length === 0) {
+      const none = document.createElement("div");
+      none.style.cssText = "opacity:0.6;";
+      none.textContent = this.t("combat.no_items");
+      menu.appendChild(none);
+    }
+    consumables.forEach(([itemId, item]) => {
+      const btn = document.createElement("button");
+      btn.textContent = `${item.name || itemId} x${item.quantity || 1}`;
+      btn.style.cssText = "padding:6px;cursor:pointer;text-align:left;";
+      btn.addEventListener("click", () => onSelect(itemId));
+      menu.appendChild(btn);
+    });
+    const backBtn = document.createElement("button");
+    backBtn.textContent = this.t("ui.back");
+    backBtn.style.cssText = "padding:6px;cursor:pointer;";
+    backBtn.addEventListener("click", onBack);
+    menu.appendChild(backBtn);
+    actionsBox.appendChild(menu);
+  }
+  _renderTargeting(actionsBox, battle, targetMode, onSelect, onBack) {
+    const menu = document.createElement("div");
+    menu.style.cssText = "display:flex;flex-direction:column;gap:6px;";
+    const title = document.createElement("div");
+    title.style.fontWeight = "bold";
+    title.textContent = targetMode === "friendly" ? this.t("combat.select_ally") : this.t("combat.select_enemy");
+    menu.appendChild(title);
+    const targets = targetMode === "friendly" ? battle.heroes || [] : battle.enemies || [];
+    targets.forEach((target) => {
+      const btn = document.createElement("button");
+      btn.textContent = target.name;
+      btn.style.cssText = "padding:6px;cursor:pointer;text-align:left;";
+      btn.addEventListener("click", () => onSelect(target.id));
+      menu.appendChild(btn);
+    });
+    const backBtn = document.createElement("button");
+    backBtn.textContent = this.t("ui.back");
+    backBtn.style.cssText = "padding:6px;cursor:pointer;";
+    backBtn.addEventListener("click", onBack);
+    menu.appendChild(backBtn);
+    actionsBox.appendChild(menu);
+  }
+  _executeTargetAction(skillId, itemId, targetId) {
+    if (skillId && this.engine && this.engine.executeBattleAction) {
+      this.engine.executeBattleAction("skill", { skillId, targetId });
+    } else if (itemId && this.engine && this.engine.useBattleConsumable) {
+      this.engine.useBattleConsumable(itemId, targetId);
+    }
+  }
+  _animateLastEvents(battle) {
+    const log = battle.log || [];
+    const newEvents = log.slice(this.lastLogLength);
+    this.lastLogLength = log.length;
+    newEvents.forEach((entry, idx) => {
+      setTimeout(() => {
+        this._triggerVisualEffect(entry, battle);
+      }, idx * 200);
+    });
+  }
+  _triggerVisualEffect(entry, battle) {
+    const damageMatch = entry.match(/(\d+)\s*damage/i);
+    const healMatch = entry.match(/(\d+)\s*HP/i);
+    const targetNameMatch = entry.match(/^([^\s]+)/);
+    const value = damageMatch ? parseInt(damageMatch[1], 10) : healMatch ? parseInt(healMatch[1], 10) : null;
+    const isHeal = !!healMatch;
+    if (!value || !targetNameMatch) return;
+    const targetName = targetNameMatch[1];
+    let card = null;
+    const overlay = document.getElementById("combat-overlay");
+    if (!overlay) return;
+    const cards = overlay.querySelectorAll("[data-hero-id], [data-enemy-id]");
+    cards.forEach((c) => {
+      const nameEl = c.querySelector("div:first-child");
+      if (nameEl && nameEl.textContent === targetName) {
+        card = c;
+      }
+    });
+    if (!card) return;
+    const float = document.createElement("div");
+    float.textContent = isHeal ? `+${value}` : `-${value}`;
+    float.style.cssText = `position:absolute;top:20%;left:50%;transform:translateX(-50%);font-weight:bold;font-size:1.4rem;color:${isHeal ? "#4caf50" : "#f44336"};pointer-events:none;z-index:10;transition:top 1s,opacity 1s;`;
+    card.appendChild(float);
+    requestAnimationFrame(() => {
+      float.style.top = "-10%";
+      float.style.opacity = "0";
+    });
+    setTimeout(() => float.remove(), 1e3);
+    card.style.transform = "translateX(-4px)";
+    setTimeout(() => {
+      card.style.transform = "translateX(4px)";
+    }, 50);
+    setTimeout(() => {
+      card.style.transform = "translateX(-4px)";
+    }, 100);
+    setTimeout(() => {
+      card.style.transform = "translateX(4px)";
+    }, 150);
+    setTimeout(() => {
+      card.style.transform = "translateX(0)";
+    }, 200);
+  }
+}
+class UIController {
+  constructor(i18n2) {
+    this.i18n = i18n2;
+    this.elements = {
+      mainContent: document.getElementById("main-content"),
+      loader: document.getElementById("main-loader"),
+      goldCount: document.getElementById("gold-count"),
+      villagerCount: document.getElementById("villager-count"),
+      woodCount: document.getElementById("wood-count"),
+      globalDay: document.getElementById("global-day"),
+      navItems: document.querySelectorAll(".nav-item"),
+      shopNav: document.querySelector('.nav-item[data-view="shop"]'),
+      forgeNav: document.querySelector('.nav-item[data-view="forge"]')
+    };
+    this.isShopUnlocked = false;
+    this.isForgeUnlocked = false;
+    this.lastState = null;
+    this.combatView = new CombatView({ i18n: this.i18n });
+    this.views = /* @__PURE__ */ new Map();
+    this.activeView = null;
+    this.activeDomain = null;
+    this.setupEventListeners();
+    this.translateView(document.body);
+  }
+  /**
+   * Registers a view controller for a specific domain.
+   */
+  registerView(domain, viewController) {
+    viewController.ui = this;
+    this.views.set(domain, viewController);
+  }
+  setupEventListeners() {
+    this.elements.navItems.forEach((item) => {
+      item.addEventListener("click", () => {
+        const domain = item.getAttribute("data-view");
+        if (domain === "shop" && !this.isShopUnlocked) return;
+        if (domain === "forge" && !this.isForgeUnlocked) return;
+        this.switchView(domain);
+      });
+    });
+  }
+  /**
+   * Transitions to a new domain view.
+   */
+  async switchView(domain) {
+    if (domain === "shop" && !this.isShopUnlocked) return;
+    if (domain === "forge" && !this.isForgeUnlocked) return;
+    if (this.activeDomain === domain) return;
+    console.log(`Switching to domain: ${domain}`);
+    this.elements.navItems.forEach((item) => {
+      if (item.getAttribute("data-view") === domain) {
+        item.classList.add("active");
+      } else {
+        item.classList.remove("active");
+      }
+    });
+    this.elements.loader.style.display = "flex";
+    try {
+      const template = document.getElementById(`tpl-${domain}`);
+      if (!template) throw new Error(`Template not found: tpl-${domain}`);
+      const content = template.content.cloneNode(true);
+      this.elements.mainContent.innerHTML = "";
+      this.elements.mainContent.appendChild(content);
+      this.translateView(this.elements.mainContent);
+      this.activeDomain = domain;
+      this.activeView = this.views.get(domain);
+      if (this.activeView) {
+        this.activeView.mount(this.elements.mainContent.querySelector(".domain-view"), this);
+      }
+    } catch (error) {
+      console.error(error);
+      this.elements.mainContent.innerHTML = `<div class="error-state">Error loading view: ${domain}</div>`;
+    } finally {
+      setTimeout(() => {
+        this.elements.loader.style.display = "none";
+      }, 50);
+    }
+  }
+  /**
+   * Scans a container for elements with data-i18n and translates them.
+   */
+  translateView(container) {
+    if (!this.i18n) return;
+    const elements = container.querySelectorAll("[data-i18n]");
+    elements.forEach((el) => this.translateElement(el));
+  }
+  /**
+   * Translates a single element based on its data-i18n attribute.
+   */
+  translateElement(element) {
+    const key = element.getAttribute("data-i18n");
+    if (key) {
+      element.textContent = this.t(key);
+    }
+  }
+  /**
+   * Helper to get translated string.
+   */
+  t(key) {
+    return this.i18n ? this.i18n.t(key) : key;
+  }
+  /**
+   * Changes the current language and re-translates the entire UI.
+   */
+  setLanguage(lang) {
+    if (this.i18n.setLanguage(lang)) {
+      this.translateView(document.body);
+      if (this.lastState) {
+        this.updateNavLocks(this.lastState);
+      }
+      return true;
+    }
+    return false;
+  }
+  updateNavLocks(state) {
+    var _a, _b;
+    const completed = state.completedExpeditions || [];
+    this.isShopUnlocked = completed.includes("exp_tutorial_cave");
+    const blacksmithLvl = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
+    this.isForgeUnlocked = blacksmithLvl >= 1;
+    if (this.elements.shopNav) {
+      const iconEl = this.elements.shopNav.querySelector(".nav-icon");
+      const labelEl = this.elements.shopNav.querySelector(".nav-label");
+      if (this.isShopUnlocked) {
+        this.elements.shopNav.classList.remove("nav-locked");
+        if (iconEl) iconEl.textContent = "🛒";
+        if (labelEl) {
+          labelEl.textContent = this.t("nav_shop");
+          labelEl.setAttribute("data-i18n", "nav_shop");
+        }
+      } else {
+        this.elements.shopNav.classList.add("nav-locked");
+        if (iconEl) iconEl.textContent = "🔒";
+        if (labelEl) {
+          labelEl.textContent = "???";
+          labelEl.removeAttribute("data-i18n");
+        }
+      }
+    }
+    if (this.elements.forgeNav) {
+      const iconEl = this.elements.forgeNav.querySelector(".nav-icon");
+      const labelEl = this.elements.forgeNav.querySelector(".nav-label");
+      if (this.isForgeUnlocked) {
+        this.elements.forgeNav.classList.remove("nav-locked");
+        if (iconEl) iconEl.textContent = "🔥";
+        if (labelEl) {
+          labelEl.textContent = this.t("nav_forge");
+          labelEl.setAttribute("data-i18n", "nav_forge");
+        }
+      } else {
+        this.elements.forgeNav.classList.add("nav-locked");
+        if (iconEl) iconEl.textContent = "🔒";
+        if (labelEl) {
+          labelEl.textContent = "???";
+          labelEl.removeAttribute("data-i18n");
+        }
+      }
+    }
+  }
+  /**
+   * Updates the global shell stats and the active view.
+   */
+  update(state) {
+    var _a, _b;
+    this.lastState = state;
+    this.updateNavLocks(state);
+    if (state.village) {
+      if (this.elements.globalDay) this.elements.globalDay.textContent = state.village.day || 1;
+      if (this.elements.goldCount) this.elements.goldCount.textContent = Math.floor(state.village.gold || 0);
+      if (this.elements.villagerCount) {
+        this.elements.villagerCount.textContent = ((_a = state.village.population) == null ? void 0 : _a.total) || 0;
+      }
+      if (this.elements.woodCount && state.inventory) {
+        this.elements.woodCount.textContent = ((_b = state.inventory.materials) == null ? void 0 : _b.material_wood) || 0;
+      }
+    }
+    this.combatView.update(state);
+    if (this.activeView) {
+      this.activeView.update(state);
+    }
+  }
+  // Compatibility method for current main.js
+  onInitialize(callback) {
+    this.initCallback = callback;
+  }
+  /**
+   * Displays the introductory narrative modal.
+   */
+  showIntroDialog() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    document.body.appendChild(overlay);
+    const slides = [
+      {
+        image: "assets/story/prologue_1.png",
+        titleKey: "prologue_title_1",
+        loreKey: "prologue_lore_1"
+      },
+      {
+        image: "assets/story/prologue_2.png",
+        titleKey: "prologue_title_2",
+        loreKey: "prologue_lore_2"
+      },
+      {
+        image: "assets/story/prologue_3.png",
+        titleKey: "prologue_title_3",
+        loreKey: "prologue_lore_3"
+      }
+    ];
+    let currentSlide = 0;
+    const renderSlide = () => {
+      const slide = slides[currentSlide];
+      overlay.innerHTML = `
+                <div class="intro-modal story-slideshow">
+                    <div class="prologue-illustration-container">
+                        <img class="prologue-illustration-img" src="${slide.image}" alt="Prologue Illustration">
+                    </div>
+                    <div class="prologue-text-container">
+                        <h2 data-i18n="${slide.titleKey}">${this.t(slide.titleKey)}</h2>
+                        <p data-i18n="${slide.loreKey}">${this.t(slide.loreKey)}</p>
+                    </div>
+                    <div class="prologue-controls">
+                        <button class="btn btn-secondary btn-sm" id="btn-prologue-back" ${currentSlide === 0 ? 'style="visibility: hidden;"' : ""}>
+                            <span data-i18n="prologue_btn_back">${this.t("prologue_btn_back")}</span>
+                        </button>
+                        <div class="prologue-dots">
+                            ${slides.map((_, i) => `<span class="prologue-dot ${i === currentSlide ? "active" : ""}"></span>`).join("")}
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="btn-prologue-next">
+                            <span data-i18n="${currentSlide === slides.length - 1 ? "intro_btn" : "prologue_btn_next"}">
+                                ${currentSlide === slides.length - 1 ? this.t("intro_btn") : this.t("prologue_btn_next")}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            `;
+      const backBtn = overlay.querySelector("#btn-prologue-back");
+      if (backBtn && currentSlide > 0) {
+        backBtn.addEventListener("click", () => {
+          currentSlide--;
+          renderSlide();
+        });
+      }
+      const nextBtn = overlay.querySelector("#btn-prologue-next");
+      if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+          if (currentSlide < slides.length - 1) {
+            currentSlide++;
+            renderSlide();
+          } else {
+            overlay.style.opacity = "0";
+            overlay.style.transition = "opacity 0.5s ease";
+            setTimeout(() => {
+              overlay.remove();
+            }, 500);
+          }
+        });
+      }
+    };
+    renderSlide();
+  }
+  /**
+   * Displays a generic confirmation dialog.
+   */
+  showConfirmDialog({ title, message, onConfirm }) {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+            <div class="modal-body">
+                <div class="modal-header">
+                    <h3 data-i18n="${title}">${this.t(title)}</h3>
+                </div>
+                <div class="modal-text">
+                    <p data-i18n="${message}">${this.t(message)}</p>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="modal-btn-cancel">
+                        <span data-i18n="ui_btn_cancel">${this.t("ui_btn_cancel")}</span>
+                    </button>
+                    <button class="btn btn-danger" id="modal-btn-confirm">
+                        <span data-i18n="ui_btn_confirm">${this.t("ui_btn_confirm")}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.3s ease";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    overlay.querySelector("#modal-btn-cancel").addEventListener("click", close);
+    overlay.querySelector("#modal-btn-confirm").addEventListener("click", () => {
+      close();
+      if (onConfirm) onConfirm();
+    });
+  }
+  /**
+   * Displays a transient in-game toast notification.
+   * @param {string} message  Translated message text to show.
+   * @param {'error'|'success'|'info'} type  Visual style. Defaults to 'error'.
+   * @param {number} duration  Auto-dismiss delay in ms. Defaults to 3500.
+   */
+  showToast(message, type = "error", duration = 3500) {
+    let container = document.getElementById("game-toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "game-toast-container";
+      container.className = "game-toast-container";
+      document.body.appendChild(container);
+    }
+    const icons = { error: "⚠️", success: "✅", info: "ℹ️" };
+    const toast = document.createElement("div");
+    toast.className = `game-toast toast-${type}`;
+    toast.innerHTML = `<span class="toast-icon">${icons[type] || "⚠️"}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add("toast-out");
+      setTimeout(() => toast.remove(), 400);
+    }, duration);
+  }
+  /**
+   * Plays the battle log in a full-screen overlay dynamically imitating a turn-based combat log.
+   */
+  // --- Combat UI Proxies (implementation in CombatView.js) ---
+  get isCombatOverlayOpen() {
+    return this.combatView.isCombatOverlayOpen;
+  }
+  set isCombatOverlayOpen(v) {
+    this.combatView.isCombatOverlayOpen = v;
+  }
+  get renderCombatOverlay() {
+    return this.combatView.renderCombatOverlay;
+  }
+  set renderCombatOverlay(v) {
+    this.combatView.renderCombatOverlay = v;
+  }
+  playBattleLog(combatLog, onComplete) {
+    return this.combatView.playBattleLog(combatLog, onComplete);
+  }
+  openCombatOverlay(battleContext, onComplete) {
+    return this.combatView.openCombatOverlay(battleContext, onComplete);
+  }
+  // NOTE: Original playBattleLog (~145 lines) and openCombatOverlay (~597 lines)
+  // have been extracted to src/rpg-village/js/presentation/ui/combat/CombatView.js
+  forceUpdate() {
+    if (this.adapter) {
+      this.adapter.forceUpdate();
+    }
+  }
+}
+class Result {
+  constructor(success, data = null, error = null, context = {}) {
+    this.success = success;
+    this.data = data;
+    this.error = error;
+    this.context = context;
+  }
+  static ok(data = null) {
+    return new Result(true, data);
+  }
+  static fail(error, context = {}) {
+    return new Result(false, null, error, context);
+  }
+}
 class Hero {
   constructor(data) {
     this.id = data.id || crypto.randomUUID();
@@ -1377,12 +1204,12 @@ class Hero {
     this.statPoints = data.statPoints !== void 0 ? data.statPoints : 5;
     this.skillPoints = data.skillPoints || 0;
     this.avatar = data.avatar || null;
-    this.baseMaxHp = data.baseMaxHp || 10;
-    this.baseMaxMp = data.baseMaxMp || 5;
-    this.baseStrength = data.baseStrength || 1;
-    this.baseSpeed = data.baseSpeed || 1;
-    this.baseDefense = data.baseDefense || 1;
-    this.baseMagicPower = data.baseMagicPower || 1;
+    this.baseMaxHp = data.baseMaxHp || 30;
+    this.baseMaxMp = data.baseMaxMp || 15;
+    this.baseStrength = data.baseStrength || 8;
+    this.baseSpeed = data.baseSpeed || 4;
+    this.baseDefense = data.baseDefense || 4;
+    this.baseMagicPower = data.baseMagicPower || 4;
     this.hp = data.hp ?? this.baseMaxHp;
     this.mp = data.mp ?? this.baseMaxMp;
     this.status = data.status || "resting";
@@ -2402,8 +2229,8 @@ class VillageService {
       gold: 100,
       population: {
         total: 2,
-        // 2 Builders
-        assigned: 0
+        assigned: 0,
+        builders: 2
       },
       infrastructure: {
         housing: 1,
@@ -2423,8 +2250,12 @@ class VillageService {
     if (typeof loaded.population === "number") {
       loaded.population = {
         total: loaded.population,
-        assigned: 0
+        assigned: 0,
+        builders: loaded.population
       };
+    }
+    if (loaded.population && loaded.population.builders === void 0) {
+      loaded.population.builders = loaded.population.total;
     }
     if (loaded.population && loaded.population.max !== void 0) {
       delete loaded.population.max;
@@ -2439,7 +2270,8 @@ class VillageService {
       ...this.state,
       population: {
         ...this.state.population,
-        max: this.getMaxPopulation()
+        max: this.getMaxPopulation(),
+        availableBuilders: Math.max(0, this.state.population.builders - this.state.population.assigned)
       },
       maxStorage: this.getMaxStorage()
     };
@@ -2518,11 +2350,11 @@ class VillageService {
       return Result.fail("error_already_in_queue");
     }
     if (this.state.gold < costGold) return Result.fail("error_not_enough_gold");
-    if (this.state.population.total - this.state.population.assigned <= 0) {
-      return Result.fail("error_no_available_labor");
+    if (this.state.population.builders - this.state.population.assigned <= 0) {
+      return Result.fail("error_no_available_builders");
     }
     for (const [matId, amount] of Object.entries(costMaterials)) {
-      if (this.inventoryService.getConsumableCount(matId) < amount) {
+      if (this.inventoryService.getItemCount(matId) < amount) {
         return Result.fail("error_not_enough_materials");
       }
     }
@@ -2553,7 +2385,21 @@ class VillageService {
   }
   addVillagers(amount) {
     this.state.population.total += amount;
+    this.state.population.builders = Math.min(this.state.population.total, this.state.population.builders + amount);
     this.save();
+  }
+  setBuilders(count) {
+    const total = this.state.population.total;
+    const assigned = this.state.population.assigned;
+    if (count < 0 || count > total) {
+      return Result.fail("error_invalid_builder_count");
+    }
+    if (count < assigned) {
+      return Result.fail("error_builders_below_assigned");
+    }
+    this.state.population.builders = count;
+    this.save();
+    return Result.ok();
   }
 }
 class Enemy {
@@ -2607,7 +2453,9 @@ class ExpeditionService {
   _load() {
     const defaultState = {
       completedIds: [],
-      activeExpedition: null,
+      activeExpeditions: [],
+      expeditionTurnIndex: 0,
+      activeCombatExpeditionId: null,
       regions: {
         reg_greenfields: {
           clears: 0,
@@ -2628,10 +2476,22 @@ class ExpeditionService {
         }
       }
     };
-    return persistence.load(this.STORAGE_KEY, defaultState);
+    const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+    if (loaded.activeExpedition && !loaded.activeExpeditions) {
+      loaded.activeExpeditions = [loaded.activeExpedition];
+      loaded.activeCombatExpeditionId = loaded.activeExpedition.id;
+      delete loaded.activeExpedition;
+    }
+    if (!loaded.activeExpeditions) loaded.activeExpeditions = [];
+    if (loaded.expeditionTurnIndex === void 0) loaded.expeditionTurnIndex = 0;
+    return loaded;
   }
   save() {
     persistence.save(this.STORAGE_KEY, this.state);
+  }
+  getMaxConcurrentExpeditions() {
+    const explorerGuildLevel = this.villageService.getState().infrastructure.explorer_guild || 0;
+    return 1 + explorerGuildLevel;
   }
   /**
    * Returns the list of all expeditions across all unlocked regions.
@@ -2652,9 +2512,9 @@ class ExpeditionService {
    */
   _getRegionData(regionId) {
     const REGIONS = {
-      reg_greenfields: { name: "Greenfields", branching: "low", minStages: 1, maxStages: 2, enemies: ["slime_green", "wild_boar"] },
-      reg_tiny_cave: { name: "Tiny Cave", branching: "medium", minStages: 2, maxStages: 2, enemies: ["bat_small", "spider_minor"] },
-      reg_calmed_beach: { name: "Calmed Beach", branching: "low", minStages: 3, maxStages: 3, enemies: ["crab_shell", "water_spirit_minor"] }
+      reg_greenfields: { name: "Greenfields", branching: "low", minStages: 1, maxStages: 2, enemies: ["slime_green", "wild_boar"], baseLevel: 1 },
+      reg_tiny_cave: { name: "Tiny Cave", branching: "medium", minStages: 2, maxStages: 2, enemies: ["bat_small", "spider_minor"], baseLevel: 2 },
+      reg_calmed_beach: { name: "Calmed Beach", branching: "low", minStages: 3, maxStages: 3, enemies: ["crab_shell", "water_spirit_minor"], baseLevel: 2 }
     };
     return REGIONS[regionId] || REGIONS["reg_greenfields"];
   }
@@ -2699,7 +2559,12 @@ class ExpeditionService {
   }
   _createProceduralNode(regionId, rData, clears) {
     const id = "proc_" + crypto.randomUUID().split("-")[0];
-    const stagesCount = Math.max(rData.minStages, Math.min(rData.maxStages, rData.minStages + Math.floor(clears / 5)));
+    let stagesCount = Math.max(rData.minStages, Math.min(rData.maxStages, rData.minStages + Math.floor(clears / 5)));
+    const explorerGuildLevel = this.villageService.getState().infrastructure.explorer_guild || 0;
+    if (explorerGuildLevel > 0) {
+      stagesCount = Math.max(1, Math.ceil(stagesCount * (1 - explorerGuildLevel * 0.1)));
+    }
+    const enemyLevel = (rData.baseLevel || 1) + Math.floor(clears / 3);
     const stages = [];
     for (let i = 0; i < stagesCount; i++) {
       const isBoss = i === stagesCount - 1;
@@ -2708,7 +2573,7 @@ class ExpeditionService {
       for (let e = 0; e < enemyCount; e++) {
         encounter.push(rData.enemies[Math.floor(Math.random() * rData.enemies.length)]);
       }
-      stages.push({ type: "battle", enemies: encounter, isBoss });
+      stages.push({ type: "battle", enemies: encounter, isBoss, enemyLevel });
     }
     const rewardItems = {};
     if (regionId === "reg_greenfields") {
@@ -2735,14 +2600,15 @@ class ExpeditionService {
   }
   /**
    * Determines if a hero is currently on an expedition.
-   * Future-proofed for when multiple expeditions run concurrently.
    */
   getHeroActivity(heroId) {
-    if (this.state.activeExpedition && this.state.activeExpedition.heroIds.includes(heroId)) {
-      return {
-        type: "expedition",
-        expeditionId: this.state.activeExpedition.id
-      };
+    for (const exp of this.state.activeExpeditions) {
+      if (exp.heroIds.includes(heroId)) {
+        return {
+          type: "expedition",
+          expeditionId: exp.id
+        };
+      }
     }
     return { type: "idle" };
   }
@@ -2751,83 +2617,130 @@ class ExpeditionService {
    * Can only add/modify if currentStage === 0.
    */
   assignExpedition(expId, heroIds) {
-    if (this.state.activeExpedition) {
-      if (this.state.activeExpedition.id !== expId) {
-        return Result.fail("error_other_expedition_active");
-      }
-      if (this.state.activeExpedition.currentStage > 0) {
+    const existing = this.state.activeExpeditions.find((e) => e.id === expId);
+    if (existing) {
+      if (existing.currentStage > 0) {
         return Result.fail("error_expedition_locked");
+      }
+    } else {
+      const max = this.getMaxConcurrentExpeditions();
+      if (this.state.activeExpeditions.length >= max) {
+        return Result.fail("error_max_expeditions_reached");
+      }
+      for (const other of this.state.activeExpeditions) {
+        for (const hId of heroIds) {
+          if (other.heroIds.includes(hId)) {
+            return Result.fail("error_hero_on_other_expedition");
+          }
+        }
       }
     }
     const exp = this.getExpeditions().find((e) => e.id === expId);
     if (!exp || exp.status !== "available") return Result.fail("error_expedition_unavailable");
     const heroes = heroIds.map((id) => this.heroService.get(id)).filter((h) => h);
     if (heroes.length === 0) {
-      this.state.activeExpedition = null;
+      this.state.activeExpeditions = this.state.activeExpeditions.filter((e) => e.id !== expId);
       this.save();
       return Result.ok();
     }
     const hasDeadHero = heroes.some((h) => h.hp <= 0);
     if (hasDeadHero) return Result.fail("error_hero_dead");
-    this.state.activeExpedition = {
-      id: expId,
-      currentStage: 0,
-      heroIds: heroes.map((h) => h.id),
-      status: "assigned"
-    };
+    if (existing) {
+      existing.heroIds = heroes.map((h) => h.id);
+    } else {
+      this.state.activeExpeditions.push({
+        id: expId,
+        currentStage: 0,
+        heroIds: heroes.map((h) => h.id),
+        status: "assigned"
+      });
+    }
     this.save();
-    return Result.ok(this.state.activeExpedition);
+    return Result.ok(this.state.activeExpeditions.find((e) => e.id === expId));
   }
   /**
-   * Unassigns a single hero. If the expedition becomes empty, it resets.
+   * Unassigns a single hero from any active expedition.
+   * If the expedition becomes empty, it is removed.
    */
   unassignHero(heroId) {
-    if (!this.state.activeExpedition) return Result.fail("error_no_active_expedition");
-    this.state.activeExpedition.heroIds = this.state.activeExpedition.heroIds.filter((id) => id !== heroId);
-    if (this.state.activeExpedition.heroIds.length === 0) {
-      this.state.activeExpedition = null;
-    }
-    this.save();
-    return Result.ok();
-  }
-  /**
-   * Retires the entire expedition, resetting it to stage 0.
-   */
-  retire() {
-    this.state.activeExpedition = null;
-    this.save();
-    return Result.ok();
-  }
-  /**
-   * Processes one stage of the active expedition during the day advance.
-   */
-  processDay() {
-    if (!this.state.activeExpedition || this.state.activeExpedition.heroIds.length === 0) {
-      return Result.ok();
-    }
-    const exp = this.getExpeditions().find((e) => e.id === this.state.activeExpedition.id);
-    if (!exp) return Result.fail("error_expedition_not_found");
-    if (this.state.activeExpedition.status === "combat") {
-      const resumed = this.resumeActiveBattle();
-      if (resumed) {
-        return Result.ok({
-          status: "battle_started",
-          expId: exp.id,
-          expName: exp.name,
-          battleContext: this.state.activeExpedition.battleContext
-        });
+    for (let i = 0; i < this.state.activeExpeditions.length; i++) {
+      const exp = this.state.activeExpeditions[i];
+      if (exp.heroIds.includes(heroId)) {
+        exp.heroIds = exp.heroIds.filter((id) => id !== heroId);
+        if (exp.heroIds.length === 0) {
+          this.state.activeExpeditions.splice(i, 1);
+        }
+        this.save();
+        return Result.ok();
       }
     }
-    const stage = exp.stages[this.state.activeExpedition.currentStage];
+    return Result.fail("error_no_active_expedition");
+  }
+  /**
+   * Retires a specific expedition. If no expId provided, retires all.
+   */
+  retire(expId) {
+    if (expId) {
+      this.state.activeExpeditions = this.state.activeExpeditions.filter((e) => e.id !== expId);
+    } else {
+      this.state.activeExpeditions = [];
+    }
+    this.state.activeCombatExpeditionId = null;
+    this.save();
+    return Result.ok();
+  }
+  _findActiveExpeditionById(expId) {
+    return this.state.activeExpeditions.find((e) => e.id === expId);
+  }
+  /**
+   * Processes one stage of the next active expedition during the day advance (round-robin).
+   */
+  processDay() {
+    var _a;
+    const expeditions = this.state.activeExpeditions;
+    if (expeditions.length === 0) {
+      return Result.ok();
+    }
+    if (this.state.activeCombatExpeditionId) {
+      const combatExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+      if (combatExp && combatExp.status === "combat") {
+        const resumed = this.resumeActiveBattle();
+        if (resumed) {
+          return Result.ok({
+            status: "battle_started",
+            expId: combatExp.id,
+            expName: ((_a = this.getExpeditions().find((e) => e.id === combatExp.id)) == null ? void 0 : _a.name) || combatExp.id,
+            battleContext: combatExp.battleContext
+          });
+        }
+      }
+    }
+    const idx = this.state.expeditionTurnIndex % expeditions.length;
+    const activeExp = expeditions[idx];
+    if (!activeExp || activeExp.heroIds.length === 0) {
+      this.state.activeExpeditions.splice(idx, 1);
+      this.state.expeditionTurnIndex = this.state.activeExpeditions.length > 0 ? idx % this.state.activeExpeditions.length : 0;
+      this.save();
+      return Result.ok();
+    }
+    const exp = this.getExpeditions().find((e) => e.id === activeExp.id);
+    if (!exp) {
+      this.state.activeExpeditions.splice(idx, 1);
+      this.state.expeditionTurnIndex = this.state.activeExpeditions.length > 0 ? idx % this.state.activeExpeditions.length : 0;
+      this.save();
+      return Result.ok();
+    }
+    const stage = exp.stages[activeExp.currentStage];
     if (stage.type === "battle") {
-      const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+      const heroes = this.heroService.list().filter((h) => activeExp.heroIds.includes(h.id));
       const enemyCounts = {};
       stage.enemies.forEach((eId) => {
         enemyCounts[eId] = (enemyCounts[eId] || 0) + 1;
       });
       const enemyIndices = {};
       const enemies = stage.enemies.map((eId) => {
-        const enemy = this._createEnemy(eId, stage.isBoss);
+        const enemyLevel = stage.enemyLevel || 1;
+        const enemy = this._createEnemy(eId, stage.isBoss, enemyLevel);
         if (enemyCounts[eId] > 1) {
           enemyIndices[eId] = (enemyIndices[eId] || 0) + 1;
           const suffix = String.fromCharCode(64 + enemyIndices[eId]);
@@ -2839,11 +2752,11 @@ class ExpeditionService {
       heroes.forEach((h) => initialHp[h.id] = h.hp);
       const totalEnemyHp = enemies.reduce((sum, e) => sum + e.maxHp, 0);
       const expPerHero = Math.floor(totalEnemyHp / heroes.length);
-      const stageNum = this.state.activeExpedition.currentStage + 1;
+      const stageNum = activeExp.currentStage + 1;
       const stageTotal = exp.stages.length;
       this.battleService.startBattle(heroes, enemies, false);
-      this.state.activeExpedition.status = "combat";
-      this.state.activeExpedition.battleContext = {
+      activeExp.status = "combat";
+      activeExp.battleContext = {
         enemies: enemies.map((e) => e.toJSON()),
         initialHp,
         expPerHero,
@@ -2852,41 +2765,41 @@ class ExpeditionService {
         stageTotal,
         expName: exp.name
       };
+      this.state.activeCombatExpeditionId = activeExp.id;
+      this.state.expeditionTurnIndex = (idx + 1) % this.state.activeExpeditions.length;
       this.save();
       return Result.ok({
         status: "battle_started",
         expId: exp.id,
         expName: exp.name,
-        battleContext: this.state.activeExpedition.battleContext
+        battleContext: activeExp.battleContext
       });
     }
     return Result.fail("error_unknown_stage_type");
   }
   resumeActiveBattle() {
-    if (!this.state.activeExpedition || this.state.activeExpedition.status !== "combat") {
-      return null;
-    }
-    const ctx = this.state.activeExpedition.battleContext;
-    const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+    if (!this.state.activeCombatExpeditionId) return null;
+    const activeExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+    if (!activeExp || activeExp.status !== "combat") return null;
+    const ctx = activeExp.battleContext;
+    const heroes = this.heroService.list().filter((h) => activeExp.heroIds.includes(h.id));
     const enemies = ctx.enemies.map((eData) => new Enemy(eData));
     this.battleService.startBattle(heroes, enemies, false);
     return {
-      expId: this.state.activeExpedition.id,
+      expId: activeExp.id,
       expName: ctx.expName,
       battleContext: ctx
     };
   }
   getBattleResolutionPreview() {
-    if (!this.state.activeExpedition || this.state.activeExpedition.status !== "combat") {
-      return null;
-    }
-    if (!this.battleService.isOver) {
-      return null;
-    }
-    const exp = this.getExpeditions().find((e) => e.id === this.state.activeExpedition.id);
+    if (!this.state.activeCombatExpeditionId) return null;
+    const activeExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+    if (!activeExp || activeExp.status !== "combat") return null;
+    if (!this.battleService.isOver) return null;
+    const exp = this.getExpeditions().find((e) => e.id === activeExp.id);
     if (!exp) return null;
-    const ctx = this.state.activeExpedition.battleContext;
-    const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+    const ctx = activeExp.battleContext;
+    const heroes = this.heroService.list().filter((h) => activeExp.heroIds.includes(h.id));
     const enemies = this.battleService.enemies;
     const isVictory = this.battleService.winner === "heroes";
     const totalDamageDone = enemies.reduce((sum, e) => sum + (e.maxHp - Math.max(0, e.hp)), 0);
@@ -2900,7 +2813,9 @@ class ExpeditionService {
           expEarned = ctx.expPerHero;
         }
       } else {
-        expEarned = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+        const minimumExp = Math.floor(ctx.expPerHero * 0.25);
+        const damageBasedExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+        expEarned = Math.max(minimumExp, damageBasedExp);
       }
       if (expEarned > 0) {
         let currentExp = h.exp + expEarned;
@@ -2928,7 +2843,7 @@ class ExpeditionService {
     let rewards = null;
     let isLastStage = false;
     if (isVictory) {
-      const nextStage = this.state.activeExpedition.currentStage + 1;
+      const nextStage = activeExp.currentStage + 1;
       if (nextStage >= exp.stages.length) {
         isLastStage = true;
         rewards = exp.reward;
@@ -2942,16 +2857,20 @@ class ExpeditionService {
     };
   }
   resolveBattle() {
-    if (!this.state.activeExpedition || this.state.activeExpedition.status !== "combat") {
+    if (!this.state.activeCombatExpeditionId) {
+      return Result.fail("error_no_active_battle");
+    }
+    const activeExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+    if (!activeExp || activeExp.status !== "combat") {
       return Result.fail("error_no_active_battle");
     }
     if (!this.battleService.isOver) {
       return Result.fail("error_battle_not_over");
     }
-    const exp = this.getExpeditions().find((e) => e.id === this.state.activeExpedition.id);
+    const exp = this.getExpeditions().find((e) => e.id === activeExp.id);
     if (!exp) return Result.fail("error_expedition_not_found");
-    const ctx = this.state.activeExpedition.battleContext;
-    const heroes = this.heroService.list().filter((h) => this.state.activeExpedition.heroIds.includes(h.id));
+    const ctx = activeExp.battleContext;
+    const heroes = this.heroService.list().filter((h) => activeExp.heroIds.includes(h.id));
     const enemies = this.battleService.enemies;
     const isVictory = this.battleService.winner === "heroes";
     const stageNum = ctx.stageNum;
@@ -2976,7 +2895,9 @@ class ExpeditionService {
           expEarned = ctx.expPerHero;
         }
       } else {
-        const partialExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+        const minimumExp = Math.floor(ctx.expPerHero * 0.25);
+        const damageBasedExp = Math.floor(ctx.expPerHero * depletionProportion * 0.5);
+        const partialExp = Math.max(minimumExp, damageBasedExp);
         if (partialExp > 0) {
           const preLevel = h.level;
           h.addExperience(partialExp);
@@ -2999,28 +2920,39 @@ class ExpeditionService {
     this.heroService.saveAll();
     let finalResult;
     if (isVictory) {
-      this.state.activeExpedition.currentStage++;
-      if (this.state.activeExpedition.currentStage >= exp.stages.length) {
-        const result = this._finishExpedition(exp);
+      activeExp.currentStage++;
+      if (activeExp.currentStage >= exp.stages.length) {
+        const result = this._finishExpedition(exp, activeExp);
         result.data.combatLog = combatLog;
         finalResult = result;
       } else {
-        this.state.activeExpedition.status = "assigned";
-        delete this.state.activeExpedition.battleContext;
+        activeExp.status = "assigned";
+        delete activeExp.battleContext;
+        this.state.activeCombatExpeditionId = null;
         this.save();
         finalResult = Result.ok({ status: "progress", expId: exp.id, expName: exp.name, combatLog });
       }
     } else {
-      this.state.activeExpedition = null;
+      const expId = activeExp.id;
+      const expName = exp.name;
+      const idx = this.state.activeExpeditions.findIndex((e) => e.id === expId);
+      if (idx >= 0) {
+        this.state.activeExpeditions.splice(idx, 1);
+      }
+      this.state.activeCombatExpeditionId = null;
       this.save();
-      finalResult = Result.ok({ status: "failed", expId: exp.id, expName: exp.name, combatLog });
+      finalResult = Result.ok({ status: "failed", expId, expName, combatLog });
     }
     this.battleService.reset();
     return finalResult;
   }
-  _finishExpedition(exp) {
+  _finishExpedition(exp, activeExp) {
     this.state.completedIds.push(exp.id);
-    this.state.activeExpedition = null;
+    const idx = this.state.activeExpeditions.findIndex((e) => e.id === activeExp.id);
+    if (idx >= 0) {
+      this.state.activeExpeditions.splice(idx, 1);
+    }
+    this.state.activeCombatExpeditionId = null;
     const region = this.state.regions[exp.regionId];
     if (region) {
       region.clears++;
@@ -3033,30 +2965,121 @@ class ExpeditionService {
         this.villageService.addItemToInventory(id, qty);
       });
     }
+    const loot = this._generateLootDrop(exp.regionId);
+    if (loot) {
+      this.inventoryService.addEquipment(loot);
+    }
     if (exp.reward.special) {
       const s = exp.reward.special;
       if (s.type === "hero") {
         const avatar = s.value === "Sir Valen" ? "valen.png" : null;
-        this.heroService.add({ name: s.value, origin: "origin_guard", avatar });
+        const existingHeroes = this.heroService.list();
+        const avgLevel = existingHeroes.length > 0 ? Math.floor(existingHeroes.reduce((sum, h) => sum + h.level, 0) / existingHeroes.length) : 1;
+        const startLevel = Math.max(1, avgLevel - 1);
+        const result = this.heroService.add({ name: s.value, origin: "origin_guard", avatar, level: startLevel });
+        if (result.success) {
+          const newHero = result.data;
+          for (let i = 1; i < startLevel; i++) {
+            newHero.levelUp();
+          }
+          newHero.equipment.leftHand = { type: "weapon", material: "wooden", family: "broadsword", level: 0 };
+          newHero.equipment.body = { type: "armor", material: "wooden", archetype: "leather", slot: "body", level: 0 };
+          newHero.recalculateStats({});
+          this.heroService.saveAll();
+        }
       } else if (s.type === "villagers") {
         this.villageService.addVillagers(s.value);
       }
     }
     this.save();
+    this._checkRegionUnlocks();
     return Result.ok({ status: "completed", expId: exp.id, expName: exp.name, reward: exp.reward });
   }
-  _createEnemy(templateId, isBoss) {
+  /**
+   * Public method for GameEngine to call during nextDay()
+   * to check building-based unlocks (e.g., Explorer Guild).
+   */
+  checkRegionUnlocks() {
+    this._checkRegionUnlocks();
+  }
+  _checkRegionUnlocks() {
+    if (this.state.completedIds.includes("exp_tutorial_cave") && !this.state.regions.reg_tiny_cave) {
+      this._seedRegion("reg_tiny_cave");
+    }
+    const greenfields = this.state.regions.reg_greenfields;
+    const explorerGuildLevel = this.villageService.getState().infrastructure.explorer_guild || 0;
+    const beachUnlocked = greenfields.clears >= 3 || explorerGuildLevel >= 1;
+    if (beachUnlocked && !this.state.regions.reg_calmed_beach) {
+      this._seedRegion("reg_calmed_beach");
+    }
+  }
+  _seedRegion(regionId) {
+    const rData = this._getRegionData(regionId);
+    this.state.regions[regionId] = {
+      clears: 0,
+      unlocked: true,
+      availableNodes: [this._createProceduralNode(regionId, rData, 0)]
+    };
+    this.save();
+  }
+  _generateLootDrop(regionId) {
+    if (Math.random() >= 0.4) return null;
+    const rData = this._getRegionData(regionId);
+    const materialTiers = ["wooden", "iron", "steel", "gold", "mythril"];
+    const material = materialTiers[Math.min(rData.baseLevel || 1, materialTiers.length) - 1];
+    const isWeapon = Math.random() < 0.5;
+    let item = {
+      type: isWeapon ? "weapon" : "armor",
+      material,
+      level: 0,
+      affixes: []
+    };
+    if (isWeapon) {
+      const families = ["dagger", "broadsword", "battle_axe", "wand"];
+      item.family = families[Math.floor(Math.random() * families.length)];
+    } else {
+      const archetypes = ["plate", "leather", "robes"];
+      const slots = ["head", "body", "legs", "rightHand"];
+      item.archetype = archetypes[Math.floor(Math.random() * archetypes.length)];
+      item.slot = slots[Math.floor(Math.random() * slots.length)];
+    }
+    const affixPool = ["vampire", "sage", "titan", "assassin", "phoenix"];
+    const roll = Math.random();
+    const numAffixes = roll < 0.02 ? 2 : roll < 0.12 ? 1 : 0;
+    for (let i = 0; i < numAffixes; i++) {
+      const affix = affixPool[Math.floor(Math.random() * affixPool.length)];
+      if (!item.affixes.includes(affix)) {
+        item.affixes.push(affix);
+      }
+    }
+    return item;
+  }
+  _createEnemy(templateId, isBoss, level = 1) {
     const templates = {
-      slime_green: { name: "Green Slime", type: "beast", maxHp: 15, strength: 2, speed: 1 },
-      slime_fire: { name: "Fire Slime", type: "beast", maxHp: 20, strength: 3, speed: 2, element: "fire" },
-      wild_boar: { name: "Wild Boar", type: "beast", maxHp: 25, strength: 4, speed: 3 },
-      goblin_scout: { name: "Goblin Scout", type: "humanoid", maxHp: 22, strength: 4, speed: 5 },
-      goblin_grunt: { name: "Goblin Grunt", type: "humanoid", maxHp: 30, strength: 5, speed: 2 },
-      goblin_brute: { name: "Goblin Brute", type: "humanoid", maxHp: 50, strength: 6, speed: 1 },
-      goblin_king: { name: "Goblin King", type: "humanoid", maxHp: 120, strength: 10, speed: 4, isBoss: true }
+      slime_green: { name: "Green Slime", type: "beast", maxHp: 20, strength: 3, defense: 2, speed: 2 },
+      slime_fire: { name: "Fire Slime", type: "beast", maxHp: 30, strength: 5, defense: 3, speed: 3, element: "fire" },
+      wild_boar: { name: "Wild Boar", type: "beast", maxHp: 40, strength: 6, defense: 4, speed: 4 },
+      goblin_scout: { name: "Goblin Scout", type: "humanoid", maxHp: 25, strength: 4, defense: 2, speed: 6 },
+      goblin_grunt: { name: "Goblin Grunt", type: "humanoid", maxHp: 35, strength: 5, defense: 4, speed: 2 },
+      goblin_brute: { name: "Goblin Brute", type: "humanoid", maxHp: 55, strength: 7, defense: 5, speed: 1 },
+      goblin_king: { name: "Goblin King", type: "humanoid", maxHp: 120, strength: 10, defense: 6, speed: 4, isBoss: true },
+      bat_small: { name: "Small Bat", type: "beast", maxHp: 22, strength: 4, defense: 2, speed: 7 },
+      spider_minor: { name: "Minor Spider", type: "beast", maxHp: 28, strength: 5, defense: 3, speed: 4 },
+      crab_shell: { name: "Shell Crab", type: "beast", maxHp: 35, strength: 5, defense: 5, speed: 2 },
+      water_spirit_minor: { name: "Minor Water Spirit", type: "elemental", maxHp: 25, strength: 4, defense: 2, speed: 5, element: "water" }
     };
     const t = templates[templateId] || templates["slime_green"];
-    return new Enemy({ ...t, id: crypto.randomUUID(), isBoss });
+    const levelMult = Math.pow(1.1, level - 1);
+    const scaled = {
+      ...t,
+      maxHp: Math.floor(t.maxHp * levelMult),
+      strength: Math.floor(t.strength * levelMult),
+      defense: Math.floor((t.defense || 1) * levelMult),
+      speed: t.speed,
+      // Speed stays flat to preserve turn-order feel
+      level
+    };
+    return new Enemy({ ...scaled, id: crypto.randomUUID(), isBoss });
   }
 }
 const en = {
@@ -3316,6 +3339,19 @@ const en = {
   desc_infirmary: "Heals injured heroes daily (+10% heal amount and +1 hero slot limit per level).",
   ui_stat_points_busy: "Unassigned Stat Points: {amount} (Cannot assign on expedition)",
   error_hero_busy: "Hero is currently on an expedition and cannot perform this action.",
+  ui_skill_points: "Skill Points: {amount}",
+  ui_unlock: "Unlock",
+  ui_upgrade: "Upgrade",
+  ui_max: "MAX",
+  ui_locked: "Locked",
+  ui_cost: "Cost",
+  cat_physical: "Physical",
+  cat_magic: "Magic",
+  cat_support: "Support",
+  cat_tricker: "Tricker",
+  error_no_skill_points: "Not enough skill points.",
+  error_skill_already_unlocked: "Skill already learned.",
+  error_skill_locked: "Skill not yet learned.",
   // Shop & Forge additions
   nav_shop: "Shop",
   nav_forge: "Forge",
@@ -3399,7 +3435,17 @@ const en = {
   desc_food_raw_grain: "Harvested wheat. Consumed daily by villagers to prevent starvation. Keep stock high!",
   btn_auto_combat: "Auto-Combat",
   btn_skip_combat: "Skip Battle",
-  ui_choose_target: "Choose Target"
+  ui_choose_target: "Choose Target",
+  ui_builders: "Builders",
+  ui_available_builders: "Available",
+  error_no_available_builders: "No available builders",
+  error_invalid_builder_count: "Invalid builder count",
+  error_builders_below_assigned: "Cannot reduce builders below assigned count",
+  error_max_expeditions_reached: "Maximum concurrent expeditions reached",
+  error_hero_on_other_expedition: "Hero is already on another expedition",
+  ui_max_expeditions_reached: "Maximum concurrent expeditions reached. Complete or retire one to start another.",
+  ui_report_training: "{count} heroes trained at the grounds",
+  ui_report_training_level: "{heroes} leveled up from training!"
 };
 const es = {
   // UI General
@@ -3638,6 +3684,19 @@ const es = {
   desc_explorer_guild: "Desbloquea mapas de expedición avanzados y nuevas regiones para explorar.",
   desc_infirmary: "Cura a los héroes heridos diariamente (+10% de curación y +1 límite de héroes por nivel).",
   ui_stat_points_busy: "Puntos de atributo: {amount} (No se pueden asignar en expedición)",
+  ui_skill_points: "Puntos de habilidad: {amount}",
+  ui_unlock: "Desbloquear",
+  ui_upgrade: "Mejorar",
+  ui_max: "MAX",
+  ui_locked: "Bloqueado",
+  ui_cost: "Coste",
+  cat_physical: "Físico",
+  cat_magic: "Mágico",
+  cat_support: "Apoyo",
+  cat_tricker: "Tramposo",
+  error_no_skill_points: "No tienes suficientes puntos de habilidad.",
+  error_skill_already_unlocked: "Habilidad ya aprendida.",
+  error_skill_locked: "Habilidad aún no aprendida.",
   error_hero_busy: "El héroe está actualmente en una expedición y no puede realizar esta acción.",
   // Shop & Forge additions
   nav_shop: "Tienda",
@@ -3722,7 +3781,17 @@ const es = {
   desc_food_raw_grain: "Trigo cosechado. Consumido diariamente por los aldeanos para evitar la inanición. ¡Mantén existencias!",
   btn_auto_combat: "Auto-Combate",
   btn_skip_combat: "Saltar Batalla",
-  ui_choose_target: "Elegir Objetivo"
+  ui_choose_target: "Elegir Objetivo",
+  ui_builders: "Constructores",
+  ui_available_builders: "Disponibles",
+  error_no_available_builders: "No hay constructores disponibles",
+  error_invalid_builder_count: "Número de constructores inválido",
+  error_builders_below_assigned: "No puedes reducir constructores por debajo de los asignados",
+  error_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado",
+  error_hero_on_other_expedition: "El héroe ya está en otra expedición",
+  ui_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado. Completa o retira una para iniciar otra.",
+  ui_report_training: "{count} héroes entrenaron en el campo",
+  ui_report_training_level: "¡{heroes} subieron de nivel entrenando!"
 };
 const ca = {
   // UI General
@@ -3934,6 +4003,19 @@ const ca = {
   desc_explorer_guild: "Desbloqueja mapes d'expedició avançats i noves regions per explorar.",
   desc_infirmary: "Cura els herois ferits diàriament (+10% de curació i +1 límit d'herois per nivell).",
   ui_stat_points_busy: "Punts d'atribut: {amount} (No se poden assignar en expedició)",
+  ui_skill_points: "Punts d'habilitat: {amount}",
+  ui_unlock: "Desbloquejar",
+  ui_upgrade: "Millorar",
+  ui_max: "MAX",
+  ui_locked: "Bloquejat",
+  ui_cost: "Cost",
+  cat_physical: "Físic",
+  cat_magic: "Màgic",
+  cat_support: "Suport",
+  cat_tricker: "Tramposo",
+  error_no_skill_points: "No tens prou punts d'habilitat.",
+  error_skill_already_unlocked: "Habilitat ja apresa.",
+  error_skill_locked: "Habilitat encara no apresa.",
   error_hero_busy: "L'heroi està actualment en una expedició i no pot fer aquesta acció.",
   // Shop & Forge additions
   nav_shop: "Botiga",
@@ -4042,7 +4124,17 @@ const ca = {
   prologue_btn_next: "Següent",
   btn_auto_combat: "Auto-Combat",
   btn_skip_combat: "Saltar Batalla",
-  ui_choose_target: "Triar Objectiu"
+  ui_choose_target: "Triar Objectiu",
+  ui_builders: "Constructors",
+  ui_available_builders: "Disponibles",
+  error_no_available_builders: "No hi ha constructors disponibles",
+  error_invalid_builder_count: "Nombre de constructors invàlid",
+  error_builders_below_assigned: "No pots reduir constructors per sota dels assignats",
+  error_max_expeditions_reached: "Màxim d'expedicions simultànies assolit",
+  error_hero_on_other_expedition: "L'heroi ja està en una altra expedició",
+  ui_max_expeditions_reached: "Màxim d'expedicions simultànies assolit. Completa o retira una per iniciar una altra.",
+  ui_report_training: "{count} herois van entrenar al camp",
+  ui_report_training_level: "¡{heroes} han pujat de nivell entrenant!"
 };
 const eu = {
   // UI General
@@ -4254,6 +4346,19 @@ const eu = {
   desc_explorer_guild: "Espedizio mapa aurreratuak eta esploratzeko eskualde berriak desblokeatzen ditu.",
   desc_infirmary: "Zauritutako heroiak osatzen ditu egunero (+%10 osatze eta +1 heroi muga mailako).",
   ui_stat_points_busy: "Atributu puntuak: {amount} (Ezin dira espedizioan esleitu)",
+  ui_skill_points: "Gaitasun puntuak: {amount}",
+  ui_unlock: "Desblokeatu",
+  ui_upgrade: "Hobetu",
+  ui_max: "MAX",
+  ui_locked: "Blokeatuta",
+  ui_cost: "Kostua",
+  cat_physical: "Fisikoa",
+  cat_magic: "Magikoa",
+  cat_support: "Laguntza",
+  cat_tricker: "Tramposoa",
+  error_no_skill_points: "Ez duzu gaitasun puntu nahikor.",
+  error_skill_already_unlocked: "Gaitasuna jada ikasia.",
+  error_skill_locked: "Gaitasuna oraindik ikasi gabe.",
   error_hero_busy: "Heroia espedizio batean dago une honetan eta ezin du ekintza hau burutu.",
   // Shop & Forge additions
   nav_shop: "Denda",
@@ -4362,7 +4467,17 @@ const eu = {
   prologue_btn_next: "Hurrengoa",
   btn_auto_combat: "Auto-Borroka",
   btn_skip_combat: "Borroka Saltatu",
-  ui_choose_target: "Helburua Hautatu"
+  ui_choose_target: "Helburua Hautatu",
+  ui_builders: "Eraikitzaileak",
+  ui_available_builders: "Eskuragarri",
+  error_no_available_builders: "Ez dago eraikitzaile eskuragarririk",
+  error_invalid_builder_count: "Eraikitzaile kopuru baliogabea",
+  error_builders_below_assigned: "Ezin da esleitutako kopurua baino eraikitzaile gutxiago izan",
+  error_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da",
+  error_hero_on_other_expedition: "Heroia beste esplorazio batean dago jada",
+  ui_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da. Bete edo utzi bat beste bat hasteko.",
+  ui_report_training: "{count} heroik entrenatu dute zelaian",
+  ui_report_training_level: "{heroes}-ek maila igo dute entrenamenduan!"
 };
 const gl = {
   // UI General
@@ -4574,6 +4689,19 @@ const gl = {
   desc_explorer_guild: "Desbloquea mapas de expedición avanzados e novas rexións para explorar.",
   desc_infirmary: "Cura os heroes feridos diariamente (+10% de curación e +1 límite de heroes por nivel).",
   ui_stat_points_busy: "Puntos de atributo: {amount} (Non se poden asignar en expedición)",
+  ui_skill_points: "Puntos de habilidade: {amount}",
+  ui_unlock: "Desbloquear",
+  ui_upgrade: "Mellorar",
+  ui_max: "MAX",
+  ui_locked: "Bloqueado",
+  ui_cost: "Custo",
+  cat_physical: "Físico",
+  cat_magic: "Máxico",
+  cat_support: "Apoio",
+  cat_tricker: "Tramposo",
+  error_no_skill_points: "Non tes suficientes puntos de habilidade.",
+  error_skill_already_unlocked: "Habilidade xa aprendida.",
+  error_skill_locked: "Habilidade aínda non aprendida.",
   error_hero_busy: "O heroe está actualmente nunha expedición e non pode realizar esta acción.",
   // Shop & Forge additions
   nav_shop: "Tenda",
@@ -4682,7 +4810,17 @@ const gl = {
   prologue_btn_next: "Seguinte",
   btn_auto_combat: "Auto-Combate",
   btn_skip_combat: "Saltar Batalla",
-  ui_choose_target: "Elixir Obxectivo"
+  ui_choose_target: "Elixir Obxectivo",
+  ui_builders: "Construtores",
+  ui_available_builders: "Dispoñibles",
+  error_no_available_builders: "Non hai construtores dispoñibles",
+  error_invalid_builder_count: "Número de construtores inválido",
+  error_builders_below_assigned: "Non podes reducir construtores por debaixo dos asignados",
+  error_max_expeditions_reached: "Máximo de expedicións simultáneas alcanzado",
+  error_hero_on_other_expedition: "O heroe xa está noutra expedición",
+  ui_max_expeditions_reached: "Máximo de expedicións simultáneas alcanzado. Completa ou retira unha para iniciar outra.",
+  ui_report_training: "{count} heroes adestraron no campo",
+  ui_report_training_level: "¡{heroes} subiron de nivel adestrando!"
 };
 class I18nService {
   constructor() {
@@ -4721,7 +4859,6 @@ const _GameEngine = class _GameEngine {
       this.inventoryService
     );
     this.i18n = i18n;
-    this.i18n = i18n;
     const hasHeroes = persistence.load("heroes_data", null) !== null;
     const hasVillage = persistence.load("village_state", null) !== null;
     this.isNewGame = !hasHeroes || !hasVillage;
@@ -4730,7 +4867,7 @@ const _GameEngine = class _GameEngine {
       this.initNewGame();
     }
     this.i18n.setLanguage(persistence.load("settings_lang", "en"));
-    if (this.expeditionService.state.activeExpedition && this.expeditionService.state.activeExpedition.status === "combat") {
+    if (this.expeditionService.state.activeCombatExpeditionId) {
       console.log("Engine: Resuming active combat...");
       this.expeditionService.resumeActiveBattle();
     }
@@ -4744,13 +4881,7 @@ const _GameEngine = class _GameEngine {
         origin: "origin_warrior",
         avatar: "arthur.png",
         level: 1,
-        statPoints: 5,
-        baseMaxHp: 10,
-        baseMaxMp: 5,
-        baseStrength: 1,
-        baseSpeed: 1,
-        baseDefense: 1,
-        baseMagicPower: 1
+        statPoints: 5
       });
     }
   }
@@ -4780,7 +4911,8 @@ const _GameEngine = class _GameEngine {
     return Result.ok();
   }
   update() {
-    const activeExpedition = this.expeditionService.state.activeExpedition;
+    const activeExpeditions = this.expeditionService.state.activeExpeditions;
+    const maxConcurrentExpeditions = this.expeditionService.getMaxConcurrentExpeditions();
     const heroesDto = this.heroService.list().map((hero) => {
       const dto = hero.toJSON();
       const activityInfo = this.expeditionService.getHeroActivity(hero.id);
@@ -4805,7 +4937,8 @@ const _GameEngine = class _GameEngine {
       inventory: this.inventoryService.getState(),
       heroes: heroesDto,
       expeditions: this.expeditionService.getExpeditions(),
-      activeExpedition,
+      activeExpeditions,
+      maxConcurrentExpeditions,
       completedExpeditions: this.expeditionService.state.completedIds || [],
       activeBattle
     };
@@ -4823,6 +4956,20 @@ const _GameEngine = class _GameEngine {
       return Result.fail("error_hero_busy");
     }
     return this.heroService.increaseHeroStat(heroId, statId);
+  }
+  learnHeroSkill(heroId, skillId, unlockCost) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.learnHeroSkill(heroId, skillId, unlockCost);
+  }
+  upgradeHeroSkill(heroId, skillId, upgradeCost) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.upgradeHeroSkill(heroId, skillId, upgradeCost);
   }
   equipHeroItem(heroId, slot, equipmentId) {
     const activityInfo = this.expeditionService.getHeroActivity(heroId);
@@ -4893,33 +5040,7 @@ const _GameEngine = class _GameEngine {
     return Result.ok({ goldEarned: sellPrice });
   }
   getRefineCost(item) {
-    const L = item.level || 0;
-    const nextLevel = L + 1;
-    const mat = item.material;
-    const cost = {
-      gold: 0,
-      materials: {}
-    };
-    if (mat === "wooden") {
-      cost.gold = 30 * nextLevel;
-      cost.materials.material_wood = 10 * nextLevel;
-    } else if (mat === "iron") {
-      cost.gold = 75 * nextLevel;
-      cost.materials.material_wood = 5 * nextLevel;
-      cost.materials.material_stone = 5 * nextLevel;
-      cost.materials.material_iron_ore = 3 * nextLevel;
-    } else if (mat === "steel") {
-      cost.gold = 150 * nextLevel;
-      cost.materials.material_stone = 10 * nextLevel;
-      cost.materials.material_steel_ingot = 3 * nextLevel;
-    } else if (mat === "gold") {
-      cost.gold = 300 * nextLevel;
-      cost.materials.material_stone = 15 * nextLevel;
-    } else if (mat === "mythril") {
-      cost.gold = 500 * nextLevel;
-      cost.materials.material_mythril = 2 * nextLevel;
-    }
-    return cost;
+    return getRefineCost(item);
   }
   refineEquipment(itemId) {
     let item = this.inventoryService.getEquipment(itemId);
@@ -5006,11 +5127,12 @@ const _GameEngine = class _GameEngine {
   // --- Time & Construction ---
   nextDay() {
     const villageReport = this.villageService.nextDay();
+    this.expeditionService.checkRegionUnlocks();
     const expeditionResult = this.expeditionService.processDay();
     const infirmaryLevel = this.villageService.getState().infrastructure.infirmary || 0;
     const healPercentage = 0.2 + infirmaryLevel * 0.1;
     const maxHeroesHealed = 1 + Math.floor(infirmaryLevel / 2);
-    const heroesNeedingHeal = this.heroService.list().filter((h) => h.hp < h.maxHp);
+    const heroesNeedingHeal = this.heroService.list().filter((h) => h.hp > 0 && h.hp < h.maxHp && this.expeditionService.getHeroActivity(h.id).type === "idle");
     heroesNeedingHeal.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
     const heroesToHeal = heroesNeedingHeal.slice(0, maxHeroesHealed);
     const healedLog = [];
@@ -5020,13 +5142,31 @@ const _GameEngine = class _GameEngine {
       hero.hp += actualHeal;
       healedLog.push({ heroName: hero.name, amount: actualHeal });
     });
-    if (heroesToHeal.length > 0) {
-      this.heroService.saveAll();
+    const trainingGroundsLevel = this.villageService.getState().infrastructure.training_grounds || 0;
+    const xpGainRate = 0.05 * trainingGroundsLevel;
+    const xpLog = [];
+    if (xpGainRate > 0) {
+      const idleHeroes = this.heroService.list().filter((h) => h.hp > 0 && this.expeditionService.getHeroActivity(h.id).type === "idle");
+      idleHeroes.forEach((hero) => {
+        const expNeeded = hero.getExpToNextLevel();
+        const xpGain = Math.max(1, Math.floor(expNeeded * xpGainRate));
+        const preLevel = hero.level;
+        hero.addExperience(xpGain);
+        if (hero.level > preLevel) {
+          xpLog.push({ heroName: hero.name, leveledUp: true, xpGain });
+        } else {
+          xpLog.push({ heroName: hero.name, leveledUp: false, xpGain });
+        }
+      });
+      if (idleHeroes.length > 0) {
+        this.heroService.saveAll();
+      }
     }
     const dailyReport = {
       ...villageReport,
       expedition: expeditionResult.success ? expeditionResult.data : null,
-      recovery: healedLog
+      recovery: healedLog,
+      training: xpLog
     };
     this.villageService.setDailyReport(dailyReport);
     return dailyReport;
@@ -5041,8 +5181,8 @@ const _GameEngine = class _GameEngine {
   unassignHero(heroId) {
     return this.expeditionService.unassignHero(heroId);
   }
-  retireExpedition() {
-    return this.expeditionService.retire();
+  retireExpedition(expId) {
+    return this.expeditionService.retire(expId);
   }
 };
 // --- Shop & Forge Facade ---
@@ -5064,6 +5204,8 @@ class EngineAdapter {
   init() {
     this.ui.engine = this.engine;
     this.ui.adapter = this;
+    this.ui.combatView.engine = this.engine;
+    this.ui.combatView.adapter = this;
     const btnNextDay = document.getElementById("btn-global-next-day");
     if (btnNextDay) {
       btnNextDay.addEventListener("click", () => {
@@ -5103,6 +5245,18 @@ class EngineAdapter {
           this.forceUpdate();
         });
       }
+      if (domain === "village") {
+        view.on("setBuilders", (data) => {
+          const village = this.engine.villageService.getState();
+          const currentBuilders = village.population.builders || 0;
+          const newCount = currentBuilders + (data.delta || 0);
+          const result = this.engine.villageService.setBuilders(newCount);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+      }
       if (domain === "explore") {
         view.on("assignExpedition", (data) => {
           const result = this.engine.assignExpedition(data.expId, data.heroIds);
@@ -5111,8 +5265,8 @@ class EngineAdapter {
           }
           this.forceUpdate();
         });
-        view.on("retireExpedition", () => {
-          this.engine.retireExpedition();
+        view.on("retireExpedition", (data) => {
+          this.engine.retireExpedition(data && data.expId ? data.expId : null);
           this.forceUpdate();
         });
       }
@@ -5133,6 +5287,20 @@ class EngineAdapter {
         });
         view.on("unequipItem", (data) => {
           const result = this.engine.unequipHeroItem(data.heroId, data.slot);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("learnSkill", (data) => {
+          const result = this.engine.learnHeroSkill(data.heroId, data.skillId, data.unlockCost);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("upgradeSkill", (data) => {
+          const result = this.engine.upgradeHeroSkill(data.heroId, data.skillId, data.upgradeCost);
           if (!result.success) {
             this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
@@ -5317,10 +5485,25 @@ class VillageView extends BaseView {
       gold: this.$("#village-gold"),
       pop: this.$("#village-pop"),
       popAvail: this.$("#village-pop-avail"),
+      builderCount: this.$("#village-builder-count"),
+      builderAvail: this.$("#village-builder-avail"),
       storageText: this.$("#village-storage-text"),
       storageBar: this.$("#village-storage-bar"),
       constructionList: this.$("#construction-list")
     };
+    const builderControls = this.$(".builder-controls");
+    if (builderControls) {
+      builderControls.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action]");
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === "inc-builder") {
+          this.emit("setBuilders", { delta: 1 });
+        } else if (action === "dec-builder") {
+          this.emit("setBuilders", { delta: -1 });
+        }
+      });
+    }
   }
   onUpdate(state) {
     const { village, inventory } = state;
@@ -5332,6 +5515,12 @@ class VillageView extends BaseView {
     if (this.elements.popAvail) {
       const avail = village.population.total - (village.population.assigned || 0);
       this.elements.popAvail.textContent = avail;
+    }
+    if (this.elements.builderCount) {
+      this.elements.builderCount.textContent = `${village.population.builders || 0} / ${village.population.total}`;
+    }
+    if (this.elements.builderAvail) {
+      this.elements.builderAvail.textContent = village.population.availableBuilders || 0;
     }
     if (inventory && this.elements.storageText) {
       const used = inventory.totalUsed || 0;
@@ -5358,6 +5547,8 @@ class VillageView extends BaseView {
       { id: "farm", name: this.t("village_farm") || "Farm", icon: "🌾", lvl: infra.farm || 0, active: (infra.farm || 0) > 0 },
       { id: "warehouse", name: this.t("village_warehouse") || "Warehouse", icon: "📦", lvl: infra.warehouse || 0, active: (infra.warehouse || 0) > 0 },
       { id: "blacksmith", name: this.t("village_blacksmith") || "Blacksmith", icon: "⚒️", lvl: infra.blacksmith || 0, active: (infra.blacksmith || 0) > 0 },
+      { id: "training_grounds", name: this.t("village_training_grounds") || "Training Grounds", icon: "💪", lvl: infra.training_grounds || 0, active: (infra.training_grounds || 0) > 0 },
+      { id: "explorer_guild", name: this.t("village_explorer_guild") || "Explorer Guild", icon: "🧭", lvl: infra.explorer_guild || 0, active: (infra.explorer_guild || 0) > 0 },
       { id: "infirmary", name: this.t("village_infirmary") || "Infirmary", icon: "🏥", lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 }
     ];
     canvas.innerHTML = `
@@ -5452,6 +5643,25 @@ class VillageView extends BaseView {
                 </div>
             `;
     }
+    let trainingHtml = "";
+    if (report.training && report.training.length > 0) {
+      const leveled = report.training.filter((t) => t.leveledUp).map((t) => t.heroName);
+      if (leveled.length > 0) {
+        trainingHtml = `
+                    <div class="report-section success">
+                        <span class="report-icon">💪</span>
+                        <span>${this.t("ui_report_training_level").replace("{heroes}", leveled.join(", "))}</span>
+                    </div>
+                `;
+      } else {
+        trainingHtml = `
+                    <div class="report-section">
+                        <span class="report-icon">💪</span>
+                        <span>${this.t("ui_report_training").replace("{count}", report.training.length)}</span>
+                    </div>
+                `;
+      }
+    }
     container.innerHTML = `
             <div class="card widget daily-report-widget">
                 <h3>${this.t("ui_daily_report_title").replace("{day}", report.day - 1)}</h3>
@@ -5463,6 +5673,7 @@ class VillageView extends BaseView {
                     ${growthHtml}
                     ${builtHtml}
                     ${recoveryHtml}
+                    ${trainingHtml}
                     ${expHtml}
                 </div>
             </div>
@@ -5865,6 +6076,17 @@ class HeroesView extends BaseView {
         if (slotBtn) {
           const slot = slotBtn.dataset.slot;
           this._openEquipModal(slot);
+          return;
+        }
+        const learnBtn = e.target.closest(".btn-learn-skill");
+        if (learnBtn) {
+          this.emit("learnSkill", { heroId: this.selectedHeroId, skillId: learnBtn.dataset.skill, unlockCost: parseInt(learnBtn.dataset.cost) });
+          return;
+        }
+        const upgradeBtn = e.target.closest(".btn-upgrade-skill");
+        if (upgradeBtn) {
+          this.emit("upgradeSkill", { heroId: this.selectedHeroId, skillId: upgradeBtn.dataset.skill, upgradeCost: 1 });
+          return;
         }
       });
     }
@@ -5937,12 +6159,44 @@ class HeroesView extends BaseView {
                 </div>
             `;
     }).join("");
-    let skillsHtml = Object.keys(hero.skills).map((skillId) => `
-            <div class="skill-item">
-                <span class="skill-name">${this.t(skillId)}</span>
-                <span class="skill-level">${this.t("ui_level") || "Level"} ${hero.skills[skillId]}</span>
-            </div>
-        `).join("");
+    const hasSkillPoints = hero.skillPoints > 0;
+    const canManageSkills = hasSkillPoints && isIdle;
+    const allSkills = Object.values(SKILLS_DATA);
+    let skillsHtml = allSkills.map((skill) => {
+      const skillId = skill.id;
+      const learned = hero.skills[skillId] !== void 0;
+      const level = learned ? hero.skills[skillId] : null;
+      const depMet = !skill.dependency || hero.skills[skill.dependency] !== void 0;
+      const canLearn = !learned && depMet && canManageSkills && hero.skillPoints >= skill.unlockCost;
+      const canUpgrade = learned && canManageSkills && hero.skillPoints >= 1 && level < 5;
+      let actionBtn = "";
+      if (learned && canUpgrade) {
+        actionBtn = `<button class="btn btn-primary btn-sm btn-upgrade-skill" data-skill="${skillId}">+1 (${this.t("ui_cost") || "Cost"} 1)</button>`;
+      } else if (learned) {
+        actionBtn = `<span class="skill-max-label">${this.t("ui_max") || "MAX"}</span>`;
+      } else if (canLearn) {
+        actionBtn = `<button class="btn btn-primary btn-sm btn-learn-skill" data-skill="${skillId}" data-cost="${skill.unlockCost}">${this.t("ui_unlock") || "Unlock"} (${skill.unlockCost} SP)</button>`;
+      } else if (!depMet) {
+        actionBtn = `<span class="skill-locked-label">${this.t("ui_locked") || "Locked"}</span>`;
+      } else {
+        actionBtn = `<span class="skill-locked-label">${skill.unlockCost} SP</span>`;
+      }
+      const categoryClass = `skill-cat-${skill.category}`;
+      const tierClass = `skill-tier-${skill.tier}`;
+      const learnedClass = learned ? "skill-learned" : "skill-locked";
+      return `
+                <div class="skill-item ${categoryClass} ${tierClass} ${learnedClass}">
+                    <div class="skill-info">
+                        <span class="skill-name">${this.t(skillId)}</span>
+                        <span class="skill-meta">${skill.mpCost > 0 ? skill.mpCost + " MP" : "0 MP"} · ${this.t("cat_" + skill.category) || skill.category}</span>
+                    </div>
+                    <div class="skill-actions">
+                        ${learned ? `<span class="skill-level">Lv.${level}</span>` : ""}
+                        ${actionBtn}
+                    </div>
+                </div>
+            `;
+    }).join("");
     const hasStatPoints = hero.statPoints > 0;
     const canAllocate = hasStatPoints && isIdle;
     const statPointsText = canAllocate ? this.t("ui_stat_points").replace("{amount}", hero.statPoints) : this.t("ui_stat_points_busy").replace("{amount}", hero.statPoints);
@@ -5980,6 +6234,11 @@ class HeroesView extends BaseView {
                         ${hasStatPoints ? `
                         <div class="stat-points-alert ${canAllocate ? "" : "locked"}">
                             <strong>${statPointsText}</strong>
+                        </div>
+                        ` : ""}
+                        ${hero.skillPoints > 0 ? `
+                        <div class="stat-points-alert ${canManageSkills ? "" : "locked"}" style="margin-top: 6px; background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">
+                            <strong>${this.t("ui_skill_points").replace("{amount}", hero.skillPoints)}${!canManageSkills ? " (Cannot spend on expedition)" : ""}</strong>
                         </div>
                         ` : ""}
                     </div>
@@ -6397,7 +6656,8 @@ class ExploreView extends BaseView {
     if (!state.expeditions) return;
     const stateString = JSON.stringify({
       expeditions: state.expeditions.map((e) => ({ id: e.id, status: e.status, stages: e.stages.length })),
-      activeExpedition: state.activeExpedition,
+      activeExpeditions: state.activeExpeditions,
+      maxConcurrentExpeditions: state.maxConcurrentExpeditions,
       selectedExpId: this.selectedExpId,
       selectedHeroes: Array.from(this.selectedHeroIds),
       idleHeroes: (_a = state.heroes) == null ? void 0 : _a.filter((h) => h.activity === "idle").map((h) => ({ id: h.id, hp: h.hp }))
@@ -6408,14 +6668,15 @@ class ExploreView extends BaseView {
   }
   onUpdate(state) {
     this.renderRegionsList(state.expeditions);
-    this.renderStatus(state.activeExpedition);
+    this.renderStatus(state.activeExpeditions, state.maxConcurrentExpeditions);
     this.renderExpeditionDetail(state);
   }
-  renderStatus(activeExpedition) {
+  renderStatus(activeExpeditions, maxConcurrentExpeditions) {
     if (!this.elements.statusBanner) return;
-    if (activeExpedition) {
+    const count = activeExpeditions ? activeExpeditions.length : 0;
+    if (count > 0) {
       this.elements.statusBanner.className = "status-banner";
-      this.elements.statusBanner.innerHTML = `<span data-i18n="ui_active_expeditions">${this.t("ui_active_expeditions")}</span>: ${this.t("status_active")}`;
+      this.elements.statusBanner.innerHTML = `<span>${this.t("ui_active_expeditions")}</span>: ${count} / ${maxConcurrentExpeditions}`;
     } else {
       this.elements.statusBanner.className = "status-banner none";
     }
@@ -6449,8 +6710,13 @@ class ExploreView extends BaseView {
   renderExpeditionDetail(state) {
     if (!this.elements.detailContent) return;
     const exp = state.expeditions.find((e) => e.id === this.selectedExpId);
-    if (!exp && state.activeExpedition) {
-      this.selectedExpId = state.activeExpedition.id;
+    const activeExpeditions = state.activeExpeditions || [];
+    const activeExp = activeExpeditions.find((e) => e.id === this.selectedExpId);
+    const isActiveNode = !!activeExp;
+    const isAtMax = activeExpeditions.length >= (state.maxConcurrentExpeditions || 1);
+    const isLocked = isActiveNode && activeExp.currentStage > 0;
+    if (!exp && activeExpeditions.length > 0) {
+      this.selectedExpId = activeExpeditions[0].id;
       return this.update(this.lastRawState);
     }
     if (!exp) {
@@ -6460,47 +6726,50 @@ class ExploreView extends BaseView {
                 </div>`;
       return;
     }
-    const isActiveNode = state.activeExpedition && state.activeExpedition.id === exp.id;
-    const isAnotherActive = state.activeExpedition && state.activeExpedition.id !== exp.id;
-    const isLocked = isActiveNode && state.activeExpedition.currentStage > 0;
     let dashboardHtml = "";
     if (isActiveNode) {
-      const isStageZero = state.activeExpedition.currentStage === 0;
+      const isStageZero = activeExp.currentStage === 0;
       dashboardHtml = `
                 <div class="active-expedition-dashboard" style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
                     <h3 style="margin-top: 0; color: var(--primary-color);">${this.t("ui_assigned_expedition")}</h3>
                     <p class="description">${isStageZero ? this.t("ui_waiting_combat") : this.t("ui_progress_combat")}</p>
                     <div class="exp-progress">
-                        <h4>${this.t("exp_stage")} ${state.activeExpedition.currentStage} / ${exp.stages.length}</h4>
+                        <h4>${this.t("exp_stage")} ${activeExp.currentStage} / ${exp.stages.length}</h4>
                         <div class="progress-bar-container" style="background: rgba(255,255,255,0.1); height: 10px; border-radius: 5px; margin: 10px 0;">
-                            <div class="progress-bar" style="background: var(--primary-color); height: 100%; border-radius: 5px; width: ${state.activeExpedition.currentStage / exp.stages.length * 100}%"></div>
+                            <div class="progress-bar" style="background: var(--primary-color); height: 100%; border-radius: 5px; width: ${activeExp.currentStage / exp.stages.length * 100}%"></div>
                         </div>
                     </div>
                     <button class="btn btn-secondary btn-retire" style="width: 100%; margin-top: 10px;">${this.t("ui_unassign_retire")}</button>
                 </div>
             `;
-    } else if (isAnotherActive) {
+    } else if (isAtMax) {
       dashboardHtml = `
                 <div class="alert alert-warning" style="margin-bottom: 20px;">
-                    ${this.t("ui_another_active")}
+                    ${this.t("ui_max_expeditions_reached")}
                 </div>
             `;
     }
     const idleHeroes = state.heroes.filter((h) => h.activity === "idle");
-    const assignedHeroes = isActiveNode ? state.heroes.filter((h) => state.activeExpedition.heroIds.includes(h.id)) : [];
+    const assignedHeroes = isActiveNode ? state.heroes.filter((h) => activeExp.heroIds.includes(h.id)) : [];
+    const busyHeroIds = /* @__PURE__ */ new Set();
+    activeExpeditions.forEach((ae) => {
+      if (ae.id !== this.selectedExpId) {
+        ae.heroIds.forEach((id) => busyHeroIds.add(id));
+      }
+    });
     let heroListHtml = "";
     if (isLocked) {
       const lvlLabel = this.t("ui_level") || "Level";
       heroListHtml = `<p>${this.t("ui_roster_locked")}</p>
                 <ul>${assignedHeroes.map((h) => `<li>${h.name} (${lvlLabel} ${h.level})</li>`).join("")}</ul>`;
     } else {
-      const availableHeroes = [...assignedHeroes, ...idleHeroes];
-      if (availableHeroes.length === 0) {
+      const availableHeroes2 = [...assignedHeroes, ...idleHeroes].filter((h) => !busyHeroIds.has(h.id));
+      if (availableHeroes2.length === 0) {
         heroListHtml = `<p>${this.t("ui_no_idle_heroes")}</p>`;
       } else {
         heroListHtml = `<div class="hero-checkbox-list">
-                    ${availableHeroes.map((h) => {
-          const isAssigned = isActiveNode && state.activeExpedition.heroIds.includes(h.id);
+                    ${availableHeroes2.map((h) => {
+          const isAssigned = isActiveNode && activeExp.heroIds.includes(h.id);
           const isChecked = this.selectedHeroIds.has(h.id) || isAssigned && !this.selectedHeroIds.size;
           if (isChecked) this.selectedHeroIds.add(h.id);
           const isWounded = h.hp <= 0;
@@ -6519,6 +6788,7 @@ class ExploreView extends BaseView {
                 </div>`;
       }
     }
+    const canStart = !isLocked && (!isAtMax || isActiveNode) && availableHeroes.length > 0;
     this.elements.detailContent.innerHTML = `
             ${dashboardHtml}
             <div class="expedition-profile">
@@ -6537,7 +6807,7 @@ class ExploreView extends BaseView {
                     <h3>${this.t("ui_select_heroes")}</h3>
                     ${heroListHtml}
                     ${!isLocked ? `
-                        <button class="btn btn-primary btn-start-exp" ${isAnotherActive || idleHeroes.length === 0 && assignedHeroes.length === 0 ? "disabled" : ""}>
+                        <button class="btn btn-primary btn-start-exp" ${!canStart ? "disabled" : ""}>
                             ${isActiveNode ? this.t("ui_update_assignment") : this.t("ui_assign_heroes")}
                         </button>
                     ` : ""}
@@ -6548,7 +6818,7 @@ class ExploreView extends BaseView {
       const retireBtn = this.elements.detailContent.querySelector(".btn-retire");
       if (retireBtn) {
         retireBtn.addEventListener("click", () => {
-          this.emit("retireExpedition");
+          this.emit("retireExpedition", { expId: this.selectedExpId });
           this.selectedHeroIds.clear();
         });
       }
@@ -6646,7 +6916,22 @@ const WEAPONS_CATALOG = [
   { type: "weapon", material: "iron", family: "dagger", cost: 150, tier: 2 },
   { type: "weapon", material: "iron", family: "broadsword", cost: 240, tier: 2 },
   { type: "weapon", material: "iron", family: "battle_axe", cost: 360, tier: 2 },
-  { type: "weapon", material: "iron", family: "wand", cost: 300, tier: 2 }
+  { type: "weapon", material: "iron", family: "wand", cost: 300, tier: 2 },
+  // Tier 3 (Steel)
+  { type: "weapon", material: "steel", family: "dagger", cost: 450, tier: 3 },
+  { type: "weapon", material: "steel", family: "broadsword", cost: 720, tier: 3 },
+  { type: "weapon", material: "steel", family: "battle_axe", cost: 1080, tier: 3 },
+  { type: "weapon", material: "steel", family: "wand", cost: 900, tier: 3 },
+  // Tier 4 (Gold)
+  { type: "weapon", material: "gold", family: "dagger", cost: 1350, tier: 4 },
+  { type: "weapon", material: "gold", family: "broadsword", cost: 2160, tier: 4 },
+  { type: "weapon", material: "gold", family: "battle_axe", cost: 3240, tier: 4 },
+  { type: "weapon", material: "gold", family: "wand", cost: 2700, tier: 4 },
+  // Tier 5 (Mythril)
+  { type: "weapon", material: "mythril", family: "dagger", cost: 4050, tier: 5 },
+  { type: "weapon", material: "mythril", family: "broadsword", cost: 6480, tier: 5 },
+  { type: "weapon", material: "mythril", family: "battle_axe", cost: 9720, tier: 5 },
+  { type: "weapon", material: "mythril", family: "wand", cost: 8100, tier: 5 }
 ];
 const ARMOR_CATALOG = [
   // Tier 1 (Wooden / Basic)
@@ -6674,7 +6959,46 @@ const ARMOR_CATALOG = [
   { type: "armor", material: "iron", archetype: "robes", slot: "head", cost: 130, tier: 2 },
   { type: "armor", material: "iron", archetype: "robes", slot: "body", cost: 260, tier: 2 },
   { type: "armor", material: "iron", archetype: "robes", slot: "legs", cost: 175, tier: 2 },
-  { type: "armor", material: "iron", archetype: "robes", slot: "rightHand", cost: 120, tier: 2 }
+  { type: "armor", material: "iron", archetype: "robes", slot: "rightHand", cost: 120, tier: 2 },
+  // Tier 3 (Steel)
+  { type: "armor", material: "steel", archetype: "plate", slot: "head", cost: 450, tier: 3 },
+  { type: "armor", material: "steel", archetype: "plate", slot: "body", cost: 900, tier: 3 },
+  { type: "armor", material: "steel", archetype: "plate", slot: "legs", cost: 600, tier: 3 },
+  { type: "armor", material: "steel", archetype: "plate", slot: "rightHand", cost: 540, tier: 3 },
+  { type: "armor", material: "steel", archetype: "leather", slot: "head", cost: 360, tier: 3 },
+  { type: "armor", material: "steel", archetype: "leather", slot: "body", cost: 720, tier: 3 },
+  { type: "armor", material: "steel", archetype: "leather", slot: "legs", cost: 480, tier: 3 },
+  { type: "armor", material: "steel", archetype: "leather", slot: "rightHand", cost: 405, tier: 3 },
+  { type: "armor", material: "steel", archetype: "robes", slot: "head", cost: 390, tier: 3 },
+  { type: "armor", material: "steel", archetype: "robes", slot: "body", cost: 780, tier: 3 },
+  { type: "armor", material: "steel", archetype: "robes", slot: "legs", cost: 525, tier: 3 },
+  { type: "armor", material: "steel", archetype: "robes", slot: "rightHand", cost: 360, tier: 3 },
+  // Tier 4 (Gold)
+  { type: "armor", material: "gold", archetype: "plate", slot: "head", cost: 1350, tier: 4 },
+  { type: "armor", material: "gold", archetype: "plate", slot: "body", cost: 2700, tier: 4 },
+  { type: "armor", material: "gold", archetype: "plate", slot: "legs", cost: 1800, tier: 4 },
+  { type: "armor", material: "gold", archetype: "plate", slot: "rightHand", cost: 1620, tier: 4 },
+  { type: "armor", material: "gold", archetype: "leather", slot: "head", cost: 1080, tier: 4 },
+  { type: "armor", material: "gold", archetype: "leather", slot: "body", cost: 2160, tier: 4 },
+  { type: "armor", material: "gold", archetype: "leather", slot: "legs", cost: 1440, tier: 4 },
+  { type: "armor", material: "gold", archetype: "leather", slot: "rightHand", cost: 1215, tier: 4 },
+  { type: "armor", material: "gold", archetype: "robes", slot: "head", cost: 1170, tier: 4 },
+  { type: "armor", material: "gold", archetype: "robes", slot: "body", cost: 2340, tier: 4 },
+  { type: "armor", material: "gold", archetype: "robes", slot: "legs", cost: 1575, tier: 4 },
+  { type: "armor", material: "gold", archetype: "robes", slot: "rightHand", cost: 1080, tier: 4 },
+  // Tier 5 (Mythril)
+  { type: "armor", material: "mythril", archetype: "plate", slot: "head", cost: 4050, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "plate", slot: "body", cost: 8100, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "plate", slot: "legs", cost: 5400, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "plate", slot: "rightHand", cost: 4860, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "leather", slot: "head", cost: 3240, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "leather", slot: "body", cost: 6480, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "leather", slot: "legs", cost: 4320, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "leather", slot: "rightHand", cost: 3645, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "robes", slot: "head", cost: 3510, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "robes", slot: "body", cost: 7020, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "robes", slot: "legs", cost: 4725, tier: 5 },
+  { type: "armor", material: "mythril", archetype: "robes", slot: "rightHand", cost: 3240, tier: 5 }
 ];
 function getWeaponBaseCost(material, family) {
   const item = WEAPONS_CATALOG.find((w) => w.material === material && w.family === family);
@@ -6767,7 +7091,7 @@ class ShopView extends BaseView {
   _renderBuyTab(state) {
     var _a, _b, _c;
     const blacksmithLevel = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
-    const maxTier = blacksmithLevel >= 1 ? 2 : 1;
+    const maxTier = blacksmithLevel >= 7 ? 5 : blacksmithLevel >= 5 ? 4 : blacksmithLevel >= 3 ? 3 : blacksmithLevel >= 1 ? 2 : 1;
     const playerGold = ((_c = state.village) == null ? void 0 : _c.gold) || 0;
     const t = this.t.bind(this);
     const groups = [
@@ -7513,7 +7837,7 @@ class ForgeView extends BaseView {
     let costHtml = "";
     let canAfford = true;
     if (!isMaxLevel) {
-      const cost = this._getRefineCost(selectedItem);
+      const cost = getRefineCost(selectedItem);
       const playerGold = state.village.gold;
       const goldClass = playerGold >= cost.gold ? "" : "insufficient";
       if (playerGold < cost.gold) canAfford = false;
@@ -7582,35 +7906,6 @@ class ForgeView extends BaseView {
         this.emit("refineItem", { itemId: selectedItem.id });
       });
     }
-  }
-  _getRefineCost(item) {
-    const L = item.level || 0;
-    const nextLevel = L + 1;
-    const mat = item.material;
-    const cost = {
-      gold: 0,
-      materials: {}
-    };
-    if (mat === "wooden") {
-      cost.gold = 30 * nextLevel;
-      cost.materials.material_wood = 10 * nextLevel;
-    } else if (mat === "iron") {
-      cost.gold = 75 * nextLevel;
-      cost.materials.material_wood = 5 * nextLevel;
-      cost.materials.material_stone = 5 * nextLevel;
-      cost.materials.material_iron_ore = 3 * nextLevel;
-    } else if (mat === "steel") {
-      cost.gold = 150 * nextLevel;
-      cost.materials.material_stone = 10 * nextLevel;
-      cost.materials.material_steel_ingot = 3 * nextLevel;
-    } else if (mat === "gold") {
-      cost.gold = 300 * nextLevel;
-      cost.materials.material_stone = 15 * nextLevel;
-    } else if (mat === "mythril") {
-      cost.gold = 500 * nextLevel;
-      cost.materials.material_mythril = 2 * nextLevel;
-    }
-    return cost;
   }
 }
 document.addEventListener("DOMContentLoaded", () => {
@@ -8954,6 +9249,18 @@ body {
 
                     <div class="status-item-detailed">
                         <div class="status-row">
+                            <span class="label" data-i18n="ui_builders">Builders</span>
+                            <span id="village-builder-count" class="value">--</span>
+                        </div>
+                        <div class="sub-label builder-controls">
+                            <button class="btn-builder" data-action="dec-builder">−</button>
+                            <span data-i18n="ui_available_builders">Available</span>: <span id="village-builder-avail" class="accent-text">--</span>
+                            <button class="btn-builder" data-action="inc-builder">+</button>
+                        </div>
+                    </div>
+
+                    <div class="status-item-detailed">
+                        <div class="status-row">
                             <span class="label" data-i18n="inv_storage">Storage</span>
                             <span id="village-storage-text" class="value">-- / --</span>
                         </div>
@@ -9002,6 +9309,9 @@ body {
     .status-row .label { color: var(--text-muted); font-size: 0.9rem; }
     .status-row .value { font-weight: 700; color: var(--text-primary); }
     .accent-text { color: var(--accent-color); font-weight: 700; }
+    .builder-controls { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .btn-builder { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-builder:hover { background: rgba(255,255,255,0.2); }
     
     .action-card {
         display: flex;
@@ -9312,6 +9622,66 @@ body {
     .slot-item, .skill-level {
         font-weight: 500;
         font-size: 0.9em;
+    }
+
+    /* Skill tree styles */
+    .skill-item {
+        align-items: center;
+        padding: 8px 5px;
+        border-radius: var(--radius-sm);
+        transition: background 0.2s ease;
+    }
+    .skill-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .skill-item .skill-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .skill-item .skill-name {
+        font-weight: 600;
+        font-size: 0.9em;
+    }
+    .skill-item .skill-meta {
+        font-size: 0.75em;
+        color: var(--text-muted);
+        text-transform: capitalize;
+    }
+    .skill-item .skill-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .skill-item .skill-level {
+        color: var(--accent-color);
+        font-weight: 700;
+        font-size: 0.85em;
+    }
+    .skill-item.skill-locked .skill-name {
+        color: var(--text-muted);
+    }
+    .skill-item.skill-learned .skill-name {
+        color: var(--text-primary);
+    }
+    .skill-item.skill-cat-physical .skill-name { color: #ff8c69; }
+    .skill-item.skill-cat-magic .skill-name { color: #7eb8ff; }
+    .skill-item.skill-cat-support .skill-name { color: #7fffaa; }
+    .skill-item.skill-cat-tricker .skill-name { color: #da70d6; }
+    .skill-max-label {
+        font-size: 0.75em;
+        color: var(--accent-color);
+        font-weight: 700;
+        opacity: 0.7;
+    }
+    .skill-locked-label {
+        font-size: 0.75em;
+        color: var(--text-muted);
+    }
+    .btn-learn-skill, .btn-upgrade-skill {
+        padding: 3px 8px;
+        font-size: 0.75em;
+        min-width: auto;
     }
 </style>
 </template>

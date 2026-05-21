@@ -10,6 +10,7 @@ import { ExpeditionService } from './explore/services/ExpeditionService.js';
 import { persistence } from './shared/core/Persistence.js';
 import { i18n } from './shared/core/i18n/I18nService.js';
 import { Result } from './shared/core/Result.js';
+import { getRefineCost } from './shared/data/GameConstants.js';
 
 export class GameEngine {
     constructor() {
@@ -26,8 +27,6 @@ export class GameEngine {
             this.villageService, 
             this.inventoryService
         );
-        this.i18n = i18n;
-        
         this.i18n = i18n;
         
         // New Game Experience
@@ -271,36 +270,7 @@ export class GameEngine {
     }
 
     getRefineCost(item) {
-        const L = item.level || 0;
-        const nextLevel = L + 1;
-        const mat = item.material;
-        
-        const cost = {
-            gold: 0,
-            materials: {}
-        };
-        
-        if (mat === 'wooden') {
-            cost.gold = 30 * nextLevel;
-            cost.materials.material_wood = 10 * nextLevel;
-        } else if (mat === 'iron') {
-            cost.gold = 75 * nextLevel;
-            cost.materials.material_wood = 5 * nextLevel;
-            cost.materials.material_stone = 5 * nextLevel;
-            cost.materials.material_iron_ore = 3 * nextLevel;
-        } else if (mat === 'steel') {
-            cost.gold = 150 * nextLevel;
-            cost.materials.material_stone = 10 * nextLevel;
-            cost.materials.material_steel_ingot = 3 * nextLevel;
-        } else if (mat === 'gold') {
-            cost.gold = 300 * nextLevel;
-            cost.materials.material_stone = 15 * nextLevel;
-        } else if (mat === 'mythril') {
-            cost.gold = 500 * nextLevel;
-            cost.materials.material_mythril = 2 * nextLevel;
-        }
-        
-        return cost;
+        return getRefineCost(item);
     }
 
     refineEquipment(itemId) {

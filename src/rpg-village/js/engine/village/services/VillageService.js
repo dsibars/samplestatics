@@ -181,9 +181,9 @@ export class VillageService {
             return Result.fail('error_no_available_builders');
         }
 
-        // Check materials (this logic will be refined when materials are properly categorized)
+        // Check materials
         for (const [matId, amount] of Object.entries(costMaterials)) {
-            if (this.inventoryService.getConsumableCount(matId) < amount) {
+            if (this.inventoryService.getItemCount(matId) < amount) {
                 return Result.fail('error_not_enough_materials');
             }
         }

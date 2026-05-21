@@ -317,3 +317,38 @@ export const ARMOR_ARCHETYPES = {
     leather: { id: 'leather', defMult: 1.0, evaBonus: 10, spdPenalty: 0 },
     robes: { id: 'robes', defMult: 0.5, mpMult: 1.5, magMult: 1.2, spdPenalty: 0 }
 };
+
+/**
+ * Calculate equipment refinement cost based on material and current level.
+ * @param {Object} item - Equipment item with `material` and `level`.
+ * @returns {{gold:number,materials:Object<string,number>}}
+ */
+export function getRefineCost(item) {
+    const L = item.level || 0;
+    const nextLevel = L + 1;
+    const mat = item.material;
+
+    const cost = { gold: 0, materials: {} };
+
+    if (mat === 'wooden') {
+        cost.gold = 30 * nextLevel;
+        cost.materials.material_wood = 10 * nextLevel;
+    } else if (mat === 'iron') {
+        cost.gold = 75 * nextLevel;
+        cost.materials.material_wood = 5 * nextLevel;
+        cost.materials.material_stone = 5 * nextLevel;
+        cost.materials.material_iron_ore = 3 * nextLevel;
+    } else if (mat === 'steel') {
+        cost.gold = 150 * nextLevel;
+        cost.materials.material_stone = 10 * nextLevel;
+        cost.materials.material_steel_ingot = 3 * nextLevel;
+    } else if (mat === 'gold') {
+        cost.gold = 300 * nextLevel;
+        cost.materials.material_stone = 15 * nextLevel;
+    } else if (mat === 'mythril') {
+        cost.gold = 500 * nextLevel;
+        cost.materials.material_mythril = 2 * nextLevel;
+    }
+
+    return cost;
+}
