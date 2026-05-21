@@ -78,6 +78,20 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
+                view.on('assignDefense', (data) => {
+                    const result = this.engine.assignDefense(data.heroId);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('unassignDefense', (data) => {
+                    const result = this.engine.unassignDefense(data.heroId);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
             }
             
             if (domain === 'explore') {

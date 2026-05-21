@@ -8,6 +8,7 @@ import { InventoryService } from './shared/inventory/services/InventoryService.j
 import { VillageService } from './village/services/VillageService.js';
 import { ExpeditionService } from './explore/services/ExpeditionService.js';
 import { DailyObjectivesService } from './daily/services/DailyObjectivesService.js';
+import { CalendarService } from './calendar/services/CalendarService.js';
 import { persistence } from './shared/core/Persistence.js';
 import { i18n } from './shared/core/i18n/I18nService.js';
 import { Result } from './shared/core/Result.js';
@@ -29,6 +30,7 @@ export class GameEngine {
             this.inventoryService
         );
         this.dailyObjectivesService = new DailyObjectivesService(this.inventoryService);
+        this.calendarService = new CalendarService(this.villageService, this.heroService);
         this.i18n = i18n;
         
         // New Game Experience
@@ -131,6 +133,7 @@ export class GameEngine {
             itemUsedThisTurn: this.battleService.itemUsedThisTurn
         } : null;
 
+        const currentDay = this.villageService.getState().day || 1;
         return {
             village: this.villageService.getState(),
             inventory: this.inventoryService.getState(),
@@ -142,7 +145,8 @@ export class GameEngine {
             activeBattle,
             bestiary: this.expeditionService.getBestiary(),
             enemyTemplates: this.expeditionService.getEnemyTemplates(),
-            dailyObjectives: this.dailyObjectivesService.getState()
+            dailyObjectives: this.dailyObjectivesService.getState(),
+            calendar: this.calendarService.getState(currentDay)
         };
     }
 
@@ -553,11 +557,21 @@ export class GameEngine {
         // Tick meal buffs after any combat
         this.heroService.tickAllMealBuffs();
 
+        // --- Calendar & Defense Events ---
+        this.calendarService.generateEvents(villageState.day);
+        let raidResult = null;
+        const todayEvent = this.calendarService.getUpcomingEvents(villageState.day)
+            .find(e => e.day === villageState.day && e.type === 'raid');
+        if (todayEvent) {
+            raidResult = this.calendarService.resolveRaid(villageState.day);
+        }
+
         const dailyReport = {
             ...villageReport,
             expedition: expeditionResult.success ? expeditionResult.data : null,
             recovery: healedLog,
-            training: xpLog
+            training: xpLog,
+            raid: raidResult
         };
         
         this.villageService.setDailyReport(dailyReport);
@@ -566,6 +580,19 @@ export class GameEngine {
 
     setWorkerRole(role, delta) {
         return this.villageService.setWorkerRole(role, delta);
+    }
+
+    // --- Calendar & Defense Facade ---
+    getCalendarState() {
+        return this.calendarService.getState(this.villageService.getState().day);
+    }
+
+    assignDefense(heroId) {
+        return this.calendarService.assignDefense(heroId);
+    }
+
+    unassignDefense(heroId) {
+        return this.calendarService.unassignDefense(heroId);
     }
 
     startProject(buildingId, targetLevel, costGold, costMaterials, duration) {

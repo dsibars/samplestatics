@@ -69,6 +69,22 @@
                 </div>
             </div>
 
+            <!-- Calendar Widget -->
+            <div class="card widget calendar-widget">
+                <h3><span id="calendar-season-icon">🌸</span> <span id="calendar-season-label">--</span> <span style="font-size:0.8rem;color:var(--text-muted);">(<span id="calendar-day-of-season">--</span>/30)</span></h3>
+                <div id="calendar-events-list">
+                    <div class="empty-state" data-i18n="ui_no_events">No upcoming events.</div>
+                </div>
+            </div>
+
+            <!-- Defense Widget -->
+            <div class="card widget defense-widget">
+                <h3>🛡️ <span data-i18n="ui_defense">Village Defense</span> <span style="font-size:0.8rem;color:var(--text-muted);">(<span id="defense-count">0</span>/4)</span></h3>
+                <div id="defense-assignments-list">
+                    <div class="empty-state" data-i18n="ui_no_defenders">No defenders assigned.</div>
+                </div>
+            </div>
+
             <!-- Daily Objectives Widget -->
             <div class="card widget objectives-widget">
                 <h3 data-i18n="ui_daily_objectives">Daily Objectives</h3>
@@ -160,6 +176,23 @@
     .objective-progress { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
     .objective-all-completed { margin-top: 10px; padding: 10px; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: var(--radius-sm); text-align: center; font-size: 0.9rem; color: #2ecc71; }
     .progress-bar.success { background: linear-gradient(90deg, #2ecc71, #27ae60); }
+
+    .calendar-widget h3 { display: flex; align-items: center; gap: 6px; }
+    .event-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
+    .event-item:last-child { border-bottom: none; }
+    .event-icon { font-size: 1.1rem; }
+    .event-day { font-weight: 700; color: var(--accent-color); min-width: 40px; }
+    .event-label { flex: 1; }
+    .event-urgent { color: #f44336; }
+    .season-effect { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; padding: 6px; background: rgba(255,255,255,0.03); border-radius: 4px; }
+
+    .defense-widget .defender-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 12px; font-size: 0.85rem; margin: 2px; }
+    .defense-widget .defender-chip .remove-btn { background: none; border: none; color: #f44336; cursor: pointer; font-size: 0.9rem; padding: 0 2px; }
+    .defense-widget .assign-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--text-primary); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin: 2px; }
+    .defense-widget .assign-btn:hover { background: rgba(255,255,255,0.15); }
+    .defense-widget .assign-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .defense-assign-section { margin-top: 8px; }
+    .defense-assign-section h4 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
 
     @media (max-width: 767px) {
         .action-card { flex-direction: column; gap: var(--spacing-md); text-align: center; }

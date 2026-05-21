@@ -19,7 +19,13 @@ export class VillageView extends BaseView {
             storageBar: this.$('#village-storage-bar'),
             constructionList: this.$('#construction-list'),
             objectivesList: this.$('#daily-objectives-list'),
-            roleControls: this.$('#role-controls')
+            roleControls: this.$('#role-controls'),
+            calendarSeasonIcon: this.$('#calendar-season-icon'),
+            calendarSeasonLabel: this.$('#calendar-season-label'),
+            calendarDayOfSeason: this.$('#calendar-day-of-season'),
+            calendarEventsList: this.$('#calendar-events-list'),
+            defenseCount: this.$('#defense-count'),
+            defenseAssignmentsList: this.$('#defense-assignments-list')
         };
 
         const builderControls = this.$('.builder-controls');
@@ -47,6 +53,21 @@ export class VillageView extends BaseView {
                     this.emit('setWorkerRole', { role, delta: 1 });
                 } else if (action === 'dec') {
                     this.emit('setWorkerRole', { role, delta: -1 });
+                }
+            });
+        }
+
+        const defenseList = this.$('#defense-assignments-list');
+        if (defenseList) {
+            defenseList.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-defense-action]');
+                if (!btn) return;
+                const action = btn.dataset.defenseAction;
+                const heroId = btn.dataset.heroId;
+                if (action === 'unassign') {
+                    this.emit('unassignDefense', { heroId });
+                } else if (action === 'assign') {
+                    this.emit('assignDefense', { heroId });
                 }
             });
         }
@@ -99,6 +120,10 @@ export class VillageView extends BaseView {
 
         // Daily Objectives
         this.renderDailyObjectives(state.dailyObjectives);
+
+        // Calendar & Defense
+        this.renderCalendar(state.calendar);
+        this.renderDefense(state.calendar, state.heroes);
 
         // Daily Report
         this.renderDailyReport(village.lastDailyReport);
@@ -256,6 +281,37 @@ export class VillageView extends BaseView {
             }
         }
 
+        let raidHtml = '';
+        if (report.raid) {
+            const raid = report.raid;
+            if (raid.isVictory) {
+                raidHtml = `
+                    <div class="report-section success">
+                        <span class="report-icon">🛡️</span>
+                        <span>${this.t('ui_report_raid_victory')
+                            .replace('{defense}', raid.defensePower)
+                            .replace('{raid}', raid.raidPower)
+                            .replace('{gold}', raid.goldReward || 0)}</span>
+                    </div>
+                `;
+            } else {
+                const damagedStr = raid.damagedBuilding
+                    ? this.t('ui_report_raid_damaged').replace('{building}', this.t('village_' + raid.damagedBuilding) || raid.damagedBuilding)
+                    : '';
+                raidHtml = `
+                    <div class="report-section danger">
+                        <span class="report-icon">⚠️</span>
+                        <span>${this.t('ui_report_raid_defeat')
+                            .replace('{defense}', raid.defensePower)
+                            .replace('{raid}', raid.raidPower)
+                            .replace('{wood}', raid.woodLoss || 0)
+                            .replace('{stone}', raid.stoneLoss || 0)
+                            .replace('{damaged}', damagedStr)}</span>
+                    </div>
+                `;
+            }
+        }
+
         container.innerHTML = `
             <div class="card widget daily-report-widget">
                 <h3>${this.t('ui_daily_report_title').replace('{day}', report.day - 1)}</h3>
@@ -270,6 +326,7 @@ export class VillageView extends BaseView {
                     ${recoveryHtml}
                     ${trainingHtml}
                     ${expHtml}
+                    ${raidHtml}
                 </div>
             </div>
         `;
@@ -379,5 +436,103 @@ export class VillageView extends BaseView {
                 </div>
             </div>
         `).join('');
+    }
+
+    renderCalendar(calendar) {
+        if (!calendar) return;
+
+        const SEASON_ICONS = {
+            spring: '🌸',
+            summer: '☀️',
+            autumn: '🍂',
+            winter: '❄️'
+        };
+
+        if (this.elements.calendarSeasonIcon) {
+            this.elements.calendarSeasonIcon.textContent = SEASON_ICONS[calendar.season] || '📅';
+        }
+        if (this.elements.calendarSeasonLabel) {
+            this.elements.calendarSeasonLabel.textContent = this.t('season_' + calendar.season) || calendar.season;
+        }
+        if (this.elements.calendarDayOfSeason) {
+            this.elements.calendarDayOfSeason.textContent = calendar.dayOfSeason;
+        }
+
+        if (this.elements.calendarEventsList) {
+            const events = calendar.upcomingEvents || [];
+            if (events.length === 0) {
+                this.elements.calendarEventsList.innerHTML = `
+                    <div class="empty-state" data-i18n="ui_no_events">${this.t('ui_no_events')}</div>
+                `;
+            } else {
+                this.elements.calendarEventsList.innerHTML = events.slice(0, 5).map(ev => {
+                    const isRaid = ev.type === 'raid';
+                    const daysAway = ev.day - (calendar.day || 1);
+                    const isUrgent = isRaid && daysAway <= 2;
+                    const icon = isRaid ? '⚔️' : '📅';
+                    const label = isRaid ? this.t('event_raid') || 'Raid' : this.t('event_' + ev.type) || ev.type;
+                    const dayLabel = daysAway === 0 ? this.t('ui_today') || 'Today' : (daysAway === 1 ? this.t('ui_tomorrow') || 'Tomorrow' : `D+${daysAway}`);
+                    return `
+                        <div class="event-item ${isUrgent ? 'event-urgent' : ''}">
+                            <span class="event-icon">${icon}</span>
+                            <span class="event-day">${dayLabel}</span>
+                            <span class="event-label">${label}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    }
+
+    renderDefense(calendar, heroes) {
+        if (!calendar) return;
+
+        const assigned = calendar.defenseAssigned || [];
+        if (this.elements.defenseCount) {
+            this.elements.defenseCount.textContent = assigned.length;
+        }
+
+        if (!this.elements.defenseAssignmentsList) return;
+
+        const maxDefenders = 4;
+        const idleHeroes = (heroes || []).filter(h => h.activity === 'idle' && h.hp > 0);
+        const canAssign = assigned.length < maxDefenders;
+
+        let html = '';
+
+        if (assigned.length > 0) {
+            html += `<div class="defenders-row">`;
+            assigned.forEach(heroId => {
+                const hero = (heroes || []).find(h => h.id === heroId);
+                const heroName = hero ? hero.name : heroId;
+                html += `
+                    <span class="defender-chip">
+                        ${heroName}
+                        <button class="remove-btn" data-defense-action="unassign" data-hero-id="${heroId}" title="${this.t('ui_remove') || 'Remove'}">×</button>
+                    </span>
+                `;
+            });
+            html += `</div>`;
+        }
+
+        if (idleHeroes.length > 0 && canAssign) {
+            html += `<div class="defense-assign-section"><h4>${this.t('ui_assign_defender') || 'Assign Defender'}</h4>`;
+            idleHeroes.forEach(hero => {
+                if (!assigned.includes(hero.id)) {
+                    html += `
+                        <button class="assign-btn" data-defense-action="assign" data-hero-id="${hero.id}">
+                            + ${hero.name}
+                        </button>
+                    `;
+                }
+            });
+            html += `</div>`;
+        }
+
+        if (assigned.length === 0 && idleHeroes.length === 0) {
+            html = `<div class="empty-state" data-i18n="ui_no_defenders">${this.t('ui_no_defenders')}</div>`;
+        }
+
+        this.elements.defenseAssignmentsList.innerHTML = html;
     }
 }
