@@ -1,5 +1,6 @@
 import { BaseView } from '../BaseView.js';
 import { getEquipmentName, getEquipmentStats, getFormattedStats } from '../shared/EquipmentHelper.js';
+import { MEAL_RECIPES } from '../../../engine/shared/data/GameConstants.js';
 
 export class InventoryView extends BaseView {
     constructor() {
@@ -45,6 +46,22 @@ export class InventoryView extends BaseView {
                     if (this.lastState) {
                         this.onUpdate(this.lastState);
                     }
+                }
+            });
+        }
+
+        // Bind cook/consume buttons in detail pane
+        if (this.elements.detail) {
+            this.elements.detail.addEventListener('click', (e) => {
+                const cookBtn = e.target.closest('.btn-cook-meal');
+                if (cookBtn) {
+                    this.emit('cookMeal', { recipeId: cookBtn.dataset.recipe });
+                    return;
+                }
+                const feedBtn = e.target.closest('.btn-consume-meal');
+                if (feedBtn) {
+                    this.emit('consumeMeal', { mealId: feedBtn.dataset.meal });
+                    return;
                 }
             });
         }
@@ -106,12 +123,13 @@ export class InventoryView extends BaseView {
         if (inventory.food) {
             Object.entries(inventory.food).forEach(([id, count]) => {
                 if (count > 0) {
+                    const mealRecipe = MEAL_RECIPES[id];
                     items.push({
                         id,
                         type: 'food',
                         name: this.t(id),
                         qty: count,
-                        icon: '🌾'
+                        icon: mealRecipe ? mealRecipe.icon : '🌾'
                     });
                 }
             });
@@ -217,6 +235,68 @@ export class InventoryView extends BaseView {
         }
 
         let detailsHtml = '';
+        let actionHtml = '';
+
+        // Show cook recipes when raw grain is selected
+        if (item.id === 'food_raw_grain') {
+            const recipes = Object.values(MEAL_RECIPES);
+            const inventory = this.lastState?.inventory || {};
+            const recipesHtml = recipes.map(recipe => {
+                const canCook = Object.entries(recipe.ingredients).every(([ingId, qty]) => {
+                    const count = inventory.materials?.[ingId] || inventory.food?.[ingId] || inventory.consumables?.[ingId] || 0;
+                    return count >= qty;
+                });
+                const ingredientsList = Object.entries(recipe.ingredients).map(([ingId, qty]) => {
+                    const have = inventory.materials?.[ingId] || inventory.food?.[ingId] || inventory.consumables?.[ingId] || 0;
+                    const color = have >= qty ? 'var(--success)' : 'var(--danger)';
+                    return `<span style="color:${color}">${qty} ${this.t(ingId) || ingId}</span>`;
+                }).join(', ');
+                const buffDesc = Object.entries(recipe.buff).map(([stat, val]) => {
+                    const label = stat === 'maxHp' ? '+${Math.round(val*100)}% HP' : `+${val} ${this.t('ui_stats_' + stat) || stat.toUpperCase()}`;
+                    return label.replace('${Math.round(val*100)}', Math.round(val * 100)).replace('${val}', val);
+                }).join(', ');
+
+                return `
+                    <div class="recipe-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,0.05);">
+                        <div style="text-align:left;">
+                            <div style="font-weight:600; font-size:0.9rem;">${recipe.icon} ${this.t(recipe.name) || recipe.name}</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">${ingredientsList}</div>
+                            <div style="font-size:0.75rem; color:var(--accent-color);">${buffDesc} · ${recipe.battles} ${this.t('ui_battles') || 'battle(s)'}</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm btn-cook-meal" data-recipe="${recipe.id}" ${canCook ? '' : 'disabled'} style="min-width:60px;">
+                            ${this.t('ui_cook') || 'Cook'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            actionHtml = `
+                <div class="item-inspector-stats" style="margin-top:15px;">
+                    <h4>${this.t('ui_recipes') || 'Recipes'}</h4>
+                    ${recipesHtml}
+                </div>
+            `;
+        }
+
+        // Show feed button when a meal is selected
+        if (item.id && item.id.startsWith('meal_')) {
+            const recipe = MEAL_RECIPES[item.id];
+            if (recipe) {
+                const buffDesc = Object.entries(recipe.buff).map(([stat, val]) => {
+                    if (stat === 'maxHp') return `+${Math.round(val * 100)}% HP`;
+                    return `+${val} ${this.t('ui_stats_' + stat) || stat.toUpperCase()}`;
+                }).join(', ');
+                actionHtml = `
+                    <div class="item-inspector-stats" style="margin-top:15px;">
+                        <h4>${this.t('ui_effect') || 'Effect'}</h4>
+                        <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:10px;">${buffDesc} · ${recipe.battles} ${this.t('ui_battles') || 'battle(s)'}</div>
+                        <button class="btn btn-primary btn-consume-meal" data-meal="${item.id}" style="width:100%;">
+                            ${this.t('ui_feed_heroes') || 'Feed Heroes'}
+                        </button>
+                    </div>
+                `;
+            }
+        }
 
         if (item.type === 'equipment' && item.rawEquipment) {
             const eq = item.rawEquipment;
@@ -265,6 +345,7 @@ export class InventoryView extends BaseView {
                 <div class="item-inspector-body">
                     <p class="item-inspector-description">${description}</p>
                     ${detailsHtml}
+                    ${actionHtml}
                 </div>
             </div>
         `;

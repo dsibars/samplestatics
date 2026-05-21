@@ -73,6 +73,19 @@ export class HeroService {
         return result;
     }
 
+    tickAllMealBuffs() {
+        let anyChanged = false;
+        this.heroes.forEach(hero => {
+            if (hero.tickMealBuffs()) {
+                anyChanged = true;
+            }
+        });
+        if (anyChanged) {
+            this.saveAll();
+        }
+        return anyChanged;
+    }
+
     learnHeroSkill(heroId, skillId, unlockCost) {
         const hero = this.get(heroId);
         if (!hero) return Result.fail('error_hero_not_found');

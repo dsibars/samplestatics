@@ -142,6 +142,15 @@ export class HeroesView extends BaseView {
                 : (this.t('ui_activity_expedition') || 'On Expedition');
             card.querySelector('.list-item-header').appendChild(activityBadge);
 
+            if (hero.mealBuffs && hero.mealBuffs.length > 0) {
+                const mealBadge = document.createElement('span');
+                mealBadge.className = 'hero-activity-badge';
+                mealBadge.textContent = '🍖';
+                mealBadge.title = this.t('ui_has_meal_buff') || 'Meal buff active';
+                mealBadge.style.marginLeft = '4px';
+                card.querySelector('.list-item-header').appendChild(mealBadge);
+            }
+
             if (hero.id === this.selectedHeroId) {
                 card.classList.add('active');
             }

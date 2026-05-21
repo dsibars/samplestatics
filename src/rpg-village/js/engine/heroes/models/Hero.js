@@ -28,6 +28,7 @@ export class Hero {
         this.skills = data.skills || { basic_attack: 0 };
         this.statusEffects = data.statusEffects || [];
         this.phoenixUsed = data.phoenixUsed || false;
+        this.mealBuffs = data.mealBuffs || [];
         
         this.equipment = data.equipment || {
             head: null,
@@ -167,6 +168,17 @@ export class Hero {
             setCounts[item.set] = (setCounts[item.set] || 0) + 1;
         });
 
+        // --- Meal Buffs ---
+        if (this.mealBuffs && this.mealBuffs.length > 0) {
+            this.mealBuffs.forEach(buff => {
+                if (buff.stat === 'maxHp') {
+                    equipBonus.maxHp += Math.floor(this.baseMaxHp * buff.value);
+                } else if (equipBonus[buff.stat] !== undefined) {
+                    equipBonus[buff.stat] += buff.value;
+                }
+            });
+        }
+
         this.activeSetBonuses = [];
         for (const [setId, count] of Object.entries(setCounts)) {
             const setData = EQUIPMENT_SET_BONUSES[setId];
@@ -277,6 +289,23 @@ export class Hero {
         return Result.ok(this[statId]);
     }
 
+    tickMealBuffs() {
+        if (!this.mealBuffs || this.mealBuffs.length === 0) return false;
+        let changed = false;
+        this.mealBuffs = this.mealBuffs.map(buff => {
+            const updated = { ...buff, battlesRemaining: buff.battlesRemaining - 1 };
+            if (updated.battlesRemaining > 0) {
+                return updated;
+            }
+            changed = true;
+            return null;
+        }).filter(Boolean);
+        if (changed) {
+            this.recalculateStats();
+        }
+        return changed;
+    }
+
     learnSkill(skillId, unlockCost) {
         if (this.skillPoints < unlockCost) return Result.fail('error_no_skill_points');
         if (this.skills[skillId] !== undefined) return Result.fail('error_skill_already_unlocked');
@@ -325,6 +354,7 @@ export class Hero {
             phoenixUsed: this.phoenixUsed,
             equipment: JSON.parse(JSON.stringify(this.equipment)),
             activeSetBonuses: this.activeSetBonuses || [],
+            mealBuffs: this.mealBuffs || [],
             avatar: this.avatar
         };
     }

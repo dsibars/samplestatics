@@ -162,6 +162,27 @@ export class EngineAdapter {
                 });
             }
 
+            if (domain === 'inventory') {
+                view.on('cookMeal', (data) => {
+                    const result = this.engine.cookMeal(data.recipeId);
+                    if (result.success) {
+                        this.ui.showToast(this.engine.i18n.t('ui_cooked') + ' ' + this.engine.i18n.t(data.recipeId));
+                    } else {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('consumeMeal', (data) => {
+                    const result = this.engine.consumeMeal(data.mealId);
+                    if (result.success) {
+                        this.ui.showToast(`${this.engine.i18n.t('ui_fed')} ${result.data.fedCount} ${this.engine.i18n.t('ui_heroes')}`);
+                    } else {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+            }
+
             if (domain === 'forge') {
                 view.on('refineItem', (data) => {
                     const result = this.engine.refineEquipment(data.itemId);

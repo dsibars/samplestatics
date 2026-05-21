@@ -349,6 +349,40 @@ const CONSUMABLES_DATA = {
   tiny_mp_potion: { id: "tiny_mp_potion", type: "HEAL_MP", amount: 0.3 },
   teleport_scroll: { id: "teleport_scroll", type: "ESCAPE", amount: 1 }
 };
+const MEAL_RECIPES = {
+  meal_bread: {
+    id: "meal_bread",
+    name: "meal_bread",
+    ingredients: { food_raw_grain: 2 },
+    buff: { maxHp: 0.05 },
+    battles: 1,
+    icon: "🍞"
+  },
+  meal_stew: {
+    id: "meal_stew",
+    name: "meal_stew",
+    ingredients: { food_raw_grain: 3, material_wood: 1 },
+    buff: { maxHp: 0.1, strength: 1 },
+    battles: 1,
+    icon: "🍲"
+  },
+  meal_pie: {
+    id: "meal_pie",
+    name: "meal_pie",
+    ingredients: { food_raw_grain: 4, material_stone: 1 },
+    buff: { maxHp: 0.1, defense: 1 },
+    battles: 1,
+    icon: "🥧"
+  },
+  meal_feast: {
+    id: "meal_feast",
+    name: "meal_feast",
+    ingredients: { food_raw_grain: 5, material_wood: 2, material_stone: 1 },
+    buff: { maxHp: 0.15, strength: 2, defense: 2 },
+    battles: 2,
+    icon: "🍖"
+  }
+};
 const WEAPON_FAMILIES = {
   dagger: { id: "dagger", spdBonus: 2, evaBonus: 5, dmgMult: 0.8 },
   broadsword: { id: "broadsword", spdBonus: 0, evaBonus: 0, dmgMult: 1 },
@@ -1300,6 +1334,7 @@ class Hero {
     this.skills = data.skills || { basic_attack: 0 };
     this.statusEffects = data.statusEffects || [];
     this.phoenixUsed = data.phoenixUsed || false;
+    this.mealBuffs = data.mealBuffs || [];
     this.equipment = data.equipment || {
       head: null,
       body: null,
@@ -1429,6 +1464,15 @@ class Hero {
       if (!item || !item.set) return;
       setCounts[item.set] = (setCounts[item.set] || 0) + 1;
     });
+    if (this.mealBuffs && this.mealBuffs.length > 0) {
+      this.mealBuffs.forEach((buff) => {
+        if (buff.stat === "maxHp") {
+          equipBonus.maxHp += Math.floor(this.baseMaxHp * buff.value);
+        } else if (equipBonus[buff.stat] !== void 0) {
+          equipBonus[buff.stat] += buff.value;
+        }
+      });
+    }
     this.activeSetBonuses = [];
     for (const [setId, count] of Object.entries(setCounts)) {
       const setData = EQUIPMENT_SET_BONUSES[setId];
@@ -1518,6 +1562,22 @@ class Hero {
     this.recalculateStats();
     return Result.ok(this[statId]);
   }
+  tickMealBuffs() {
+    if (!this.mealBuffs || this.mealBuffs.length === 0) return false;
+    let changed = false;
+    this.mealBuffs = this.mealBuffs.map((buff) => {
+      const updated = { ...buff, battlesRemaining: buff.battlesRemaining - 1 };
+      if (updated.battlesRemaining > 0) {
+        return updated;
+      }
+      changed = true;
+      return null;
+    }).filter(Boolean);
+    if (changed) {
+      this.recalculateStats();
+    }
+    return changed;
+  }
   learnSkill(skillId, unlockCost) {
     if (this.skillPoints < unlockCost) return Result.fail("error_no_skill_points");
     if (this.skills[skillId] !== void 0) return Result.fail("error_skill_already_unlocked");
@@ -1562,6 +1622,7 @@ class Hero {
       phoenixUsed: this.phoenixUsed,
       equipment: JSON.parse(JSON.stringify(this.equipment)),
       activeSetBonuses: this.activeSetBonuses || [],
+      mealBuffs: this.mealBuffs || [],
       avatar: this.avatar
     };
   }
@@ -1667,6 +1728,18 @@ class HeroService {
       this.saveAll();
     }
     return result;
+  }
+  tickAllMealBuffs() {
+    let anyChanged = false;
+    this.heroes.forEach((hero) => {
+      if (hero.tickMealBuffs()) {
+        anyChanged = true;
+      }
+    });
+    if (anyChanged) {
+      this.saveAll();
+    }
+    return anyChanged;
   }
   learnHeroSkill(heroId, skillId, unlockCost) {
     const hero = this.get(heroId);
@@ -3786,7 +3859,19 @@ const en = {
   skeleton_warrior: "Skeleton Warrior",
   ghost_wisp: "Ghost Wisp",
   ice_elemental: "Ice Elemental",
-  young_drake: "Young Drake"
+  young_drake: "Young Drake",
+  meal_bread: "Bread",
+  meal_stew: "Hearty Stew",
+  meal_pie: "Meat Pie",
+  meal_feast: "Hero's Feast",
+  ui_cook: "Cook",
+  ui_cooked: "Cooked",
+  ui_fed: "Fed",
+  ui_feed_heroes: "Feed Heroes",
+  ui_recipes: "Recipes",
+  ui_battles: "battles",
+  ui_effect: "Effect",
+  ui_has_meal_buff: "Meal buff active"
 };
 const es = {
   // UI General
@@ -4162,7 +4247,19 @@ const es = {
   skeleton_warrior: "Guerrero Esqueleto",
   ghost_wisp: "Resplandor Fantasmal",
   ice_elemental: "Elemental de Hielo",
-  young_drake: "Draco Joven"
+  young_drake: "Draco Joven",
+  meal_bread: "Pan",
+  meal_stew: "Guiso Contundente",
+  meal_pie: "Pastel de Carne",
+  meal_feast: "Banquete del Héroe",
+  ui_cook: "Cocinar",
+  ui_cooked: "Cocinado",
+  ui_fed: "Alimentado",
+  ui_feed_heroes: "Alimentar Héroes",
+  ui_recipes: "Recetas",
+  ui_battles: "batallas",
+  ui_effect: "Efecto",
+  ui_has_meal_buff: "Buff de comida activo"
 };
 const ca = {
   // UI General
@@ -4535,7 +4632,19 @@ const ca = {
   skeleton_warrior: "Guerrer Esquelet",
   ghost_wisp: "Lluïssor Fantasmal",
   ice_elemental: "Elemental de Gel",
-  young_drake: "Drac Jove"
+  young_drake: "Drac Jove",
+  meal_bread: "Pa",
+  meal_stew: "Guisat Contundent",
+  meal_pie: "Pastís de Carn",
+  meal_feast: "Banquet de l'Heroi",
+  ui_cook: "Cuinar",
+  ui_cooked: "Cuinat",
+  ui_fed: "Alimentat",
+  ui_feed_heroes: "Alimentar Herois",
+  ui_recipes: "Receptes",
+  ui_battles: "batalles",
+  ui_effect: "Efecte",
+  ui_has_meal_buff: "Buff de menjar actiu"
 };
 const eu = {
   // UI General
@@ -4909,7 +5018,19 @@ const eu = {
   skeleton_warrior: "Hezurrezko Gudaria",
   ghost_wisp: "Mamu Argia",
   ice_elemental: "Izotz Elementala",
-  young_drake: "Drake Gaztea"
+  young_drake: "Drake Gaztea",
+  meal_bread: "Ogia",
+  meal_stew: "Zopa Sendoa",
+  meal_pie: "Haragi Tarta",
+  meal_feast: "Heroiaren Otordua",
+  ui_cook: "Sukaldatu",
+  ui_cooked: "Sukaldatuta",
+  ui_fed: "Elikatu",
+  ui_feed_heroes: "Elikatu Heroiak",
+  ui_recipes: "Errezetak",
+  ui_battles: "borroka",
+  ui_effect: "Efektua",
+  ui_has_meal_buff: "Janari buff aktiboa"
 };
 const gl = {
   // UI General
@@ -5280,7 +5401,19 @@ const gl = {
   skeleton_warrior: "Guerreiro Esqueleto",
   ghost_wisp: "Resplandor Fantasmal",
   ice_elemental: "Elemental de Xeo",
-  young_drake: "Draco Novo"
+  young_drake: "Draco Novo",
+  meal_bread: "Pan",
+  meal_stew: "Guiso Contundente",
+  meal_pie: "Pastel de Carne",
+  meal_feast: "Banquete do Heroe",
+  ui_cook: "Cocer",
+  ui_cooked: "Cocido",
+  ui_fed: "Alimentado",
+  ui_feed_heroes: "Alimentar Heroes",
+  ui_recipes: "Receitas",
+  ui_battles: "batallas",
+  ui_effect: "Efecto",
+  ui_has_meal_buff: "Buff de comida activo"
 };
 class I18nService {
   constructor() {
@@ -5590,6 +5723,48 @@ const _GameEngine = class _GameEngine {
     }
     return Result.ok(item);
   }
+  // --- Meal Crafting ---
+  cookMeal(recipeId) {
+    const recipe = MEAL_RECIPES[recipeId];
+    if (!recipe) return Result.fail("error_recipe_not_found");
+    for (const [ingId, qty] of Object.entries(recipe.ingredients)) {
+      if (this.inventoryService.getItemCount(ingId) < qty) {
+        return Result.fail("error_not_enough_materials");
+      }
+    }
+    for (const [ingId, qty] of Object.entries(recipe.ingredients)) {
+      this.inventoryService.useItem(ingId, qty);
+    }
+    this.inventoryService.addItem(recipeId, 1);
+    this.dailyObjectivesService.track("craft_items", 1);
+    return Result.ok({ recipeId, mealId: recipeId });
+  }
+  consumeMeal(mealId) {
+    const { MEAL_RECIPES: MEAL_RECIPES2 } = require("./shared/data/GameConstants.js");
+    const recipe = MEAL_RECIPES2[mealId];
+    if (!recipe) return Result.fail("error_meal_not_found");
+    const mealCount = this.inventoryService.getItemCount(mealId);
+    if (mealCount < 1) return Result.fail("error_not_enough_items");
+    this.inventoryService.useItem(mealId, 1);
+    const buffs = Object.entries(recipe.buff).map(([stat, value]) => ({
+      stat,
+      value,
+      battlesRemaining: recipe.battles
+    }));
+    let fedCount = 0;
+    this.heroService.list().forEach((hero) => {
+      const activity = this.expeditionService.getHeroActivity(hero.id);
+      if (activity.type === "idle") {
+        if (!hero.mealBuffs) hero.mealBuffs = [];
+        hero.mealBuffs = hero.mealBuffs.filter((b) => !recipe.buff.hasOwnProperty(b.stat));
+        hero.mealBuffs.push(...buffs.map((b) => ({ ...b })));
+        hero.recalculateStats();
+        fedCount++;
+      }
+    });
+    this.heroService.saveAll();
+    return Result.ok({ fedCount, buffs });
+  }
   // --- Combat Facade ---
   startBattle(enemies) {
     const activeHeroes = this.heroService.list("active");
@@ -5679,6 +5854,7 @@ const _GameEngine = class _GameEngine {
         this.dailyObjectivesService.track("defeat_enemies", expData.combatLog.enemies.length);
       }
     }
+    this.heroService.tickAllMealBuffs();
     const dailyReport = {
       ...villageReport,
       expedition: expeditionResult.success ? expeditionResult.data : null,
@@ -5861,6 +6037,26 @@ class EngineAdapter {
             this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           } else {
             this.ui.showToast(`+${result.data.goldEarned}g (${result.data.sold} ${this.engine.i18n.t(data.resourceId) || data.resourceId})`);
+          }
+          this.forceUpdate();
+        });
+      }
+      if (domain === "inventory") {
+        view.on("cookMeal", (data) => {
+          const result = this.engine.cookMeal(data.recipeId);
+          if (result.success) {
+            this.ui.showToast(this.engine.i18n.t("ui_cooked") + " " + this.engine.i18n.t(data.recipeId));
+          } else {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("consumeMeal", (data) => {
+          const result = this.engine.consumeMeal(data.mealId);
+          if (result.success) {
+            this.ui.showToast(`${this.engine.i18n.t("ui_fed")} ${result.data.fedCount} ${this.engine.i18n.t("ui_heroes")}`);
+          } else {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
           this.forceUpdate();
         });
@@ -6734,6 +6930,14 @@ class HeroesView extends BaseView {
       activityBadge.textContent = hero.activity === "idle" ? "💤" : "⚔️";
       activityBadge.title = hero.activity === "idle" ? this.t("ui_activity_idle") || "Idle" : this.t("ui_activity_expedition") || "On Expedition";
       card.querySelector(".list-item-header").appendChild(activityBadge);
+      if (hero.mealBuffs && hero.mealBuffs.length > 0) {
+        const mealBadge = document.createElement("span");
+        mealBadge.className = "hero-activity-badge";
+        mealBadge.textContent = "🍖";
+        mealBadge.title = this.t("ui_has_meal_buff") || "Meal buff active";
+        mealBadge.style.marginLeft = "4px";
+        card.querySelector(".list-item-header").appendChild(mealBadge);
+      }
       if (hero.id === this.selectedHeroId) {
         card.classList.add("active");
       }
@@ -7092,6 +7296,20 @@ class InventoryView extends BaseView {
         }
       });
     }
+    if (this.elements.detail) {
+      this.elements.detail.addEventListener("click", (e) => {
+        const cookBtn = e.target.closest(".btn-cook-meal");
+        if (cookBtn) {
+          this.emit("cookMeal", { recipeId: cookBtn.dataset.recipe });
+          return;
+        }
+        const feedBtn = e.target.closest(".btn-consume-meal");
+        if (feedBtn) {
+          this.emit("consumeMeal", { mealId: feedBtn.dataset.meal });
+          return;
+        }
+      });
+    }
   }
   update(state) {
     if (!state.inventory) return;
@@ -7136,12 +7354,13 @@ class InventoryView extends BaseView {
     if (inventory.food) {
       Object.entries(inventory.food).forEach(([id, count]) => {
         if (count > 0) {
+          const mealRecipe = MEAL_RECIPES[id];
           items.push({
             id,
             type: "food",
             name: this.t(id),
             qty: count,
-            icon: "🌾"
+            icon: mealRecipe ? mealRecipe.icon : "🌾"
           });
         }
       });
@@ -7198,6 +7417,7 @@ class InventoryView extends BaseView {
     this.renderDetail();
   }
   renderDetail() {
+    var _a;
     if (!this.elements.detail) return;
     if (!this.selectedItemId) {
       this.elements.detail.innerHTML = `
@@ -7229,6 +7449,64 @@ class InventoryView extends BaseView {
       description = this.t(item.id + "_desc") || "";
     }
     let detailsHtml = "";
+    let actionHtml = "";
+    if (item.id === "food_raw_grain") {
+      const recipes = Object.values(MEAL_RECIPES);
+      const inventory = ((_a = this.lastState) == null ? void 0 : _a.inventory) || {};
+      const recipesHtml = recipes.map((recipe) => {
+        const canCook = Object.entries(recipe.ingredients).every(([ingId, qty]) => {
+          var _a2, _b, _c;
+          const count = ((_a2 = inventory.materials) == null ? void 0 : _a2[ingId]) || ((_b = inventory.food) == null ? void 0 : _b[ingId]) || ((_c = inventory.consumables) == null ? void 0 : _c[ingId]) || 0;
+          return count >= qty;
+        });
+        const ingredientsList = Object.entries(recipe.ingredients).map(([ingId, qty]) => {
+          var _a2, _b, _c;
+          const have = ((_a2 = inventory.materials) == null ? void 0 : _a2[ingId]) || ((_b = inventory.food) == null ? void 0 : _b[ingId]) || ((_c = inventory.consumables) == null ? void 0 : _c[ingId]) || 0;
+          const color = have >= qty ? "var(--success)" : "var(--danger)";
+          return `<span style="color:${color}">${qty} ${this.t(ingId) || ingId}</span>`;
+        }).join(", ");
+        const buffDesc = Object.entries(recipe.buff).map(([stat, val]) => {
+          const label = stat === "maxHp" ? "+${Math.round(val*100)}% HP" : `+${val} ${this.t("ui_stats_" + stat) || stat.toUpperCase()}`;
+          return label.replace("${Math.round(val*100)}", Math.round(val * 100)).replace("${val}", val);
+        }).join(", ");
+        return `
+                    <div class="recipe-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,0.05);">
+                        <div style="text-align:left;">
+                            <div style="font-weight:600; font-size:0.9rem;">${recipe.icon} ${this.t(recipe.name) || recipe.name}</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">${ingredientsList}</div>
+                            <div style="font-size:0.75rem; color:var(--accent-color);">${buffDesc} · ${recipe.battles} ${this.t("ui_battles") || "battle(s)"}</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm btn-cook-meal" data-recipe="${recipe.id}" ${canCook ? "" : "disabled"} style="min-width:60px;">
+                            ${this.t("ui_cook") || "Cook"}
+                        </button>
+                    </div>
+                `;
+      }).join("");
+      actionHtml = `
+                <div class="item-inspector-stats" style="margin-top:15px;">
+                    <h4>${this.t("ui_recipes") || "Recipes"}</h4>
+                    ${recipesHtml}
+                </div>
+            `;
+    }
+    if (item.id && item.id.startsWith("meal_")) {
+      const recipe = MEAL_RECIPES[item.id];
+      if (recipe) {
+        const buffDesc = Object.entries(recipe.buff).map(([stat, val]) => {
+          if (stat === "maxHp") return `+${Math.round(val * 100)}% HP`;
+          return `+${val} ${this.t("ui_stats_" + stat) || stat.toUpperCase()}`;
+        }).join(", ");
+        actionHtml = `
+                    <div class="item-inspector-stats" style="margin-top:15px;">
+                        <h4>${this.t("ui_effect") || "Effect"}</h4>
+                        <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:10px;">${buffDesc} · ${recipe.battles} ${this.t("ui_battles") || "battle(s)"}</div>
+                        <button class="btn btn-primary btn-consume-meal" data-meal="${item.id}" style="width:100%;">
+                            ${this.t("ui_feed_heroes") || "Feed Heroes"}
+                        </button>
+                    </div>
+                `;
+      }
+    }
     if (item.type === "equipment" && item.rawEquipment) {
       const eq = item.rawEquipment;
       categoryLabel = this.t("ui_equipment");
@@ -7272,6 +7550,7 @@ class InventoryView extends BaseView {
                 <div class="item-inspector-body">
                     <p class="item-inspector-description">${description}</p>
                     ${detailsHtml}
+                    ${actionHtml}
                 </div>
             </div>
         `;

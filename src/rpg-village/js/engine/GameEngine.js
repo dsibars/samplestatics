@@ -11,7 +11,7 @@ import { DailyObjectivesService } from './daily/services/DailyObjectivesService.
 import { persistence } from './shared/core/Persistence.js';
 import { i18n } from './shared/core/i18n/I18nService.js';
 import { Result } from './shared/core/Result.js';
-import { getRefineCost } from './shared/data/GameConstants.js';
+import { getRefineCost, MEAL_RECIPES } from './shared/data/GameConstants.js';
 
 export class GameEngine {
     constructor() {
@@ -379,6 +379,64 @@ export class GameEngine {
         return Result.ok(item);
     }
 
+    // --- Meal Crafting ---
+    cookMeal(recipeId) {
+        const recipe = MEAL_RECIPES[recipeId];
+        if (!recipe) return Result.fail('error_recipe_not_found');
+
+        // Check ingredients
+        for (const [ingId, qty] of Object.entries(recipe.ingredients)) {
+            if (this.inventoryService.getItemCount(ingId) < qty) {
+                return Result.fail('error_not_enough_materials');
+            }
+        }
+
+        // Deduct ingredients
+        for (const [ingId, qty] of Object.entries(recipe.ingredients)) {
+            this.inventoryService.useItem(ingId, qty);
+        }
+
+        // Add meal to food inventory
+        this.inventoryService.addItem(recipeId, 1);
+        this.dailyObjectivesService.track('craft_items', 1);
+
+        return Result.ok({ recipeId, mealId: recipeId });
+    }
+
+    consumeMeal(mealId) {
+        const { MEAL_RECIPES } = require('./shared/data/GameConstants.js');
+        const recipe = MEAL_RECIPES[mealId];
+        if (!recipe) return Result.fail('error_meal_not_found');
+
+        const mealCount = this.inventoryService.getItemCount(mealId);
+        if (mealCount < 1) return Result.fail('error_not_enough_items');
+
+        this.inventoryService.useItem(mealId, 1);
+
+        // Apply buffs to all idle heroes
+        const buffs = Object.entries(recipe.buff).map(([stat, value]) => ({
+            stat,
+            value,
+            battlesRemaining: recipe.battles
+        }));
+
+        let fedCount = 0;
+        this.heroService.list().forEach(hero => {
+            const activity = this.expeditionService.getHeroActivity(hero.id);
+            if (activity.type === 'idle') {
+                if (!hero.mealBuffs) hero.mealBuffs = [];
+                // Remove existing buffs of same stat to prevent stacking
+                hero.mealBuffs = hero.mealBuffs.filter(b => !recipe.buff.hasOwnProperty(b.stat));
+                hero.mealBuffs.push(...buffs.map(b => ({ ...b })));
+                hero.recalculateStats();
+                fedCount++;
+            }
+        });
+
+        this.heroService.saveAll();
+        return Result.ok({ fedCount, buffs });
+    }
+
     // --- Combat Facade ---
     startBattle(enemies) {
         const activeHeroes = this.heroService.list('active');
@@ -491,6 +549,9 @@ export class GameEngine {
                 this.dailyObjectivesService.track('defeat_enemies', expData.combatLog.enemies.length);
             }
         }
+
+        // Tick meal buffs after any combat
+        this.heroService.tickAllMealBuffs();
 
         const dailyReport = {
             ...villageReport,
