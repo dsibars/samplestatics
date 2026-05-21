@@ -360,6 +360,8 @@ export const ca = {
     error_max_expeditions_reached: "Màxim d'expedicions simultànies assolit",
     error_hero_on_other_expedition: "L'heroi ja està en una altra expedició",
     ui_max_expeditions_reached: "Màxim d'expedicions simultànies assolit. Completa o retira una per iniciar una altra.",
+    ui_retire_title: "¿Retirar Expedició?",
+    ui_retire_message: "Retirar-se avortarà aquesta expedició i reiniciarà el seu progrés. N'estàs segur?",
     ui_report_training: "{count} herois van entrenar al camp",
     ui_report_training_level: "¡{heroes} han pujat de nivell entrenant!",
 

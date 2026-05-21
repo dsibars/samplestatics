@@ -328,6 +328,17 @@ body {
     font-weight: 800;
 }
 
+.hero-activity-badge {
+    font-size: 0.85rem;
+    margin-left: 6px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.hero-activity-badge:hover {
+    opacity: 1;
+}
+
 .resource-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

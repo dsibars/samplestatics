@@ -102,7 +102,15 @@ export class HeroesView extends BaseView {
             card.dataset.id = hero.id;
             card.querySelector('.list-item-title').textContent = hero.name;
             card.querySelector('.list-item-level').textContent = `${this.t('ui_level') || 'Level'} ${hero.level}`;
-            
+
+            const activityBadge = document.createElement('span');
+            activityBadge.className = 'hero-activity-badge';
+            activityBadge.textContent = hero.activity === 'idle' ? '💤' : '⚔️';
+            activityBadge.title = hero.activity === 'idle'
+                ? (this.t('ui_activity_idle') || 'Idle')
+                : (this.t('ui_activity_expedition') || 'On Expedition');
+            card.querySelector('.list-item-header').appendChild(activityBadge);
+
             if (hero.id === this.selectedHeroId) {
                 card.classList.add('active');
             }

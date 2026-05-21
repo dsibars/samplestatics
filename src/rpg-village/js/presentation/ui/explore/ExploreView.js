@@ -84,8 +84,9 @@ export class ExploreView extends BaseView {
                 nodeEl.dataset.id = exp.id;
                 nodeEl.querySelector('.list-item-title').textContent = exp.name;
                 const labelStages = this.t('ui_exp_stages') || 'Stages';
-                nodeEl.querySelector('.list-item-badge').textContent = `${exp.stages.length} ${labelStages}`;
-                
+                const recLevel = Math.max(1, ...(exp.stages || []).map(s => s.enemyLevel || 1));
+                nodeEl.querySelector('.list-item-badge').textContent = `${exp.stages.length} ${labelStages} • Lv. ${recLevel}`;
+
                 if (exp.id === this.selectedExpId) {
                     nodeEl.classList.add('active');
                 }
@@ -219,8 +220,14 @@ export class ExploreView extends BaseView {
             const retireBtn = this.elements.detailContent.querySelector('.btn-retire');
             if (retireBtn) {
                 retireBtn.addEventListener('click', () => {
-                    this.emit('retireExpedition', { expId: this.selectedExpId });
-                    this.selectedHeroIds.clear();
+                    this.ui.showConfirmDialog({
+                        title: 'ui_retire_title',
+                        message: 'ui_retire_message',
+                        onConfirm: () => {
+                            this.emit('retireExpedition', { expId: this.selectedExpId });
+                            this.selectedHeroIds.clear();
+                        }
+                    });
                 });
             }
         }

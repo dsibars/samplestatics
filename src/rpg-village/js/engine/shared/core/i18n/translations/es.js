@@ -363,6 +363,8 @@ export const es = {
     error_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado",
     error_hero_on_other_expedition: "El héroe ya está en otra expedición",
     ui_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado. Completa o retira una para iniciar otra.",
+    ui_retire_title: "¿Retirar Expedición?",
+    ui_retire_message: "Retirarse abortará esta expedición y reiniciará su progreso. ¿Estás seguro?",
     ui_report_training: "{count} héroes entrenaron en el campo",
     ui_report_training_level: "¡{heroes} subieron de nivel entrenando!",
 

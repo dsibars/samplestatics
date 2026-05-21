@@ -382,6 +382,8 @@ export const en = {
     error_max_expeditions_reached: "Maximum concurrent expeditions reached",
     error_hero_on_other_expedition: "Hero is already on another expedition",
     ui_max_expeditions_reached: "Maximum concurrent expeditions reached. Complete or retire one to start another.",
+    ui_retire_title: "Retire Expedition?",
+    ui_retire_message: "Retiring will abort this expedition and reset its progress. Are you sure?",
     ui_report_training: "{count} heroes trained at the grounds",
     ui_report_training_level: "{heroes} leveled up from training!",
 

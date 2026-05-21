@@ -3444,6 +3444,8 @@ const en = {
   error_max_expeditions_reached: "Maximum concurrent expeditions reached",
   error_hero_on_other_expedition: "Hero is already on another expedition",
   ui_max_expeditions_reached: "Maximum concurrent expeditions reached. Complete or retire one to start another.",
+  ui_retire_title: "Retire Expedition?",
+  ui_retire_message: "Retiring will abort this expedition and reset its progress. Are you sure?",
   ui_report_training: "{count} heroes trained at the grounds",
   ui_report_training_level: "{heroes} leveled up from training!"
 };
@@ -3790,6 +3792,8 @@ const es = {
   error_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado",
   error_hero_on_other_expedition: "El héroe ya está en otra expedición",
   ui_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado. Completa o retira una para iniciar otra.",
+  ui_retire_title: "¿Retirar Expedición?",
+  ui_retire_message: "Retirarse abortará esta expedición y reiniciará su progreso. ¿Estás seguro?",
   ui_report_training: "{count} héroes entrenaron en el campo",
   ui_report_training_level: "¡{heroes} subieron de nivel entrenando!"
 };
@@ -4133,6 +4137,8 @@ const ca = {
   error_max_expeditions_reached: "Màxim d'expedicions simultànies assolit",
   error_hero_on_other_expedition: "L'heroi ja està en una altra expedició",
   ui_max_expeditions_reached: "Màxim d'expedicions simultànies assolit. Completa o retira una per iniciar una altra.",
+  ui_retire_title: "¿Retirar Expedició?",
+  ui_retire_message: "Retirar-se avortarà aquesta expedició i reiniciarà el seu progrés. N'estàs segur?",
   ui_report_training: "{count} herois van entrenar al camp",
   ui_report_training_level: "¡{heroes} han pujat de nivell entrenant!"
 };
@@ -4476,6 +4482,8 @@ const eu = {
   error_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da",
   error_hero_on_other_expedition: "Heroia beste esplorazio batean dago jada",
   ui_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da. Bete edo utzi bat beste bat hasteko.",
+  ui_retire_title: "Espedizioa Utzi?",
+  ui_retire_message: "Uztek espedizio hau abortatuko du eta bere aurrerapena berrezarriko du. Ziur zaude?",
   ui_report_training: "{count} heroik entrenatu dute zelaian",
   ui_report_training_level: "{heroes}-ek maila igo dute entrenamenduan!"
 };
@@ -4819,6 +4827,8 @@ const gl = {
   error_max_expeditions_reached: "Máximo de expedicións simultáneas alcanzado",
   error_hero_on_other_expedition: "O heroe xa está noutra expedición",
   ui_max_expeditions_reached: "Máximo de expedicións simultáneas alcanzado. Completa ou retira unha para iniciar outra.",
+  ui_retire_title: "¿Retirar Expedición?",
+  ui_retire_message: "Retirarse abortará esta expedición e reiniciará o seu progreso. Estás seguro?",
   ui_report_training: "{count} heroes adestraron no campo",
   ui_report_training_level: "¡{heroes} subiron de nivel adestrando!"
 };
@@ -6129,6 +6139,11 @@ class HeroesView extends BaseView {
       card.dataset.id = hero.id;
       card.querySelector(".list-item-title").textContent = hero.name;
       card.querySelector(".list-item-level").textContent = `${this.t("ui_level") || "Level"} ${hero.level}`;
+      const activityBadge = document.createElement("span");
+      activityBadge.className = "hero-activity-badge";
+      activityBadge.textContent = hero.activity === "idle" ? "💤" : "⚔️";
+      activityBadge.title = hero.activity === "idle" ? this.t("ui_activity_idle") || "Idle" : this.t("ui_activity_expedition") || "On Expedition";
+      card.querySelector(".list-item-header").appendChild(activityBadge);
       if (hero.id === this.selectedHeroId) {
         card.classList.add("active");
       }
@@ -6698,7 +6713,8 @@ class ExploreView extends BaseView {
         nodeEl.dataset.id = exp.id;
         nodeEl.querySelector(".list-item-title").textContent = exp.name;
         const labelStages = this.t("ui_exp_stages") || "Stages";
-        nodeEl.querySelector(".list-item-badge").textContent = `${exp.stages.length} ${labelStages}`;
+        const recLevel = Math.max(1, ...(exp.stages || []).map((s) => s.enemyLevel || 1));
+        nodeEl.querySelector(".list-item-badge").textContent = `${exp.stages.length} ${labelStages} • Lv. ${recLevel}`;
         if (exp.id === this.selectedExpId) {
           nodeEl.classList.add("active");
         }
@@ -6818,8 +6834,14 @@ class ExploreView extends BaseView {
       const retireBtn = this.elements.detailContent.querySelector(".btn-retire");
       if (retireBtn) {
         retireBtn.addEventListener("click", () => {
-          this.emit("retireExpedition", { expId: this.selectedExpId });
-          this.selectedHeroIds.clear();
+          this.ui.showConfirmDialog({
+            title: "ui_retire_title",
+            message: "ui_retire_message",
+            onConfirm: () => {
+              this.emit("retireExpedition", { expId: this.selectedExpId });
+              this.selectedHeroIds.clear();
+            }
+          });
         });
       }
     }
@@ -8258,6 +8280,17 @@ body {
     padding: 2px 8px;
     border-radius: 10px;
     font-weight: 800;
+}
+
+.hero-activity-badge {
+    font-size: 0.85rem;
+    margin-left: 6px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.hero-activity-badge:hover {
+    opacity: 1;
 }
 
 .resource-grid {

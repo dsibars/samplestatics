@@ -360,6 +360,8 @@ export const eu = {
     error_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da",
     error_hero_on_other_expedition: "Heroia beste esplorazio batean dago jada",
     ui_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da. Bete edo utzi bat beste bat hasteko.",
+    ui_retire_title: "Espedizioa Utzi?",
+    ui_retire_message: "Uztek espedizio hau abortatuko du eta bere aurrerapena berrezarriko du. Ziur zaude?",
     ui_report_training: "{count} heroik entrenatu dute zelaian",
     ui_report_training_level: "{heroes}-ek maila igo dute entrenamenduan!",
 

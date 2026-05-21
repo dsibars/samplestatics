@@ -13,9 +13,9 @@
 - [x] **A1** Remove `getRefineCost` duplication from `ForgeView` (delegate to engine) ✅ 2026-05-21
 - [x] **A2** Remove duplicate `this.i18n = i18n` in `GameEngine` ✅ 2026-05-21
 - [x] **A3** Fix `VillageService.startProject` to use `getItemCount` instead of `getConsumableCount` for materials ✅ 2026-05-21
-- [ ] **A4** Add activity badge to hero list cards
-- [ ] **A5** Add "Recommended Level" to expedition nodes
-- [ ] **A6** Add confirm dialog before expedition retire
+- [x] **A4** Add activity badge to hero list cards ✅ 2026-05-21
+- [x] **A5** Add "Recommended Level" to expedition nodes ✅ 2026-05-21
+- [x] **A6** Add confirm dialog before expedition retire ✅ 2026-05-21
 - [ ] **A7** Add combat turn-active highlight CSS
 - [ ] **A8** Add status effect badges to combat cards
 - [ ] **A9** Wire up equipment affixes in `CombatCalculator`
