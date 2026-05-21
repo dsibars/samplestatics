@@ -27,7 +27,8 @@ export class VillageService {
                 blacksmith: 0,
                 training_grounds: 0,
                 explorer_guild: 0,
-                infirmary: 0
+                infirmary: 0,
+                tavern: 0
             },
             constructionQueue: [],
             day: 1,

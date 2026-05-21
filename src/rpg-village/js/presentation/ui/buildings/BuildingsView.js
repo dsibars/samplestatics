@@ -110,6 +110,10 @@ export class BuildingsView extends BaseView {
             if (nextLevel === 2) return { gold: 400, wood: 200, stone: 100, duration: 5 };
             if (nextLevel === 3) return { gold: 800, wood: 300, stone: 200, duration: 7 };
         }
+        if (buildingId === 'tavern') {
+            if (nextLevel === 1) return { gold: 200, wood: 100, stone: 50, duration: 3 };
+            if (nextLevel === 2) return { gold: 500, wood: 250, stone: 150, duration: 5 };
+        }
         // Fallback default
         return {
             gold: nextLevel * 100,
@@ -157,6 +161,10 @@ export class BuildingsView extends BaseView {
             label = t('ui_effect_heal') || 'Passive Healing';
             currentEffect = `+${currentLevel * 10}%`;
             nextEffect = `+${nextLevel * 10}%`;
+        } else if (id === 'tavern') {
+            label = t('ui_effect_tavern') || 'Recruitment';
+            currentEffect = currentLevel >= 1 ? (t('ui_unlocked') || 'Unlocked') : (t('ui_locked') || 'Locked');
+            nextEffect = currentLevel >= 1 ? (t('ui_cheaper_recruits') || 'Cheaper recruits') : (t('ui_unlocked') || 'Unlocked');
         }
 
         return `

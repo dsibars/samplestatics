@@ -13,8 +13,15 @@ export class HeroesView extends BaseView {
         this.elements = {
             list: this.$('#heroes-list-container'),
             detail: this.$('#hero-detail-content'),
-            cardTemplate: this.$('#tpl-hero-card')
+            cardTemplate: this.$('#tpl-hero-card'),
+            recruitBtn: this.$('#btn-recruit-hero')
         };
+
+        if (this.elements.recruitBtn) {
+            this.elements.recruitBtn.addEventListener('click', () => {
+                this.emit('recruitHero');
+            });
+        }
 
         if (this.elements.list) {
             this.elements.list.addEventListener('click', (e) => {
@@ -90,7 +97,31 @@ export class HeroesView extends BaseView {
 
     onUpdate(state) {
         this.renderHeroesList(state.heroes);
+        this.renderRecruitButton(state);
         this.renderHeroDetail(state);
+    }
+
+    renderRecruitButton(state) {
+        const btn = this.elements.recruitBtn;
+        if (!btn) return;
+
+        const tavernLevel = state.village?.infrastructure?.tavern || 0;
+        if (tavernLevel < 1) {
+            btn.style.display = 'none';
+            return;
+        }
+
+        btn.style.display = '';
+        const heroCount = state.heroes?.length || 0;
+        const baseCost = 100;
+        const cost = Math.floor(baseCost * Math.pow(1.2, heroCount));
+        const canAfford = (state.village?.gold || 0) >= cost;
+
+        btn.disabled = !canAfford;
+        btn.textContent = `${this.t('ui_recruit') || 'Recruit'} (${cost}g)`;
+        btn.title = canAfford
+            ? `${this.t('ui_recruit') || 'Recruit'} ${this.t('ui_hero') || 'Hero'} (${cost}g)`
+            : this.t('error_not_enough_gold');
     }
 
     renderHeroesList(heroes) {

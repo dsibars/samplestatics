@@ -137,6 +137,9 @@ export const eu = {
     // Domain: Heroes
     ui_your_heroes: "Zure Heroiak",
     ui_recruit: "Kontratatu",
+    ui_recruit_success: "Kontratatuta",
+    ui_hero: "Heroia",
+    error_tavern_required: "Eraiki Taberna lehenik",
     ui_select_hero: "Hautatu heroi bat estatistikak eta ekipamendua ikusteko.",
 
     // Domain: Inventory
@@ -316,6 +319,7 @@ export const eu = {
     ui_effect_storage: "Biltegi Max",
     ui_effect_forge: "Burdinolako Funtzioak",
     ui_effect_heal: "Sendatze Pasiboa",
+    ui_effect_recruit: "Kontratazioa",
     ui_select_item: "Hautatu elementu bat xehetasunak ikusteko.",
     ui_all: "Guztiak",
     desc_material_wood: "Eraikuntzarako oinarrizko lehengaia. Espedizioetan bildutakoa edo Baserriak ekoitzia. Eraikuntzetarako erabiltzen da.",

@@ -137,6 +137,9 @@ export const gl = {
     // Domain: Heroes
     ui_your_heroes: "Os teus Héroes",
     ui_recruit: "Reclutar",
+    ui_recruit_success: "Reclutado",
+    ui_hero: "Heroe",
+    error_tavern_required: "Constr00fae unha Taberna primeiro",
     ui_select_hero: "Selecciona un héroe para ver stats e equipo.",
 
     // Domain: Inventory

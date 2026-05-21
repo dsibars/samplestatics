@@ -137,6 +137,9 @@ export const ca = {
     // Domain: Heroes
     ui_your_heroes: "Els teus Herois",
     ui_recruit: "Reclutar",
+    ui_recruit_success: "Reclutat",
+    ui_hero: "Her00f2i",
+    error_tavern_required: "Construeix una Taverna primer",
     ui_select_hero: "Selecciona un heroi per veure stats i equip.",
 
     // Domain: Inventory

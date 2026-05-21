@@ -148,6 +148,9 @@ export const en = {
     // Domain: Heroes
     ui_your_heroes: "Your Heroes",
     ui_recruit: "Recruit",
+    ui_recruit_success: "Recruited",
+    ui_hero: "Hero",
+    error_tavern_required: "Build a Tavern first",
     ui_select_hero: "Select a hero to view stats and equipment.",
     ui_experience: "Experience",
     ui_skills: "Skills",
@@ -364,6 +367,7 @@ export const en = {
     ui_effect_storage: "Max Storage",
     ui_effect_forge: "Forge Features",
     ui_effect_heal: "Passive Healing",
+    ui_effect_recruit: "Recruitment",
     ui_select_item: "Select an item to view details.",
     ui_all: "All",
     desc_material_wood: "A core building material. Gathered during expeditions or produced by the Farm. Used for constructions.",

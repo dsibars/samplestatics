@@ -88,6 +88,15 @@ export class EngineAdapter {
             }
 
             if (domain === 'heroes') {
+                view.on('recruitHero', () => {
+                    const result = this.engine.recruitHero();
+                    if (result.success) {
+                        this.ui.showToast(`${this.engine.i18n.t('ui_recruit_success') || 'Recruited'} ${result.data.hero.name}! (-${result.data.cost}g)`);
+                    } else {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
                 view.on('increaseStat', (data) => {
                     const result = this.engine.increaseHeroStat(data.heroId, data.statId);
                     if (!result.success) {

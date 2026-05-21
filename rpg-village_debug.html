@@ -910,8 +910,9 @@ class UIController {
         item.classList.remove("active");
       }
     });
-    this.elements.loader.style.display = "flex";
+    this.elements.mainContent.classList.add("view-exit");
     try {
+      await new Promise((r) => setTimeout(r, 150));
       const template = document.getElementById(`tpl-${domain}`);
       if (!template) throw new Error(`Template not found: tpl-${domain}`);
       const content = template.content.cloneNode(true);
@@ -923,13 +924,13 @@ class UIController {
       if (this.activeView) {
         this.activeView.mount(this.elements.mainContent.querySelector(".domain-view"), this);
       }
+      requestAnimationFrame(() => {
+        this.elements.mainContent.classList.remove("view-exit");
+      });
     } catch (error) {
       console.error(error);
       this.elements.mainContent.innerHTML = `<div class="error-state">Error loading view: ${domain}</div>`;
-    } finally {
-      setTimeout(() => {
-        this.elements.loader.style.display = "none";
-      }, 50);
+      this.elements.mainContent.classList.remove("view-exit");
     }
   }
   /**
@@ -2299,7 +2300,8 @@ class VillageService {
         blacksmith: 0,
         training_grounds: 0,
         explorer_guild: 0,
-        infirmary: 0
+        infirmary: 0,
+        tavern: 0
       },
       constructionQueue: [],
       day: 1,
@@ -3279,6 +3281,9 @@ const en = {
   // Domain: Heroes
   ui_your_heroes: "Your Heroes",
   ui_recruit: "Recruit",
+  ui_recruit_success: "Recruited",
+  ui_hero: "Hero",
+  error_tavern_required: "Build a Tavern first",
   ui_select_hero: "Select a hero to view stats and equipment.",
   ui_experience: "Experience",
   ui_skills: "Skills",
@@ -3636,6 +3641,9 @@ const es = {
   // Domain: Heroes
   ui_your_heroes: "Tus Héroes",
   ui_recruit: "Reclutar",
+  ui_recruit_success: "Reclutado",
+  ui_hero: "H00e9roe",
+  error_tavern_required: "Construye una Taberna primero",
   ui_select_hero: "Selecciona un héroe para ver stats y equipo.",
   // Domain: Inventory
   ui_all: "Todo",
@@ -3983,6 +3991,9 @@ const ca = {
   // Domain: Heroes
   ui_your_heroes: "Els teus Herois",
   ui_recruit: "Reclutar",
+  ui_recruit_success: "Reclutat",
+  ui_hero: "Her00f2i",
+  error_tavern_required: "Construeix una Taverna primer",
   ui_select_hero: "Selecciona un heroi per veure stats i equip.",
   // Domain: Inventory
   ui_all: "Tot",
@@ -4328,6 +4339,9 @@ const eu = {
   // Domain: Heroes
   ui_your_heroes: "Zure Heroiak",
   ui_recruit: "Kontratatu",
+  ui_recruit_success: "Kontratatuta",
+  ui_hero: "Heroia",
+  error_tavern_required: "Eraiki Taberna lehenik",
   ui_select_hero: "Hautatu heroi bat estatistikak eta ekipamendua ikusteko.",
   // Domain: Inventory
   ui_all: "Guztiak",
@@ -4673,6 +4687,9 @@ const gl = {
   // Domain: Heroes
   ui_your_heroes: "Os teus Héroes",
   ui_recruit: "Reclutar",
+  ui_recruit_success: "Reclutado",
+  ui_hero: "Heroe",
+  error_tavern_required: "Constr00fae unha Taberna primeiro",
   ui_select_hero: "Selecciona un héroe para ver stats e equipo.",
   // Domain: Inventory
   ui_all: "Todo",
@@ -5020,6 +5037,43 @@ const _GameEngine = class _GameEngine {
   getHeroes() {
     return this.heroService.list();
   }
+  recruitHero() {
+    const tavernLevel = this.villageService.getState().infrastructure.tavern || 0;
+    if (tavernLevel < 1) {
+      return Result.fail("error_tavern_required");
+    }
+    const heroCount = this.heroService.list().length;
+    const baseCost = 100;
+    const cost = Math.floor(baseCost * Math.pow(1.2, heroCount));
+    if (this.villageService.state.gold < cost) {
+      return Result.fail("error_not_enough_gold");
+    }
+    const names = ["Elena", "Thorne", "Mira", "Gareth", "Lila", "Doran", "Sera", "Kael", "Nora", "Finn"];
+    const origins = [
+      "origin_warrior",
+      "origin_thief",
+      "origin_clown",
+      "origin_farmer",
+      "origin_monk",
+      "origin_cook",
+      "origin_guard",
+      "origin_poet"
+    ];
+    const name = names[Math.floor(Math.random() * names.length)];
+    const origin = origins[Math.floor(Math.random() * origins.length)];
+    this.villageService.state.gold -= cost;
+    this.villageService.save();
+    const result = this.heroService.add({
+      name,
+      origin,
+      level: 1,
+      statPoints: 5
+    });
+    if (result.success) {
+      return Result.ok({ hero: result.data, cost });
+    }
+    return result;
+  }
   increaseHeroStat(heroId, statId) {
     const activityInfo = this.expeditionService.getHeroActivity(heroId);
     if (activityInfo && activityInfo.type === "expedition") {
@@ -5341,6 +5395,15 @@ class EngineAdapter {
         });
       }
       if (domain === "heroes") {
+        view.on("recruitHero", () => {
+          const result = this.engine.recruitHero();
+          if (result.success) {
+            this.ui.showToast(`${this.engine.i18n.t("ui_recruit_success") || "Recruited"} ${result.data.hero.name}! (-${result.data.cost}g)`);
+          } else {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
         view.on("increaseStat", (data) => {
           const result = this.engine.increaseHeroStat(data.heroId, data.statId);
           if (!result.success) {
@@ -5865,6 +5928,10 @@ class BuildingsView extends BaseView {
       if (nextLevel === 2) return { gold: 400, wood: 200, stone: 100, duration: 5 };
       if (nextLevel === 3) return { gold: 800, wood: 300, stone: 200, duration: 7 };
     }
+    if (buildingId === "tavern") {
+      if (nextLevel === 1) return { gold: 200, wood: 100, stone: 50, duration: 3 };
+      if (nextLevel === 2) return { gold: 500, wood: 250, stone: 150, duration: 5 };
+    }
     return {
       gold: nextLevel * 100,
       wood: nextLevel * 50,
@@ -5909,6 +5976,10 @@ class BuildingsView extends BaseView {
       label = t("ui_effect_heal") || "Passive Healing";
       currentEffect = `+${currentLevel * 10}%`;
       nextEffect = `+${nextLevel * 10}%`;
+    } else if (id === "tavern") {
+      label = t("ui_effect_tavern") || "Recruitment";
+      currentEffect = currentLevel >= 1 ? t("ui_unlocked") || "Unlocked" : t("ui_locked") || "Locked";
+      nextEffect = currentLevel >= 1 ? t("ui_cheaper_recruits") || "Cheaper recruits" : t("ui_unlocked") || "Unlocked";
     }
     return `
             <div class="building-stats-comparison">
@@ -6123,8 +6194,14 @@ class HeroesView extends BaseView {
     this.elements = {
       list: this.$("#heroes-list-container"),
       detail: this.$("#hero-detail-content"),
-      cardTemplate: this.$("#tpl-hero-card")
+      cardTemplate: this.$("#tpl-hero-card"),
+      recruitBtn: this.$("#btn-recruit-hero")
     };
+    if (this.elements.recruitBtn) {
+      this.elements.recruitBtn.addEventListener("click", () => {
+        this.emit("recruitHero");
+      });
+    }
     if (this.elements.list) {
       this.elements.list.addEventListener("click", (e) => {
         const card = e.target.closest(".list-item");
@@ -6189,7 +6266,26 @@ class HeroesView extends BaseView {
   }
   onUpdate(state) {
     this.renderHeroesList(state.heroes);
+    this.renderRecruitButton(state);
     this.renderHeroDetail(state);
+  }
+  renderRecruitButton(state) {
+    var _a, _b, _c, _d;
+    const btn = this.elements.recruitBtn;
+    if (!btn) return;
+    const tavernLevel = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.tavern) || 0;
+    if (tavernLevel < 1) {
+      btn.style.display = "none";
+      return;
+    }
+    btn.style.display = "";
+    const heroCount = ((_c = state.heroes) == null ? void 0 : _c.length) || 0;
+    const baseCost = 100;
+    const cost = Math.floor(baseCost * Math.pow(1.2, heroCount));
+    const canAfford = (((_d = state.village) == null ? void 0 : _d.gold) || 0) >= cost;
+    btn.disabled = !canAfford;
+    btn.textContent = `${this.t("ui_recruit") || "Recruit"} (${cost}g)`;
+    btn.title = canAfford ? `${this.t("ui_recruit") || "Recruit"} ${this.t("ui_hero") || "Hero"} (${cost}g)` : this.t("error_not_enough_gold");
   }
   renderHeroesList(heroes) {
     if (!this.elements.list || !this.elements.cardTemplate) return;
@@ -8109,6 +8205,11 @@ body {
     overflow-y: auto;
     position: relative;
     padding-bottom: 90px; /* Space for nav */
+    transition: opacity 0.15s ease;
+}
+
+#main-content.view-exit {
+    opacity: 0;
 }
 
 /* Header Styles */
@@ -9607,6 +9708,7 @@ body {
         <aside class="master-pane card">
             <div class="pane-header">
                 <h3 data-i18n="ui_your_heroes">Your Heroes</h3>
+                <button id="btn-recruit-hero" class="btn btn-primary btn-sm" data-i18n="ui_recruit">Recruit</button>
             </div>
             <div id="heroes-list-container" class="list-container">
                 <!-- Hero cards injected here -->

@@ -57,9 +57,9 @@ export class UIController {
         if (domain === 'shop' && !this.isShopUnlocked) return;
         if (domain === 'forge' && !this.isForgeUnlocked) return;
         if (this.activeDomain === domain) return;
-        
+
         console.log(`Switching to domain: ${domain}`);
-        
+
         // Update Nav UI
         this.elements.navItems.forEach(item => {
             if (item.getAttribute('data-view') === domain) {
@@ -69,41 +69,41 @@ export class UIController {
             }
         });
 
-        // Show Loader (briefly for effect, though now it's instant)
-        this.elements.loader.style.display = 'flex';
+        this.elements.mainContent.classList.add('view-exit');
 
         try {
+            await new Promise(r => setTimeout(r, 150));
+
             // Get content from template
             const template = document.getElementById(`tpl-${domain}`);
             if (!template) throw new Error(`Template not found: tpl-${domain}`);
-            
+
             // Clone template content
             const content = template.content.cloneNode(true);
-            
+
             // Clear and inject
             this.elements.mainContent.innerHTML = '';
             this.elements.mainContent.appendChild(content);
-            
+
             // Translate the new content
             this.translateView(this.elements.mainContent);
 
             // Initialize Domain Controller
             this.activeDomain = domain;
             this.activeView = this.views.get(domain);
-            
+
             if (this.activeView) {
-                // The first child of the fragment is usually our domain-view section
                 this.activeView.mount(this.elements.mainContent.querySelector('.domain-view'), this);
             }
+
+            requestAnimationFrame(() => {
+                this.elements.mainContent.classList.remove('view-exit');
+            });
 
         } catch (error) {
             console.error(error);
             this.elements.mainContent.innerHTML = `<div class="error-state">Error loading view: ${domain}</div>`;
-        } finally {
-            // Short delay to allow animation/transition to feel right
-            setTimeout(() => {
-                this.elements.loader.style.display = 'none';
-            }, 50);
+            this.elements.mainContent.classList.remove('view-exit');
         }
     }
 

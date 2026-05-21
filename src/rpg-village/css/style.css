@@ -63,6 +63,11 @@ body {
     overflow-y: auto;
     position: relative;
     padding-bottom: 90px; /* Space for nav */
+    transition: opacity 0.15s ease;
+}
+
+#main-content.view-exit {
+    opacity: 0;
 }
 
 /* Header Styles */
