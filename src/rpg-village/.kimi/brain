@@ -16,9 +16,9 @@
 - [x] **A4** Add activity badge to hero list cards ✅ 2026-05-21
 - [x] **A5** Add "Recommended Level" to expedition nodes ✅ 2026-05-21
 - [x] **A6** Add confirm dialog before expedition retire ✅ 2026-05-21
-- [ ] **A7** Add combat turn-active highlight CSS
-- [ ] **A8** Add status effect badges to combat cards
-- [ ] **A9** Wire up equipment affixes in `CombatCalculator`
+- [x] **A7** Add combat turn-active highlight CSS ✅ 2026-05-21
+- [x] **A8** Add status effect badges to combat cards ✅ 2026-05-21
+- [x] **A9** Wire up equipment affixes in `CombatCalculator` ✅ 2026-05-21
 
 ### Batch B — Medium Features (UX + Gameplay)
 - [ ] **B1** Refactor `CombatView` inline styles to CSS classes

@@ -39,7 +39,8 @@ export class Enemy {
             magicPower: this.magicPower,
             element: this.element,
             skills: this.skills,
-            isBoss: this.isBoss
+            isBoss: this.isBoss,
+            statusEffects: this.statusEffects
         };
     }
 }

@@ -265,6 +265,31 @@ export class BattleService {
                         this._applyStatusEffect(target, { type: 'poison', duration: 3, power: 0.05 });
                         event.statusApplied = 'poison';
                     }
+
+                    // Vampirism: heal attacker for a percentage of damage dealt
+                    if (isActorHero && actor.vampirism > 0 && damage > 0) {
+                        const vampHeal = Math.floor(damage * actor.vampirism);
+                        if (vampHeal > 0) {
+                            const prevHp = actor.hp;
+                            actor.hp = Math.min(actor.maxHp, actor.hp + vampHeal);
+                            const actualHeal = actor.hp - prevHp;
+                            if (actualHeal > 0) {
+                                const vampEvent = {
+                                    type: 'VAMP',
+                                    actorId: actor.id,
+                                    actorName: actor.name,
+                                    actorIsHero: true,
+                                    targetId: actor.id,
+                                    targetName: actor.name,
+                                    targetIsHero: true,
+                                    amount: actualHeal,
+                                    targetHp: actor.hp,
+                                    targetMaxHp: actor.maxHp
+                                };
+                                this.log.push(vampEvent);
+                            }
+                        }
+                    }
                 }
             }
             event.targetHp = target.hp;

@@ -144,10 +144,28 @@ export class CombatView {
       const heroesTitle = document.createElement('h3');
       heroesTitle.textContent = this.t('combat.heroes');
       heroesCol.appendChild(heroesTitle);
+      const activeActor = battle.turnOrder[battle.currentTurnIndex];
+      const isActiveActor = (actor) => activeActor && actor.id === activeActor.id;
+
+      const renderStatusEffects = (entity, card) => {
+        if (!entity.statusEffects || entity.statusEffects.length === 0) return;
+        const statusMap = { poison: '🟣', burn: '🟠', haste: '🔵', sleep: '💤', stun: '💤' };
+        const statusDiv = document.createElement('div');
+        statusDiv.style.cssText = 'display:flex;gap:4px;margin-top:4px;font-size:0.75rem;';
+        entity.statusEffects.forEach(eff => {
+          const badge = document.createElement('span');
+          badge.textContent = statusMap[eff.type] || eff.type;
+          badge.title = eff.type;
+          statusDiv.appendChild(badge);
+        });
+        card.appendChild(statusDiv);
+      };
+
       (battle.heroes || []).forEach(hero => {
         const card = document.createElement('div');
         card.dataset.heroId = hero.id;
-        card.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;';
+        const activeHighlight = isActiveActor(hero) ? 'border:2px solid #6366f1;box-shadow:0 0 15px rgba(99,102,241,0.4);' : '';
+        card.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;' + activeHighlight;
         const name = document.createElement('div');
         name.style.fontWeight = 'bold';
         name.textContent = hero.name;
@@ -176,6 +194,7 @@ export class CombatView {
           mpText.textContent = `${hero.mp}/${hero.maxMp} MP`;
           card.appendChild(mpText);
         }
+        renderStatusEffects(hero, card);
         heroesCol.appendChild(card);
       });
       columns.appendChild(heroesCol);
@@ -253,7 +272,8 @@ export class CombatView {
       (battle.enemies || []).forEach(enemy => {
         const card = document.createElement('div');
         card.dataset.enemyId = enemy.id;
-        card.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;';
+        const activeHighlight = isActiveActor(enemy) ? 'border:2px solid #6366f1;box-shadow:0 0 15px rgba(99,102,241,0.4);' : '';
+        card.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:6px;padding:10px;position:relative;overflow:hidden;' + activeHighlight;
         const name = document.createElement('div');
         name.style.fontWeight = 'bold';
         name.textContent = enemy.name;
@@ -269,6 +289,7 @@ export class CombatView {
         hpText.style.cssText = 'font-size:0.75rem;margin-top:2px;';
         hpText.textContent = `${enemy.hp}/${enemy.maxHp} HP`;
         card.appendChild(hpText);
+        renderStatusEffects(enemy, card);
         enemiesCol.appendChild(card);
       });
       columns.appendChild(enemiesCol);
