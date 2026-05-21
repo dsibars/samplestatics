@@ -411,4 +411,9 @@ export const en = {
     obj_upgrade_building: "Upgrade a building",
     obj_recruit_hero: "Recruit a hero",
     obj_craft_items: "Craft {target} items",
+    set_wooden: "Wooden Set",
+    set_iron: "Iron Set",
+    set_steel: "Steel Set",
+    set_gold: "Gold Set",
+    set_mythril: "Mythril Set",
 };

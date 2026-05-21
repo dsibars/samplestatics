@@ -321,6 +321,7 @@ export class HeroesView extends BaseView {
                         <div class="equipment-list">
                             ${equipHtml}
                         </div>
+                        ${this._renderSetBonuses(hero.activeSetBonuses)}
                     </div>
                     <div class="hero-section">
                         <h3>${this.t('ui_skills')}</h3>
@@ -331,6 +332,29 @@ export class HeroesView extends BaseView {
                 </div>
             </div>
         `;
+    }
+
+    _renderSetBonuses(activeSetBonuses) {
+        if (!activeSetBonuses || activeSetBonuses.length === 0) return '';
+
+        return activeSetBonuses.map(sb => {
+            const setName = this.t(sb.setName) || sb.setName;
+            const bonusLines = Object.entries(sb.bonus).map(([stat, val]) => {
+                const sign = val > 0 ? '+' : '';
+                const label = this.t('ui_stats_' + stat) || stat.toUpperCase();
+                return `${sign}${val} ${label}`;
+            }).join(', ');
+
+            return `
+                <div class="set-bonus-block">
+                    <div class="set-bonus-header">
+                        <span class="set-bonus-name">${setName}</span>
+                        <span class="set-bonus-pieces">(${sb.pieces}/${sb.threshold})</span>
+                    </div>
+                    <div class="set-bonus-stats">${bonusLines}</div>
+                </div>
+            `;
+        }).join('');
     }
 
     _openEquipModal(slot) {

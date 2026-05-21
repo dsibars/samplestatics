@@ -377,4 +377,9 @@ export const gl = {
     obj_upgrade_building: "Mellora un edificio",
     obj_recruit_hero: "Recluta un heroe",
     obj_craft_items: "Fabrica {target} obxectos",
+    set_wooden: "Conxunto de Madeira",
+    set_iron: "Conxunto de Ferro",
+    set_steel: "Conxunto de Aceiro",
+    set_gold: "Conxunto de Ouro",
+    set_mythril: "Conxunto de Mythril",
 };

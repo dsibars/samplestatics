@@ -382,4 +382,9 @@ export const es = {
     obj_upgrade_building: "Mejora un edificio",
     obj_recruit_hero: "Recluta un héroe",
     obj_craft_items: "Fabrica {target} objetos",
+    set_wooden: "Conjunto de Madera",
+    set_iron: "Conjunto de Hierro",
+    set_steel: "Conjunto de Acero",
+    set_gold: "Conjunto de Oro",
+    set_mythril: "Conjunto de Mythril",
 };

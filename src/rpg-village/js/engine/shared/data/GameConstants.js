@@ -323,6 +323,54 @@ export const ARMOR_ARCHETYPES = {
  * @param {Object} item - Equipment item with `material` and `level`.
  * @returns {{gold:number,materials:Object<string,number>}}
  */
+export const EQUIPMENT_SET_BONUSES = {
+    wooden: {
+        name: 'set_wooden',
+        thresholds: [2, 4, 6],
+        bonuses: {
+            2: { maxHp: 5 },
+            4: { maxHp: 10, strength: 1 },
+            6: { maxHp: 15, strength: 2, defense: 1 }
+        }
+    },
+    iron: {
+        name: 'set_iron',
+        thresholds: [2, 4, 6],
+        bonuses: {
+            2: { maxHp: 10, strength: 1 },
+            4: { maxHp: 20, strength: 2, defense: 1 },
+            6: { maxHp: 30, strength: 3, defense: 2, speed: 1 }
+        }
+    },
+    steel: {
+        name: 'set_steel',
+        thresholds: [2, 4, 6],
+        bonuses: {
+            2: { maxHp: 15, strength: 2, defense: 1 },
+            4: { maxHp: 30, strength: 3, defense: 2, speed: 1 },
+            6: { maxHp: 45, strength: 5, defense: 3, speed: 2, magicPower: 1 }
+        }
+    },
+    gold: {
+        name: 'set_gold',
+        thresholds: [2, 4, 6],
+        bonuses: {
+            2: { maxHp: 20, strength: 3, defense: 2 },
+            4: { maxHp: 40, strength: 5, defense: 3, speed: 2 },
+            6: { maxHp: 60, strength: 7, defense: 5, speed: 3, magicPower: 3 }
+        }
+    },
+    mythril: {
+        name: 'set_mythril',
+        thresholds: [2, 4, 6],
+        bonuses: {
+            2: { maxHp: 30, strength: 5, defense: 3, speed: 2 },
+            4: { maxHp: 60, strength: 8, defense: 5, speed: 4, magicPower: 3 },
+            6: { maxHp: 100, strength: 12, defense: 8, speed: 6, magicPower: 5 }
+        }
+    }
+};
+
 export function getRefineCost(item) {
     const L = item.level || 0;
     const nextLevel = L + 1;

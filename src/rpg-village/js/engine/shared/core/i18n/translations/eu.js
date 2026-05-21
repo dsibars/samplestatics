@@ -380,4 +380,9 @@ export const eu = {
     obj_upgrade_building: "Eraikina hobetu",
     obj_recruit_hero: "Kontrata heroi bat",
     obj_craft_items: "Sortu {target} objektu",
+    set_wooden: "Zurezko Sorta",
+    set_iron: "Burdinezko Sorta",
+    set_steel: "Altzairuzko Sorta",
+    set_gold: "Urrezko Sorta",
+    set_mythril: "Mythril Sorta",
 };

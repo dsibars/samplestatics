@@ -3,6 +3,7 @@ export class Equipment {
         this.id = data.id || crypto.randomUUID();
         this.type = data.type; // 'weapon' or 'armor'
         this.material = data.material; // 'wooden', 'iron', etc
+        this.set = data.set || data.material || null; // equipment set (defaults to material)
         this.level = data.level || 0;
         this.affixes = data.affixes || [];
 
@@ -32,6 +33,7 @@ export class Equipment {
             id: this.id,
             type: this.type,
             material: this.material,
+            set: this.set,
             level: this.level,
             affixes: [...this.affixes],
             family: this.family,

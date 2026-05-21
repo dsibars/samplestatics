@@ -1,4 +1,4 @@
-import { WEAPON_FAMILIES, ARMOR_ARCHETYPES, MATERIAL_TIERS } from '../../shared/data/GameConstants.js';
+import { WEAPON_FAMILIES, ARMOR_ARCHETYPES, MATERIAL_TIERS, EQUIPMENT_SET_BONUSES } from '../../shared/data/GameConstants.js';
 import { Result } from '../../shared/core/Result.js';
 
 export class Hero {
@@ -160,6 +160,41 @@ export class Hero {
             }
         });
 
+        // --- Set Bonuses ---
+        const setCounts = {};
+        Object.values(this.equipment).forEach(item => {
+            if (!item || !item.set) return;
+            setCounts[item.set] = (setCounts[item.set] || 0) + 1;
+        });
+
+        this.activeSetBonuses = [];
+        for (const [setId, count] of Object.entries(setCounts)) {
+            const setData = EQUIPMENT_SET_BONUSES[setId];
+            if (!setData) continue;
+
+            // Find the highest threshold met
+            let activeThreshold = 0;
+            for (const t of setData.thresholds) {
+                if (count >= t) activeThreshold = t;
+            }
+
+            if (activeThreshold > 0) {
+                const bonus = setData.bonuses[activeThreshold];
+                for (const [stat, val] of Object.entries(bonus)) {
+                    if (equipBonus[stat] !== undefined) {
+                        equipBonus[stat] += val;
+                    }
+                }
+                this.activeSetBonuses.push({
+                    setId,
+                    setName: setData.name,
+                    pieces: count,
+                    threshold: activeThreshold,
+                    bonus
+                });
+            }
+        }
+
         const hpBoost = (villageUpgrades.hp_boost || 0) * 10;
         const atkBoost = (villageUpgrades.attack_boost || 0);
         const defBoost = (villageUpgrades.defense_boost || 0);
@@ -289,6 +324,7 @@ export class Hero {
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
             phoenixUsed: this.phoenixUsed,
             equipment: JSON.parse(JSON.stringify(this.equipment)),
+            activeSetBonuses: this.activeSetBonuses || [],
             avatar: this.avatar
         };
     }

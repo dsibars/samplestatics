@@ -367,6 +367,53 @@ const ARMOR_ARCHETYPES = {
   leather: { id: "leather", defMult: 1, evaBonus: 10, spdPenalty: 0 },
   robes: { id: "robes", defMult: 0.5, mpMult: 1.5, magMult: 1.2, spdPenalty: 0 }
 };
+const EQUIPMENT_SET_BONUSES = {
+  wooden: {
+    name: "set_wooden",
+    thresholds: [2, 4, 6],
+    bonuses: {
+      2: { maxHp: 5 },
+      4: { maxHp: 10, strength: 1 },
+      6: { maxHp: 15, strength: 2, defense: 1 }
+    }
+  },
+  iron: {
+    name: "set_iron",
+    thresholds: [2, 4, 6],
+    bonuses: {
+      2: { maxHp: 10, strength: 1 },
+      4: { maxHp: 20, strength: 2, defense: 1 },
+      6: { maxHp: 30, strength: 3, defense: 2, speed: 1 }
+    }
+  },
+  steel: {
+    name: "set_steel",
+    thresholds: [2, 4, 6],
+    bonuses: {
+      2: { maxHp: 15, strength: 2, defense: 1 },
+      4: { maxHp: 30, strength: 3, defense: 2, speed: 1 },
+      6: { maxHp: 45, strength: 5, defense: 3, speed: 2, magicPower: 1 }
+    }
+  },
+  gold: {
+    name: "set_gold",
+    thresholds: [2, 4, 6],
+    bonuses: {
+      2: { maxHp: 20, strength: 3, defense: 2 },
+      4: { maxHp: 40, strength: 5, defense: 3, speed: 2 },
+      6: { maxHp: 60, strength: 7, defense: 5, speed: 3, magicPower: 3 }
+    }
+  },
+  mythril: {
+    name: "set_mythril",
+    thresholds: [2, 4, 6],
+    bonuses: {
+      2: { maxHp: 30, strength: 5, defense: 3, speed: 2 },
+      4: { maxHp: 60, strength: 8, defense: 5, speed: 4, magicPower: 3 },
+      6: { maxHp: 100, strength: 12, defense: 8, speed: 6, magicPower: 5 }
+    }
+  }
+};
 function getRefineCost(item) {
   const L = item.level || 0;
   const nextLevel = L + 1;
@@ -1377,6 +1424,35 @@ class Hero {
         });
       }
     });
+    const setCounts = {};
+    Object.values(this.equipment).forEach((item) => {
+      if (!item || !item.set) return;
+      setCounts[item.set] = (setCounts[item.set] || 0) + 1;
+    });
+    this.activeSetBonuses = [];
+    for (const [setId, count] of Object.entries(setCounts)) {
+      const setData = EQUIPMENT_SET_BONUSES[setId];
+      if (!setData) continue;
+      let activeThreshold = 0;
+      for (const t of setData.thresholds) {
+        if (count >= t) activeThreshold = t;
+      }
+      if (activeThreshold > 0) {
+        const bonus = setData.bonuses[activeThreshold];
+        for (const [stat, val] of Object.entries(bonus)) {
+          if (equipBonus[stat] !== void 0) {
+            equipBonus[stat] += val;
+          }
+        }
+        this.activeSetBonuses.push({
+          setId,
+          setName: setData.name,
+          pieces: count,
+          threshold: activeThreshold,
+          bonus
+        });
+      }
+    }
     const hpBoost = (villageUpgrades.hp_boost || 0) * 10;
     const atkBoost = villageUpgrades.attack_boost || 0;
     const defBoost = villageUpgrades.defense_boost || 0;
@@ -1485,6 +1561,7 @@ class Hero {
       statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
       phoenixUsed: this.phoenixUsed,
       equipment: JSON.parse(JSON.stringify(this.equipment)),
+      activeSetBonuses: this.activeSetBonuses || [],
       avatar: this.avatar
     };
   }
@@ -2114,6 +2191,7 @@ class Equipment {
     this.id = data.id || crypto.randomUUID();
     this.type = data.type;
     this.material = data.material;
+    this.set = data.set || data.material || null;
     this.level = data.level || 0;
     this.affixes = data.affixes || [];
     this.family = data.family || null;
@@ -2136,6 +2214,7 @@ class Equipment {
       id: this.id,
       type: this.type,
       material: this.material,
+      set: this.set,
       level: this.level,
       affixes: [...this.affixes],
       family: this.family,
@@ -3661,7 +3740,12 @@ const en = {
   obj_complete_expeditions: "Complete {target} expeditions",
   obj_upgrade_building: "Upgrade a building",
   obj_recruit_hero: "Recruit a hero",
-  obj_craft_items: "Craft {target} items"
+  obj_craft_items: "Craft {target} items",
+  set_wooden: "Wooden Set",
+  set_iron: "Iron Set",
+  set_steel: "Steel Set",
+  set_gold: "Gold Set",
+  set_mythril: "Mythril Set"
 };
 const es = {
   // UI General
@@ -4023,7 +4107,12 @@ const es = {
   obj_complete_expeditions: "Completa {target} expediciones",
   obj_upgrade_building: "Mejora un edificio",
   obj_recruit_hero: "Recluta un héroe",
-  obj_craft_items: "Fabrica {target} objetos"
+  obj_craft_items: "Fabrica {target} objetos",
+  set_wooden: "Conjunto de Madera",
+  set_iron: "Conjunto de Hierro",
+  set_steel: "Conjunto de Acero",
+  set_gold: "Conjunto de Oro",
+  set_mythril: "Conjunto de Mythril"
 };
 const ca = {
   // UI General
@@ -4382,7 +4471,12 @@ const ca = {
   obj_complete_expeditions: "Completa {target} expedicions",
   obj_upgrade_building: "Millora un edifici",
   obj_recruit_hero: "Recluta un heroi",
-  obj_craft_items: "Fabrica {target} objectes"
+  obj_craft_items: "Fabrica {target} objectes",
+  set_wooden: "Conjunt de Fusta",
+  set_iron: "Conjunt de Ferro",
+  set_steel: "Conjunt d'Acer",
+  set_gold: "Conjunt d'Or",
+  set_mythril: "Conjunt de Mythril"
 };
 const eu = {
   // UI General
@@ -4742,7 +4836,12 @@ const eu = {
   obj_complete_expeditions: "Bete {target} espedizio",
   obj_upgrade_building: "Eraikina hobetu",
   obj_recruit_hero: "Kontrata heroi bat",
-  obj_craft_items: "Sortu {target} objektu"
+  obj_craft_items: "Sortu {target} objektu",
+  set_wooden: "Zurezko Sorta",
+  set_iron: "Burdinezko Sorta",
+  set_steel: "Altzairuzko Sorta",
+  set_gold: "Urrezko Sorta",
+  set_mythril: "Mythril Sorta"
 };
 const gl = {
   // UI General
@@ -5099,7 +5198,12 @@ const gl = {
   obj_complete_expeditions: "Completa {target} expedicions",
   obj_upgrade_building: "Mellora un edificio",
   obj_recruit_hero: "Recluta un heroe",
-  obj_craft_items: "Fabrica {target} obxectos"
+  obj_craft_items: "Fabrica {target} obxectos",
+  set_wooden: "Conxunto de Madeira",
+  set_iron: "Conxunto de Ferro",
+  set_steel: "Conxunto de Aceiro",
+  set_gold: "Conxunto de Ouro",
+  set_mythril: "Conxunto de Mythril"
 };
 class I18nService {
   constructor() {
@@ -6717,6 +6821,7 @@ class HeroesView extends BaseView {
                         <div class="equipment-list">
                             ${equipHtml}
                         </div>
+                        ${this._renderSetBonuses(hero.activeSetBonuses)}
                     </div>
                     <div class="hero-section">
                         <h3>${this.t("ui_skills")}</h3>
@@ -6727,6 +6832,26 @@ class HeroesView extends BaseView {
                 </div>
             </div>
         `;
+  }
+  _renderSetBonuses(activeSetBonuses) {
+    if (!activeSetBonuses || activeSetBonuses.length === 0) return "";
+    return activeSetBonuses.map((sb) => {
+      const setName = this.t(sb.setName) || sb.setName;
+      const bonusLines = Object.entries(sb.bonus).map(([stat, val]) => {
+        const sign = val > 0 ? "+" : "";
+        const label = this.t("ui_stats_" + stat) || stat.toUpperCase();
+        return `${sign}${val} ${label}`;
+      }).join(", ");
+      return `
+                <div class="set-bonus-block">
+                    <div class="set-bonus-header">
+                        <span class="set-bonus-name">${setName}</span>
+                        <span class="set-bonus-pieces">(${sb.pieces}/${sb.threshold})</span>
+                    </div>
+                    <div class="set-bonus-stats">${bonusLines}</div>
+                </div>
+            `;
+    }).join("");
   }
   _openEquipModal(slot) {
     const hero = this.lastRawState.heroes.find((h) => h.id === this.selectedHeroId);
@@ -10278,6 +10403,32 @@ body {
         padding: 3px 8px;
         font-size: 0.75em;
         min-width: auto;
+    }
+    .set-bonus-block {
+        margin-top: 12px;
+        padding: 10px 12px;
+        background: rgba(255, 215, 0, 0.05);
+        border: 1px solid rgba(255, 215, 0, 0.15);
+        border-radius: var(--radius-sm);
+    }
+    .set-bonus-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+    }
+    .set-bonus-name {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #ffd700;
+    }
+    .set-bonus-pieces {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    .set-bonus-stats {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
     }
 </style>
 </template>

@@ -379,4 +379,9 @@ export const ca = {
     obj_upgrade_building: "Millora un edifici",
     obj_recruit_hero: "Recluta un heroi",
     obj_craft_items: "Fabrica {target} objectes",
+    set_wooden: "Conjunt de Fusta",
+    set_iron: "Conjunt de Ferro",
+    set_steel: "Conjunt d'Acer",
+    set_gold: "Conjunt d'Or",
+    set_mythril: "Conjunt de Mythril",
 };
