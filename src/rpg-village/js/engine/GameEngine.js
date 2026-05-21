@@ -124,29 +124,16 @@ export class GameEngine {
             return dto;
         });
 
-        let activeBattle = null;
-        if (this.battleService.heroes && this.battleService.heroes.length > 0) {
-            activeBattle = {
-                heroes: this.battleService.heroes.map(h => h.toJSON()),
-                enemies: this.battleService.enemies.map(e => e.toJSON()),
-                turnOrder: this.battleService.turnOrder.map(e => ({ id: e.id, name: e.name, type: (e.origin !== undefined || e.type === 'Hero') ? 'Hero' : 'Enemy' })),
-                currentTurnIndex: this.battleService.currentTurnIndex,
-                log: [...this.battleService.log],
-                isOver: this.battleService.isOver,
-                autoBattle: this.battleService.autoBattle,
-                itemUsedThisTurn: this.battleService.itemUsedThisTurn
-            };
-
-            if (this.battleService.isOver) {
-                const preview = this.expeditionService.getBattleResolutionPreview();
-                if (preview) {
-                    activeBattle.resolved = true;
-                    activeBattle.victory = preview.isVictory;
-                    activeBattle.summary = preview.summary;
-                    activeBattle.rewards = preview.rewards;
-                }
-            }
-        }
+        const activeBattle = (this.battleService.heroes && this.battleService.heroes.length > 0) ? {
+            heroes: this.battleService.heroes.map(h => h.toJSON()),
+            enemies: this.battleService.enemies.map(e => e.toJSON()),
+            turnOrder: this.battleService.turnOrder.map(e => ({ id: e.id, name: e.name, type: (e.origin !== undefined || e.type === 'Hero') ? 'Hero' : 'Enemy' })),
+            currentTurnIndex: this.battleService.currentTurnIndex,
+            log: [...this.battleService.log],
+            isOver: this.battleService.isOver,
+            autoBattle: this.battleService.autoBattle,
+            itemUsedThisTurn: this.battleService.itemUsedThisTurn
+        } : null;
 
         const currentDay = this.villageService.getState().day || 1;
         return {
@@ -583,6 +570,10 @@ export class GameEngine {
             this.dailyObjectivesService.track('upgrade_building', 1);
         }
         return result;
+    }
+
+    getBattleResolutionPreview() {
+        return this.expeditionService.getBattleResolutionPreview();
     }
 
     resolveBattle() {

@@ -30,7 +30,6 @@ export class EngineAdapter {
                 if (report && report.expedition) {
                     if (report.expedition.status === 'battle_started') {
                         this.ui.openCombatOverlay(report.expedition, () => {
-                            this.engine.resolveBattle();
                             this.forceUpdate();
                         });
                     } else if (report.expedition.combatLog) {

@@ -25,21 +25,7 @@ export class CombatView {
       this.openCombatOverlay(state.activeBattle);
     }
     if (this.isCombatOverlayOpen && this.renderCombatOverlay) {
-      // Only re-render if battle state has meaningfully changed
-      const battle = state.activeBattle;
-      const battleString = battle ? JSON.stringify({
-        isOver: battle.isOver,
-        currentTurnIndex: battle.currentTurnIndex,
-        logLen: (battle.log || []).length,
-        heroesHp: (battle.heroes || []).map(h => h.hp).join(','),
-        enemiesHp: (battle.enemies || []).map(e => e.hp).join(','),
-        itemUsedThisTurn: battle.itemUsedThisTurn
-      }) : 'null';
-
-      if (this.lastBattleState !== battleString) {
-        this.lastBattleState = battleString;
-        this.renderCombatOverlay();
-      }
+      this.renderCombatOverlay();
     }
   }
 
@@ -58,7 +44,7 @@ export class CombatView {
     overlay.appendChild(content);
     document.body.appendChild(overlay);
 
-    const events = combatLog.events || [];
+    const events = combatLog.events || combatLog || [];
     let index = 0;
     const interval = setInterval(() => {
       if (index >= events.length) {
@@ -78,11 +64,12 @@ export class CombatView {
         content.appendChild(closeBtn);
         return;
       }
-      const entry = document.createElement('div');
-      entry.textContent = this.formatter.format(events[index]);
-      entry.style.cssText = 'margin-bottom:4px;opacity:0;transition:opacity 0.3s;';
-      logContainer.appendChild(entry);
-      requestAnimationFrame(() => { entry.style.opacity = '1'; });
+      const entry = events[index];
+      const entryDiv = document.createElement('div');
+      entryDiv.innerHTML = this._formatLogEntryHtml(entry);
+      entryDiv.style.cssText = 'margin-bottom:4px;opacity:0;transition:opacity 0.3s;';
+      logContainer.appendChild(entryDiv);
+      requestAnimationFrame(() => { entryDiv.style.opacity = '1'; });
       index++;
     }, 600);
   }
@@ -99,15 +86,9 @@ export class CombatView {
     document.body.appendChild(overlay);
     this.overlay = overlay;
 
-    let currentMenu = 'main';
-    let selectedSkillId = null;
-    let selectedItemId = null;
-    let targetMode = null;
-
     const render = () => {
-      container.innerHTML = '';
-      const battle = this.lastState && this.lastState.activeBattle;
-      if (!battle) {
+      const state = this.lastState;
+      if (!state || !state.activeBattle) {
         overlay.remove();
         this.isCombatOverlayOpen = false;
         this.renderCombatOverlay = null;
@@ -116,22 +97,43 @@ export class CombatView {
         return;
       }
 
+      const battle = state.activeBattle;
+      const activeExp = (state.activeExpeditions || []).find(e => e.status === 'combat');
+      const currentStageNum = activeExp ? activeExp.currentStage + 1 : 1;
+      const stageText = `${this.t('exp_stage')} ${currentStageNum}`;
+
+      const menuState = overlay.menuState || 'main';
+      const selectedAction = overlay.selectedAction || null;
+      const currentHash = JSON.stringify(battle) + menuState + (selectedAction ? selectedAction.id : '');
+      if (overlay.lastRenderHash === currentHash) {
+        return;
+      }
+      overlay.lastRenderHash = currentHash;
+
+      this._animateLastEvents(battle);
+
       // Header
       const header = document.createElement('div');
       header.className = 'combat-header';
+      const titleWrap = document.createElement('div');
       const title = document.createElement('h2');
-      title.textContent = this.t('combat_battle_title');
-      header.appendChild(title);
+      title.textContent = activeExp ? (this.t(activeExp.id) !== activeExp.id ? this.t(activeExp.id) : activeExp.name) : this.t('combat_battle_title');
+      titleWrap.appendChild(title);
+      const stageLabel = document.createElement('div');
+      stageLabel.style.cssText = 'font-size:0.9rem;color:var(--text-secondary);margin-top:4px;';
+      stageLabel.textContent = stageText;
+      titleWrap.appendChild(stageLabel);
+      header.appendChild(titleWrap);
       const controls = document.createElement('div');
       controls.className = 'combat-header-controls';
       const autoBtn = document.createElement('button');
-      autoBtn.textContent = this.t('btn_auto_combat');
-      autoBtn.className = 'btn btn-secondary btn-sm';
+      autoBtn.textContent = `${this.t('btn_auto_combat')} ${battle.autoBattle ? '(ON)' : '(OFF)'}`;
+      autoBtn.className = `btn btn-sm ${battle.autoBattle ? 'btn-primary' : 'btn-secondary'}`;
       autoBtn.addEventListener('click', () => {
         if (this.engine && this.engine.battleService) {
-          this.engine.battleService.autoBattle = true;
-          this.engine.nextBattleTurn();
+          this.engine.battleService.autoBattle = !this.engine.battleService.autoBattle;
         }
+        if (this.adapter) this.adapter.forceUpdate();
       });
       controls.appendChild(autoBtn);
       const skipBtn = document.createElement('button');
@@ -141,459 +143,539 @@ export class CombatView {
         if (this.engine && this.engine.skipBattle) {
           this.engine.skipBattle();
         }
+        if (this.adapter) this.adapter.forceUpdate();
       });
       controls.appendChild(skipBtn);
       header.appendChild(controls);
+      container.innerHTML = '';
       container.appendChild(header);
 
-      // Battle Resolution
-      if (battle.isOver || battle.resolved) {
-        this._renderBattleResolution(battle, container);
-        this._animateLastEvents(battle);
-        return;
-      }
-
-      // Three columns
-      const columns = document.createElement('div');
-      columns.className = 'combat-grid';
+      // Grid
+      const grid = document.createElement('div');
+      grid.className = 'combat-grid';
 
       // Heroes column
       const heroesCol = document.createElement('div');
       heroesCol.className = 'combat-column';
-      const heroesTitle = document.createElement('h3');
+      const heroesTitle = document.createElement('div');
+      heroesTitle.className = 'combat-column-title';
       heroesTitle.textContent = this.t('combat_heroes');
       heroesCol.appendChild(heroesTitle);
+
       const activeActor = battle.turnOrder[battle.currentTurnIndex];
-      const isActiveActor = (actor) => activeActor && actor.id === activeActor.id;
+      (battle.heroes || []).forEach((hero, index) => {
+        const isCurrentTurn = activeActor && activeActor.id === hero.id;
+        const isDead = hero.hp <= 0;
+        const hpPct = hero.maxHp ? Math.max(0, Math.min(100, (hero.hp / hero.maxHp) * 100)) : 0;
+        const mpPct = hero.maxMp ? Math.max(0, Math.min(100, (hero.mp / hero.maxMp) * 100)) : 0;
 
-      const renderStatusEffects = (entity, card) => {
-        if (!entity.statusEffects || entity.statusEffects.length === 0) return;
-        const statusMap = { poison: '🟣', burn: '🟠', haste: '🔵', sleep: '💤', stun: '💤' };
-        const statusDiv = document.createElement('div');
-        statusDiv.className = 'combat-card-statuses';
-        entity.statusEffects.forEach(eff => {
-          const badge = document.createElement('span');
-          badge.className = 'combat-status-badge';
-          badge.textContent = statusMap[eff.type] || eff.type;
-          badge.title = eff.type;
-          statusDiv.appendChild(badge);
-        });
-        card.appendChild(statusDiv);
-      };
-
-      (battle.heroes || []).forEach(hero => {
         const card = document.createElement('div');
+        card.className = `combat-card hero-card ${isCurrentTurn ? 'active' : ''} ${isDead ? 'dead' : ''}`;
         card.dataset.heroId = hero.id;
-        card.className = 'combat-card' + (isActiveActor(hero) ? ' active' : '');
-        const name = document.createElement('div');
-        name.className = 'combat-card-name';
-        name.textContent = hero.name;
-        card.appendChild(name);
+        card.dataset.heroIndex = index;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'combat-card-avatar';
+        avatar.textContent = isDead ? '💀' : '⚔️';
+        card.appendChild(avatar);
+
+        const info = document.createElement('div');
+        info.className = 'combat-card-info';
+        const headerRow = document.createElement('div');
+        headerRow.className = 'combat-card-header';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'combat-card-name';
+        nameSpan.textContent = hero.name;
+        headerRow.appendChild(nameSpan);
+        const lvlSpan = document.createElement('span');
+        lvlSpan.className = 'combat-card-level';
+        lvlSpan.textContent = `Lv.${hero.level}`;
+        headerRow.appendChild(lvlSpan);
+        info.appendChild(headerRow);
+
+        const hpBarWrap = document.createElement('div');
+        hpBarWrap.className = 'combat-bar-container';
         const hpBar = document.createElement('div');
-        hpBar.className = 'combat-bar-container';
-        hpBar.style.height = '8px';
-        const hpFill = document.createElement('div');
-        const hpPct = hero.maxHp ? (hero.hp / hero.maxHp) * 100 : 0;
-        const hpColorClass = hpPct > 50 ? 'combat-bar-hp-high' : hpPct > 25 ? 'combat-bar-hp-mid' : 'combat-bar-hp-low';
-        hpFill.className = `combat-bar ${hpColorClass}`;
-        hpFill.style.width = `${hpPct}%`;
-        hpBar.appendChild(hpFill);
-        card.appendChild(hpBar);
+        hpBar.className = 'combat-bar combat-bar-hp';
+        hpBar.style.width = `${hpPct}%`;
+        hpBarWrap.appendChild(hpBar);
+        info.appendChild(hpBarWrap);
         const hpText = document.createElement('div');
         hpText.className = 'combat-bar-text';
-        hpText.textContent = `${hero.hp}/${hero.maxHp} HP`;
-        card.appendChild(hpText);
+        hpText.innerHTML = `<span>HP</span><span>${hero.hp}/${hero.maxHp}</span>`;
+        info.appendChild(hpText);
+
         if (hero.maxMp > 0) {
+          const mpBarWrap = document.createElement('div');
+          mpBarWrap.className = 'combat-bar-container';
+          mpBarWrap.style.height = '4px';
           const mpBar = document.createElement('div');
-          mpBar.className = 'combat-bar-container';
-          const mpFill = document.createElement('div');
-          const mpPct = hero.maxMp ? (hero.mp / hero.maxMp) * 100 : 0;
-          mpFill.className = 'combat-bar combat-bar-mp';
-          mpFill.style.width = `${mpPct}%`;
-          mpBar.appendChild(mpFill);
-          card.appendChild(mpBar);
+          mpBar.className = 'combat-bar combat-bar-mp';
+          mpBar.style.width = `${mpPct}%`;
+          mpBarWrap.appendChild(mpBar);
+          info.appendChild(mpBarWrap);
           const mpText = document.createElement('div');
           mpText.className = 'combat-bar-text';
-          mpText.textContent = `${hero.mp}/${hero.maxMp} MP`;
-          card.appendChild(mpText);
+          mpText.style.fontSize = '0.7rem';
+          mpText.innerHTML = `<span>MP</span><span>${hero.mp}/${hero.maxMp}</span>`;
+          info.appendChild(mpText);
         }
-        renderStatusEffects(hero, card);
+
+        const statuses = document.createElement('div');
+        statuses.className = 'combat-card-statuses';
+        (hero.statusEffects || []).forEach(st => {
+          const badge = document.createElement('span');
+          badge.className = 'combat-status-badge';
+          const iconMap = { poison: '🤢', burn: '🔥', regen: '💚', haste: '⭐', sleep: '💤', stun: '💫' };
+          badge.textContent = iconMap[st.type] || st.type;
+          badge.title = `${st.type} (${st.duration} turns)`;
+          statuses.appendChild(badge);
+        });
+        info.appendChild(statuses);
+
+        const effects = document.createElement('div');
+        effects.className = 'combat-effects-container';
+        effects.id = `effects-hero-${hero.id}`;
+        card.appendChild(info);
+        card.appendChild(effects);
         heroesCol.appendChild(card);
       });
-      columns.appendChild(heroesCol);
+      grid.appendChild(heroesCol);
 
-      // Center column: log + actions
-      const centerCol = document.createElement('div');
-      centerCol.className = 'combat-column combat-log-column';
-      const logTitle = document.createElement('h3');
+      // Middle column: log + actions
+      const middleCol = document.createElement('div');
+      middleCol.className = 'combat-log-column';
+      const logTitle = document.createElement('div');
+      logTitle.className = 'combat-column-title';
       logTitle.textContent = this.t('combat_log');
-      centerCol.appendChild(logTitle);
-      const logBox = document.createElement('div');
-      logBox.id = 'combat-log-box';
-      logBox.className = 'combat-log-console';
-      (battle.log || []).forEach(entry => {
-        const line = document.createElement('div');
-        line.textContent = this.formatter.format(entry);
-        line.style.cssText = 'margin-bottom:2px;';
-        logBox.appendChild(line);
-      });
-      centerCol.appendChild(logBox);
+      middleCol.appendChild(logTitle);
 
-      // Actions menu
-      const actionsBox = document.createElement('div');
-      actionsBox.className = 'combat-control-panel';
-      if (currentMenu === 'main') {
-        this._renderMainMenu(actionsBox,
-          () => { if (this.engine && this.engine.executeBattleAction) { this.engine.executeBattleAction('basic_attack'); } render(); },
-          () => { currentMenu = 'skills'; render(); },
-          () => { currentMenu = 'items'; render(); }
-        );
-      } else if (currentMenu === 'skills') {
-        this._renderSkillsMenu(actionsBox, battle, (skillId) => {
-          selectedSkillId = skillId;
-          const skillData = SKILLS_DATA[skillId];
-          if (skillData && skillData.targetType === 'single_ally') {
-            targetMode = 'friendly';
-          } else {
-            targetMode = 'enemy';
-          }
-          currentMenu = 'targeting';
-          render();
-        }, () => {
-          currentMenu = 'main';
-          render();
-        });
-      } else if (currentMenu === 'items') {
-        this._renderItemsMenu(actionsBox, (itemId) => {
-          selectedItemId = itemId;
-          targetMode = 'friendly';
-          currentMenu = 'targeting';
-          render();
-        }, () => {
-          currentMenu = 'main';
-          render();
-        });
-      } else if (currentMenu === 'targeting') {
-        this._renderTargeting(actionsBox, battle, targetMode, (targetId) => {
-          this._executeTargetAction(selectedSkillId, selectedItemId, targetId, targetMode);
-          currentMenu = 'main';
-          selectedSkillId = null;
-          selectedItemId = null;
-          targetMode = null;
-          render();
-        }, () => {
-          currentMenu = selectedSkillId ? 'skills' : 'items';
-          targetMode = null;
-          render();
-        });
-      }
-      centerCol.appendChild(actionsBox);
-      columns.appendChild(centerCol);
+      const logConsole = document.createElement('div');
+      logConsole.className = 'combat-log-console';
+      logConsole.id = 'combat-log-console';
+      (battle.log || []).slice(-20).forEach(entry => {
+        const line = document.createElement('div');
+        line.innerHTML = this._formatLogEntryHtml(entry);
+        line.style.cssText = 'margin-bottom:4px;line-height:1.4;';
+        logConsole.appendChild(line);
+      });
+      middleCol.appendChild(logConsole);
+
+      const turnBanner = document.createElement('div');
+      turnBanner.className = 'combat-current-turn-banner';
+      const activeActorName = activeActor ? (this.t(activeActor.name) || activeActor.name) : '...';
+      turnBanner.textContent = activeActor ? `${activeActorName}'s Turn` : '...';
+      middleCol.appendChild(turnBanner);
+
+      const controlPanel = document.createElement('div');
+      controlPanel.className = 'combat-control-panel';
+      controlPanel.id = 'combat-control-panel';
+      middleCol.appendChild(controlPanel);
+      grid.appendChild(middleCol);
 
       // Enemies column
       const enemiesCol = document.createElement('div');
       enemiesCol.className = 'combat-column';
-      const enemiesTitle = document.createElement('h3');
+      const enemiesTitle = document.createElement('div');
+      enemiesTitle.className = 'combat-column-title';
       enemiesTitle.textContent = this.t('combat_enemies');
       enemiesCol.appendChild(enemiesTitle);
-      (battle.enemies || []).forEach(enemy => {
+
+      (battle.enemies || []).forEach((enemy, index) => {
+        const isCurrentTurn = activeActor && activeActor.id === enemy.id;
+        const isDead = enemy.hp <= 0;
+        const hpPct = enemy.maxHp ? Math.max(0, Math.min(100, (enemy.hp / enemy.maxHp) * 100)) : 0;
+
         const card = document.createElement('div');
-        card.dataset.enemyId = enemy.id;
-        card.className = 'combat-card' + (isActiveActor(enemy) ? ' active' : '');
-        const name = document.createElement('div');
-        name.className = 'combat-card-name';
-        name.textContent = enemy.name;
-        card.appendChild(name);
+        card.className = `combat-card enemy-card ${isCurrentTurn ? 'active' : ''} ${isDead ? 'dead' : ''}`;
+        card.dataset.enemyIndex = index;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'combat-card-avatar';
+        avatar.textContent = isDead ? '💀' : '👾';
+        card.appendChild(avatar);
+
+        const info = document.createElement('div');
+        info.className = 'combat-card-info';
+        const headerRow = document.createElement('div');
+        headerRow.className = 'combat-card-header';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'combat-card-name';
+        nameSpan.textContent = this.t(enemy.name) || enemy.name;
+        headerRow.appendChild(nameSpan);
+        const lvlSpan = document.createElement('span');
+        lvlSpan.className = 'combat-card-level';
+        lvlSpan.textContent = `Lv.${enemy.level || 1}`;
+        headerRow.appendChild(lvlSpan);
+        info.appendChild(headerRow);
+
+        const hpBarWrap = document.createElement('div');
+        hpBarWrap.className = 'combat-bar-container';
         const hpBar = document.createElement('div');
-        hpBar.className = 'combat-bar-container';
-        hpBar.style.height = '8px';
-        const hpFill = document.createElement('div');
-        const hpPct = enemy.maxHp ? (enemy.hp / enemy.maxHp) * 100 : 0;
-        const hpColorClass = hpPct > 50 ? 'combat-bar-hp-high' : hpPct > 25 ? 'combat-bar-hp-mid' : 'combat-bar-hp-low';
-        hpFill.className = `combat-bar ${hpColorClass}`;
-        hpFill.style.width = `${hpPct}%`;
-        hpBar.appendChild(hpFill);
-        card.appendChild(hpBar);
+        hpBar.className = 'combat-bar combat-bar-hp';
+        hpBar.style.width = `${hpPct}%`;
+        hpBarWrap.appendChild(hpBar);
+        info.appendChild(hpBarWrap);
         const hpText = document.createElement('div');
         hpText.className = 'combat-bar-text';
-        hpText.textContent = `${enemy.hp}/${enemy.maxHp} HP`;
-        card.appendChild(hpText);
-        renderStatusEffects(enemy, card);
+        hpText.innerHTML = `<span>HP</span><span>${enemy.hp}/${enemy.maxHp}</span>`;
+        info.appendChild(hpText);
+
+        const statuses = document.createElement('div');
+        statuses.className = 'combat-card-statuses';
+        (enemy.statusEffects || []).forEach(st => {
+          const badge = document.createElement('span');
+          badge.className = 'combat-status-badge';
+          const iconMap = { poison: '🤢', burn: '🔥', regen: '💚', haste: '⭐', sleep: '💤', stun: '💫' };
+          badge.textContent = iconMap[st.type] || st.type;
+          badge.title = `${st.type} (${st.duration} turns)`;
+          statuses.appendChild(badge);
+        });
+        info.appendChild(statuses);
+
+        const effects = document.createElement('div');
+        effects.className = 'combat-effects-container';
+        effects.id = `effects-enemy-${index}`;
+        card.appendChild(info);
+        card.appendChild(effects);
         enemiesCol.appendChild(card);
       });
-      columns.appendChild(enemiesCol);
+      grid.appendChild(enemiesCol);
 
-      container.appendChild(columns);
-      this._animateLastEvents(battle);
+      container.appendChild(grid);
+
+      // Scroll log to bottom
+      const consoleEl = logConsole;
+      if (consoleEl) {
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      }
+
+      // Battle end → show resolution inline
+      if (battle.isOver) {
+        const preview = this.engine && this.engine.getBattleResolutionPreview ? this.engine.getBattleResolutionPreview() : null;
+        const isVictory = preview ? preview.isVictory : battle.winner === 'heroes';
+        const resultColor = isVictory ? '#4caf50' : '#f44336';
+        const resultText = isVictory ? this.t('victory') : this.t('defeat');
+
+        let summaryHtml = '';
+        if (preview && preview.summary) {
+          summaryHtml = preview.summary.map(s => {
+            let text = `<strong>${s.heroName}</strong>: `;
+            if (s.hpLost > 0) text += `<span style="color:#f44336;font-size:0.9em;">-${s.hpLost} HP</span> | `;
+            else if (s.hpLost < 0) text += `<span style="color:#4caf50;font-size:0.9em;">+${-s.hpLost} HP</span> | `;
+            text += `<span style="color:#03a9f4;font-size:0.9em;">+${s.expEarned} EXP</span>`;
+            if (s.leveledUp) text += ` <span style="color:#ffeb3b;font-weight:bold;font-size:0.9em;">(LEVEL UP!)</span>`;
+            return `<div style="margin-bottom:5px;">${text}</div>`;
+          }).join('');
+        }
+
+        let rewardsHtml = '';
+        if (preview && preview.isLastStage && preview.rewards) {
+          const rewards = [];
+          if (preview.rewards.gold) rewards.push(`💰 ${preview.rewards.gold} Gold`);
+          if (preview.rewards.items) {
+            for (const [itemId, qty] of Object.entries(preview.rewards.items)) {
+              rewards.push(`📦 ${qty}x ${this.t(itemId) || itemId}`);
+            }
+          }
+          if (rewards.length > 0) {
+            rewardsHtml = `
+              <div style="margin-top:15px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
+                <h4 style="color:#ffeb3b;margin:0 0 5px 0;">Rewards</h4>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:0.95rem;">
+                  ${rewards.map(r => `<span style="background:rgba(255,235,59,0.1);border:1px solid rgba(255,235,59,0.3);padding:4px 8px;border-radius:4px;">${r}</span>`).join('')}
+                </div>
+              </div>`;
+          }
+        }
+
+        controlPanel.innerHTML = `
+          <div style="text-align:center;margin-bottom:15px;width:100%;">
+            <h3 style="color:${resultColor};font-size:1.6rem;margin:0 0 10px 0;">${resultText}</h3>
+            <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);padding:10px;border-radius:6px;text-align:left;max-height:150px;overflow-y:auto;display:inline-block;width:100%;box-sizing:border-box;">
+              ${summaryHtml}
+              ${rewardsHtml}
+            </div>
+          </div>
+          <button class="btn btn-primary" id="btn-resolve-battle" style="width:100%;">${this.t('ui_btn_close')}</button>
+        `;
+        controlPanel.querySelector('#btn-resolve-battle').addEventListener('click', () => {
+          if (this.engine && this.engine.resolveBattle) {
+            this.engine.resolveBattle();
+          }
+          overlay.style.opacity = '0';
+          overlay.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => {
+            overlay.remove();
+            this.isCombatOverlayOpen = false;
+            this.renderCombatOverlay = null;
+            this.overlay = null;
+            if (this.onCombatComplete) this.onCombatComplete();
+            if (this.adapter) this.adapter.forceUpdate();
+          }, 300);
+        });
+        return;
+      }
+
+      // Normal combat flow
+      const isHeroTurn = activeActor && activeActor.type === 'Hero';
+      if (!isHeroTurn || battle.autoBattle) {
+        controlPanel.innerHTML = `<div class="combat-control-message">${battle.autoBattle ? 'Running Auto-Combat...' : 'Enemy is planning action...'}</div>`;
+        return;
+      }
+
+      const currentHero = battle.heroes.find(h => h.id === activeActor.id);
+      if (!currentHero) return;
+
+      if (menuState === 'main') {
+        controlPanel.innerHTML = `
+          <div class="combat-control-buttons">
+            <button class="btn btn-secondary" id="btn-action-attack" style="flex:1 1 120px;">⚔️ ${this.t('basic_attack')}</button>
+            <button class="btn btn-secondary" id="btn-action-skills" style="flex:1 1 120px;" ${(!currentHero.skills || Object.keys(currentHero.skills).length === 0) ? 'disabled' : ''}>✨ ${this.t('ui_skills')}</button>
+            <button class="btn btn-secondary" id="btn-action-items" style="flex:1 1 120px;" ${battle.itemUsedThisTurn ? 'disabled' : ''}>🎒 ${this.t('combat_items')} ${battle.itemUsedThisTurn ? '(1/Turn)' : ''}</button>
+          </div>
+        `;
+        controlPanel.querySelector('#btn-action-attack').addEventListener('click', () => {
+          overlay.menuState = 'targeting';
+          overlay.selectedAction = { type: 'attack', id: 'basic_attack', name: this.t('basic_attack') };
+          render();
+        });
+        const btnSkills = controlPanel.querySelector('#btn-action-skills');
+        if (btnSkills) {
+          btnSkills.addEventListener('click', () => {
+            overlay.menuState = 'skills';
+            render();
+          });
+        }
+        const btnItems = controlPanel.querySelector('#btn-action-items');
+        if (btnItems) {
+          btnItems.addEventListener('click', () => {
+            overlay.menuState = 'items';
+            render();
+          });
+        }
+      } else if (menuState === 'skills') {
+        const skillsButtons = Object.keys(currentHero.skills || {}).map(skillId => {
+          const skillData = SKILLS_DATA[skillId];
+          const mpCost = skillData ? skillData.mpCost : 0;
+          const canAfford = currentHero.mp >= mpCost;
+          const skillName = this.t(skillId) || skillId;
+          return `<button class="btn btn-secondary" data-skill-id="${skillId}" ${!canAfford ? 'disabled' : ''} style="flex:1 1 140px;">${skillName} <span style="font-size:0.8rem;opacity:0.8;">(${mpCost} MP)</span></button>`;
+        }).join('');
+        controlPanel.innerHTML = `
+          <div class="combat-control-back"><button class="btn btn-secondary btn-sm" id="btn-skill-back">◀ ${this.t('btn_back')}</button></div>
+          <div class="combat-control-buttons">${skillsButtons || '<div style="color:var(--text-muted);">No skills available.</div>'}</div>
+        `;
+        controlPanel.querySelector('#btn-skill-back').addEventListener('click', () => {
+          overlay.menuState = 'main';
+          render();
+        });
+        controlPanel.querySelectorAll('[data-skill-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const skillId = btn.getAttribute('data-skill-id');
+            overlay.menuState = 'targeting';
+            overlay.selectedAction = { type: 'skill', id: skillId, name: this.t(skillId) };
+            render();
+          });
+        });
+      } else if (menuState === 'items') {
+        const inventory = state.inventory || {};
+        const consumables = inventory.consumables || {};
+        const itemsButtons = Object.keys(consumables).filter(itemId => consumables[itemId] > 0).map(itemId => {
+          const itemName = this.t(itemId) || itemId;
+          return `<button class="btn btn-secondary" data-item-id="${itemId}" style="flex:1 1 140px;">${itemName} x${consumables[itemId]}</button>`;
+        }).join('');
+        controlPanel.innerHTML = `
+          <div class="combat-control-back"><button class="btn btn-secondary btn-sm" id="btn-item-back">◀ ${this.t('btn_back')}</button></div>
+          <div class="combat-control-buttons">${itemsButtons || '<div style="color:var(--text-muted);">No consumables in inventory.</div>'}</div>
+        `;
+        controlPanel.querySelector('#btn-item-back').addEventListener('click', () => {
+          overlay.menuState = 'main';
+          render();
+        });
+        controlPanel.querySelectorAll('[data-item-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const itemId = btn.getAttribute('data-item-id');
+            overlay.menuState = 'targeting';
+            overlay.selectedAction = { type: 'item', id: itemId, name: this.t(itemId) };
+            render();
+          });
+        });
+      } else if (menuState === 'targeting') {
+        const sel = overlay.selectedAction;
+        controlPanel.innerHTML = `
+          <div class="combat-control-back"><button class="btn btn-secondary btn-sm" id="btn-target-back">◀ ${this.t('btn_back')}</button></div>
+          <div class="combat-control-message" style="color:var(--success);font-weight:700;">${this.t('ui_choose_target')} — ${sel ? sel.name : ''}</div>
+        `;
+        controlPanel.querySelector('#btn-target-back').addEventListener('click', () => {
+          if (sel && sel.type === 'skill') overlay.menuState = 'skills';
+          else if (sel && sel.type === 'item') overlay.menuState = 'items';
+          else overlay.menuState = 'main';
+          render();
+        });
+
+        const isFriendly = sel && (sel.id === 'small_heal' || (sel.type === 'item' && sel.id.includes('potion')));
+        if (isFriendly) {
+          grid.querySelectorAll('.hero-card').forEach(card => {
+            const idx = parseInt(card.getAttribute('data-hero-index'));
+            const targetHero = battle.heroes[idx];
+            if (targetHero && targetHero.hp > 0) {
+              card.classList.add('targetable');
+              card.addEventListener('click', () => this._executeTargetAction(idx, targetHero.id));
+            }
+          });
+        } else {
+          grid.querySelectorAll('.enemy-card').forEach(card => {
+            const idx = parseInt(card.getAttribute('data-enemy-index'));
+            const targetEnemy = battle.enemies[idx];
+            if (targetEnemy && targetEnemy.hp > 0) {
+              card.classList.add('targetable');
+              card.addEventListener('click', () => this._executeTargetAction(idx, targetEnemy.id));
+            }
+          });
+        }
+      }
     };
 
     this.renderCombatOverlay = render;
     render();
   }
 
-  _renderBattleResolution(battle, container) {
-    const resolution = document.createElement('div');
-    resolution.style.cssText = 'text-align:center;padding:20px;background:rgba(255,255,255,0.1);border-radius:8px;';
-    const resultTitle = document.createElement('h2');
-    const isVictory = battle.victory !== undefined ? battle.victory : battle.winner === 'heroes';
-    resultTitle.textContent = isVictory ? this.t('victory') : this.t('defeat');
-    resultTitle.style.color = isVictory ? '#4caf50' : '#f44336';
-    resolution.appendChild(resultTitle);
+  _executeTargetAction(targetIndex, targetId) {
+    const overlay = document.getElementById('combat-overlay');
+    if (!overlay) return;
+    const selectedAction = overlay.selectedAction;
+    if (!selectedAction) return;
 
-    // Hero summary
-    if (battle.summary && battle.summary.length > 0) {
-      const summaryDiv = document.createElement('div');
-      summaryDiv.style.cssText = 'margin-top:12px;text-align:left;';
-      const summaryTitle = document.createElement('h3');
-      summaryTitle.textContent = this.t('combat_heroes');
-      summaryDiv.appendChild(summaryTitle);
-      battle.summary.forEach(s => {
-        const line = document.createElement('div');
-        line.style.cssText = 'margin-bottom:4px;';
-        const levelUpText = s.leveledUp ? ' ⬆️' : '';
-        line.textContent = `${s.heroName}: +${s.expEarned} XP${levelUpText} | HP Lost: ${s.hpLost}`;
-        summaryDiv.appendChild(line);
-      });
-      resolution.appendChild(summaryDiv);
+    let result;
+    if (selectedAction.type === 'attack') {
+      result = this.engine.executeBattleAction('basic_attack', targetIndex);
+    } else if (selectedAction.type === 'skill') {
+      result = this.engine.executeBattleAction(selectedAction.id, targetIndex);
+    } else if (selectedAction.type === 'item') {
+      result = this.engine.useBattleConsumable(selectedAction.id, targetId);
     }
 
-    // Rewards
-    if (battle.rewards) {
-      const rewardsDiv = document.createElement('div');
-      rewardsDiv.style.cssText = 'margin-top:12px;';
-      const rewardsTitle = document.createElement('h3');
-      rewardsTitle.textContent = this.t('combat_rewards');
-      rewardsDiv.appendChild(rewardsTitle);
+    if (result && !result.success) {
+      alert(this.t(result.error) || result.error);
+      return;
+    }
 
-      if (battle.rewards.gold) {
-        const goldLine = document.createElement('div');
-        goldLine.textContent = this.t('combat_gold_reward', { gold: battle.rewards.gold });
-        rewardsDiv.appendChild(goldLine);
+    overlay.menuState = 'main';
+    overlay.selectedAction = null;
+    if (this.adapter) this.adapter.forceUpdate();
+  }
+
+  _formatLogEntryHtml(entry) {
+    if (typeof entry === 'string') {
+      return `<span style="color:#aaa;">${entry}</span>`;
+    }
+    const ev = entry;
+    let text = '';
+    let color = '#aaa';
+
+    if (ev.type === 'DAMAGE') {
+      if (ev.isMiss) {
+        text = this.t('log_miss', { attacker: ev.actorName, target: ev.targetName });
+        color = '#ffcc00';
+      } else {
+        text = this.t('log_attack', { attacker: ev.actorName, target: ev.targetName, damage: ev.amount });
+        color = ev.actorIsHero ? '#4caf50' : '#f44336';
+        if (ev.isCrit) text = '🔥 ' + text;
+        if (ev.targetDefeated) text += ` <span style="color:#ff3b30;font-weight:bold;">(DEAD 💀)</span>`;
       }
-      if (battle.rewards.items && Object.keys(battle.rewards.items).length > 0) {
-        const itemsText = Object.entries(battle.rewards.items)
-          .map(([id, qty]) => `${this.t(id) || id} x${qty}`)
-          .join(', ');
-        const itemsLine = document.createElement('div');
-        itemsLine.textContent = this.t('combat_items_reward', { items: itemsText });
-        rewardsDiv.appendChild(itemsLine);
+    } else if (ev.type === 'HEAL') {
+      text = this.t('log_heal', { attacker: ev.actorName, target: ev.targetName, amount: ev.amount });
+      color = '#03a9f4';
+    } else if (ev.type === 'VAMP') {
+      text = this.t('log_vamp', { actor: ev.actorName, amount: ev.amount });
+      color = '#8bc34a';
+    } else if (ev.type === 'TRAIT_REGEN') {
+      text = this.t('log_regen', { target: ev.targetName, amount: ev.amount });
+      color = '#8bc34a';
+    } else if (ev.type === 'STATUS_TICK') {
+      if (ev.effectType === 'poison') {
+        text = this.t('log_poison', { target: ev.targetName, damage: ev.damage });
+        color = '#9c27b0';
+      } else if (ev.effectType === 'burn') {
+        text = this.t('log_burn', { target: ev.targetName, damage: ev.damage });
+        color = '#ff9800';
       }
-      resolution.appendChild(rewardsDiv);
+    } else if (ev.type === 'STATUS_EXPIRED') {
+      text = this.t('log_status_expired', { target: ev.targetName, effect: ev.effectType });
+      color = '#888';
+    } else if (ev.type === 'USE_CONSUMABLE') {
+      const itemName = this.t(ev.consumableId) || ev.consumableId;
+      const stat = ev.healType === 'HEAL_MP' ? 'MP' : 'HP';
+      text = this.t('log_use_consumable', { attacker: ev.actorName, item: itemName, target: ev.targetName, amount: ev.amount, stat });
+      color = '#00bcd4';
+    } else {
+      text = `[${ev.type}]`;
     }
 
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = this.t('ui_btn_close');
-    closeBtn.className = 'btn btn-secondary';
-    closeBtn.style.marginTop = '16px';
-    closeBtn.addEventListener('click', () => {
-      if (this.overlay) this.overlay.remove();
-      this.isCombatOverlayOpen = false;
-      this.renderCombatOverlay = null;
-      this.overlay = null;
-      this.lastBattleState = null;
-      if (this.onCombatComplete) this.onCombatComplete();
-    });
-    resolution.appendChild(closeBtn);
-    container.appendChild(resolution);
-  }
-
-  _renderMainMenu(actionsBox, onAttack, onSkills, onItems) {
-    const menu = document.createElement('div');
-    menu.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
-    const attackBtn = document.createElement('button');
-    attackBtn.textContent = this.t('basic_attack');
-    attackBtn.className = 'btn btn-primary';
-    attackBtn.style.flex = '1';
-    attackBtn.style.minWidth = '80px';
-    attackBtn.addEventListener('click', () => {
-      if (onAttack) onAttack();
-    });
-    menu.appendChild(attackBtn);
-    const skillsBtn = document.createElement('button');
-    skillsBtn.textContent = this.t('ui_skills');
-    skillsBtn.className = 'btn btn-secondary';
-    skillsBtn.style.flex = '1';
-    skillsBtn.style.minWidth = '80px';
-    skillsBtn.addEventListener('click', () => {
-      if (onSkills) onSkills();
-    });
-    menu.appendChild(skillsBtn);
-    const itemsBtn = document.createElement('button');
-    itemsBtn.textContent = this.t('combat_items');
-    itemsBtn.className = 'btn btn-secondary';
-    itemsBtn.style.flex = '1';
-    itemsBtn.style.minWidth = '80px';
-    itemsBtn.addEventListener('click', () => {
-      if (onItems) onItems();
-    });
-    menu.appendChild(itemsBtn);
-    actionsBox.appendChild(menu);
-  }
-
-  _renderSkillsMenu(actionsBox, battle, onSelect, onBack) {
-    const activeActor = battle.turnOrder && battle.turnOrder[battle.currentTurnIndex];
-    const currentHero = activeActor && battle.heroes ? battle.heroes.find(h => h.id === activeActor.id) : null;
-    // hero.skills is an object like { basic_attack: 0, fireball: 2 }
-    const skills = currentHero && currentHero.skills ? Object.keys(currentHero.skills) : [];
-    const menu = document.createElement('div');
-    menu.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-    const title = document.createElement('div');
-    title.style.fontWeight = 'bold';
-    title.textContent = this.t('combat_select_skill');
-    menu.appendChild(title);
-    skills.forEach(skillId => {
-      const skillData = SKILLS_DATA[skillId];
-      const mpCost = skillData ? skillData.mpCost : 0;
-      const btn = document.createElement('button');
-      // Use i18n key for skill name; SKILLS_DATA has no 'name' field
-      const skillName = this.t(skillId) || skillId;
-      btn.textContent = `${skillName} (${mpCost} MP)`;
-      btn.className = 'btn btn-secondary btn-sm';
-      btn.style.textAlign = 'left';
-      const canUse = currentHero && currentHero.mp >= mpCost;
-      if (!canUse) {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-      }
-      btn.addEventListener('click', () => {
-        if (canUse) onSelect(skillId);
-      });
-      menu.appendChild(btn);
-    });
-    const backBtn = document.createElement('button');
-    backBtn.textContent = this.t('btn_back');
-    backBtn.className = 'btn btn-secondary btn-sm';
-    backBtn.addEventListener('click', onBack);
-    menu.appendChild(backBtn);
-    actionsBox.appendChild(menu);
-  }
-
-  _renderItemsMenu(actionsBox, onSelect, onBack) {
-    const inventory = this.lastState && this.lastState.inventory ? this.lastState.inventory : {};
-    // consumables is a flat object: { item_tiny_hp_potion: 5, ... }
-    const consumables = Object.entries(inventory.consumables || {}).filter(([_, count]) => count > 0);
-    const menu = document.createElement('div');
-    menu.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-    const title = document.createElement('div');
-    title.style.fontWeight = 'bold';
-    title.textContent = this.t('combat_select_item');
-    menu.appendChild(title);
-    if (consumables.length === 0) {
-      const none = document.createElement('div');
-      none.style.cssText = 'opacity:0.6;';
-      none.textContent = this.t('ui_no_items');
-      menu.appendChild(none);
+    if (ev.targetHp !== undefined && ev.targetMaxHp !== undefined && !ev.targetDefeated) {
+      text += ` <span style="color:#8e8e93;font-size:0.85em;">(HP: ${ev.targetHp}/${ev.targetMaxHp})</span>`;
     }
-    consumables.forEach(([itemId, count]) => {
-      const btn = document.createElement('button');
-      const itemName = this.t(itemId) || itemId;
-      btn.textContent = `${itemName} x${count}`;
-      btn.className = 'btn btn-secondary btn-sm';
-      btn.style.textAlign = 'left';
-      btn.addEventListener('click', () => onSelect(itemId));
-      menu.appendChild(btn);
-    });
-    const backBtn = document.createElement('button');
-    backBtn.textContent = this.t('btn_back');
-    backBtn.className = 'btn btn-secondary btn-sm';
-    backBtn.addEventListener('click', onBack);
-    menu.appendChild(backBtn);
-    actionsBox.appendChild(menu);
-  }
 
-  _renderTargeting(actionsBox, battle, targetMode, onSelect, onBack) {
-    const menu = document.createElement('div');
-    menu.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-    const title = document.createElement('div');
-    title.style.fontWeight = 'bold';
-    title.textContent = this.t('ui_choose_target');
-    menu.appendChild(title);
-    const targets = targetMode === 'friendly' ? (battle.heroes || []) : (battle.enemies || []);
-    targets.forEach(target => {
-      const btn = document.createElement('button');
-      btn.textContent = target.name;
-      btn.className = 'btn btn-secondary btn-sm';
-      btn.style.textAlign = 'left';
-      btn.addEventListener('click', () => onSelect(target.id));
-      menu.appendChild(btn);
-    });
-    const backBtn = document.createElement('button');
-    backBtn.textContent = this.t('btn_back');
-    backBtn.className = 'btn btn-secondary btn-sm';
-    backBtn.addEventListener('click', onBack);
-    menu.appendChild(backBtn);
-    actionsBox.appendChild(menu);
-  }
-
-  _executeTargetAction(skillId, itemId, targetId, targetMode) {
-    const battle = this.lastState && this.lastState.activeBattle;
-    if (!battle) return;
-
-    if (skillId && this.engine && this.engine.executeBattleAction) {
-      // Map targetId to target index in the appropriate array
-      const isFriendly = targetMode === 'friendly';
-      const targets = isFriendly ? (battle.heroes || []) : (battle.enemies || []);
-      const targetIndex = targets.findIndex(t => t.id === targetId);
-      this.engine.executeBattleAction(skillId, targetIndex >= 0 ? targetIndex : null);
-    } else if (itemId && this.engine && this.engine.useBattleConsumable) {
-      this.engine.useBattleConsumable(itemId, targetId);
-    }
+    return `<span style="color:${color};">${text}</span>`;
   }
 
   _animateLastEvents(battle) {
     const log = battle.log || [];
-    const newEvents = log.slice(this.lastLogLength);
+    if (this.lastLogLength !== undefined && log.length > this.lastLogLength) {
+      const newEvents = log.slice(this.lastLogLength);
+      newEvents.forEach(ev => {
+        const targetName = ev.targetName;
+        if (!targetName) return;
+        if (ev.type === 'DAMAGE') {
+          const text = ev.isMiss ? this.t('miss') : `-${ev.amount}`;
+          const type = ev.isMiss ? 'miss' : 'damage';
+          this._triggerVisualEffect(targetName, text, type);
+        } else if (ev.type === 'HEAL' || ev.type === 'VAMP' || ev.type === 'TRAIT_REGEN' || ev.type === 'USE_CONSUMABLE') {
+          const label = ev.type === 'USE_CONSUMABLE' && ev.healType === 'HEAL_MP' ? 'MP' : 'HP';
+          const amount = ev.amount || ev.damage || 0;
+          this._triggerVisualEffect(targetName, `+${amount} ${label}`, 'heal');
+        } else if (ev.type === 'STATUS_TICK') {
+          this._triggerVisualEffect(targetName, `-${ev.damage}`, 'damage');
+        }
+      });
+    }
     this.lastLogLength = log.length;
-    newEvents.forEach((entry, idx) => {
-      setTimeout(() => {
-        this._triggerVisualEffect(entry, battle);
-      }, idx * 200);
-    });
   }
 
-  _triggerVisualEffect(entry, battle) {
-    // Structured event parsing (replaces old regex-based string parsing)
-    const type = entry.type;
-    const isDamage = type === 'DAMAGE' || type === 'STATUS_TICK';
-    const isHeal = type === 'HEAL' || type === 'VAMP' || type === 'TRAIT_REGEN' || type === 'USE_CONSUMABLE';
-
-    if (!isDamage && !isHeal) return;
-
-    const value = entry.amount !== undefined ? entry.amount : entry.damage;
-    if (!value || value <= 0) return;
-
-    const targetName = entry.targetName;
-    if (!targetName) return;
-
-    // Find target card
-    let card = null;
+  _triggerVisualEffect(targetName, text, type) {
     const overlay = document.getElementById('combat-overlay');
     if (!overlay) return;
-    const cards = overlay.querySelectorAll('[data-hero-id], [data-enemy-id]');
+    const cards = overlay.querySelectorAll('.combat-card');
+    let card = null;
     cards.forEach(c => {
-      const nameEl = c.querySelector('div:first-child');
-      if (nameEl && nameEl.textContent === targetName) {
+      const nameEl = c.querySelector('.combat-card-name');
+      if (nameEl && nameEl.textContent.trim() === targetName) {
         card = c;
       }
     });
     if (!card) return;
 
-    // Floating number
-    const float = document.createElement('div');
-    float.textContent = isHeal ? `+${value}` : `-${value}`;
-    float.style.cssText = `position:absolute;top:20%;left:50%;transform:translateX(-50%);font-weight:bold;font-size:1.4rem;color:${isHeal ? '#4caf50' : '#f44336'};pointer-events:none;z-index:10;transition:top 1s,opacity 1s;`;
-    card.appendChild(float);
-    requestAnimationFrame(() => {
-      float.style.top = '-10%';
-      float.style.opacity = '0';
-    });
-    setTimeout(() => float.remove(), 1000);
+    if (type === 'damage') {
+      card.classList.add('hit-shake');
+      setTimeout(() => card.classList.remove('hit-shake'), 400);
+    }
 
-    // Card shake
-    card.style.transform = 'translateX(-4px)';
-    setTimeout(() => { card.style.transform = 'translateX(4px)'; }, 50);
-    setTimeout(() => { card.style.transform = 'translateX(-4px)'; }, 100);
-    setTimeout(() => { card.style.transform = 'translateX(4px)'; }, 150);
-    setTimeout(() => { card.style.transform = 'translateX(0)'; }, 200);
+    const effectContainer = card.querySelector('.combat-effects-container');
+    if (effectContainer) {
+      const numEl = document.createElement('div');
+      numEl.className = 'floating-num';
+      numEl.textContent = text;
+      let color = '#ff3b30';
+      if (type === 'heal') color = '#34c759';
+      if (type === 'miss') color = '#ffcc00';
+      numEl.style.cssText = `position:absolute;top:20%;left:50%;transform:translateX(-50%);font-weight:bold;font-size:1.4rem;color:${color};pointer-events:none;z-index:10;transition:top 1s,opacity 1s;`;
+      effectContainer.appendChild(numEl);
+      requestAnimationFrame(() => {
+        numEl.style.top = '-30%';
+        numEl.style.opacity = '0';
+      });
+      setTimeout(() => numEl.remove(), 1000);
+    }
   }
 }
