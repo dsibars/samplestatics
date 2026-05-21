@@ -71,6 +71,13 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
+                view.on('setWorkerRole', (data) => {
+                    const result = this.engine.setWorkerRole(data.role, data.delta);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
             }
             
             if (domain === 'explore') {

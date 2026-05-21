@@ -18,7 +18,8 @@ export class VillageView extends BaseView {
             storageText: this.$('#village-storage-text'),
             storageBar: this.$('#village-storage-bar'),
             constructionList: this.$('#construction-list'),
-            objectivesList: this.$('#daily-objectives-list')
+            objectivesList: this.$('#daily-objectives-list'),
+            roleControls: this.$('#role-controls')
         };
 
         const builderControls = this.$('.builder-controls');
@@ -31,6 +32,21 @@ export class VillageView extends BaseView {
                     this.emit('setBuilders', { delta: 1 });
                 } else if (action === 'dec-builder') {
                     this.emit('setBuilders', { delta: -1 });
+                }
+            });
+        }
+
+        const roleControls = this.$('#role-controls');
+        if (roleControls) {
+            roleControls.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-role-action]');
+                if (!btn) return;
+                const role = btn.dataset.role;
+                const action = btn.dataset.roleAction;
+                if (action === 'inc') {
+                    this.emit('setWorkerRole', { role, delta: 1 });
+                } else if (action === 'dec') {
+                    this.emit('setWorkerRole', { role, delta: -1 });
                 }
             });
         }
@@ -74,6 +90,9 @@ export class VillageView extends BaseView {
 
         // Render Canvas Visuals
         this.renderVillageCanvas(village);
+
+        // Worker Roles
+        this.renderRoles(village.population);
 
         // Construction Queue
         this.renderConstructionQueue(village.constructionQueue);
@@ -149,6 +168,19 @@ export class VillageView extends BaseView {
                 <div class="report-section">
                     <span class="report-icon">👶</span>
                     <span>${this.t('ui_report_growth').replace('{amount}', report.growth)}</span>
+                </div>
+            `;
+        }
+
+        let minerHtml = '';
+        if (report.minerYield && (report.minerYield.wood > 0 || report.minerYield.stone > 0)) {
+            const yields = [];
+            if (report.minerYield.wood > 0) yields.push(`${report.minerYield.wood} ${this.t('material_wood')}`);
+            if (report.minerYield.stone > 0) yields.push(`${report.minerYield.stone} ${this.t('material_stone')}`);
+            minerHtml = `
+                <div class="report-section success">
+                    <span class="report-icon">⛏️</span>
+                    <span>${this.t('ui_report_miner').replace('{yield}', yields.join(', '))}</span>
                 </div>
             `;
         }
@@ -233,6 +265,7 @@ export class VillageView extends BaseView {
                         <span>${report.starvation ? this.t('ui_report_starvation') : this.t('ui_report_food').replace('{amount}', report.consumed)}</span>
                     </div>
                     ${growthHtml}
+                    ${minerHtml}
                     ${builtHtml}
                     ${recoveryHtml}
                     ${trainingHtml}
@@ -240,6 +273,44 @@ export class VillageView extends BaseView {
                 </div>
             </div>
         `;
+    }
+
+    renderRoles(population) {
+        if (!this.elements.roleControls) return;
+
+        const roles = population.roles || { builder: population.builders || 0, farmer: 0, miner: 0, scout: 0 };
+        const total = population.total || 0;
+        const used = Object.values(roles).reduce((a, b) => a + b, 0);
+        const available = total - used;
+
+        const ROLE_ICONS = {
+            builder: '🔨',
+            farmer: '🌾',
+            miner: '⛏️',
+            scout: '👁️'
+        };
+
+        const ROLE_EFFECTS = {
+            builder: this.t('ui_role_builder') || 'Construction',
+            farmer: this.t('ui_role_farmer') || '+10% food per farmer',
+            miner: this.t('ui_role_miner') || '20% chance for mats',
+            scout: this.t('ui_role_scout') || '-1 stage per 2 scouts'
+        };
+
+        this.elements.roleControls.innerHTML = Object.entries(roles).map(([role, count]) => {
+            const canInc = available > 0;
+            const canDec = count > 0;
+            return `
+                <div class="role-row">
+                    <span class="role-name">${ROLE_ICONS[role]} ${this.t('role_' + role) || role} <span style="font-size:0.75rem; color:var(--text-muted);">(${ROLE_EFFECTS[role]})</span></span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button class="btn-role" data-role="${role}" data-role-action="dec" ${canDec ? '' : 'disabled'}>−</button>
+                        <span class="role-count">${count}</span>
+                        <button class="btn-role" data-role="${role}" data-role-action="inc" ${canInc ? '' : 'disabled'}>+</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     renderDailyObjectives(dailyObj) {

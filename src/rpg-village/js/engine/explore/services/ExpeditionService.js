@@ -159,6 +159,14 @@ export class ExpeditionService {
         if (explorerGuildLevel > 0) {
             stagesCount = Math.max(1, Math.ceil(stagesCount * (1 - (explorerGuildLevel * 0.10))));
         }
+
+        // Scouts reduce stage count by 1 per 2 scouts (min 1 stage)
+        const villageState = this.villageService.getState();
+        const scoutCount = villageState.population?.roles?.scout || 0;
+        if (scoutCount > 0) {
+            const scoutReduction = Math.floor(scoutCount / 2);
+            stagesCount = Math.max(1, stagesCount - scoutReduction);
+        }
         
         // Enemy level based on region base level + clears
         const enemyLevel = (rData.baseLevel || 1) + Math.floor(clears / 3);

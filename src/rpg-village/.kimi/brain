@@ -32,9 +32,9 @@
 
 ### Batch C — Large Features / Content
 - [ ] **C1** Separate structured combat events from formatted log strings
-- [ ] **C2** Expand region pool to 6-8 regions
+- [x] **C2** Expand region pool to 6-8 regions ✅ 2026-05-21
 - [ ] **C3** Implement worker specialization
-- [ ] **C4** Add food crafting / meal buffs
+- [x] **C4** Add food crafting / meal buffs ✅ 2026-05-21
 - [ ] **C5** Implement Calendar & Defense events
 
 ---

@@ -564,6 +564,10 @@ export class GameEngine {
         return dailyReport;
     }
 
+    setWorkerRole(role, delta) {
+        return this.villageService.setWorkerRole(role, delta);
+    }
+
     startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
         const result = this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
         if (result.success) {

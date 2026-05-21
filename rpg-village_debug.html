@@ -2442,7 +2442,8 @@ class VillageService {
       population: {
         total: 2,
         assigned: 0,
-        builders: 2
+        builders: 2,
+        roles: { builder: 2, farmer: 0, miner: 0, scout: 0 }
       },
       infrastructure: {
         housing: 1,
@@ -2470,6 +2471,9 @@ class VillageService {
     if (loaded.population && loaded.population.builders === void 0) {
       loaded.population.builders = loaded.population.total;
     }
+    if (loaded.population && loaded.population.roles === void 0) {
+      loaded.population.roles = { builder: loaded.population.builders || loaded.population.total, farmer: 0, miner: 0, scout: 0 };
+    }
     if (loaded.population && loaded.population.max !== void 0) {
       delete loaded.population.max;
     }
@@ -2479,12 +2483,14 @@ class VillageService {
     persistence.save(this.STORAGE_KEY, this.state);
   }
   getState() {
+    const roles = this.state.population.roles || { builder: 0, farmer: 0, miner: 0, scout: 0 };
     return {
       ...this.state,
       population: {
         ...this.state.population,
         max: this.getMaxPopulation(),
-        availableBuilders: Math.max(0, this.state.population.builders - this.state.population.assigned)
+        availableBuilders: Math.max(0, this.state.population.builders - this.state.population.assigned),
+        roles
       },
       maxStorage: this.getMaxStorage()
     };
@@ -2522,12 +2528,29 @@ class VillageService {
       report.starvation = true;
     }
     const farmLevel = this.state.infrastructure.farm || 0;
+    const roles = this.state.population.roles || { farmer: 0, miner: 0 };
     let foodProduced = 0;
     if (farmLevel > 0) {
-      foodProduced = farmLevel * 4;
+      const farmerBonus = 1 + roles.farmer * 0.1;
+      foodProduced = Math.floor(farmLevel * 4 * farmerBonus);
       this.addItemToInventory("food_raw_grain", foodProduced);
     }
     report.produced = foodProduced;
+    let minerYield = { wood: 0, stone: 0 };
+    if (roles.miner > 0) {
+      for (let i = 0; i < roles.miner; i++) {
+        if (Math.random() < 0.2) {
+          if (Math.random() < 0.5) {
+            minerYield.wood++;
+          } else {
+            minerYield.stone++;
+          }
+        }
+      }
+      if (minerYield.wood > 0) this.addItemToInventory("material_wood", minerYield.wood);
+      if (minerYield.stone > 0) this.addItemToInventory("material_stone", minerYield.stone);
+    }
+    report.minerYield = minerYield;
     const completed = [];
     this.state.constructionQueue.forEach((project) => {
       project.daysRemaining--;
@@ -2611,6 +2634,29 @@ class VillageService {
       return Result.fail("error_builders_below_assigned");
     }
     this.state.population.builders = count;
+    if (!this.state.population.roles) {
+      this.state.population.roles = { builder: count, farmer: 0, miner: 0, scout: 0 };
+    } else {
+      this.state.population.roles.builder = count;
+    }
+    this.save();
+    return Result.ok();
+  }
+  setWorkerRole(role, delta) {
+    const validRoles = ["builder", "farmer", "miner", "scout"];
+    if (!validRoles.includes(role)) {
+      return Result.fail("error_invalid_role");
+    }
+    const roles = this.state.population.roles || { builder: this.state.population.builders, farmer: 0, miner: 0, scout: 0 };
+    const current = roles[role] || 0;
+    const newCount = Math.max(0, current + delta);
+    const totalUsed = validRoles.reduce((sum, r) => sum + (r === role ? newCount : roles[r] || 0), 0);
+    if (totalUsed > this.state.population.total) {
+      return Result.fail("error_not_enough_villagers");
+    }
+    roles[role] = newCount;
+    this.state.population.roles = roles;
+    this.state.population.builders = roles.builder;
     this.save();
     return Result.ok();
   }
@@ -2778,11 +2824,18 @@ class ExpeditionService {
     }
   }
   _createProceduralNode(regionId, rData, clears) {
+    var _a, _b;
     const id = "proc_" + crypto.randomUUID().split("-")[0];
     let stagesCount = Math.max(rData.minStages, Math.min(rData.maxStages, rData.minStages + Math.floor(clears / 5)));
     const explorerGuildLevel = this.villageService.getState().infrastructure.explorer_guild || 0;
     if (explorerGuildLevel > 0) {
       stagesCount = Math.max(1, Math.ceil(stagesCount * (1 - explorerGuildLevel * 0.1)));
+    }
+    const villageState = this.villageService.getState();
+    const scoutCount = ((_b = (_a = villageState.population) == null ? void 0 : _a.roles) == null ? void 0 : _b.scout) || 0;
+    if (scoutCount > 0) {
+      const scoutReduction = Math.floor(scoutCount / 2);
+      stagesCount = Math.max(1, stagesCount - scoutReduction);
     }
     const enemyLevel = (rData.baseLevel || 1) + Math.floor(clears / 3);
     const stages = [];
@@ -3871,7 +3924,18 @@ const en = {
   ui_recipes: "Recipes",
   ui_battles: "battles",
   ui_effect: "Effect",
-  ui_has_meal_buff: "Meal buff active"
+  ui_has_meal_buff: "Meal buff active",
+  ui_roles: "Specialization",
+  role_builder: "Builder",
+  role_farmer: "Farmer",
+  role_miner: "Miner",
+  role_scout: "Scout",
+  ui_role_builder: "Construction",
+  ui_role_farmer: "+10% food each",
+  ui_role_miner: "20% chance for mats",
+  ui_role_scout: "-1 stage per 2 scouts",
+  error_invalid_role: "Invalid role",
+  ui_report_miner: "Miners gathered: {yield}"
 };
 const es = {
   // UI General
@@ -4259,7 +4323,18 @@ const es = {
   ui_recipes: "Recetas",
   ui_battles: "batallas",
   ui_effect: "Efecto",
-  ui_has_meal_buff: "Buff de comida activo"
+  ui_has_meal_buff: "Buff de comida activo",
+  ui_roles: "Especialización",
+  role_builder: "Constructor",
+  role_farmer: "Granjero",
+  role_miner: "Minero",
+  role_scout: "Explorador",
+  ui_role_builder: "Construcción",
+  ui_role_farmer: "+10% comida c/u",
+  ui_role_miner: "20% prob. de mats",
+  ui_role_scout: "-1 etapa por 2 expl.",
+  error_invalid_role: "Rol inválido",
+  ui_report_miner: "Mineros recogieron: {yield}"
 };
 const ca = {
   // UI General
@@ -4644,7 +4719,18 @@ const ca = {
   ui_recipes: "Receptes",
   ui_battles: "batalles",
   ui_effect: "Efecte",
-  ui_has_meal_buff: "Buff de menjar actiu"
+  ui_has_meal_buff: "Buff de menjar actiu",
+  ui_roles: "Especialització",
+  role_builder: "Constructor",
+  role_farmer: "Granger",
+  role_miner: "Miner",
+  role_scout: "Explorador",
+  ui_role_builder: "Construcció",
+  ui_role_farmer: "+10% menjar c/u",
+  ui_role_miner: "20% prob. de mats",
+  ui_role_scout: "-1 etapa per 2 expl.",
+  error_invalid_role: "Rol invàlid",
+  ui_report_miner: "Miners van recollir: {yield}"
 };
 const eu = {
   // UI General
@@ -5030,7 +5116,18 @@ const eu = {
   ui_recipes: "Errezetak",
   ui_battles: "borroka",
   ui_effect: "Efektua",
-  ui_has_meal_buff: "Janari buff aktiboa"
+  ui_has_meal_buff: "Janari buff aktiboa",
+  ui_roles: "Eskpezializazioa",
+  role_builder: "Eraikitzaile",
+  role_farmer: "Nekazari",
+  role_miner: "Mehatzaile",
+  role_scout: "Esploratzaile",
+  ui_role_builder: "Eraikuntza",
+  ui_role_farmer: "+10% janari bakoitzeko",
+  ui_role_miner: "20% materialak",
+  ui_role_scout: "-1 etapa 2 espl.",
+  error_invalid_role: "Rol baliogabea",
+  ui_report_miner: "Mehatzaileek bildu zuten: {yield}"
 };
 const gl = {
   // UI General
@@ -5413,7 +5510,18 @@ const gl = {
   ui_recipes: "Receitas",
   ui_battles: "batallas",
   ui_effect: "Efecto",
-  ui_has_meal_buff: "Buff de comida activo"
+  ui_has_meal_buff: "Buff de comida activo",
+  ui_roles: "Especialización",
+  role_builder: "Construtor",
+  role_farmer: "Granxeiro",
+  role_miner: "Mineiro",
+  role_scout: "Explorador",
+  ui_role_builder: "Construción",
+  ui_role_farmer: "+10% comida c/u",
+  ui_role_miner: "20% prob. de mats",
+  ui_role_scout: "-1 etapa por 2 expl.",
+  error_invalid_role: "Rol inválido",
+  ui_report_miner: "Mineiros recolleron: {yield}"
 };
 class I18nService {
   constructor() {
@@ -5864,6 +5972,9 @@ const _GameEngine = class _GameEngine {
     this.villageService.setDailyReport(dailyReport);
     return dailyReport;
   }
+  setWorkerRole(role, delta) {
+    return this.villageService.setWorkerRole(role, delta);
+  }
   startProject(buildingId, targetLevel, costGold, costMaterials, duration) {
     const result = this.villageService.startProject(buildingId, targetLevel, costGold, costMaterials, duration);
     if (result.success) {
@@ -5949,6 +6060,13 @@ class EngineAdapter {
           const currentBuilders = village.population.builders || 0;
           const newCount = currentBuilders + (data.delta || 0);
           const result = this.engine.villageService.setBuilders(newCount);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("setWorkerRole", (data) => {
+          const result = this.engine.setWorkerRole(data.role, data.delta);
           if (!result.success) {
             this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
@@ -6217,7 +6335,8 @@ class VillageView extends BaseView {
       storageText: this.$("#village-storage-text"),
       storageBar: this.$("#village-storage-bar"),
       constructionList: this.$("#construction-list"),
-      objectivesList: this.$("#daily-objectives-list")
+      objectivesList: this.$("#daily-objectives-list"),
+      roleControls: this.$("#role-controls")
     };
     const builderControls = this.$(".builder-controls");
     if (builderControls) {
@@ -6229,6 +6348,20 @@ class VillageView extends BaseView {
           this.emit("setBuilders", { delta: 1 });
         } else if (action === "dec-builder") {
           this.emit("setBuilders", { delta: -1 });
+        }
+      });
+    }
+    const roleControls = this.$("#role-controls");
+    if (roleControls) {
+      roleControls.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-role-action]");
+        if (!btn) return;
+        const role = btn.dataset.role;
+        const action = btn.dataset.roleAction;
+        if (action === "inc") {
+          this.emit("setWorkerRole", { role, delta: 1 });
+        } else if (action === "dec") {
+          this.emit("setWorkerRole", { role, delta: -1 });
         }
       });
     }
@@ -6262,6 +6395,7 @@ class VillageView extends BaseView {
       }
     }
     this.renderVillageCanvas(village);
+    this.renderRoles(village.population);
     this.renderConstructionQueue(village.constructionQueue);
     this.renderDailyObjectives(state.dailyObjectives);
     this.renderDailyReport(village.lastDailyReport);
@@ -6321,6 +6455,18 @@ class VillageView extends BaseView {
                 <div class="report-section">
                     <span class="report-icon">👶</span>
                     <span>${this.t("ui_report_growth").replace("{amount}", report.growth)}</span>
+                </div>
+            `;
+    }
+    let minerHtml = "";
+    if (report.minerYield && (report.minerYield.wood > 0 || report.minerYield.stone > 0)) {
+      const yields = [];
+      if (report.minerYield.wood > 0) yields.push(`${report.minerYield.wood} ${this.t("material_wood")}`);
+      if (report.minerYield.stone > 0) yields.push(`${report.minerYield.stone} ${this.t("material_stone")}`);
+      minerHtml = `
+                <div class="report-section success">
+                    <span class="report-icon">⛏️</span>
+                    <span>${this.t("ui_report_miner").replace("{yield}", yields.join(", "))}</span>
                 </div>
             `;
     }
@@ -6400,6 +6546,7 @@ class VillageView extends BaseView {
                         <span>${report.starvation ? this.t("ui_report_starvation") : this.t("ui_report_food").replace("{amount}", report.consumed)}</span>
                     </div>
                     ${growthHtml}
+                    ${minerHtml}
                     ${builtHtml}
                     ${recoveryHtml}
                     ${trainingHtml}
@@ -6407,6 +6554,39 @@ class VillageView extends BaseView {
                 </div>
             </div>
         `;
+  }
+  renderRoles(population) {
+    if (!this.elements.roleControls) return;
+    const roles = population.roles || { builder: population.builders || 0, farmer: 0, miner: 0, scout: 0 };
+    const total = population.total || 0;
+    const used = Object.values(roles).reduce((a, b) => a + b, 0);
+    const available = total - used;
+    const ROLE_ICONS = {
+      builder: "🔨",
+      farmer: "🌾",
+      miner: "⛏️",
+      scout: "👁️"
+    };
+    const ROLE_EFFECTS = {
+      builder: this.t("ui_role_builder") || "Construction",
+      farmer: this.t("ui_role_farmer") || "+10% food per farmer",
+      miner: this.t("ui_role_miner") || "20% chance for mats",
+      scout: this.t("ui_role_scout") || "-1 stage per 2 scouts"
+    };
+    this.elements.roleControls.innerHTML = Object.entries(roles).map(([role, count]) => {
+      const canInc = available > 0;
+      const canDec = count > 0;
+      return `
+                <div class="role-row">
+                    <span class="role-name">${ROLE_ICONS[role]} ${this.t("role_" + role) || role} <span style="font-size:0.75rem; color:var(--text-muted);">(${ROLE_EFFECTS[role]})</span></span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button class="btn-role" data-role="${role}" data-role-action="dec" ${canDec ? "" : "disabled"}>−</button>
+                        <span class="role-count">${count}</span>
+                        <button class="btn-role" data-role="${role}" data-role-action="inc" ${canInc ? "" : "disabled"}>+</button>
+                    </div>
+                </div>
+            `;
+    }).join("");
   }
   renderDailyObjectives(dailyObj) {
     if (!this.elements.objectivesList) return;
@@ -10319,6 +10499,15 @@ body {
 
                     <div class="status-item-detailed">
                         <div class="status-row">
+                            <span class="label" data-i18n="ui_roles">Specialization</span>
+                        </div>
+                        <div id="role-controls" class="role-controls">
+                            <!-- Role rows injected here -->
+                        </div>
+                    </div>
+
+                    <div class="status-item-detailed">
+                        <div class="status-row">
                             <span class="label" data-i18n="inv_storage">Storage</span>
                             <span id="village-storage-text" class="value">-- / --</span>
                         </div>
@@ -10378,6 +10567,13 @@ body {
     .builder-controls { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
     .btn-builder { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; }
     .btn-builder:hover { background: rgba(255,255,255,0.2); }
+    .role-controls { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .role-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+    .role-name { color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+    .role-count { font-weight: 700; color: var(--text-primary); min-width: 20px; text-align: center; }
+    .btn-role { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--text-primary); width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+    .btn-role:hover { background: rgba(255,255,255,0.15); }
+    .btn-role:disabled { opacity: 0.3; cursor: not-allowed; }
     
     .action-card {
         display: flex;

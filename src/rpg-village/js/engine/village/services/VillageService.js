@@ -19,6 +19,7 @@ export class VillageService {
                 total: 2,
                 assigned: 0,
                 builders: 2,
+                roles: { builder: 2, farmer: 0, miner: 0, scout: 0 }
             },
             infrastructure: {
                 housing: 1,
@@ -50,6 +51,11 @@ export class VillageService {
             loaded.population.builders = loaded.population.total;
         }
 
+        // Migrate old state without roles field
+        if (loaded.population && loaded.population.roles === undefined) {
+            loaded.population.roles = { builder: loaded.population.builders || loaded.population.total, farmer: 0, miner: 0, scout: 0 };
+        }
+
         // Migrate old state if max was stored
         if (loaded.population && loaded.population.max !== undefined) {
             delete loaded.population.max;
@@ -63,12 +69,14 @@ export class VillageService {
     }
 
     getState() {
+        const roles = this.state.population.roles || { builder: 0, farmer: 0, miner: 0, scout: 0 };
         return {
             ...this.state,
             population: {
                 ...this.state.population,
                 max: this.getMaxPopulation(),
-                availableBuilders: Math.max(0, this.state.population.builders - this.state.population.assigned)
+                availableBuilders: Math.max(0, this.state.population.builders - this.state.population.assigned),
+                roles
             },
             maxStorage: this.getMaxStorage()
         };
@@ -121,12 +129,31 @@ export class VillageService {
 
         // 1.5. Production Phase: Farm generates food
         const farmLevel = this.state.infrastructure.farm || 0;
+        const roles = this.state.population.roles || { builder: 0, farmer: 0, miner: 0, scout: 0 };
         let foodProduced = 0;
         if (farmLevel > 0) {
-            foodProduced = farmLevel * 4;
+            const farmerBonus = 1 + (roles.farmer * 0.10);
+            foodProduced = Math.floor(farmLevel * 4 * farmerBonus);
             this.addItemToInventory('food_raw_grain', foodProduced);
         }
         report.produced = foodProduced;
+
+        // 1.6. Miner Phase: Chance for materials
+        let minerYield = { wood: 0, stone: 0 };
+        if (roles.miner > 0) {
+            for (let i = 0; i < roles.miner; i++) {
+                if (Math.random() < 0.20) {
+                    if (Math.random() < 0.5) {
+                        minerYield.wood++;
+                    } else {
+                        minerYield.stone++;
+                    }
+                }
+            }
+            if (minerYield.wood > 0) this.addItemToInventory('material_wood', minerYield.wood);
+            if (minerYield.stone > 0) this.addItemToInventory('material_stone', minerYield.stone);
+        }
+        report.minerYield = minerYield;
 
         // 2. Construction Phase
         const completed = [];
@@ -238,6 +265,37 @@ export class VillageService {
             return Result.fail('error_builders_below_assigned');
         }
         this.state.population.builders = count;
+        // Keep builder role in sync
+        if (!this.state.population.roles) {
+            this.state.population.roles = { builder: count, farmer: 0, miner: 0, scout: 0 };
+        } else {
+            this.state.population.roles.builder = count;
+        }
+        this.save();
+        return Result.ok();
+    }
+
+    setWorkerRole(role, delta) {
+        const validRoles = ['builder', 'farmer', 'miner', 'scout'];
+        if (!validRoles.includes(role)) {
+            return Result.fail('error_invalid_role');
+        }
+
+        const roles = this.state.population.roles || { builder: this.state.population.builders, farmer: 0, miner: 0, scout: 0 };
+        const current = roles[role] || 0;
+        const newCount = Math.max(0, current + delta);
+
+        // Calculate total used roles
+        const totalUsed = validRoles.reduce((sum, r) => sum + (r === role ? newCount : (roles[r] || 0)), 0);
+        if (totalUsed > this.state.population.total) {
+            return Result.fail('error_not_enough_villagers');
+        }
+
+        roles[role] = newCount;
+        this.state.population.roles = roles;
+
+        // Sync builders count with builder role
+        this.state.population.builders = roles.builder;
         this.save();
         return Result.ok();
     }
