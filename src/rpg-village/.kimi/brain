@@ -31,11 +31,11 @@
 - [x] **B8** Implement equipment set bonuses ✅ 2026-05-21
 
 ### Batch C — Large Features / Content
-- [ ] **C1** Separate structured combat events from formatted log strings
+- [x] **C1** Separate structured combat events from formatted log strings ✅ 2026-05-21
 - [x] **C2** Expand region pool to 6-8 regions ✅ 2026-05-21
 - [x] **C3** Implement worker specialization ✅ 2026-05-21
 - [x] **C4** Add food crafting / meal buffs ✅ 2026-05-21
-- [ ] **C5** Implement Calendar & Defense events
+- [x] **C5** Implement Calendar & Defense events ✅ 2026-05-21
 
 ---
 

@@ -474,9 +474,107 @@ function getRefineCost(item) {
   }
   return cost;
 }
+class CombatLogFormatter {
+  constructor(i18n2) {
+    this.i18n = i18n2;
+  }
+  /**
+   * Format a single combat log event into a human-readable string.
+   * @param {Object} event
+   * @returns {string}
+   */
+  format(event) {
+    if (!event || typeof event !== "object") return String(event);
+    switch (event.type) {
+      case "DAMAGE":
+        return this._formatDamage(event);
+      case "HEAL":
+        return this._formatHeal(event);
+      case "VAMP":
+        return this._formatVamp(event);
+      case "TRAIT_REGEN":
+        return this._formatTraitRegen(event);
+      case "STATUS_TICK":
+        return this._formatStatusTick(event);
+      case "STATUS_EXPIRED":
+        return this._formatStatusExpired(event);
+      case "USE_CONSUMABLE":
+        return this._formatUseConsumable(event);
+      default:
+        return `[${event.type}] ${JSON.stringify(event)}`;
+    }
+  }
+  _formatDamage(event) {
+    if (event.isMiss) {
+      return this.i18n.t("log_miss", {
+        attacker: event.actorName,
+        target: event.targetName
+      });
+    }
+    let msg = this.i18n.t("log_attack", {
+      attacker: event.actorName,
+      target: event.targetName,
+      damage: event.amount
+    });
+    if (event.isCrit) {
+      msg = `💥 ${msg}`;
+    }
+    if (event.targetDefeated) {
+      msg += ` ${this.i18n.t("log_target_defeated", { target: event.targetName })}`;
+    }
+    return msg;
+  }
+  _formatHeal(event) {
+    return this.i18n.t("log_heal", {
+      attacker: event.actorName,
+      target: event.targetName,
+      amount: event.amount
+    });
+  }
+  _formatVamp(event) {
+    return this.i18n.t("log_vamp", {
+      actor: event.actorName,
+      amount: event.amount
+    });
+  }
+  _formatTraitRegen(event) {
+    return this.i18n.t("log_regen", {
+      target: event.targetName,
+      amount: event.amount
+    });
+  }
+  _formatStatusTick(event) {
+    const key = event.effectType === "poison" ? "log_poison" : event.effectType === "burn" ? "log_burn" : null;
+    if (key) {
+      return this.i18n.t(key, {
+        target: event.targetName,
+        damage: event.damage
+      });
+    }
+    return `${event.targetName} takes ${event.damage} ${event.effectType} damage.`;
+  }
+  _formatStatusExpired(event) {
+    return this.i18n.t("log_status_expired", {
+      target: event.targetName,
+      effect: event.effectType
+    });
+  }
+  _formatUseConsumable(event) {
+    const statLabel = event.healType === "HEAL_MP" ? "MP" : "HP";
+    const itemName = this.i18n.t(event.consumableId) || event.consumableId;
+    return this.i18n.t("log_use_consumable", {
+      attacker: event.actorName,
+      item: itemName,
+      target: event.targetName,
+      amount: event.amount,
+      stat: statLabel
+    });
+  }
+}
 class CombatView {
   constructor({ i18n: i18n2 }) {
     this.i18n = i18n2;
+    this.formatter = new CombatLogFormatter(i18n2);
     this.engine = null;
     this.adapter = null;
     this.lastState = null;
@@ -512,9 +610,10 @@ class CombatView {
     content.appendChild(logContainer);
     overlay.appendChild(content);
     document.body.appendChild(overlay);
+    const events = combatLog.events || [];
     let index = 0;
     const interval = setInterval(() => {
-      if (index >= combatLog.length) {
+      if (index >= events.length) {
         clearInterval(interval);
         const summary = document.createElement("div");
         summary.style.cssText = "margin-top:12px;font-weight:bold;color:#ffd700;";
@@ -531,7 +630,7 @@ class CombatView {
         return;
       }
       const entry = document.createElement("div");
-      entry.textContent = combatLog[index];
+      entry.textContent = this.formatter.format(events[index]);
       entry.style.cssText = "margin-bottom:4px;opacity:0;transition:opacity 0.3s;";
       logContainer.appendChild(entry);
       requestAnimationFrame(() => {
@@ -667,7 +766,7 @@ class CombatView {
       logBox.className = "combat-log-console";
       (battle.log || []).forEach((entry) => {
         const line = document.createElement("div");
-        line.textContent = entry;
+        line.textContent = this.formatter.format(entry);
         line.style.cssText = "margin-bottom:2px;";
         logBox.appendChild(line);
       });
@@ -893,13 +992,14 @@ class CombatView {
     });
   }
   _triggerVisualEffect(entry, battle) {
-    const damageMatch = entry.match(/(\d+)\s*damage/i);
-    const healMatch = entry.match(/(\d+)\s*HP/i);
-    const targetNameMatch = entry.match(/^([^\s]+)/);
-    const value = damageMatch ? parseInt(damageMatch[1], 10) : healMatch ? parseInt(healMatch[1], 10) : null;
-    const isHeal = !!healMatch;
-    if (!value || !targetNameMatch) return;
-    const targetName = targetNameMatch[1];
+    const type = entry.type;
+    const isDamage = type === "DAMAGE" || type === "STATUS_TICK";
+    const isHeal = type === "HEAL" || type === "VAMP" || type === "TRAIT_REGEN" || type === "USE_CONSUMABLE";
+    if (!isDamage && !isHeal) return;
+    const value = entry.amount !== void 0 ? entry.amount : entry.damage;
+    if (!value || value <= 0) return;
+    const targetName = entry.targetName;
+    if (!targetName) return;
     let card = null;
     const overlay = document.getElementById("combat-overlay");
     if (!overlay) return;
@@ -4077,6 +4177,9 @@ const en = {
   ui_time: "Time",
   ui_days: "Days",
   log_use_consumable: "{attacker} used {item} on {target}, restoring {amount} {stat}.",
+  log_vamp: "{actor} drains {amount} HP through vampirism.",
+  log_status_expired: "{target}'s {effect} wore off.",
+  log_target_defeated: "{target} was defeated!",
   ui_locked: "Locked",
   ui_owned: "Owned",
   ui_wounded: "Wounded",
@@ -4496,6 +4599,9 @@ const es = {
   ui_time: "Tiempo",
   ui_days: "Días",
   log_use_consumable: "{attacker} usó {item} en {target}, restaurando {amount} {stat}.",
+  log_vamp: "{actor} drena {amount} PV a través del vampirismo.",
+  log_status_expired: "El efecto {effect} de {target} se disipó.",
+  log_target_defeated: "¡{target} fue derrotado!",
   ui_locked: "Bloqueado",
   ui_owned: "Tienes",
   ui_wounded: "Herido",
@@ -4887,6 +4993,9 @@ const ca = {
   ui_time: "Temps",
   ui_days: "Dies",
   log_use_consumable: "¡{attacker} ha utilitzat {item} en {target}, restaurant {amount} {stat}!",
+  log_vamp: "{actor} drena {amount} PV a través del vampirisme.",
+  log_status_expired: "L'efecte {effect} de {target} s'ha dissipat.",
+  log_target_defeated: "¡{target} ha estat derrotat!",
   ui_locked: "Bloquejat",
   ui_owned: "Tens",
   ui_wounded: "Ferit",
@@ -5302,6 +5411,9 @@ const eu = {
   ui_time: "Denbora",
   ui_days: "Egun",
   log_use_consumable: "¡{attacker}-(e)k {item} erabili du {target}-(r)en aurka, {amount} {stat} berrituz!",
+  log_vamp: "{actor}k {amount} PV xurgatu ditu vampirismoaren bidez.",
+  log_status_expired: "{target}-ren {effect} efektua desagertu da.",
+  log_target_defeated: "¡{target} garaitua izan da!",
   ui_locked: "Blokeatuta",
   ui_owned: "Daukazu",
   ui_wounded: "Zauritua",
@@ -5716,6 +5828,9 @@ const gl = {
   ui_time: "Tempo",
   ui_days: "Días",
   log_use_consumable: "¡{attacker} usou {item} en {target}, restaurando {amount} {stat}!",
+  log_vamp: "{actor} drena {amount} PV a través do vampirismo.",
+  log_status_expired: "O efecto {effect} de {target} disipouse.",
+  log_target_defeated: "¡{target} foi derrotado!",
   ui_locked: "Bloqueado",
   ui_owned: "Tes",
   ui_wounded: "Ferido",

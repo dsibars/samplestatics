@@ -1,8 +1,10 @@
 import { SKILLS_DATA } from '../../../engine/shared/data/GameConstants.js';
+import { CombatLogFormatter } from '../../../engine/shared/combat/CombatLogFormatter.js';
 
 export class CombatView {
   constructor({ i18n }) {
     this.i18n = i18n;
+    this.formatter = new CombatLogFormatter(i18n);
     this.engine = null;
     this.adapter = null;
     this.lastState = null;
@@ -42,9 +44,10 @@ export class CombatView {
     overlay.appendChild(content);
     document.body.appendChild(overlay);
 
+    const events = combatLog.events || [];
     let index = 0;
     const interval = setInterval(() => {
-      if (index >= combatLog.length) {
+      if (index >= events.length) {
         clearInterval(interval);
         const summary = document.createElement('div');
         summary.style.cssText = 'margin-top:12px;font-weight:bold;color:#ffd700;';
@@ -61,7 +64,7 @@ export class CombatView {
         return;
       }
       const entry = document.createElement('div');
-      entry.textContent = combatLog[index];
+      entry.textContent = this.formatter.format(events[index]);
       entry.style.cssText = 'margin-bottom:4px;opacity:0;transition:opacity 0.3s;';
       logContainer.appendChild(entry);
       requestAnimationFrame(() => { entry.style.opacity = '1'; });
@@ -214,7 +217,7 @@ export class CombatView {
       logBox.className = 'combat-log-console';
       (battle.log || []).forEach(entry => {
         const line = document.createElement('div');
-        line.textContent = entry;
+        line.textContent = this.formatter.format(entry);
         line.style.cssText = 'margin-bottom:2px;';
         logBox.appendChild(line);
       });
@@ -496,16 +499,20 @@ export class CombatView {
   }
 
   _triggerVisualEffect(entry, battle) {
-    // Parse damage/heal from log entry text
-    const damageMatch = entry.match(/(\d+)\s*damage/i);
-    const healMatch = entry.match(/(\d+)\s*HP/i);
-    const targetNameMatch = entry.match(/^([^\s]+)/);
-    const value = damageMatch ? parseInt(damageMatch[1], 10) : healMatch ? parseInt(healMatch[1], 10) : null;
-    const isHeal = !!healMatch;
-    if (!value || !targetNameMatch) return;
+    // Structured event parsing (replaces old regex-based string parsing)
+    const type = entry.type;
+    const isDamage = type === 'DAMAGE' || type === 'STATUS_TICK';
+    const isHeal = type === 'HEAL' || type === 'VAMP' || type === 'TRAIT_REGEN' || type === 'USE_CONSUMABLE';
+
+    if (!isDamage && !isHeal) return;
+
+    const value = entry.amount !== undefined ? entry.amount : entry.damage;
+    if (!value || value <= 0) return;
+
+    const targetName = entry.targetName;
+    if (!targetName) return;
 
     // Find target card
-    const targetName = targetNameMatch[1];
     let card = null;
     const overlay = document.getElementById('combat-overlay');
     if (!overlay) return;
