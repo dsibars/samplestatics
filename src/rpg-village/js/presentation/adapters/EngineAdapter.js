@@ -2,6 +2,8 @@
  * EngineAdapter - Orchestrates the Engine and UI.
  * Connects events from UI to Engine and updates UI from Engine state.
  */
+const DEBUG = false;
+
 export class EngineAdapter {
     constructor(engine, ui) {
         this.engine = engine;
@@ -216,7 +218,7 @@ export class EngineAdapter {
 
             if (domain === 'settings') {
                 view.on('devCheatActivate', () => {
-                    console.log('EngineAdapter: devCheatActivate received');
+                    if (DEBUG) console.log('EngineAdapter: devCheatActivate received');
                     this.engine.activateDeveloperCheat();
                     this.forceUpdate();
                 });
@@ -225,7 +227,7 @@ export class EngineAdapter {
 
         // Handle UI actions (legacy)
         this.ui.onInitialize(() => {
-            console.log('Village initialization requested via Adapter');
+            if (DEBUG) console.log('Village initialization requested via Adapter');
         });
 
         // Start the game loop

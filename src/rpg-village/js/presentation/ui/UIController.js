@@ -3,6 +3,8 @@
  * Manages the shell, view transitions, and domain-specific view registration.
  */
 import { CombatView } from './combat/CombatView.js';
+const DEBUG = false;
+
 export class UIController {
     constructor(i18n) {
         this.i18n = i18n;
@@ -58,7 +60,7 @@ export class UIController {
         if (domain === 'forge' && !this.isForgeUnlocked) return;
         if (this.activeDomain === domain) return;
 
-        console.log(`Switching to domain: ${domain}`);
+        if (DEBUG) console.log(`Switching to domain: ${domain}`);
 
         // Update Nav UI
         this.elements.navItems.forEach(item => {
@@ -101,7 +103,7 @@ export class UIController {
             });
 
         } catch (error) {
-            console.error(error);
+            if (DEBUG) console.error(error);
             this.elements.mainContent.innerHTML = `<div class="error-state">Error loading view: ${domain}</div>`;
             this.elements.mainContent.classList.remove('view-exit');
         }
@@ -149,10 +151,16 @@ export class UIController {
 
     updateNavLocks(state) {
         const completed = state.completedExpeditions || [];
-        this.isShopUnlocked = completed.includes('exp_tutorial_cave');
-        
+        const isShopUnlocked = completed.includes('exp_tutorial_cave');
         const blacksmithLvl = state.village?.infrastructure?.blacksmith || 0;
-        this.isForgeUnlocked = blacksmithLvl >= 1;
+        const isForgeUnlocked = blacksmithLvl >= 1;
+
+        // Skip DOM updates if nothing changed
+        if (this.isShopUnlocked === isShopUnlocked && this.isForgeUnlocked === isForgeUnlocked) {
+            return;
+        }
+        this.isShopUnlocked = isShopUnlocked;
+        this.isForgeUnlocked = isForgeUnlocked;
 
         // Update Shop Tab
         if (this.elements.shopNav) {

@@ -224,8 +224,8 @@ export class Hero {
         this.evasion = equipBonus.evasion;
         this.mpCostReduction = equipBonus.mpCostReduction;
         this.vampirism = equipBonus.vampirism;
-        this.critChanceBonus = equipBonus.critChance;
-        this.accuracyBonus = equipBonus.accuracy;
+        this.critChanceBonus = (equipBonus.critChance || 0) + (traitMults.critChance || 0);
+        this.accuracyBonus = (equipBonus.accuracy || 0) + (traitMults.accuracy || 0);
         this.hasPhoenix = equipBonus.hasPhoenix;
 
         this.hp = Math.min(this.hp, this.maxHp);

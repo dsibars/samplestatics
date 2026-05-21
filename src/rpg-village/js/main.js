@@ -14,7 +14,8 @@ import { ForgeView } from './presentation/ui/forge/ForgeView.js';
 import { BestiaryView } from './presentation/ui/bestiary/BestiaryView.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('RPG Village Initializing...');
+    const DEBUG = false;
+    if (DEBUG) console.log('RPG Village Initializing...');
 
     // 1. Initialize Engine (The Logic)
     const engine = new GameEngine();
@@ -49,5 +50,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start the loop
     adapter.init();
     
-    console.log('RPG Village Ready!');
+    if (DEBUG) console.log('RPG Village Ready!');
 });

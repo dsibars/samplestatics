@@ -16,15 +16,15 @@ When the player triggers a "Next Day" event, the following steps occur in order:
 
 3.  **Production Phase**:
     - The `farm` infrastructure produces food daily (+4 `food_raw_grain` per level) which is added to the inventory.
-    - **Farmer Bonus**: Each assigned Farmer villager increases farm output by 10%.
+    - **Farmer Bonus**: If the `farmer` role is assigned, farm output is increased by 10%.
 
 4.  **Miner Phase**:
-    - Each assigned Miner villager has a 20% chance to produce 1 Wood or Stone.
+    - If the `miner` role is assigned, there is a 20% chance to produce 1 Wood or Stone per day.
 
 5.  **Construction Phase**: 
     - All active projects in the `constructionQueue` have their `daysRemaining` decremented by 1.
     - If `daysRemaining` reaches 0, the building is completed and its bonuses become active.
-    - The worker assigned to the project is returned to the `availableVillagers` pool.
+
 
 6.  **Growth Phase**:
     - If food is abundant and there is housing capacity, there is a chance for new villagers to join.
@@ -45,13 +45,13 @@ Buildings are not instantaneous. They require a "Project" to be initiated.
 ### Requirements to Start a Project:
 1.  **Materials**: The full cost in wood, stone, etc., must be available in the inventory.
 2.  **Gold**: The upgrade cost must be paid upfront.
-3.  **Labor**: One (1) available villager must be assigned to the project for its entire duration.
+3.  **Labor**: Construction proceeds automatically once initiated; no individual villager needs to be assigned to the project.
 
 ### Project Data Model:
 - `buildingId`: The ID of the building being upgraded/built.
 - `targetLevel`: The level the building will reach upon completion.
 - `daysRemaining`: Number of "Next Day" triggers required to finish.
-- `assignedVillagerId`: (Future) The specific villager working on it.
+- `assignedVillagerId`: (Deprecated) No longer used; construction does not track individual villagers.
 
 ## Implementation Details
 - The state of all active projects is stored in `village.state.constructionQueue`.

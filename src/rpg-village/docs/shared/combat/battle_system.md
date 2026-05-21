@@ -26,6 +26,21 @@ Magic attacks have elements. Damage is multiplied based on target element:
 ### Accuracy & Evasion
 Evasion is a percentage chance calculated via the ratio of the Defender's Speed to the Attacker's Speed.
 
+## Party Traits
+Party-wide traits are calculated at battle start based on the active heroes' origins:
+- **Cook** (`origin_cook`): +5% HP regen per turn for the whole party.
+- **Guard** (`origin_guard`): +10% physical damage reduction for the whole party.
+- **Poet** (`origin_poet`): +10% magic power boost for the whole party.
+- **Thief** (`origin_thief`): +10% gold bonus from battle rewards.
+
+## Critical Hits
+- A critical hit occurs when a random roll is below the actor's `critChanceBonus` (base 5%, modified by equipment and origin traits).
+- Critical hits deal **150%** of normal damage.
+
+## Splash & Jump Mechanics
+- **Splash**: Skills with `splash` targeting hit the primary target for full damage and adjacent targets for **50%** damage.
+- **Jump**: Skills with `jump` targeting hit up to N targets in sequence, with each subsequent target receiving **75%** of the previous hit's damage.
+
 ## Status Effects
 Status effects are turn-based modifications to an entity's state. They are rendered as emoji badges below the HP bar in combat:
 - `poison` 🟣: Target takes 5% of Max HP as damage every turn.

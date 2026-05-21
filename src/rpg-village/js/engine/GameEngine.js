@@ -10,6 +10,8 @@ import { ExpeditionService } from './explore/services/ExpeditionService.js';
 import { DailyObjectivesService } from './daily/services/DailyObjectivesService.js';
 import { CalendarService } from './calendar/services/CalendarService.js';
 import { persistence } from './shared/core/Persistence.js';
+const DEBUG = false;
+
 import { i18n } from './shared/core/i18n/I18nService.js';
 import { Result } from './shared/core/Result.js';
 import { getRefineCost, MEAL_RECIPES } from './shared/data/GameConstants.js';
@@ -38,7 +40,7 @@ export class GameEngine {
         const hasVillage = persistence.load('village_state', null) !== null;
         
         this.isNewGame = !hasHeroes || !hasVillage;
-        console.log('Engine: checkNewGame?', this.isNewGame, { hasHeroes, hasVillage });
+        if (DEBUG) console.log('Engine: checkNewGame?', this.isNewGame, { hasHeroes, hasVillage });
         
         if (this.isNewGame) {
             this.initNewGame();
@@ -48,14 +50,14 @@ export class GameEngine {
 
         // Resume combat if active
         if (this.expeditionService.state.activeCombatExpeditionId) {
-            console.log('Engine: Resuming active combat...');
+            if (DEBUG) console.log('Engine: Resuming active combat...');
             this.expeditionService.resumeActiveBattle();
         }
     }
 
 
     initNewGame() {
-        console.log('Engine: Initializing New Game state...');
+        if (DEBUG) console.log('Engine: Initializing New Game state...');
         
         // Add starting hero if not exists
         const currentHeroes = this.heroService.list();
@@ -71,7 +73,7 @@ export class GameEngine {
     }
 
     activateDeveloperCheat() {
-        console.warn('🚀 Engine: Developer Cheat Activated!');
+        if (DEBUG) console.warn('🚀 Engine: Developer Cheat Activated!');
 
         // 1. Add 10,000 gold
         this.villageService.addGold(10000);
@@ -151,14 +153,6 @@ export class GameEngine {
     }
 
     // --- Hero Facade ---
-    addHero(heroData) {
-        return this.heroService.add(heroData);
-    }
-
-    getHeroes() {
-        return this.heroService.list();
-    }
-
     recruitHero() {
         const tavernLevel = this.villageService.getState().infrastructure.tavern || 0;
         if (tavernLevel < 1) {
@@ -408,7 +402,6 @@ export class GameEngine {
     }
 
     consumeMeal(mealId) {
-        const { MEAL_RECIPES } = require('./shared/data/GameConstants.js');
         const recipe = MEAL_RECIPES[mealId];
         if (!recipe) return Result.fail('error_meal_not_found');
 
@@ -442,11 +435,6 @@ export class GameEngine {
     }
 
     // --- Combat Facade ---
-    startBattle(enemies) {
-        const activeHeroes = this.heroService.list('active');
-        return this.battleService.startBattle(activeHeroes, enemies);
-    }
-
     nextBattleTurn() {
         return this.battleService.nextTurn();
     }
@@ -471,22 +459,6 @@ export class GameEngine {
             }
         }
         return Result.ok({ skipped: true });
-    }
-
-    getBattleResolutionPreview() {
-        return this.expeditionService.getBattleResolutionPreview();
-    }
-
-    resolveBattle() {
-        return this.expeditionService.resolveBattle();
-    }
-
-    setLanguage(lang) {
-        if (this.i18n.setLanguage(lang)) {
-            persistence.save('settings_lang', lang);
-            return true;
-        }
-        return false;
     }
 
     // --- Time & Construction ---
@@ -583,10 +555,6 @@ export class GameEngine {
     }
 
     // --- Calendar & Defense Facade ---
-    getCalendarState() {
-        return this.calendarService.getState(this.villageService.getState().day);
-    }
-
     assignDefense(heroId) {
         return this.calendarService.assignDefense(heroId);
     }
@@ -602,6 +570,10 @@ export class GameEngine {
             this.dailyObjectivesService.track('upgrade_building', 1);
         }
         return result;
+    }
+
+    resolveBattle() {
+        return this.expeditionService.resolveBattle();
     }
 
     // --- Explore Facade ---

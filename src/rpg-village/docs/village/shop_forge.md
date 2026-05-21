@@ -99,4 +99,4 @@ The cost to refine an item to level $L+1$ depends on its material tier:
 | **Mythril** | $500 \times (L+1)$ | Mythril: $2 \times (L+1)$ |
 
 ### Interaction Constraints
-- Only items in the main **Inventory** can be refined. Items equipped on a hero must be unequipped first to undergo refinement.
+- Items in the main **Inventory** and items **equipped on heroes** can both be refined. Equipped items do not need to be unequipped first.

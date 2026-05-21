@@ -1,3 +1,5 @@
+const DEBUG = false;
+
 export class Persistence {
     constructor(prefix = 'rpg_village_v1_') {
         this.prefix = prefix;
@@ -13,7 +15,7 @@ export class Persistence {
             localStorage.setItem(this._key(key), serialized);
             return true;
         } catch (e) {
-            console.error(`Engine Persistence: Failed to save ${key}`, e);
+            if (DEBUG) console.error(`Engine Persistence: Failed to save ${key}`, e);
             return false;
         }
     }
@@ -22,11 +24,11 @@ export class Persistence {
         try {
             const fullKey = this._key(key);
             const serialized = localStorage.getItem(fullKey);
-            console.log(`Persistence: Loading ${fullKey}`, serialized ? 'FOUND' : 'NOT FOUND');
+            if (DEBUG) console.log(`Persistence: Loading ${fullKey}`, serialized ? 'FOUND' : 'NOT FOUND');
             if (serialized === null) return defaultValue;
             return JSON.parse(serialized);
         } catch (e) {
-            console.error(`Engine Persistence: Failed to load ${key}`, e);
+            if (DEBUG) console.error(`Engine Persistence: Failed to load ${key}`, e);
             return defaultValue;
         }
     }
@@ -36,10 +38,10 @@ export class Persistence {
     }
 
     clear() {
-        console.warn(`Persistence: CLEARING ALL DATA with prefix ${this.prefix}`);
+        if (DEBUG) console.warn(`Persistence: CLEARING ALL DATA with prefix ${this.prefix}`);
         Object.keys(localStorage).forEach(key => {
             if (key.startsWith(this.prefix)) {
-                console.log(`Persistence: Removing ${key}`);
+                if (DEBUG) console.log(`Persistence: Removing ${key}`);
                 localStorage.removeItem(key);
             }
         });

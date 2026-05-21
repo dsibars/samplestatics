@@ -134,12 +134,12 @@ export class CalendarService {
     }
 
     assignDefense(heroId) {
+        if (this.state.defenseAssigned.includes(heroId)) {
+            return Result.fail('error_already_assigned');
+        }
         const maxDefenders = 4;
         if (this.state.defenseAssigned.length >= maxDefenders) {
             return Result.fail('error_max_defenders');
-        }
-        if (this.state.defenseAssigned.includes(heroId)) {
-            return Result.fail('error_already_assigned');
         }
         this.state.defenseAssigned.push(heroId);
         this.save();

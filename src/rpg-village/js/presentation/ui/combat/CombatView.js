@@ -113,8 +113,9 @@ export class CombatView {
       autoBtn.textContent = this.t('combat.auto');
       autoBtn.className = 'btn btn-secondary btn-sm';
       autoBtn.addEventListener('click', () => {
-        if (this.engine && this.engine.executeBattleAction) {
-          this.engine.executeBattleAction('auto');
+        if (this.engine && this.engine.battleService) {
+          this.engine.battleService.autoBattle = true;
+          this.engine.nextBattleTurn();
         }
       });
       controls.appendChild(autoBtn);
@@ -122,8 +123,8 @@ export class CombatView {
       skipBtn.textContent = this.t('combat.skip');
       skipBtn.className = 'btn btn-secondary btn-sm';
       skipBtn.addEventListener('click', () => {
-        if (this.engine && this.engine.executeBattleAction) {
-          this.engine.executeBattleAction('skip');
+        if (this.engine && this.engine.skipBattle) {
+          this.engine.skipBattle();
         }
       });
       controls.appendChild(skipBtn);
@@ -227,12 +228,16 @@ export class CombatView {
       const actionsBox = document.createElement('div');
       actionsBox.className = 'combat-control-panel';
       if (currentMenu === 'main') {
-        this._renderMainMenu(actionsBox, () => render());
+        this._renderMainMenu(actionsBox,
+          () => { if (this.engine && this.engine.executeBattleAction) { this.engine.executeBattleAction('basic_attack'); } render(); },
+          () => { currentMenu = 'skills'; render(); },
+          () => { currentMenu = 'items'; render(); }
+        );
       } else if (currentMenu === 'skills') {
         this._renderSkillsMenu(actionsBox, battle, (skillId) => {
           selectedSkillId = skillId;
           const skillData = SKILLS_DATA[skillId];
-          if (skillData && skillData.target === 'friendly') {
+          if (skillData && skillData.targetType === 'single_ally') {
             targetMode = 'friendly';
           } else {
             targetMode = 'enemy';
@@ -255,7 +260,7 @@ export class CombatView {
         });
       } else if (currentMenu === 'targeting') {
         this._renderTargeting(actionsBox, battle, targetMode, (targetId) => {
-          this._executeTargetAction(selectedSkillId, selectedItemId, targetId);
+          this._executeTargetAction(selectedSkillId, selectedItemId, targetId, targetMode);
           currentMenu = 'main';
           selectedSkillId = null;
           selectedItemId = null;
@@ -357,44 +362,36 @@ export class CombatView {
     container.appendChild(resolution);
   }
 
-  _renderMainMenu(actionsBox, rerender) {
+  _renderMainMenu(actionsBox, onAttack, onSkills, onItems) {
     const menu = document.createElement('div');
     menu.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
     const attackBtn = document.createElement('button');
     attackBtn.textContent = this.t('combat.attack');
     attackBtn.style.cssText = 'flex:1;min-width:80px;padding:8px;cursor:pointer;';
     attackBtn.addEventListener('click', () => {
-      if (this.engine && this.engine.executeBattleAction) {
-        this.engine.executeBattleAction('attack');
-      }
-      rerender();
+      if (onAttack) onAttack();
     });
     menu.appendChild(attackBtn);
     const skillsBtn = document.createElement('button');
     skillsBtn.textContent = this.t('combat.skills');
     skillsBtn.style.cssText = 'flex:1;min-width:80px;padding:8px;cursor:pointer;';
     skillsBtn.addEventListener('click', () => {
-      const event = new CustomEvent('combat-menu-change', { detail: { menu: 'skills' } });
-      document.dispatchEvent(event);
+      if (onSkills) onSkills();
     });
     menu.appendChild(skillsBtn);
     const itemsBtn = document.createElement('button');
     itemsBtn.textContent = this.t('combat.items');
     itemsBtn.style.cssText = 'flex:1;min-width:80px;padding:8px;cursor:pointer;';
     itemsBtn.addEventListener('click', () => {
-      const event = new CustomEvent('combat-menu-change', { detail: { menu: 'items' } });
-      document.dispatchEvent(event);
+      if (onItems) onItems();
     });
     menu.appendChild(itemsBtn);
     actionsBox.appendChild(menu);
-
-    document.addEventListener('combat-menu-change', (e) => {
-      // Handled in render closure
-    }, { once: true });
   }
 
   _renderSkillsMenu(actionsBox, battle, onSelect, onBack) {
-    const currentHero = battle.heroes && battle.heroes[battle.currentHeroIndex || 0];
+    const activeActor = battle.turnOrder && battle.turnOrder[battle.currentTurnIndex];
+    const currentHero = activeActor && battle.heroes ? battle.heroes.find(h => h.id === activeActor.id) : null;
     const skills = currentHero && currentHero.skills ? currentHero.skills : [];
     const menu = document.createElement('div');
     menu.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
@@ -479,9 +476,16 @@ export class CombatView {
     actionsBox.appendChild(menu);
   }
 
-  _executeTargetAction(skillId, itemId, targetId) {
+  _executeTargetAction(skillId, itemId, targetId, targetMode) {
+    const battle = this.lastState && this.lastState.activeBattle;
+    if (!battle) return;
+
     if (skillId && this.engine && this.engine.executeBattleAction) {
-      this.engine.executeBattleAction('skill', { skillId, targetId });
+      // Map targetId to target index in the appropriate array
+      const isFriendly = targetMode === 'friendly';
+      const targets = isFriendly ? (battle.heroes || []) : (battle.enemies || []);
+      const targetIndex = targets.findIndex(t => t.id === targetId);
+      this.engine.executeBattleAction(skillId, targetIndex >= 0 ? targetIndex : null);
     } else if (itemId && this.engine && this.engine.useBattleConsumable) {
       this.engine.useBattleConsumable(itemId, targetId);
     }

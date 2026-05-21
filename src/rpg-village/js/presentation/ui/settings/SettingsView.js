@@ -1,3 +1,5 @@
+const DEBUG = false;
+
 import { BaseView } from '../BaseView.js';
 import { persistence } from '../../../engine/shared/core/Persistence.js';
 
@@ -22,7 +24,7 @@ export class SettingsView extends BaseView {
             
             this.elements.langSelect.addEventListener('change', (e) => {
                 const newLang = e.target.value;
-                console.log(`Settings: Changing language to ${newLang}`);
+                if (DEBUG) console.log(`Settings: Changing language to ${newLang}`);
                 this.ui.setLanguage(newLang);
             });
         }
@@ -30,16 +32,16 @@ export class SettingsView extends BaseView {
         // Wipe Data logic
         if (this.elements.btnWipe) {
             this.elements.btnWipe.addEventListener('click', () => {
-                console.log('SettingsView: Wipe button clicked');
+                if (DEBUG) console.log('SettingsView: Wipe button clicked');
                 
                 this.ui.showConfirmDialog({
                     title: 'ui_settings_wipe_data',
                     message: 'ui_settings_wipe_confirm',
                     onConfirm: () => {
-                        console.warn('SettingsView: USER CONFIRMED WIPE. Executing persistence.clear()...');
+                        if (DEBUG) console.warn('SettingsView: USER CONFIRMED WIPE. Executing persistence.clear()...');
                         persistence.clear();
                         
-                        console.log('SettingsView: Wipe complete. Reloading page...');
+                        if (DEBUG) console.log('SettingsView: Wipe complete. Reloading page...');
                         // Small delay to ensure logs are processed
                         setTimeout(() => {
                             window.location.reload();
@@ -52,7 +54,7 @@ export class SettingsView extends BaseView {
         // Developer Cheat logic
         if (this.elements.btnDevCheat) {
             this.elements.btnDevCheat.addEventListener('click', () => {
-                console.log('SettingsView: Dev Cheat button clicked');
+                if (DEBUG) console.log('SettingsView: Dev Cheat button clicked');
                 this.emit('devCheatActivate', {});
 
                 // Brief visual feedback on the button

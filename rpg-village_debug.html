@@ -650,6 +650,10 @@ class CombatView {
     overlay.appendChild(container);
     document.body.appendChild(overlay);
     this.overlay = overlay;
+    let currentMenu = "main";
+    let selectedSkillId = null;
+    let selectedItemId = null;
+    let targetMode = null;
     const render = () => {
       container.innerHTML = "";
       const battle = this.lastState && this.lastState.activeBattle;
@@ -672,8 +676,9 @@ class CombatView {
       autoBtn.textContent = this.t("combat.auto");
       autoBtn.className = "btn btn-secondary btn-sm";
       autoBtn.addEventListener("click", () => {
-        if (this.engine && this.engine.executeBattleAction) {
-          this.engine.executeBattleAction("auto");
+        if (this.engine && this.engine.battleService) {
+          this.engine.battleService.autoBattle = true;
+          this.engine.nextBattleTurn();
         }
       });
       controls.appendChild(autoBtn);
@@ -681,8 +686,8 @@ class CombatView {
       skipBtn.textContent = this.t("combat.skip");
       skipBtn.className = "btn btn-secondary btn-sm";
       skipBtn.addEventListener("click", () => {
-        if (this.engine && this.engine.executeBattleAction) {
-          this.engine.executeBattleAction("skip");
+        if (this.engine && this.engine.skipBattle) {
+          this.engine.skipBattle();
         }
       });
       controls.appendChild(skipBtn);
@@ -773,8 +778,62 @@ class CombatView {
       centerCol.appendChild(logBox);
       const actionsBox = document.createElement("div");
       actionsBox.className = "combat-control-panel";
-      {
-        this._renderMainMenu(actionsBox, () => render());
+      if (currentMenu === "main") {
+        this._renderMainMenu(
+          actionsBox,
+          () => {
+            if (this.engine && this.engine.executeBattleAction) {
+              this.engine.executeBattleAction("basic_attack");
+            }
+            render();
+          },
+          () => {
+            currentMenu = "skills";
+            render();
+          },
+          () => {
+            currentMenu = "items";
+            render();
+          }
+        );
+      } else if (currentMenu === "skills") {
+        this._renderSkillsMenu(actionsBox, battle, (skillId) => {
+          selectedSkillId = skillId;
+          const skillData = SKILLS_DATA[skillId];
+          if (skillData && skillData.targetType === "single_ally") {
+            targetMode = "friendly";
+          } else {
+            targetMode = "enemy";
+          }
+          currentMenu = "targeting";
+          render();
+        }, () => {
+          currentMenu = "main";
+          render();
+        });
+      } else if (currentMenu === "items") {
+        this._renderItemsMenu(actionsBox, (itemId) => {
+          selectedItemId = itemId;
+          targetMode = "friendly";
+          currentMenu = "targeting";
+          render();
+        }, () => {
+          currentMenu = "main";
+          render();
+        });
+      } else if (currentMenu === "targeting") {
+        this._renderTargeting(actionsBox, battle, targetMode, (targetId) => {
+          this._executeTargetAction(selectedSkillId, selectedItemId, targetId, targetMode);
+          currentMenu = "main";
+          selectedSkillId = null;
+          selectedItemId = null;
+          targetMode = null;
+          render();
+        }, () => {
+          currentMenu = selectedSkillId ? "skills" : "items";
+          targetMode = null;
+          render();
+        });
       }
       centerCol.appendChild(actionsBox);
       columns.appendChild(centerCol);
@@ -858,41 +917,35 @@ class CombatView {
     resolution.appendChild(closeBtn);
     container.appendChild(resolution);
   }
-  _renderMainMenu(actionsBox, rerender) {
+  _renderMainMenu(actionsBox, onAttack, onSkills, onItems) {
     const menu = document.createElement("div");
     menu.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;";
     const attackBtn = document.createElement("button");
     attackBtn.textContent = this.t("combat.attack");
     attackBtn.style.cssText = "flex:1;min-width:80px;padding:8px;cursor:pointer;";
     attackBtn.addEventListener("click", () => {
-      if (this.engine && this.engine.executeBattleAction) {
-        this.engine.executeBattleAction("attack");
-      }
-      rerender();
+      if (onAttack) onAttack();
     });
     menu.appendChild(attackBtn);
     const skillsBtn = document.createElement("button");
     skillsBtn.textContent = this.t("combat.skills");
     skillsBtn.style.cssText = "flex:1;min-width:80px;padding:8px;cursor:pointer;";
     skillsBtn.addEventListener("click", () => {
-      const event = new CustomEvent("combat-menu-change", { detail: { menu: "skills" } });
-      document.dispatchEvent(event);
+      if (onSkills) onSkills();
     });
     menu.appendChild(skillsBtn);
     const itemsBtn = document.createElement("button");
     itemsBtn.textContent = this.t("combat.items");
     itemsBtn.style.cssText = "flex:1;min-width:80px;padding:8px;cursor:pointer;";
     itemsBtn.addEventListener("click", () => {
-      const event = new CustomEvent("combat-menu-change", { detail: { menu: "items" } });
-      document.dispatchEvent(event);
+      if (onItems) onItems();
     });
     menu.appendChild(itemsBtn);
     actionsBox.appendChild(menu);
-    document.addEventListener("combat-menu-change", (e) => {
-    }, { once: true });
   }
   _renderSkillsMenu(actionsBox, battle, onSelect, onBack) {
-    const currentHero = battle.heroes && battle.heroes[battle.currentHeroIndex || 0];
+    const activeActor = battle.turnOrder && battle.turnOrder[battle.currentTurnIndex];
+    const currentHero = activeActor && battle.heroes ? battle.heroes.find((h) => h.id === activeActor.id) : null;
     const skills = currentHero && currentHero.skills ? currentHero.skills : [];
     const menu = document.createElement("div");
     menu.style.cssText = "display:flex;flex-direction:column;gap:6px;";
@@ -974,9 +1027,14 @@ class CombatView {
     menu.appendChild(backBtn);
     actionsBox.appendChild(menu);
   }
-  _executeTargetAction(skillId, itemId, targetId) {
+  _executeTargetAction(skillId, itemId, targetId, targetMode) {
+    const battle = this.lastState && this.lastState.activeBattle;
+    if (!battle) return;
     if (skillId && this.engine && this.engine.executeBattleAction) {
-      this.engine.executeBattleAction("skill", { skillId, targetId });
+      const isFriendly = targetMode === "friendly";
+      const targets = isFriendly ? battle.heroes || [] : battle.enemies || [];
+      const targetIndex = targets.findIndex((t) => t.id === targetId);
+      this.engine.executeBattleAction(skillId, targetIndex >= 0 ? targetIndex : null);
     } else if (itemId && this.engine && this.engine.useBattleConsumable) {
       this.engine.useBattleConsumable(itemId, targetId);
     }
@@ -1083,7 +1141,6 @@ class UIController {
     if (domain === "shop" && !this.isShopUnlocked) return;
     if (domain === "forge" && !this.isForgeUnlocked) return;
     if (this.activeDomain === domain) return;
-    console.log(`Switching to domain: ${domain}`);
     this.elements.navItems.forEach((item) => {
       if (item.getAttribute("data-view") === domain) {
         item.classList.add("active");
@@ -1109,7 +1166,6 @@ class UIController {
         this.elements.mainContent.classList.remove("view-exit");
       });
     } catch (error) {
-      console.error(error);
       this.elements.mainContent.innerHTML = `<div class="error-state">Error loading view: ${domain}</div>`;
       this.elements.mainContent.classList.remove("view-exit");
     }
@@ -1153,9 +1209,14 @@ class UIController {
   updateNavLocks(state) {
     var _a, _b;
     const completed = state.completedExpeditions || [];
-    this.isShopUnlocked = completed.includes("exp_tutorial_cave");
+    const isShopUnlocked = completed.includes("exp_tutorial_cave");
     const blacksmithLvl = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
-    this.isForgeUnlocked = blacksmithLvl >= 1;
+    const isForgeUnlocked = blacksmithLvl >= 1;
+    if (this.isShopUnlocked === isShopUnlocked && this.isForgeUnlocked === isForgeUnlocked) {
+      return;
+    }
+    this.isShopUnlocked = isShopUnlocked;
+    this.isForgeUnlocked = isForgeUnlocked;
     if (this.elements.shopNav) {
       const iconEl = this.elements.shopNav.querySelector(".nav-icon");
       const labelEl = this.elements.shopNav.querySelector(".nav-label");
@@ -1611,8 +1672,8 @@ class Hero {
     this.evasion = equipBonus.evasion;
     this.mpCostReduction = equipBonus.mpCostReduction;
     this.vampirism = equipBonus.vampirism;
-    this.critChanceBonus = equipBonus.critChance;
-    this.accuracyBonus = equipBonus.accuracy;
+    this.critChanceBonus = (equipBonus.critChance || 0) + (traitMults.critChance || 0);
+    this.accuracyBonus = (equipBonus.accuracy || 0) + (traitMults.accuracy || 0);
     this.hasPhoenix = equipBonus.hasPhoenix;
     this.hp = Math.min(this.hp, this.maxHp);
     this.mp = Math.min(this.mp, this.maxMp);
@@ -1727,6 +1788,7 @@ class Hero {
     };
   }
 }
+const DEBUG = false;
 class Persistence {
   constructor(prefix = "rpg_village_v1_") {
     this.prefix = prefix;
@@ -1740,7 +1802,6 @@ class Persistence {
       localStorage.setItem(this._key(key), serialized);
       return true;
     } catch (e) {
-      console.error(`Engine Persistence: Failed to save ${key}`, e);
       return false;
     }
   }
@@ -1748,11 +1809,10 @@ class Persistence {
     try {
       const fullKey = this._key(key);
       const serialized = localStorage.getItem(fullKey);
-      console.log(`Persistence: Loading ${fullKey}`, serialized ? "FOUND" : "NOT FOUND");
+      if (DEBUG) ;
       if (serialized === null) return defaultValue;
       return JSON.parse(serialized);
     } catch (e) {
-      console.error(`Engine Persistence: Failed to load ${key}`, e);
       return defaultValue;
     }
   }
@@ -1760,10 +1820,8 @@ class Persistence {
     localStorage.removeItem(this._key(key));
   }
   clear() {
-    console.warn(`Persistence: CLEARING ALL DATA with prefix ${this.prefix}`);
     Object.keys(localStorage).forEach((key) => {
       if (key.startsWith(this.prefix)) {
-        console.log(`Persistence: Removing ${key}`);
         localStorage.removeItem(key);
       }
     });
@@ -3711,12 +3769,12 @@ class CalendarService {
     return this.state.events.filter((e) => !e.resolved && e.day >= day).sort((a, b) => a.day - b.day);
   }
   assignDefense(heroId) {
+    if (this.state.defenseAssigned.includes(heroId)) {
+      return Result.fail("error_already_assigned");
+    }
     const maxDefenders = 4;
     if (this.state.defenseAssigned.length >= maxDefenders) {
       return Result.fail("error_max_defenders");
-    }
-    if (this.state.defenseAssigned.includes(heroId)) {
-      return Result.fail("error_already_assigned");
     }
     this.state.defenseAssigned.push(heroId);
     this.save();
@@ -5993,18 +6051,15 @@ const _GameEngine = class _GameEngine {
     const hasHeroes = persistence.load("heroes_data", null) !== null;
     const hasVillage = persistence.load("village_state", null) !== null;
     this.isNewGame = !hasHeroes || !hasVillage;
-    console.log("Engine: checkNewGame?", this.isNewGame, { hasHeroes, hasVillage });
     if (this.isNewGame) {
       this.initNewGame();
     }
     this.i18n.setLanguage(persistence.load("settings_lang", "en"));
     if (this.expeditionService.state.activeCombatExpeditionId) {
-      console.log("Engine: Resuming active combat...");
       this.expeditionService.resumeActiveBattle();
     }
   }
   initNewGame() {
-    console.log("Engine: Initializing New Game state...");
     const currentHeroes = this.heroService.list();
     if (currentHeroes.length === 0) {
       this.heroService.add({
@@ -6017,7 +6072,6 @@ const _GameEngine = class _GameEngine {
     }
   }
   activateDeveloperCheat() {
-    console.warn("🚀 Engine: Developer Cheat Activated!");
     this.villageService.addGold(1e4);
     this.villageService.save();
     const inv = this.inventoryService;
@@ -6080,12 +6134,6 @@ const _GameEngine = class _GameEngine {
     };
   }
   // --- Hero Facade ---
-  addHero(heroData) {
-    return this.heroService.add(heroData);
-  }
-  getHeroes() {
-    return this.heroService.list();
-  }
   recruitHero() {
     const tavernLevel = this.villageService.getState().infrastructure.tavern || 0;
     if (tavernLevel < 1) {
@@ -6279,8 +6327,7 @@ const _GameEngine = class _GameEngine {
     return Result.ok({ recipeId, mealId: recipeId });
   }
   consumeMeal(mealId) {
-    const { MEAL_RECIPES: MEAL_RECIPES2 } = require("./shared/data/GameConstants.js");
-    const recipe = MEAL_RECIPES2[mealId];
+    const recipe = MEAL_RECIPES[mealId];
     if (!recipe) return Result.fail("error_meal_not_found");
     const mealCount = this.inventoryService.getItemCount(mealId);
     if (mealCount < 1) return Result.fail("error_not_enough_items");
@@ -6305,10 +6352,6 @@ const _GameEngine = class _GameEngine {
     return Result.ok({ fedCount, buffs });
   }
   // --- Combat Facade ---
-  startBattle(enemies) {
-    const activeHeroes = this.heroService.list("active");
-    return this.battleService.startBattle(activeHeroes, enemies);
-  }
   nextBattleTurn() {
     return this.battleService.nextTurn();
   }
@@ -6330,19 +6373,6 @@ const _GameEngine = class _GameEngine {
       }
     }
     return Result.ok({ skipped: true });
-  }
-  getBattleResolutionPreview() {
-    return this.expeditionService.getBattleResolutionPreview();
-  }
-  resolveBattle() {
-    return this.expeditionService.resolveBattle();
-  }
-  setLanguage(lang) {
-    if (this.i18n.setLanguage(lang)) {
-      persistence.save("settings_lang", lang);
-      return true;
-    }
-    return false;
   }
   // --- Time & Construction ---
   nextDay() {
@@ -6414,9 +6444,6 @@ const _GameEngine = class _GameEngine {
     return this.villageService.setWorkerRole(role, delta);
   }
   // --- Calendar & Defense Facade ---
-  getCalendarState() {
-    return this.calendarService.getState(this.villageService.getState().day);
-  }
   assignDefense(heroId) {
     return this.calendarService.assignDefense(heroId);
   }
@@ -6430,6 +6457,9 @@ const _GameEngine = class _GameEngine {
       this.dailyObjectivesService.track("upgrade_building", 1);
     }
     return result;
+  }
+  resolveBattle() {
+    return this.expeditionService.resolveBattle();
   }
   // --- Explore Facade ---
   assignExpedition(expeditionId, heroIds) {
@@ -6652,14 +6682,12 @@ class EngineAdapter {
       }
       if (domain === "settings") {
         view.on("devCheatActivate", () => {
-          console.log("EngineAdapter: devCheatActivate received");
           this.engine.activateDeveloperCheat();
           this.forceUpdate();
         });
       }
     });
     this.ui.onInitialize(() => {
-      console.log("Village initialization requested via Adapter");
     });
     this.startLoop();
   }
@@ -8570,20 +8598,16 @@ class SettingsView extends BaseView {
       this.elements.langSelect.value = this.ui.i18n.currentLang;
       this.elements.langSelect.addEventListener("change", (e) => {
         const newLang = e.target.value;
-        console.log(`Settings: Changing language to ${newLang}`);
         this.ui.setLanguage(newLang);
       });
     }
     if (this.elements.btnWipe) {
       this.elements.btnWipe.addEventListener("click", () => {
-        console.log("SettingsView: Wipe button clicked");
         this.ui.showConfirmDialog({
           title: "ui_settings_wipe_data",
           message: "ui_settings_wipe_confirm",
           onConfirm: () => {
-            console.warn("SettingsView: USER CONFIRMED WIPE. Executing persistence.clear()...");
             persistence.clear();
-            console.log("SettingsView: Wipe complete. Reloading page...");
             setTimeout(() => {
               window.location.reload();
             }, 100);
@@ -8593,7 +8617,6 @@ class SettingsView extends BaseView {
     }
     if (this.elements.btnDevCheat) {
       this.elements.btnDevCheat.addEventListener("click", () => {
-        console.log("SettingsView: Dev Cheat button clicked");
         this.emit("devCheatActivate", {});
         const btn = this.elements.btnDevCheat;
         btn.textContent = "✓ Done!";
@@ -9695,7 +9718,6 @@ class BestiaryView extends BaseView {
   }
 }
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("RPG Village Initializing...");
   const engine = new GameEngine();
   window.engine = engine;
   const ui = new UIController(engine.i18n);
@@ -9715,7 +9737,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const adapter = new EngineAdapter(engine, ui);
   adapter.init();
-  console.log("RPG Village Ready!");
 });</script>
   <style rel="stylesheet" crossorigin>:root {
     /* Color Palette - Premium Dark Theme */
