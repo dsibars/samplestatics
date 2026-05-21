@@ -21,6 +21,16 @@ Heroes are the defenders of the village and the primary means of progressing the
 - `magicPower`: Magic damage and healing power.
 - `speed`: Turn order and evasion frequency.
 
+### Meal Buffs
+- `mealBuffs`: Array of active food buffs. Each buff has `stat`, `value`, and `battlesRemaining`.
+  - Buffs are applied in `recalculateStats()` and tick down after each combat.
+  - When `battlesRemaining` reaches 0, the buff is removed.
+
+### Equipment Set Bonuses
+- `activeSetBonuses`: Array of currently active equipment set bonuses.
+  - Each entry contains `setId`, `setName`, `pieces` (equipped count), `threshold` (met tier), and `bonus` (stat deltas).
+  - Set bonuses are recalculated whenever equipment changes.
+
 ## Progression
 - **Leveling**: Every level grants `statPoints` (2-3) and `skillPoints` (1).
 - **Starting Points**: All newly recruited heroes begin at Level 1 with **5 unassigned stat points** by default, allowing the player to customize their initial attributes before deployment.
@@ -28,14 +38,23 @@ Heroes are the defenders of the village and the primary means of progressing the
 - **Rescued Heroes**: Heroes obtained through story missions (e.g., Sir Valen) start at `max(1, average_party_level - 1)` and are equipped with a basic wooden weapon and leather armor so they can contribute immediately.
 - **Attributes**: Base HP/MP increase automatically on level up.
 - **Skills**: Heroes can learn and upgrade skills using `skillPoints`.
-  - See [../shared/combat/hero_skills.md](../shared/combat/hero_skills.md) for logic and [../shared/combat/hero_skills_data.md](../shared/combat/hero_skills_data.md) for the registry.
+  - See [../shared/combat/hero_skills.md](../shared/combat/hero_skills.md) for logic and [../shared/combat/hero_skills_data.md](../shared/shared/combat/hero_skills_data.md) for the registry.
+
+## Recruitment
+
+Heroes can be obtained through two methods:
+
+1. **Story Rescue**: Certain expeditions reward heroes upon completion (e.g., Sir Valen from "The Captured Guard").
+2. **Tavern Recruitment**: Once the `tavern` building is constructed (Level 1), players can recruit random heroes for gold.
+   - Base cost: 100g.
+   - Cost scales by 20% per existing hero: `cost = floor(100 * 1.2^(hero_count))`.
+   - Recruited heroes receive a random name and origin, start at Level 1 with 5 stat points.
 
 ## Equipment
 Heroes have 6 equipment slots: `head`, `body`, `legs`, `leftHand`, `rightHand`, and `accessory`. 
 - See [../shared/inventory/equipment.md](../shared/inventory/equipment.md) for details on gear and [../shared/inventory/equipment_data.md](../shared/inventory/equipment_data.md) for values.
 - Equipment can be swapped or unequipped from the Hero Details panel in the Heroes screen. Clicking any equipment slot opens a modal displaying compatible items in the inventory.
+- Equipping multiple items of the same material **set** grants set bonuses. See Equipment Specification for the full bonus table.
 
 ## Expedition State Lock
 While a hero is deployed on an active expedition (their status or activity is not idle), their progression and equipment are locked. They cannot assign unassigned stat points, learn/upgrade skills, or swap/unequip equipment until they return to the village (either by completing the expedition or by retreating).
-
-

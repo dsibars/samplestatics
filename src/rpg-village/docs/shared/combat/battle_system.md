@@ -27,11 +27,16 @@ Magic attacks have elements. Damage is multiplied based on target element:
 Evasion is a percentage chance calculated via the ratio of the Defender's Speed to the Attacker's Speed.
 
 ## Status Effects
-Status effects are turn-based modifications to an entity's state:
-- `poison`: Target takes 5% of Max HP as damage every turn.
-- `burn`: Target takes 5% of Max HP as damage every turn.
-- `haste`: Increases speed by 50% for 3 turns.
-- `sleep`/`stun`: Skips the entity's action phase.
+Status effects are turn-based modifications to an entity's state. They are rendered as emoji badges below the HP bar in combat:
+- `poison` 🟣: Target takes 5% of Max HP as damage every turn.
+- `burn` 🟠: Target takes 5% of Max HP as damage every turn.
+- `haste` 🔵: Increases speed by 50% for 3 turns.
+- `sleep`/`stun` 💤: Skips the entity's action phase.
+
+## Equipment Affix Combat Effects
+Certain equipment affixes have direct combat impact:
+- `vampire` (Life Steal): The actor heals for 5% of damage dealt per affix stack. A `VAMP` log event is emitted showing the heal amount.
+- `phoenix`: If the hero would die (HP <= 0), they survive with 1 HP once per battle. Resets after combat.
 
 ## Smart AI Decision Tree
 The `CombatAI` uses a weighted decision tree:

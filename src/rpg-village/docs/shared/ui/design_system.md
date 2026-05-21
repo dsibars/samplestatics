@@ -58,3 +58,18 @@ Used for settings, confirmation prompts, and quick actions.
 - **Typography**: Use modern sans-serif (e.g., `Outfit`, `Inter`).
 - **Colors**: Sleek dark mode by default with vibrant primary accents for "Action" buttons.
 - **Micro-animations**: Subtle transitions for view changes and hover effects on Desktop.
+
+## View Transitions
+When switching between domain views (e.g., Village → Heroes → Inventory), the main content area applies a fade/slide transition:
+- **Exit**: Content fades out with a slight upward slide over ~150ms.
+- **Enter**: New content fades in from a downward offset over ~150ms.
+- **CSS Class**: `.view-transitioning` controls the animation state.
+
+## Combat Card Styling
+Combat entities are displayed as cards within the combat overlay:
+- **Active Turn Highlight**: The currently active actor's card receives a glowing border (`combat-card-active`) using the accent color with a box-shadow glow.
+- **Status Badges**: Status effects are rendered as emoji badges below the HP bar (🟣 poison, 🟠 burn, 🔵 haste, 💤 stun).
+- **HP Bar Colors**: HP bars use color-coded classes based on percentage:
+  - `combat-bar-hp-high`: Green (>= 70%)
+  - `combat-bar-hp-mid`: Yellow (30–69%)
+  - `combat-bar-hp-low`: Red (< 30%)

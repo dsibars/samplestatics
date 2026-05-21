@@ -40,8 +40,6 @@ Hand-crafted "Story Missions" are injected into the discovery tree at specific m
 
 ## The Assignment & Execution Lifecycle
 
-Expedition progression is tied to the village's day cycle. Battles and exploration take time, and heroes will be unavailable while they work.
-
 ### 1. Assignment Phase
 - **Assigning Heroes**: Heroes can be assigned to an available expedition node.
 - **Lock-in**: While an expedition is in its initial stage (Stage 0), you can assign or unassign heroes freely.
@@ -75,18 +73,30 @@ Regions are unlocked dynamically as the player progresses:
 | **Greenfields** | Available from game start |
 | **Tiny Cave** | Automatically unlocked after completing `exp_tutorial_cave` |
 | **Calmed Beach** | Unlocked after completing **3 Greenfields expeditions** OR building **Explorer Guild Level 1** |
+| **Dark Forest** | Unlocked after **2 Tiny Cave clears** |
+| **Goblin Camp** | Unlocked after **3 Dark Forest clears** OR **Explorer Guild Level 2** |
+| **Mystic Ruins** | Unlocked after **Explorer Guild Level 2** OR **5 total clears across all regions** |
+| **Frozen Peaks** | Unlocked after **Explorer Guild Level 3** OR **8 total clears across all regions** |
 
 ## Building Effects on Expeditions
 
 ### Explorer Guild
 - **Level 1**: Unlocks Calmed Beach immediately (bypasses the 3-clears requirement)
 - **Level 2+**: Reduces expedition stage count by **10% per level** (minimum 1 stage)
+- **Level 2+**: Unlocks Goblin Camp and Mystic Ruins
+- **Level 3+**: Unlocks Frozen Peaks
 
 ### Training Grounds
 - **Level 1+**: Idle heroes gain **+5% passive EXP per day** per Training Grounds level
 - Only heroes that are alive, idle, and not on expeditions receive this bonus
 
+## Bestiary Integration
+
+Enemy types encountered during expeditions are automatically tracked in the **Bestiary**. Each unique enemy template ID is recorded upon first combat encounter. The Bestiary displays encountered enemies with full stats, while undiscovered enemies remain hidden (shown as `???`).
+
+See [Bestiary Specification](../shared/combat/bestiary.md) for details.
+
 ## Data Registries
-- **[Regions Data](regions_data.md)**: Details on the 15 regions and their generation patterns.
+- **[Regions Data](regions_data.md)**: Details on all implemented and planned regions.
 - **[Special Missions](expeditions_data.md)**: Registry of unique story-driven milestones.
 - **[Enemies Data](../shared/combat/enemies_data.md)**: Enemy templates used for generation.

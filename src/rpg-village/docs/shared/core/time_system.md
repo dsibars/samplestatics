@@ -6,20 +6,37 @@
 ## The Day Cycle
 When the player triggers a "Next Day" event, the following steps occur in order:
 
-1.  **Consumption Phase**: 
+1.  **Daily Objectives Generation**:
+    - If objectives for the current day do not exist, 2–3 random objectives are generated.
+    - Objectives persist until completed or the day advances.
+
+2.  **Consumption Phase**: 
     - The village consumes **1 Food** per **Villager** (Total Population).
     - If food is insufficient, growth stops and health/efficiency may drop.
-1.5. **Production Phase**:
+
+3.  **Production Phase**:
     - The `farm` infrastructure produces food daily (+4 `food_raw_grain` per level) which is added to the inventory.
-2.  **Construction Phase**: 
+    - **Farmer Bonus**: Each assigned Farmer villager increases farm output by 10%.
+
+4.  **Miner Phase**:
+    - Each assigned Miner villager has a 20% chance to produce 1 Wood or Stone.
+
+5.  **Construction Phase**: 
     - All active projects in the `constructionQueue` have their `daysRemaining` decremented by 1.
     - If `daysRemaining` reaches 0, the building is completed and its bonuses become active.
     - The worker assigned to the project is returned to the `availableVillagers` pool.
-3.  **Growth Phase**:
+
+6.  **Growth Phase**:
     - If food is abundant and there is housing capacity, there is a chance for new villagers to join.
-3.5. **Recovery Phase**:
+
+7.  **Recovery Phase**:
     - Idle/exhausted heroes recover HP (base +20% HP, increased by the `infirmary` level).
-4.  **Calendar Update**:
+
+8.  **Meal Buff Tick**:
+    - After any combat resolution, heroes' `mealBuffs` have their `battlesRemaining` decremented by 1.
+    - Buffs with 0 battles remaining are removed.
+
+9.  **Calendar Update**:
     - The `day` counter is incremented.
 
 ## Construction Mechanic
@@ -39,3 +56,4 @@ Buildings are not instantaneous. They require a "Project" to be initiated.
 ## Implementation Details
 - The state of all active projects is stored in `village.state.constructionQueue`.
 - The `GameEngine.nextDay()` method is the central entry point for this logic.
+- Worker roles (`population.roles`) affect Production, Miner, and Expedition phases.

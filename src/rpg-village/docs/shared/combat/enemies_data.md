@@ -10,17 +10,19 @@ This registry defines the base enemy types that can be encountered. For the MVP,
 | `wild_boar` | Wild Boar | `neutral` | `beast` | 40 | 6 | 4 | 4 |
 | `goblin_scout` | Goblin Scout | `neutral` | `humanoid` | 25 | 4 | 2 | 6 |
 | `goblin_grunt` | Goblin Grunt | `neutral` | `humanoid` | 35 | 5 | 4 | 2 |
-| **Tier 2 (Caves & Ruins)** | | | | | | | |
-| `giant_spider` | Giant Spider | `neutral` | `beast` | 50 | 9 | 5 | 6 |
-| `skeleton_warrior`| Skeleton | `neutral` | `undead` | 55 | 8 | 5 | 3 |
-| `skeleton_archer` | Skel. Archer | `wind` | `undead` | 45 | 10 | 3 | 4 |
-| `wraith_minor` | Minor Wraith | `storm` | `undead` | 40 | 14 | 3 | 7 |
-| `zombie_shambler` | Zombie | `neutral` | `undead` | 70 | 7 | 6 | 1 |
-| **Tier 3 (Mountains & Fortress)** | | | | | | | |
-| `orc_grunt` | Orc Grunt | `neutral` | `humanoid` | 90 | 16 | 8 | 3 |
-| `orc_shaman` | Orc Shaman | `fire` | `humanoid` | 75 | 20 | 5 | 4 |
-| `rock_golem` | Rock Golem | `neutral` | `construct` | 170 | 14 | 12 | 1 |
-| `harpy_scout` | Harpy | `wind` | `beast` | 80 | 15 | 5 | 10 |
+| **Tier 2 (Caves & Coast)** | | | | | | | |
+| `bat_small` | Small Bat | `neutral` | `beast` | 22 | 4 | 2 | 7 |
+| `spider_minor` | Minor Spider | `neutral` | `beast` | 28 | 5 | 3 | 4 |
+| `crab_shell` | Shell Crab | `neutral` | `beast` | 35 | 5 | 5 | 2 |
+| `water_spirit_minor` | Minor Water Spirit | `water` | `elemental` | 25 | 4 | 2 | 5 |
+| **Tier 3 (Forest & Camps)** | | | | | | | |
+| `goblin_brute` | Goblin Brute | `neutral` | `humanoid` | 55 | 7 | 5 | 1 |
+| `goblin_shaman` | Goblin Shaman | `storm` | `humanoid` | 40 | 5 | 3 | 5 |
+| `skeleton_warrior` | Skeleton Warrior | `neutral` | `undead` | 35 | 5 | 3 | 3 |
+| `ghost_wisp` | Ghost Wisp | `wind` | `undead` | 20 | 3 | 1 | 8 |
+| **Tier 4 (Ruins & Peaks)** | | | | | | | |
+| `ice_elemental` | Ice Elemental | `water` | `elemental` | 45 | 6 | 5 | 2 |
+| `young_drake` | Young Drake | `fire` | `dragon` | 70 | 8 | 6 | 4 |
 | **Bosses** | | | | | | | |
 | `goblin_king` | Goblin King | `neutral` | `humanoid` | 120 | 10 | 6 | 4 |
 | `lich_apprentice` | Lich Apprentice | `storm` | `undead` | 180 | 25 | 8 | 5 |
