@@ -5,6 +5,7 @@ import { Enemy } from '../../shared/combat/models/Enemy.js';
 /**
  * ExpeditionService handles manual combat challenges, stage progression,
  * and quest-chain unlocking logic.
+ * Supports concurrent expeditions (round-robin resolution).
  */
 export class ExpeditionService {
     constructor(battleService, heroService, villageService, inventoryService) {
@@ -20,7 +21,9 @@ export class ExpeditionService {
     _load() {
         const defaultState = {
             completedIds: [],
-            activeExpedition: null,
+            activeExpeditions: [],
+            expeditionTurnIndex: 0,
+            activeCombatExpeditionId: null,
             regions: {
                 reg_greenfields: {
                     clears: 0,
@@ -41,11 +44,27 @@ export class ExpeditionService {
                 }
             }
         };
-        return persistence.load(this.STORAGE_KEY, defaultState);
+        const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+
+        // Migrate old singular activeExpedition to array
+        if (loaded.activeExpedition && !loaded.activeExpeditions) {
+            loaded.activeExpeditions = [loaded.activeExpedition];
+            loaded.activeCombatExpeditionId = loaded.activeExpedition.id;
+            delete loaded.activeExpedition;
+        }
+        if (!loaded.activeExpeditions) loaded.activeExpeditions = [];
+        if (loaded.expeditionTurnIndex === undefined) loaded.expeditionTurnIndex = 0;
+
+        return loaded;
     }
 
     save() {
         persistence.save(this.STORAGE_KEY, this.state);
+    }
+
+    getMaxConcurrentExpeditions() {
+        const explorerGuildLevel = this.villageService.getState().infrastructure.explorer_guild || 0;
+        return 1 + explorerGuildLevel;
     }
 
     /**
@@ -178,15 +197,15 @@ export class ExpeditionService {
 
     /**
      * Determines if a hero is currently on an expedition.
-     * Future-proofed for when multiple expeditions run concurrently.
      */
     getHeroActivity(heroId) {
-        // Currently we only have one active expedition, but this centralizes the check
-        if (this.state.activeExpedition && this.state.activeExpedition.heroIds.includes(heroId)) {
-            return {
-                type: 'expedition',
-                expeditionId: this.state.activeExpedition.id
-            };
+        for (const exp of this.state.activeExpeditions) {
+            if (exp.heroIds.includes(heroId)) {
+                return {
+                    type: 'expedition',
+                    expeditionId: exp.id
+                };
+            }
         }
         return { type: 'idle' };
     }
@@ -196,12 +215,25 @@ export class ExpeditionService {
      * Can only add/modify if currentStage === 0.
      */
     assignExpedition(expId, heroIds) {
-        if (this.state.activeExpedition) {
-            if (this.state.activeExpedition.id !== expId) {
-                return Result.fail('error_other_expedition_active');
-            }
-            if (this.state.activeExpedition.currentStage > 0) {
+        const existing = this.state.activeExpeditions.find(e => e.id === expId);
+        
+        if (existing) {
+            if (existing.currentStage > 0) {
                 return Result.fail('error_expedition_locked');
+            }
+        } else {
+            // New expedition — check concurrency limit
+            const max = this.getMaxConcurrentExpeditions();
+            if (this.state.activeExpeditions.length >= max) {
+                return Result.fail('error_max_expeditions_reached');
+            }
+            // Check for heroes already on other expeditions
+            for (const other of this.state.activeExpeditions) {
+                for (const hId of heroIds) {
+                    if (other.heroIds.includes(hId)) {
+                        return Result.fail('error_hero_on_other_expedition');
+                    }
+                }
             }
         }
         
@@ -210,8 +242,8 @@ export class ExpeditionService {
 
         const heroes = heroIds.map(id => this.heroService.get(id)).filter(h => h);
         if (heroes.length === 0) {
-            // If they assign 0 heroes, it's effectively unassigning all.
-            this.state.activeExpedition = null;
+            // If they assign 0 heroes, it's effectively retiring this expedition.
+            this.state.activeExpeditions = this.state.activeExpeditions.filter(e => e.id !== expId);
             this.save();
             return Result.ok();
         }
@@ -219,69 +251,112 @@ export class ExpeditionService {
         const hasDeadHero = heroes.some(h => h.hp <= 0);
         if (hasDeadHero) return Result.fail('error_hero_dead');
 
-        this.state.activeExpedition = {
-            id: expId,
-            currentStage: 0,
-            heroIds: heroes.map(h => h.id),
-            status: 'assigned'
-        };
+        if (existing) {
+            existing.heroIds = heroes.map(h => h.id);
+        } else {
+            this.state.activeExpeditions.push({
+                id: expId,
+                currentStage: 0,
+                heroIds: heroes.map(h => h.id),
+                status: 'assigned'
+            });
+        }
 
         this.save();
-        return Result.ok(this.state.activeExpedition);
+        return Result.ok(this.state.activeExpeditions.find(e => e.id === expId));
     }
 
     /**
-     * Unassigns a single hero. If the expedition becomes empty, it resets.
+     * Unassigns a single hero from any active expedition.
+     * If the expedition becomes empty, it is removed.
      */
     unassignHero(heroId) {
-        if (!this.state.activeExpedition) return Result.fail('error_no_active_expedition');
-        
-        this.state.activeExpedition.heroIds = this.state.activeExpedition.heroIds.filter(id => id !== heroId);
-        
-        if (this.state.activeExpedition.heroIds.length === 0) {
-            this.state.activeExpedition = null;
+        for (let i = 0; i < this.state.activeExpeditions.length; i++) {
+            const exp = this.state.activeExpeditions[i];
+            if (exp.heroIds.includes(heroId)) {
+                exp.heroIds = exp.heroIds.filter(id => id !== heroId);
+                if (exp.heroIds.length === 0) {
+                    this.state.activeExpeditions.splice(i, 1);
+                }
+                this.save();
+                return Result.ok();
+            }
         }
-        this.save();
-        return Result.ok();
+        return Result.fail('error_no_active_expedition');
     }
 
     /**
-     * Retires the entire expedition, resetting it to stage 0.
+     * Retires a specific expedition. If no expId provided, retires all.
      */
-    retire() {
-        this.state.activeExpedition = null;
+    retire(expId) {
+        if (expId) {
+            this.state.activeExpeditions = this.state.activeExpeditions.filter(e => e.id !== expId);
+        } else {
+            this.state.activeExpeditions = [];
+        }
+        this.state.activeCombatExpeditionId = null;
         this.save();
         return Result.ok();
     }
 
+    _findActiveExpeditionById(expId) {
+        return this.state.activeExpeditions.find(e => e.id === expId);
+    }
+
     /**
-     * Processes one stage of the active expedition during the day advance.
+     * Processes one stage of the next active expedition during the day advance (round-robin).
      */
     processDay() {
-        if (!this.state.activeExpedition || this.state.activeExpedition.heroIds.length === 0) {
+        const expeditions = this.state.activeExpeditions;
+        if (expeditions.length === 0) {
             return Result.ok();
         }
 
-        const exp = this.getExpeditions().find(e => e.id === this.state.activeExpedition.id);
-        if (!exp) return Result.fail('error_expedition_not_found');
-
-        // If we are already in combat status, resume/return the ongoing combat state
-        if (this.state.activeExpedition.status === 'combat') {
-            const resumed = this.resumeActiveBattle();
-            if (resumed) {
-                return Result.ok({
-                    status: 'battle_started',
-                    expId: exp.id,
-                    expName: exp.name,
-                    battleContext: this.state.activeExpedition.battleContext
-                });
+        // Safety: if a battle is somehow still active, resume it instead
+        if (this.state.activeCombatExpeditionId) {
+            const combatExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+            if (combatExp && combatExp.status === 'combat') {
+                const resumed = this.resumeActiveBattle();
+                if (resumed) {
+                    return Result.ok({
+                        status: 'battle_started',
+                        expId: combatExp.id,
+                        expName: this.getExpeditions().find(e => e.id === combatExp.id)?.name || combatExp.id,
+                        battleContext: combatExp.battleContext
+                    });
+                }
             }
         }
 
-        const stage = exp.stages[this.state.activeExpedition.currentStage];
+        // Pick expedition by round-robin index
+        const idx = this.state.expeditionTurnIndex % expeditions.length;
+        const activeExp = expeditions[idx];
+        
+        if (!activeExp || activeExp.heroIds.length === 0) {
+            // Empty expedition — remove and skip
+            this.state.activeExpeditions.splice(idx, 1);
+            this.state.expeditionTurnIndex = this.state.activeExpeditions.length > 0
+                ? idx % this.state.activeExpeditions.length
+                : 0;
+            this.save();
+            return Result.ok();
+        }
+
+        const exp = this.getExpeditions().find(e => e.id === activeExp.id);
+        if (!exp) {
+            // Defensive: expedition definition no longer exists
+            this.state.activeExpeditions.splice(idx, 1);
+            this.state.expeditionTurnIndex = this.state.activeExpeditions.length > 0
+                ? idx % this.state.activeExpeditions.length
+                : 0;
+            this.save();
+            return Result.ok();
+        }
+
+        const stage = exp.stages[activeExp.currentStage];
 
         if (stage.type === 'battle') {
-            const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
+            const heroes = this.heroService.list().filter(h => activeExp.heroIds.includes(h.id));
             
             const enemyCounts = {};
             stage.enemies.forEach(eId => {
@@ -306,14 +381,14 @@ export class ExpeditionService {
             // Calculate potential EXP
             const totalEnemyHp = enemies.reduce((sum, e) => sum + e.maxHp, 0);
             const expPerHero = Math.floor(totalEnemyHp / heroes.length);
-            const stageNum = this.state.activeExpedition.currentStage + 1;
+            const stageNum = activeExp.currentStage + 1;
             const stageTotal = exp.stages.length;
 
             // Start battle (manual by default)
             this.battleService.startBattle(heroes, enemies, false);
 
-            this.state.activeExpedition.status = 'combat';
-            this.state.activeExpedition.battleContext = {
+            activeExp.status = 'combat';
+            activeExp.battleContext = {
                 enemies: enemies.map(e => e.toJSON()),
                 initialHp,
                 expPerHero,
@@ -322,13 +397,17 @@ export class ExpeditionService {
                 stageTotal,
                 expName: exp.name
             };
+            this.state.activeCombatExpeditionId = activeExp.id;
+            
+            // Advance turn index for next day (round-robin)
+            this.state.expeditionTurnIndex = (idx + 1) % this.state.activeExpeditions.length;
             this.save();
 
             return Result.ok({
                 status: 'battle_started',
                 expId: exp.id,
                 expName: exp.name,
-                battleContext: this.state.activeExpedition.battleContext
+                battleContext: activeExp.battleContext
             });
         }
 
@@ -336,34 +415,33 @@ export class ExpeditionService {
     }
 
     resumeActiveBattle() {
-        if (!this.state.activeExpedition || this.state.activeExpedition.status !== 'combat') {
-            return null;
-        }
-        const ctx = this.state.activeExpedition.battleContext;
-        const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
+        if (!this.state.activeCombatExpeditionId) return null;
+        const activeExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+        if (!activeExp || activeExp.status !== 'combat') return null;
+        
+        const ctx = activeExp.battleContext;
+        const heroes = this.heroService.list().filter(h => activeExp.heroIds.includes(h.id));
         const enemies = ctx.enemies.map(eData => new Enemy(eData));
         
         this.battleService.startBattle(heroes, enemies, false);
         return {
-            expId: this.state.activeExpedition.id,
+            expId: activeExp.id,
             expName: ctx.expName,
             battleContext: ctx
         };
     }
 
     getBattleResolutionPreview() {
-        if (!this.state.activeExpedition || this.state.activeExpedition.status !== 'combat') {
-            return null;
-        }
-        if (!this.battleService.isOver) {
-            return null;
-        }
+        if (!this.state.activeCombatExpeditionId) return null;
+        const activeExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+        if (!activeExp || activeExp.status !== 'combat') return null;
+        if (!this.battleService.isOver) return null;
 
-        const exp = this.getExpeditions().find(e => e.id === this.state.activeExpedition.id);
+        const exp = this.getExpeditions().find(e => e.id === activeExp.id);
         if (!exp) return null;
 
-        const ctx = this.state.activeExpedition.battleContext;
-        const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
+        const ctx = activeExp.battleContext;
+        const heroes = this.heroService.list().filter(h => activeExp.heroIds.includes(h.id));
         const enemies = this.battleService.enemies;
         
         const isVictory = this.battleService.winner === 'heroes';
@@ -414,7 +492,7 @@ export class ExpeditionService {
         let rewards = null;
         let isLastStage = false;
         if (isVictory) {
-            const nextStage = this.state.activeExpedition.currentStage + 1;
+            const nextStage = activeExp.currentStage + 1;
             if (nextStage >= exp.stages.length) {
                 isLastStage = true;
                 rewards = exp.reward;
@@ -430,19 +508,23 @@ export class ExpeditionService {
     }
 
     resolveBattle() {
-        if (!this.state.activeExpedition || this.state.activeExpedition.status !== 'combat') {
+        if (!this.state.activeCombatExpeditionId) {
+            return Result.fail('error_no_active_battle');
+        }
+        const activeExp = this._findActiveExpeditionById(this.state.activeCombatExpeditionId);
+        if (!activeExp || activeExp.status !== 'combat') {
             return Result.fail('error_no_active_battle');
         }
         if (!this.battleService.isOver) {
             return Result.fail('error_battle_not_over');
         }
 
-        const exp = this.getExpeditions().find(e => e.id === this.state.activeExpedition.id);
+        const exp = this.getExpeditions().find(e => e.id === activeExp.id);
         if (!exp) return Result.fail('error_expedition_not_found');
 
-        const ctx = this.state.activeExpedition.battleContext;
-        const heroes = this.heroService.list().filter(h => this.state.activeExpedition.heroIds.includes(h.id));
-        const enemies = this.battleService.enemies; // final state of enemies
+        const ctx = activeExp.battleContext;
+        const heroes = this.heroService.list().filter(h => activeExp.heroIds.includes(h.id));
+        const enemies = this.battleService.enemies;
         
         const isVictory = this.battleService.winner === 'heroes';
         const stageNum = ctx.stageNum;
@@ -500,22 +582,29 @@ export class ExpeditionService {
 
         let finalResult;
         if (isVictory) {
-            this.state.activeExpedition.currentStage++;
-            if (this.state.activeExpedition.currentStage >= exp.stages.length) {
-                const result = this._finishExpedition(exp);
+            activeExp.currentStage++;
+            if (activeExp.currentStage >= exp.stages.length) {
+                const result = this._finishExpedition(exp, activeExp);
                 result.data.combatLog = combatLog;
                 finalResult = result;
             } else {
-                this.state.activeExpedition.status = 'assigned'; // back to assigned/idle until next day advance
-                delete this.state.activeExpedition.battleContext;
+                activeExp.status = 'assigned';
+                delete activeExp.battleContext;
+                this.state.activeCombatExpeditionId = null;
                 this.save();
                 finalResult = Result.ok({ status: 'progress', expId: exp.id, expName: exp.name, combatLog });
             }
         } else {
-            // Defeat resets the expedition completely and loses progress
-            this.state.activeExpedition = null;
+            // Defeat removes this expedition
+            const expId = activeExp.id;
+            const expName = exp.name;
+            const idx = this.state.activeExpeditions.findIndex(e => e.id === expId);
+            if (idx >= 0) {
+                this.state.activeExpeditions.splice(idx, 1);
+            }
+            this.state.activeCombatExpeditionId = null;
             this.save();
-            finalResult = Result.ok({ status: 'failed', expId: exp.id, expName: exp.name, combatLog });
+            finalResult = Result.ok({ status: 'failed', expId, expName, combatLog });
         }
 
         // Reset battle service state
@@ -524,9 +613,15 @@ export class ExpeditionService {
         return finalResult;
     }
 
-    _finishExpedition(exp) {
+    _finishExpedition(exp, activeExp) {
         this.state.completedIds.push(exp.id);
-        this.state.activeExpedition = null;
+        
+        // Remove from active expeditions
+        const idx = this.state.activeExpeditions.findIndex(e => e.id === activeExp.id);
+        if (idx >= 0) {
+            this.state.activeExpeditions.splice(idx, 1);
+        }
+        this.state.activeCombatExpeditionId = null;
 
         // Update Region Discovery
         const region = this.state.regions[exp.regionId];
@@ -562,11 +657,9 @@ export class ExpeditionService {
                 const result = this.heroService.add({ name: s.value, origin: 'origin_guard', avatar, level: startLevel });
                 if (result.success) {
                     const newHero = result.data;
-                    // Level up to reach target (constructor doesn't auto-level)
                     for (let i = 1; i < startLevel; i++) {
                         newHero.levelUp();
                     }
-                    // Give starting equipment so they're not naked
                     newHero.equipment.leftHand = { type: 'weapon', material: 'wooden', family: 'broadsword', level: 0 };
                     newHero.equipment.body = { type: 'armor', material: 'wooden', archetype: 'leather', slot: 'body', level: 0 };
                     newHero.recalculateStats({});

@@ -372,5 +372,17 @@ export const en = {
     desc_food_raw_grain: "Harvested wheat. Consumed daily by villagers to prevent starvation. Keep stock high!",
     btn_auto_combat: "Auto-Combat",
     btn_skip_combat: "Skip Battle",
-    ui_choose_target: "Choose Target"
+    ui_choose_target: "Choose Target",
+
+    ui_builders: "Builders",
+    ui_available_builders: "Available",
+    error_no_available_builders: "No available builders",
+    error_invalid_builder_count: "Invalid builder count",
+    error_builders_below_assigned: "Cannot reduce builders below assigned count",
+    error_max_expeditions_reached: "Maximum concurrent expeditions reached",
+    error_hero_on_other_expedition: "Hero is already on another expedition",
+    ui_max_expeditions_reached: "Maximum concurrent expeditions reached. Complete or retire one to start another.",
+    ui_report_training: "{count} heroes trained at the grounds",
+    ui_report_training_level: "{heroes} leveled up from training!",
+
 };

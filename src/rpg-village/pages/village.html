@@ -28,6 +28,18 @@
 
                     <div class="status-item-detailed">
                         <div class="status-row">
+                            <span class="label" data-i18n="ui_builders">Builders</span>
+                            <span id="village-builder-count" class="value">--</span>
+                        </div>
+                        <div class="sub-label builder-controls">
+                            <button class="btn-builder" data-action="dec-builder">−</button>
+                            <span data-i18n="ui_available_builders">Available</span>: <span id="village-builder-avail" class="accent-text">--</span>
+                            <button class="btn-builder" data-action="inc-builder">+</button>
+                        </div>
+                    </div>
+
+                    <div class="status-item-detailed">
+                        <div class="status-row">
                             <span class="label" data-i18n="inv_storage">Storage</span>
                             <span id="village-storage-text" class="value">-- / --</span>
                         </div>
@@ -76,6 +88,9 @@
     .status-row .label { color: var(--text-muted); font-size: 0.9rem; }
     .status-row .value { font-weight: 700; color: var(--text-primary); }
     .accent-text { color: var(--accent-color); font-weight: 700; }
+    .builder-controls { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .btn-builder { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-builder:hover { background: rgba(255,255,255,0.2); }
     
     .action-card {
         display: flex;

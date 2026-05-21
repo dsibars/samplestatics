@@ -4,7 +4,7 @@
 # This file is NOT human-facing. Delete before merging to main.
 
 META branch app/project-rpg-village
-META date 2026-05-20
+META date 2026-05-21
 META format v1
 
 [PHILOSOPHY]
@@ -30,7 +30,7 @@ I18N en es ca eu gl
 A done balance enemy_rebalance rescued_catch_up defeat_min_exp
 B done enemy_scaling unlock_tiny_cave unlock_calmed_beach explorer_guild_fx training_grounds_fx
 C done loot_drops affix_roll shop_tier_3_5
-D pending builder_assignment concurrent_expeditions
+D done builder_assignment concurrent_expeditions construction_queue_multiple_builders
 E_1 done skill_ui_learn_upgrade_all_25_skills category_colors_dependency_tree
 E_2 done combat_ui_extract_mp_cost_bug_fixed
 
@@ -59,8 +59,10 @@ shop_gating BS0_T1 BS1_T2 BS3_T3 BS5_T4 BS7_T5
 
 [SPRINT_D_PLAN]
 builders assign_villagers_as_builders consumes_1_food_per_day
+builder_ui village_view plus_minus_buttons
 concurrent_expeditions max_1_plus_explorer_guild_level
 construction_queue multiple_projects_if_multiple_builders
+round_robin expeditionTurnIndex advances_each_day
 
 [SPRINT_E_1_DETAILS]
 skill_ui_all_25_skills_from_SKILLS_DATA rendered_in_heroes_view
@@ -78,8 +80,8 @@ mp_cost_bug_fixed SKILLS_DATA_skillId_mpCost replaces hardcoded skillMeta map
 
 [GAPS]
 SEV_HIGH none_all_major_gaps_closed
-SEV_MEDIUM inert_buildings_explorer_guild training_grounds only_1_region_active single_expedition_only
-SEV_LOW combat_ui_monolith i18n_gaps test_coverage
+SEV_MEDIUM none_first_iteration_complete
+SEV_LOW i18n_completeness test_coverage
 
 [POWER_CURVE]
 HERO_L1_NO_GEAR 30hp 15mp 8str 4def 4spd 4mag
@@ -141,3 +143,6 @@ Spec_first_is_aspiration_not_always_reality_some_features_implemented_before_spe
 User_is_from_Spain_Basque_Country_or_nearby_5_i18n_including_eu_gl
 User_prefers_slow_loving_iteration_manual_testing_between_commits
 Never_implement_worker_specialization_or_expedition_hero_interaction_without_explicit_approval
+First_iteration_complete_2026_05_21_all_sprints_A_through_E_done
+Concurrent_expeditions_max_1_plus_explorer_guild_level_round_robin_resolution
+Builder_assignment_explicit_UI_village_view_plus_minus_controls

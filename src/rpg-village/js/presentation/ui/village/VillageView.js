@@ -13,10 +13,26 @@ export class VillageView extends BaseView {
             gold: this.$('#village-gold'),
             pop: this.$('#village-pop'),
             popAvail: this.$('#village-pop-avail'),
+            builderCount: this.$('#village-builder-count'),
+            builderAvail: this.$('#village-builder-avail'),
             storageText: this.$('#village-storage-text'),
             storageBar: this.$('#village-storage-bar'),
             constructionList: this.$('#construction-list')
         };
+
+        const builderControls = this.$('.builder-controls');
+        if (builderControls) {
+            builderControls.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action]');
+                if (!btn) return;
+                const action = btn.dataset.action;
+                if (action === 'inc-builder') {
+                    this.emit('setBuilders', { delta: 1 });
+                } else if (action === 'dec-builder') {
+                    this.emit('setBuilders', { delta: -1 });
+                }
+            });
+        }
     }
 
     onUpdate(state) {
@@ -32,6 +48,13 @@ export class VillageView extends BaseView {
         if (this.elements.popAvail) {
             const avail = village.population.total - (village.population.assigned || 0);
             this.elements.popAvail.textContent = avail;
+        }
+
+        if (this.elements.builderCount) {
+            this.elements.builderCount.textContent = `${village.population.builders || 0} / ${village.population.total}`;
+        }
+        if (this.elements.builderAvail) {
+            this.elements.builderAvail.textContent = village.population.availableBuilders || 0;
         }
 
         // Storage Updates
@@ -70,6 +93,8 @@ export class VillageView extends BaseView {
             { id: 'farm', name: this.t('village_farm') || 'Farm', icon: '🌾', lvl: infra.farm || 0, active: (infra.farm || 0) > 0 },
             { id: 'warehouse', name: this.t('village_warehouse') || 'Warehouse', icon: '📦', lvl: infra.warehouse || 0, active: (infra.warehouse || 0) > 0 },
             { id: 'blacksmith', name: this.t('village_blacksmith') || 'Blacksmith', icon: '⚒️', lvl: infra.blacksmith || 0, active: (infra.blacksmith || 0) > 0 },
+            { id: 'training_grounds', name: this.t('village_training_grounds') || 'Training Grounds', icon: '💪', lvl: infra.training_grounds || 0, active: (infra.training_grounds || 0) > 0 },
+            { id: 'explorer_guild', name: this.t('village_explorer_guild') || 'Explorer Guild', icon: '🧭', lvl: infra.explorer_guild || 0, active: (infra.explorer_guild || 0) > 0 },
             { id: 'infirmary', name: this.t('village_infirmary') || 'Infirmary', icon: '🏥', lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 }
         ];
 
@@ -175,6 +200,26 @@ export class VillageView extends BaseView {
             `;
         }
 
+        let trainingHtml = '';
+        if (report.training && report.training.length > 0) {
+            const leveled = report.training.filter(t => t.leveledUp).map(t => t.heroName);
+            if (leveled.length > 0) {
+                trainingHtml = `
+                    <div class="report-section success">
+                        <span class="report-icon">💪</span>
+                        <span>${this.t('ui_report_training_level').replace('{heroes}', leveled.join(', '))}</span>
+                    </div>
+                `;
+            } else {
+                trainingHtml = `
+                    <div class="report-section">
+                        <span class="report-icon">💪</span>
+                        <span>${this.t('ui_report_training').replace('{count}', report.training.length)}</span>
+                    </div>
+                `;
+            }
+        }
+
         container.innerHTML = `
             <div class="card widget daily-report-widget">
                 <h3>${this.t('ui_daily_report_title').replace('{day}', report.day - 1)}</h3>
@@ -186,6 +231,7 @@ export class VillageView extends BaseView {
                     ${growthHtml}
                     ${builtHtml}
                     ${recoveryHtml}
+                    ${trainingHtml}
                     ${expHtml}
                 </div>
             </div>

@@ -16,8 +16,9 @@ export class VillageService {
         const defaultState = {
             gold: 100,
             population: {
-                total: 2, // 2 Builders
+                total: 2,
                 assigned: 0,
+                builders: 2,
             },
             infrastructure: {
                 housing: 1,
@@ -38,8 +39,14 @@ export class VillageService {
         if (typeof loaded.population === 'number') {
             loaded.population = {
                 total: loaded.population,
-                assigned: 0
+                assigned: 0,
+                builders: loaded.population
             };
+        }
+
+        // Migrate old state without builders field
+        if (loaded.population && loaded.population.builders === undefined) {
+            loaded.population.builders = loaded.population.total;
         }
 
         // Migrate old state if max was stored
@@ -59,7 +66,8 @@ export class VillageService {
             ...this.state,
             population: {
                 ...this.state.population,
-                max: this.getMaxPopulation()
+                max: this.getMaxPopulation(),
+                availableBuilders: Math.max(0, this.state.population.builders - this.state.population.assigned)
             },
             maxStorage: this.getMaxStorage()
         };
@@ -169,8 +177,8 @@ export class VillageService {
         if (this.state.gold < costGold) return Result.fail('error_not_enough_gold');
         
         // Check labor
-        if (this.state.population.total - this.state.population.assigned <= 0) {
-            return Result.fail('error_no_available_labor');
+        if (this.state.population.builders - this.state.population.assigned <= 0) {
+            return Result.fail('error_no_available_builders');
         }
 
         // Check materials (this logic will be refined when materials are properly categorized)
@@ -215,6 +223,21 @@ export class VillageService {
     
     addVillagers(amount) {
         this.state.population.total += amount;
+        this.state.population.builders = Math.min(this.state.population.total, this.state.population.builders + amount);
         this.save();
+    }
+
+    setBuilders(count) {
+        const total = this.state.population.total;
+        const assigned = this.state.population.assigned;
+        if (count < 0 || count > total) {
+            return Result.fail('error_invalid_builder_count');
+        }
+        if (count < assigned) {
+            return Result.fail('error_builders_below_assigned');
+        }
+        this.state.population.builders = count;
+        this.save();
+        return Result.ok();
     }
 }

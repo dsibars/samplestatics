@@ -77,12 +77,12 @@
 | Day cycle | ✅ | Food consumption, farm production (+4 grain/level), growth, recovery, construction progress |
 | Hero stats & equipment | ✅ | 6 slots, stat allocation, leveling (2-3 pts + 1 skill pt), portraits, origins |
 | Inventory | ✅ | Materials, food, consumables, equipment. Storage enforced by warehouse level |
-| Shop (buy/sell resources/sell items) | ✅ | Tier-gated by blacksmith. Consumables + gear. Resources tab. No affixes. |
+| Shop (buy/sell resources/sell items) | ✅ | Tier-gated by blacksmith. Consumables + gear. Resources tab. |
 | Forge (refine) | ✅ | +0 to +10, ×1.1 power per level. Material/gold costs scale by tier. |
 | Turn-based combat | ✅ | Speed-based turns, 20+ skills, status effects (poison, burn, haste), consumables, auto-battle, enemy AI |
-| Expeditions | 🟡 | Only `reg_greenfields` wired. Tutorial chain: `exp_tutorial_cave` → `exp_rescue_mission` (unlocks Sir Valen). Procedural nodes spawn after story missions. |
+| Expeditions | ✅ | 3 regions wired (greenfields, tiny_cave, calmed_beach). Concurrent expeditions: max = 1 + explorer_guild level. Round-robin resolution. |
 | i18n | ✅ | EN, ES, CA, EU, GL |
-| Tests | 🟡 | 3 test files: BattleService, InventoryService, CombatFlow |
+| Tests | ✅ | 5 test files: BattleService, InventoryService, CombatFlow, ExpeditionService, VillageService |
 
 ---
 
@@ -91,17 +91,17 @@
 ### Functional Gaps
 | # | Gap | Severity | Notes |
 |---|-----|----------|-------|
-| 1 | **No Skill UI** | High | Heroes earn `skillPoints` but there's no interface to learn/upgrade skills. Skills DO work in combat (auto-assigned), but player has zero build expression. |
+| 1 | **No Skill UI** | High | ✅ **Implemented 2026-05-20**. |
 | 2 | **No Sell Resources** | Medium | ✅ **Implemented 2026-05-20**. |
 | 3 | **No Sell Items** | Medium | ✅ **Implemented 2026-05-20**. |
-| 4 | **Workers / Labor** | Medium | `population.assigned` exists but no worker entities, specializations, or assignment UI. **DO NOT implement yet** — this is a late-game feature once the skeleton is solid. |
-| 5 | **Inert Buildings** | Medium | `explorer_guild` and `training_grounds` provide no gameplay effect. These are **next priority** after region unlocks. |
-| 6 | **No Affix Generation** | Medium | Affixes (`vampire`, `phoenix`, `sage`, `titan`, `assassin`) coded in stat calc but never rolled. |
-| 7 | **Only 1 Region Active** | Medium | `reg_tiny_cave`, `reg_calmed_beach` defined in data but unreachable. Other 12 regions exist only in docs. |
-| 8 | **Enemy Level Scaling** | Medium | Spec says `Base * 1.1^(L-1)`; code uses flat base stats. Regions track `clears` but don't use them for scaling. |
+| 4 | **Workers / Labor** | Medium | ✅ **Implemented 2026-05-21**. Explicit builder assignment UI in village view. |
+| 5 | **Inert Buildings** | Medium | ✅ **Implemented 2026-05-20**. explorer_guild unlocks regions & reduces stages. training_grounds gives idle XP. |
+| 6 | **No Affix Generation** | Medium | ✅ **Implemented 2026-05-20**. |
+| 7 | **Only 1 Region Active** | Medium | ✅ **Implemented 2026-05-20**. 3 regions active. |
+| 8 | **Enemy Level Scaling** | Medium | ✅ **Implemented 2026-05-20**. |
 | 9 | **Not in Hub** | Low | ✅ **Fixed 2026-05-20**. |
-| 10 | **No Loot Drops** | Medium | Expedition rewards are deterministic wood/stone/gold. No equipment drops, no affix rolls, no "one more run" dopamine. |
-| 11 | **Single Expedition** | Medium | Only 1 active expedition at a time. Concurrent expeditions are a planned puzzle mechanic but require architecture changes. |
+| 10 | **No Loot Drops** | Medium | ✅ **Implemented 2026-05-20**. |
+| 11 | **Single Expedition** | Medium | ✅ **Implemented 2026-05-21**. Concurrent expeditions with round-robin. |
 
 ### Code Quality Issues
 | # | Issue | Location | Status |
@@ -186,14 +186,14 @@ This was the #1 game-feel problem. The old curve had Level 1 heroes with 1 STR d
 | C.2 | **Affix roll on drops** | `docs/shared/inventory/equipment.md` | `ExpeditionService` — 10% 1 affix, 2% 2 affixes | Small |
 | C.3 | **Tier 3-5 gear in shop** | `docs/shared/inventory/equipment_data.md` | `ShopCatalog.js` — Steel, Gold, Mythril already defined in `MATERIAL_TIERS` | Small |
 
-### Sprint D — "The Puzzle Emerges"
+### Sprint D — "The Puzzle Emerges" ✅ DONE
 > Builders and concurrent expeditions — the core strategic layer.
 
-| # | Feature | Spec | Implementation | Effort |
+| # | Feature | Spec | Implementation | Status |
 |---|---------|------|----------------|--------|
-| D.1 | **Builder assignment UI** | *NEW: `docs/village/builders.md`* | `VillageView.js`, `VillageService.js` — assign villagers as builders | Medium |
-| D.2 | **Concurrent expeditions** | *NEW: `docs/explore/concurrent_expeditions.md`* | `ExpeditionService` — round-robin resolution, max = 1 + Explorer Guild level | Medium |
-| D.3 | **Construction queue + builders** | `docs/village/buildings_data.md` | Multiple projects simultaneously if multiple builders assigned | Medium |
+| D.1 | **Builder assignment UI** | *NEW: `docs/village/builders.md`* | `VillageView.js`, `VillageService.js` — assign villagers as builders | ✅ |
+| D.2 | **Concurrent expeditions** | *NEW: `docs/explore/concurrent_expeditions.md`* | `ExpeditionService` — round-robin resolution, max = 1 + Explorer Guild level | ✅ |
+| D.3 | **Construction queue + builders** | `docs/village/buildings_data.md` | Multiple projects simultaneously if multiple builders assigned | ✅ |
 
 ### Sprint E — "Build Expression"
 > Skill choices and combat UI health.
@@ -282,5 +282,5 @@ startLevel = max(1, floor(avg_party_level) - 1)
 
 ---
 
-*Last updated: 2026-05-20*  
-*Next milestone: Sprint B — "The World Grows" (unlock regions + enemy scaling + building effects)*
+*Last updated: 2026-05-21*  
+*Status: First iteration complete. All sprints A–E done. Ready for Phase 3 planning (Magic Circle, Calendar & Defense, Achievements, Villager Personalities).*

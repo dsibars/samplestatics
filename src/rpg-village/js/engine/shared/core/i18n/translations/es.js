@@ -353,5 +353,17 @@ export const es = {
     desc_food_raw_grain: "Trigo cosechado. Consumido diariamente por los aldeanos para evitar la inanición. ¡Mantén existencias!",
     btn_auto_combat: "Auto-Combate",
     btn_skip_combat: "Saltar Batalla",
-    ui_choose_target: "Elegir Objetivo"
+    ui_choose_target: "Elegir Objetivo",
+
+    ui_builders: "Constructores",
+    ui_available_builders: "Disponibles",
+    error_no_available_builders: "No hay constructores disponibles",
+    error_invalid_builder_count: "Número de constructores inválido",
+    error_builders_below_assigned: "No puedes reducir constructores por debajo de los asignados",
+    error_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado",
+    error_hero_on_other_expedition: "El héroe ya está en otra expedición",
+    ui_max_expeditions_reached: "Máximo de expediciones simultáneas alcanzado. Completa o retira una para iniciar otra.",
+    ui_report_training: "{count} héroes entrenaron en el campo",
+    ui_report_training_level: "¡{heroes} subieron de nivel entrenando!",
+
 };

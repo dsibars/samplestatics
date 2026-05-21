@@ -44,7 +44,7 @@ export class GameEngine {
         this.i18n.setLanguage(persistence.load('settings_lang', 'en'));
 
         // Resume combat if active
-        if (this.expeditionService.state.activeExpedition && this.expeditionService.state.activeExpedition.status === 'combat') {
+        if (this.expeditionService.state.activeCombatExpeditionId) {
             console.log('Engine: Resuming active combat...');
             this.expeditionService.resumeActiveBattle();
         }
@@ -106,7 +106,8 @@ export class GameEngine {
 
     update() {
         const now = Date.now();
-        const activeExpedition = this.expeditionService.state.activeExpedition;
+        const activeExpeditions = this.expeditionService.state.activeExpeditions;
+        const maxConcurrentExpeditions = this.expeditionService.getMaxConcurrentExpeditions();
         
         const heroesDto = this.heroService.list().map(hero => {
             const dto = hero.toJSON();
@@ -134,7 +135,8 @@ export class GameEngine {
             inventory: this.inventoryService.getState(),
             heroes: heroesDto,
             expeditions: this.expeditionService.getExpeditions(),
-            activeExpedition: activeExpedition,
+            activeExpeditions,
+            maxConcurrentExpeditions,
             completedExpeditions: this.expeditionService.state.completedIds || [],
             activeBattle
         };
@@ -480,7 +482,7 @@ export class GameEngine {
     unassignHero(heroId) {
         return this.expeditionService.unassignHero(heroId);
     }
-    retireExpedition() {
-        return this.expeditionService.retire();
+    retireExpedition(expId) {
+        return this.expeditionService.retire(expId);
     }
 }

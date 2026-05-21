@@ -350,5 +350,17 @@ export const gl = {
     prologue_btn_next: "Seguinte",
     btn_auto_combat: "Auto-Combate",
     btn_skip_combat: "Saltar Batalla",
-    ui_choose_target: "Elixir Obxectivo"
+    ui_choose_target: "Elixir Obxectivo",
+
+    ui_builders: "Construtores",
+    ui_available_builders: "Dispoñibles",
+    error_no_available_builders: "Non hai construtores dispoñibles",
+    error_invalid_builder_count: "Número de construtores inválido",
+    error_builders_below_assigned: "Non podes reducir construtores por debaixo dos asignados",
+    error_max_expeditions_reached: "Máximo de expedicións simultáneas alcanzado",
+    error_hero_on_other_expedition: "O heroe xa está noutra expedición",
+    ui_max_expeditions_reached: "Máximo de expedicións simultáneas alcanzado. Completa ou retira unha para iniciar outra.",
+    ui_report_training: "{count} heroes adestraron no campo",
+    ui_report_training_level: "¡{heroes} subiron de nivel adestrando!",
+
 };

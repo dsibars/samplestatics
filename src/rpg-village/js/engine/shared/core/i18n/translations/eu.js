@@ -350,5 +350,17 @@ export const eu = {
     prologue_btn_next: "Hurrengoa",
     btn_auto_combat: "Auto-Borroka",
     btn_skip_combat: "Borroka Saltatu",
-    ui_choose_target: "Helburua Hautatu"
+    ui_choose_target: "Helburua Hautatu",
+
+    ui_builders: "Eraikitzaileak",
+    ui_available_builders: "Eskuragarri",
+    error_no_available_builders: "Ez dago eraikitzaile eskuragarririk",
+    error_invalid_builder_count: "Eraikitzaile kopuru baliogabea",
+    error_builders_below_assigned: "Ezin da esleitutako kopurua baino eraikitzaile gutxiago izan",
+    error_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da",
+    error_hero_on_other_expedition: "Heroia beste esplorazio batean dago jada",
+    ui_max_expeditions_reached: "Esplorazioen kopuru maximoa lortu da. Bete edo utzi bat beste bat hasteko.",
+    ui_report_training: "{count} heroik entrenatu dute zelaian",
+    ui_report_training_level: "{heroes}-ek maila igo dute entrenamenduan!",
+
 };

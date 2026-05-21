@@ -350,5 +350,17 @@ export const ca = {
     prologue_btn_next: "Següent",
     btn_auto_combat: "Auto-Combat",
     btn_skip_combat: "Saltar Batalla",
-    ui_choose_target: "Triar Objectiu"
+    ui_choose_target: "Triar Objectiu",
+
+    ui_builders: "Constructors",
+    ui_available_builders: "Disponibles",
+    error_no_available_builders: "No hi ha constructors disponibles",
+    error_invalid_builder_count: "Nombre de constructors invàlid",
+    error_builders_below_assigned: "No pots reduir constructors per sota dels assignats",
+    error_max_expeditions_reached: "Màxim d'expedicions simultànies assolit",
+    error_hero_on_other_expedition: "L'heroi ja està en una altra expedició",
+    ui_max_expeditions_reached: "Màxim d'expedicions simultànies assolit. Completa o retira una per iniciar una altra.",
+    ui_report_training: "{count} herois van entrenar al camp",
+    ui_report_training_level: "¡{heroes} han pujat de nivell entrenant!",
+
 };

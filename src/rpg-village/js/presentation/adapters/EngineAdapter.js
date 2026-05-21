@@ -60,6 +60,19 @@ export class EngineAdapter {
                 });
             }
             
+            if (domain === 'village') {
+                view.on('setBuilders', (data) => {
+                    const village = this.engine.villageService.getState();
+                    const currentBuilders = village.population.builders || 0;
+                    const newCount = currentBuilders + (data.delta || 0);
+                    const result = this.engine.villageService.setBuilders(newCount);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+            }
+            
             if (domain === 'explore') {
                 view.on('assignExpedition', (data) => {
                     const result = this.engine.assignExpedition(data.expId, data.heroIds);
@@ -68,8 +81,8 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
-                view.on('retireExpedition', () => {
-                    this.engine.retireExpedition();
+                view.on('retireExpedition', (data) => {
+                    this.engine.retireExpedition(data && data.expId ? data.expId : null);
                     this.forceUpdate();
                 });
             }

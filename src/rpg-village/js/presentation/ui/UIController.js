@@ -387,6 +387,7 @@ export class UIController {
 
     /**
      * Plays the battle log in a full-screen overlay dynamically imitating a turn-based combat log.
+     */
     // --- Combat UI Proxies (implementation in CombatView.js) ---
     get isCombatOverlayOpen() { return this.combatView.isCombatOverlayOpen; }
     set isCombatOverlayOpen(v) { this.combatView.isCombatOverlayOpen = v; }

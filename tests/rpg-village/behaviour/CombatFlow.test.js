@@ -74,7 +74,7 @@ test('Combat Flow: End-To-End Combat and Item Rules', () => {
     state = engine.update();
     assert.strictEqual(state.activeBattle, null, 'Active battle should clear after resolve');
     // Tutorial Cave has 2 stages; after winning stage 1, expedition advances to stage 2
-    assert.strictEqual(state.activeExpedition.currentStage, 1, 'Expedition should advance to stage 2');
+    assert.strictEqual(state.activeExpeditions[0].currentStage, 1, 'Expedition should advance to stage 2');
 
     // 8. Advance day to trigger second (boss) battle
     engine.nextDay();
@@ -85,5 +85,5 @@ test('Combat Flow: End-To-End Combat and Item Rules', () => {
     engine.skipBattle();
     engine.resolveBattle();
     state = engine.update();
-    assert.strictEqual(state.activeExpedition, null, 'Active expedition should complete after final stage');
+    assert.strictEqual(state.activeExpeditions.length, 0, 'Active expedition should complete after final stage');
 });
