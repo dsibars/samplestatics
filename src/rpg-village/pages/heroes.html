@@ -37,9 +37,14 @@
     
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
         margin-top: 20px;
+    }
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
     
     .stat-row {
@@ -125,6 +130,167 @@
         margin-top: 20px;
         padding-top: 20px;
         border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Equipment Body Diagram */
+    .equipment-diagram {
+        position: relative;
+        width: 100%;
+        max-width: 320px;
+        height: 380px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+    .eq-body-silhouette {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60px;
+        height: 200px;
+        pointer-events: none;
+        opacity: 0.15;
+    }
+    .silhouette-head {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+    }
+    .silhouette-torso {
+        position: absolute;
+        top: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 44px;
+        height: 80px;
+        border-radius: 12px;
+        background: linear-gradient(180deg, var(--accent-color), var(--primary-color));
+    }
+    .silhouette-legs {
+        position: absolute;
+        top: 118px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 70px;
+        border-radius: 0 0 18px 18px;
+        background: linear-gradient(180deg, var(--primary-color), var(--accent-color));
+    }
+    .eq-slot {
+        position: absolute;
+        width: 82px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 8px 4px;
+        border-radius: var(--radius-sm);
+        border: 2px dashed rgba(255,255,255,0.15);
+        background: rgba(255,255,255,0.03);
+        transition: all 0.25s ease;
+        cursor: default;
+    }
+    .eq-slot.clickable {
+        cursor: pointer;
+        border-style: solid;
+        border-color: rgba(255,255,255,0.2);
+    }
+    .eq-slot.clickable:hover {
+        background: rgba(255,255,255,0.08);
+        border-color: var(--accent-color);
+        transform: scale(1.08);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+        z-index: 2;
+    }
+    .eq-slot.has-item {
+        border-color: rgba(99, 102, 241, 0.4);
+        background: rgba(99, 102, 241, 0.08);
+    }
+    .eq-slot.has-item.clickable:hover {
+        border-color: var(--accent-color);
+        background: rgba(99, 102, 241, 0.15);
+    }
+    .eq-slot-icon {
+        font-size: 1.4rem;
+        line-height: 1;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    .eq-slot-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .eq-slot-item {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-align: center;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .eq-slot.has-item .eq-slot-item {
+        color: var(--accent-color);
+    }
+    .eq-slot-empty-hint {
+        font-size: 0.7rem;
+        color: rgba(255,255,255,0.2);
+    }
+    /* Slot positions */
+    .eq-slot-head {
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .eq-slot-body {
+        top: 26%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .eq-slot-legs {
+        top: 52%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .eq-slot-leftHand {
+        top: 22%;
+        left: 2%;
+    }
+    .eq-slot-rightHand {
+        top: 22%;
+        right: 2%;
+    }
+    .eq-slot-accessory {
+        top: 76%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    @media (max-width: 768px) {
+        .equipment-diagram {
+            height: 340px;
+            max-width: 280px;
+        }
+        .eq-slot {
+            width: 72px;
+            padding: 6px 2px;
+        }
+        .eq-slot-icon {
+            font-size: 1.2rem;
+        }
+        .eq-slot-label {
+            font-size: 0.6rem;
+        }
+        .eq-slot-item {
+            font-size: 0.7rem;
+        }
     }
     
     .hero-section h3 {

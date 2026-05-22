@@ -8055,17 +8055,36 @@ class HeroesView extends BaseView {
     const isIdle = hero.activity === "idle";
     const activityText = isIdle ? this.t("ui_activity_idle") : this.t("ui_activity_expedition");
     const equipSlots = ["head", "body", "legs", "leftHand", "rightHand", "accessory"];
-    let equipHtml = equipSlots.map((slot) => {
+    const slotIcons = {
+      head: "🪖",
+      body: "🦺",
+      legs: "👢",
+      leftHand: "⚔️",
+      rightHand: "🛡️",
+      accessory: "💍"
+    };
+    let equipHtml = `
+            <div class="equipment-diagram">
+                <div class="eq-body-silhouette">
+                    <div class="silhouette-head"></div>
+                    <div class="silhouette-torso"></div>
+                    <div class="silhouette-legs"></div>
+                </div>
+                ${equipSlots.map((slot) => {
       const hasItem = !!hero.equipment[slot];
       const itemName = hasItem ? getEquipmentName(hero.equipment[slot], this.t.bind(this)) : this.t("ui_empty_slot");
       const clickableClass = isIdle ? "clickable" : "locked";
+      const hasItemClass = hasItem ? "has-item" : "";
       return `
-                <div class="equip-slot ${clickableClass}" data-slot="${slot}">
-                    <span class="slot-name">${this.t("slot_" + slot)}</span>
-                    <span class="slot-item" style="color: ${hasItem ? "var(--accent-color)" : "var(--text-muted)"};">${itemName}</span>
-                </div>
-            `;
-    }).join("");
+                        <div class="equip-slot eq-slot-${slot} ${clickableClass} ${hasItemClass}" data-slot="${slot}">
+                            <div class="eq-slot-icon">${slotIcons[slot]}</div>
+                            <div class="eq-slot-label">${this.t("slot_" + slot)}</div>
+                            <div class="eq-slot-item" title="${itemName}">${itemName}</div>
+                        </div>
+                    `;
+    }).join("")}
+            </div>
+        `;
     const hasSkillPoints = hero.skillPoints > 0;
     const canManageSkills = hasSkillPoints && isIdle;
     const allSkills = Object.values(SKILLS_DATA);
@@ -10407,11 +10426,26 @@ body {
 .resource-item .value { display: block; font-size: 1.3rem; font-weight: 800; color: var(--accent-color); }
 
 .action-bar { margin-top: var(--spacing-lg); display: flex; justify-content: center; }
-.dashboard-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-md); }
+.dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
 
+/* Settings view retains the classic 2-column grid layout */
+.settings-view .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+}
 @media (min-width: 768px) {
-    .dashboard-grid { grid-template-columns: 350px 1fr; }
-    .canvas-widget { grid-column: 2; grid-row: 1 / 3; }
+    .settings-view .dashboard-grid {
+        grid-template-columns: 350px 1fr;
+    }
+    .settings-view .canvas-widget {
+        grid-column: 2;
+        grid-row: 1 / 3;
+    }
 }
 
 @keyframes fadeIn {
@@ -11377,64 +11411,55 @@ body {
     <div class="view-header">
         <h2 data-i18n="nav_village">Village</h2>
     </div>
+
     <div class="dashboard-grid">
-        <!-- Left Column: Status & Queue -->
-        <div class="side-panel">
-            <!-- Village Status Widget -->
-            <div class="card widget status-widget">
-                <h3 data-i18n="ui_village_status">Village Status</h3>
-                <div class="status-content">
-                    <div class="status-item-detailed">
-                        <div class="status-row">
-                            <span class="label" data-i18n="village_gold">Gold</span>
-                            <span id="village-gold" class="value">--</span>
-                        </div>
-                    </div>
-                    
-                    <div class="status-item-detailed">
-                        <div class="status-row">
-                            <span class="label" data-i18n="village_population">Population</span>
-                            <span id="village-pop" class="value">--</span>
-                        </div>
-                        <div class="sub-label">
-                            <span data-i18n="ui_available">Available</span>: <span id="village-pop-avail" class="accent-text">--</span>
-                        </div>
-                    </div>
-
-                    <div class="status-item-detailed">
-                        <div class="status-row">
-                            <span class="label" data-i18n="ui_builders">Builders</span>
-                            <span id="village-builder-count" class="value">--</span>
-                        </div>
-                        <div class="sub-label builder-controls">
-                            <button class="btn-builder" data-action="dec-builder">−</button>
-                            <span data-i18n="ui_available_builders">Available</span>: <span id="village-builder-avail" class="accent-text">--</span>
-                            <button class="btn-builder" data-action="inc-builder">+</button>
-                        </div>
-                    </div>
-
-                    <div class="status-item-detailed">
-                        <div class="status-row">
-                            <span class="label" data-i18n="ui_roles">Specialization</span>
-                        </div>
-                        <div id="role-controls" class="role-controls">
-                            <!-- Role rows injected here -->
-                        </div>
-                    </div>
-
-                    <div class="status-item-detailed">
-                        <div class="status-row">
-                            <span class="label" data-i18n="inv_storage">Storage</span>
-                            <span id="village-storage-text" class="value">-- / --</span>
-                        </div>
-                        <div class="progress-container">
-                            <div id="village-storage-bar" class="progress-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
+        <!-- Compact Status Bar -->
+        <div class="village-status-bar card">
+            <div class="status-bar-item">
+                <span class="status-bar-icon">💰</span>
+                <span class="status-bar-label" data-i18n="village_gold">Gold</span>
+                <span id="village-gold" class="status-bar-value">--</span>
+            </div>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-item">
+                <span class="status-bar-icon">👥</span>
+                <span class="status-bar-label" data-i18n="village_population">Pop</span>
+                <span id="village-pop" class="status-bar-value">--</span>
+                <span class="status-bar-sub">(<span data-i18n="ui_available">Avail</span>: <span id="village-pop-avail" class="accent-text">--</span>)</span>
+            </div>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-item builder-bar-item">
+                <span class="status-bar-icon">🔨</span>
+                <span class="status-bar-label" data-i18n="ui_builders">Builders</span>
+                <span id="village-builder-count" class="status-bar-value">--</span>
+                <div class="builder-controls">
+                    <button class="btn-builder" data-action="dec-builder">−</button>
+                    <span class="status-bar-sub"><span data-i18n="ui_available_builders">Avail</span>: <span id="village-builder-avail" class="accent-text">--</span></span>
+                    <button class="btn-builder" data-action="inc-builder">+</button>
                 </div>
             </div>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-item storage-bar-item">
+                <span class="status-bar-icon">📦</span>
+                <span class="status-bar-label" data-i18n="inv_storage">Storage</span>
+                <span id="village-storage-text" class="status-bar-value">-- / --</span>
+                <div class="progress-container" style="width: 80px; margin-left: 6px;">
+                    <div id="village-storage-bar" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
 
-            <!-- Construction Queue Widget -->
+        <!-- Main Content: Canvas + Report -->
+        <div class="village-main-content">
+            <div id="village-canvas-container">
+                <!-- Dynamic village tiles will be rendered here -->
+            </div>
+            <div id="daily-report-container"></div>
+        </div>
+
+        <!-- Widget Grid -->
+        <div class="village-widgets-grid">
+            <!-- Construction Widget -->
             <div class="card widget construction-widget">
                 <h3 data-i18n="ui_construction">Construction</h3>
                 <div id="construction-list-container">
@@ -11467,111 +11492,365 @@ body {
                     <div class="empty-state" data-i18n="ui_no_objectives">No objectives today.</div>
                 </div>
             </div>
-        </div>
 
-        <!-- Right Column: Visual Center & Global Actions -->
-        <div class="main-panel">
-
-
-            <div id="daily-report-container"></div>
-            
-            <div id="village-canvas-container">
-                <!-- Dynamic village tiles will be rendered here -->
+            <!-- Roles Widget -->
+            <div class="card widget roles-widget">
+                <h3 data-i18n="ui_roles">Specialization</h3>
+                <div id="role-controls" class="role-controls">
+                    <!-- Role rows injected here -->
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <style>
-    .status-item-detailed {
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .status-row {
+    /* Status Bar */
+    .village-status-bar {
         display: flex;
-        justify-content: space-between;
+        flex-wrap: wrap;
         align-items: center;
+        gap: 8px 16px;
+        padding: 10px 16px;
     }
-    .status-row .label { color: var(--text-muted); font-size: 0.9rem; }
-    .status-row .value { font-weight: 700; color: var(--text-primary); }
-    .accent-text { color: var(--accent-color); font-weight: 700; }
-    .builder-controls { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-    .btn-builder { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; }
-    .btn-builder:hover { background: rgba(255,255,255,0.2); }
-    .role-controls { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-    .role-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
-    .role-name { color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
-    .role-count { font-weight: 700; color: var(--text-primary); min-width: 20px; text-align: center; }
-    .btn-role { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--text-primary); width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; }
-    .btn-role:hover { background: rgba(255,255,255,0.15); }
-    .btn-role:disabled { opacity: 0.3; cursor: not-allowed; }
-    
-    .action-card {
+    .status-bar-item {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-top: var(--spacing-md);
-        background: linear-gradient(to right, var(--bg-accent), var(--bg-secondary));
+        gap: 6px;
+        font-size: 0.9rem;
+        white-space: nowrap;
     }
-    
-    .day-cycle-info {
+    .status-bar-icon {
+        font-size: 1.1rem;
+    }
+    .status-bar-label {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .status-bar-value {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .status-bar-sub {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+    }
+    .status-bar-divider {
+        width: 1px;
+        height: 20px;
+        background: var(--glass-border);
+    }
+    .builder-bar-item {
+        gap: 8px;
+    }
+    .builder-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .btn-builder {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: var(--text-primary);
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        line-height: 1;
+    }
+    .btn-builder:hover {
+        background: rgba(255,255,255,0.2);
+    }
+    .storage-bar-item {
+        flex: 1;
+        min-width: 180px;
+    }
+    .storage-bar-item .progress-container {
+        flex: 1;
+        max-width: 120px;
+    }
+
+    /* Main Content Area */
+    .village-main-content {
+        display: flex;
+        gap: var(--spacing-md);
+        align-items: stretch;
+        min-height: 280px;
+    }
+    #village-canvas-container {
+        flex: 2;
+        min-width: 0;
+    }
+    #daily-report-container {
+        flex: 1;
+        max-width: 380px;
+        min-width: 260px;
+    }
+
+    /* Widgets Grid */
+    .village-widgets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: var(--spacing-md);
+    }
+    .village-widgets-grid .widget {
+        min-height: 180px;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        padding: 0 20px;
-        border-right: 1px solid var(--glass-border);
     }
-    
-    .day-label { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); }
-    .day-value { font-size: 2rem; font-weight: 900; color: var(--accent-color); }
-    
-    .action-bar-centered {
-        flex: 1;
+    .village-widgets-grid .widget h3 {
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .village-widgets-grid .widget .empty-state {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-align: center;
+        padding: 20px 0;
+    }
+
+    /* Roles */
+    .role-controls {
         display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .role-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.85rem;
+    }
+    .role-name {
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .role-count {
+        font-weight: 700;
+        color: var(--text-primary);
+        min-width: 20px;
+        text-align: center;
+    }
+    .btn-role {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: var(--text-primary);
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        display: inline-flex;
+        align-items: center;
         justify-content: center;
+        font-size: 0.8rem;
+    }
+    .btn-role:hover {
+        background: rgba(255,255,255,0.15);
+    }
+    .btn-role:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
     }
 
-    .side-panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
-    .main-panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
-    
-    .daily-report-widget { border-left: 4px solid var(--accent-color); }
-    .report-content { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-    .report-section { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; }
-    .report-section.success { border-left: 3px solid #4CAF50; }
-    .report-section.danger { border-left: 3px solid #f44336; color: #f44336; }
-    .report-icon { font-size: 1.2rem; }
+    /* Construction */
+    .construction-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 4px;
+    }
+    .days-remaining {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
 
-    .objective-item { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .objective-item:last-child { border-bottom: none; }
-    .objective-item.completed .objective-label { text-decoration: line-through; opacity: 0.6; }
-    .objective-header { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
-    .objective-check { font-size: 1rem; }
-    .objective-label { flex: 1; color: var(--text-primary); }
-    .objective-progress { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
-    .objective-all-completed { margin-top: 10px; padding: 10px; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: var(--radius-sm); text-align: center; font-size: 0.9rem; color: #2ecc71; }
-    .progress-bar.success { background: linear-gradient(90deg, #2ecc71, #27ae60); }
+    /* Calendar */
+    .calendar-widget h3 {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .event-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        font-size: 0.85rem;
+    }
+    .event-item:last-child {
+        border-bottom: none;
+    }
+    .event-icon {
+        font-size: 1rem;
+    }
+    .event-day {
+        font-weight: 700;
+        color: var(--accent-color);
+        min-width: 40px;
+        font-size: 0.8rem;
+    }
+    .event-label {
+        flex: 1;
+    }
+    .event-urgent {
+        color: #f44336;
+    }
 
-    .calendar-widget h3 { display: flex; align-items: center; gap: 6px; }
-    .event-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
-    .event-item:last-child { border-bottom: none; }
-    .event-icon { font-size: 1.1rem; }
-    .event-day { font-weight: 700; color: var(--accent-color); min-width: 40px; }
-    .event-label { flex: 1; }
-    .event-urgent { color: #f44336; }
-    .season-effect { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; padding: 6px; background: rgba(255,255,255,0.03); border-radius: 4px; }
+    /* Defense */
+    .defense-widget .defender-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background: rgba(46, 204, 113, 0.15);
+        border: 1px solid rgba(46, 204, 113, 0.3);
+        border-radius: 12px;
+        font-size: 0.85rem;
+        margin: 2px;
+    }
+    .defense-widget .defender-chip .remove-btn {
+        background: none;
+        border: none;
+        color: #f44336;
+        cursor: pointer;
+        font-size: 0.9rem;
+        padding: 0 2px;
+    }
+    .defense-widget .assign-btn {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: var(--text-primary);
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        margin: 2px;
+    }
+    .defense-widget .assign-btn:hover {
+        background: rgba(255,255,255,0.15);
+    }
+    .defense-widget .assign-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+    .defense-assign-section {
+        margin-top: 8px;
+    }
+    .defense-assign-section h4 {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+    }
 
-    .defense-widget .defender-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 12px; font-size: 0.85rem; margin: 2px; }
-    .defense-widget .defender-chip .remove-btn { background: none; border: none; color: #f44336; cursor: pointer; font-size: 0.9rem; padding: 0 2px; }
-    .defense-widget .assign-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--text-primary); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin: 2px; }
-    .defense-widget .assign-btn:hover { background: rgba(255,255,255,0.15); }
-    .defense-widget .assign-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .defense-assign-section { margin-top: 8px; }
-    .defense-assign-section h4 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
+    /* Objectives */
+    .objective-item {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .objective-item:last-child {
+        border-bottom: none;
+    }
+    .objective-item.completed .objective-label {
+        text-decoration: line-through;
+        opacity: 0.6;
+    }
+    .objective-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+    }
+    .objective-check {
+        font-size: 1rem;
+    }
+    .objective-label {
+        flex: 1;
+        color: var(--text-primary);
+    }
+    .objective-progress {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+    .objective-all-completed {
+        margin-top: 10px;
+        padding: 10px;
+        background: rgba(46, 204, 113, 0.1);
+        border: 1px solid rgba(46, 204, 113, 0.3);
+        border-radius: var(--radius-sm);
+        text-align: center;
+        font-size: 0.85rem;
+        color: #2ecc71;
+    }
+    .progress-bar.success {
+        background: linear-gradient(90deg, #2ecc71, #27ae60);
+    }
 
-    @media (max-width: 767px) {
-        .action-card { flex-direction: column; gap: var(--spacing-md); text-align: center; }
-        .day-cycle-info { border-right: none; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; width: 100%; }
+    /* Daily Report */
+    .daily-report-widget {
+        border-left: 4px solid var(--accent-color);
+    }
+    .report-content {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .report-section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        background: rgba(0,0,0,0.2);
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    .report-section.success {
+        border-left: 3px solid #4CAF50;
+    }
+    .report-section.danger {
+        border-left: 3px solid #f44336;
+        color: #f44336;
+    }
+    .report-icon {
+        font-size: 1.1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .village-main-content {
+            flex-direction: column;
+        }
+        #daily-report-container {
+            max-width: none;
+            min-width: auto;
+        }
+    }
+    @media (max-width: 768px) {
+        .village-status-bar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .status-bar-divider {
+            display: none;
+        }
+        .storage-bar-item {
+            width: 100%;
+        }
     }
 </style>
 </template>
@@ -11715,9 +11994,14 @@ body {
     
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
         margin-top: 20px;
+    }
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
     
     .stat-row {
@@ -11803,6 +12087,167 @@ body {
         margin-top: 20px;
         padding-top: 20px;
         border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Equipment Body Diagram */
+    .equipment-diagram {
+        position: relative;
+        width: 100%;
+        max-width: 320px;
+        height: 380px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+    .eq-body-silhouette {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60px;
+        height: 200px;
+        pointer-events: none;
+        opacity: 0.15;
+    }
+    .silhouette-head {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+    }
+    .silhouette-torso {
+        position: absolute;
+        top: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 44px;
+        height: 80px;
+        border-radius: 12px;
+        background: linear-gradient(180deg, var(--accent-color), var(--primary-color));
+    }
+    .silhouette-legs {
+        position: absolute;
+        top: 118px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 70px;
+        border-radius: 0 0 18px 18px;
+        background: linear-gradient(180deg, var(--primary-color), var(--accent-color));
+    }
+    .eq-slot {
+        position: absolute;
+        width: 82px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 8px 4px;
+        border-radius: var(--radius-sm);
+        border: 2px dashed rgba(255,255,255,0.15);
+        background: rgba(255,255,255,0.03);
+        transition: all 0.25s ease;
+        cursor: default;
+    }
+    .eq-slot.clickable {
+        cursor: pointer;
+        border-style: solid;
+        border-color: rgba(255,255,255,0.2);
+    }
+    .eq-slot.clickable:hover {
+        background: rgba(255,255,255,0.08);
+        border-color: var(--accent-color);
+        transform: scale(1.08);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+        z-index: 2;
+    }
+    .eq-slot.has-item {
+        border-color: rgba(99, 102, 241, 0.4);
+        background: rgba(99, 102, 241, 0.08);
+    }
+    .eq-slot.has-item.clickable:hover {
+        border-color: var(--accent-color);
+        background: rgba(99, 102, 241, 0.15);
+    }
+    .eq-slot-icon {
+        font-size: 1.4rem;
+        line-height: 1;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    .eq-slot-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .eq-slot-item {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-align: center;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .eq-slot.has-item .eq-slot-item {
+        color: var(--accent-color);
+    }
+    .eq-slot-empty-hint {
+        font-size: 0.7rem;
+        color: rgba(255,255,255,0.2);
+    }
+    /* Slot positions */
+    .eq-slot-head {
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .eq-slot-body {
+        top: 26%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .eq-slot-legs {
+        top: 52%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .eq-slot-leftHand {
+        top: 22%;
+        left: 2%;
+    }
+    .eq-slot-rightHand {
+        top: 22%;
+        right: 2%;
+    }
+    .eq-slot-accessory {
+        top: 76%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    @media (max-width: 768px) {
+        .equipment-diagram {
+            height: 340px;
+            max-width: 280px;
+        }
+        .eq-slot {
+            width: 72px;
+            padding: 6px 2px;
+        }
+        .eq-slot-icon {
+            font-size: 1.2rem;
+        }
+        .eq-slot-label {
+            font-size: 0.6rem;
+        }
+        .eq-slot-item {
+            font-size: 0.7rem;
+        }
     }
     
     .hero-section h3 {

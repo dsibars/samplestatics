@@ -175,17 +175,36 @@ export class HeroesView extends BaseView {
         const activityText = isIdle ? this.t('ui_activity_idle') : this.t('ui_activity_expedition');
 
         const equipSlots = ['head', 'body', 'legs', 'leftHand', 'rightHand', 'accessory'];
-        let equipHtml = equipSlots.map(slot => {
-            const hasItem = !!hero.equipment[slot];
-            const itemName = hasItem ? getEquipmentName(hero.equipment[slot], this.t.bind(this)) : this.t('ui_empty_slot');
-            const clickableClass = isIdle ? 'clickable' : 'locked';
-            return `
-                <div class="equip-slot ${clickableClass}" data-slot="${slot}">
-                    <span class="slot-name">${this.t('slot_' + slot)}</span>
-                    <span class="slot-item" style="color: ${hasItem ? 'var(--accent-color)' : 'var(--text-muted)'};">${itemName}</span>
+        const slotIcons = {
+            head: '🪖',
+            body: '🦺',
+            legs: '👢',
+            leftHand: '⚔️',
+            rightHand: '🛡️',
+            accessory: '💍'
+        };
+        let equipHtml = `
+            <div class="equipment-diagram">
+                <div class="eq-body-silhouette">
+                    <div class="silhouette-head"></div>
+                    <div class="silhouette-torso"></div>
+                    <div class="silhouette-legs"></div>
                 </div>
-            `;
-        }).join('');
+                ${equipSlots.map(slot => {
+                    const hasItem = !!hero.equipment[slot];
+                    const itemName = hasItem ? getEquipmentName(hero.equipment[slot], this.t.bind(this)) : this.t('ui_empty_slot');
+                    const clickableClass = isIdle ? 'clickable' : 'locked';
+                    const hasItemClass = hasItem ? 'has-item' : '';
+                    return `
+                        <div class="equip-slot eq-slot-${slot} ${clickableClass} ${hasItemClass}" data-slot="${slot}">
+                            <div class="eq-slot-icon">${slotIcons[slot]}</div>
+                            <div class="eq-slot-label">${this.t('slot_' + slot)}</div>
+                            <div class="eq-slot-item" title="${itemName}">${itemName}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
 
         const hasSkillPoints = hero.skillPoints > 0;
         const canManageSkills = hasSkillPoints && isIdle;
