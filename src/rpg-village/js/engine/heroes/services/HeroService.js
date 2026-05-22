@@ -86,20 +86,29 @@ export class HeroService {
         return anyChanged;
     }
 
-    learnHeroSkill(heroId, skillId, unlockCost) {
+    learnHeroSkill(heroId, skillId) {
         const hero = this.get(heroId);
         if (!hero) return Result.fail('error_hero_not_found');
 
-        const result = hero.learnSkill(skillId, unlockCost);
+        const result = hero.learnSkill(skillId);
         if (result.success) this.saveAll();
         return result;
     }
 
-    upgradeHeroSkill(heroId, skillId, upgradeCost) {
+    upgradeHeroSkill(heroId, skillId) {
         const hero = this.get(heroId);
         if (!hero) return Result.fail('error_hero_not_found');
 
-        const result = hero.upgradeSkill(skillId, upgradeCost);
+        const result = hero.upgradeSkill(skillId);
+        if (result.success) this.saveAll();
+        return result;
+    }
+
+    unequipHeroSkill(heroId, skillId) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.unequipSkill(skillId);
         if (result.success) this.saveAll();
         return result;
     }

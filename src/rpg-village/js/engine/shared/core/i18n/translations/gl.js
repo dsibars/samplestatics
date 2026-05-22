@@ -125,6 +125,14 @@ export const gl = {
     nav_town: "Vila",
     nav_inventory: "Inventario",
     nav_explore: "Explorar",
+    error_no_skill_slots: "Non hai rañuras de habilidade baleiras",
+    error_skill_max_level: "A habilidade xa está ao máximo nivel",
+    error_cannot_unequip_basic: "Non se pode desequipar o ataque básico",
+    ui_skill_slots: "Rañuras: {current}/{max}",
+    ui_equip: "Equipar",
+    ui_unequip: "Desequipar",
+    ui_no_slots: "Cheo",
+    ui_busy: "Ocupado",
 
     // Domain: Village
     ui_village_status: "Estado da Aldea",

@@ -125,6 +125,14 @@ export const ca = {
     nav_town: "Poble",
     nav_inventory: "Inventari",
     nav_explore: "Explorar",
+    error_no_skill_slots: "No hi ha ranures d'habilitat buides",
+    error_skill_max_level: "L'habilitat ja està al nivell màxim",
+    error_cannot_unequip_basic: "No es pot desequipar l'atac bàsic",
+    ui_skill_slots: "Ranures: {current}/{max}",
+    ui_equip: "Equipar",
+    ui_unequip: "Desequipar",
+    ui_no_slots: "Ple",
+    ui_busy: "Ocupat",
 
     // Domain: Village
     ui_village_status: "Estat de l'Aldea",

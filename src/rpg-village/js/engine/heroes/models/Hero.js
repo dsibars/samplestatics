@@ -9,7 +9,6 @@ export class Hero {
         this.level = data.level || 1;
         this.exp = data.exp || 0;
         this.statPoints = data.statPoints !== undefined ? data.statPoints : 5;
-        this.skillPoints = data.skillPoints || 0;
         this.avatar = data.avatar || null;
 
         // Base stats
@@ -226,6 +225,7 @@ export class Hero {
 
         // maxStamina depends on strength, defense, and level — must be calculated after those
         this.maxStamina = Math.floor((this.strength * 3) + (this.defense * 2) + (this.level * 2));
+        this.maxSkillSlots = Math.min(4 + Math.floor(this.level / 10), 8);
 
         this.evasion = equipBonus.evasion;
         this.mpCostReduction = equipBonus.mpCostReduction;
@@ -264,7 +264,6 @@ export class Hero {
     levelUp() {
         this.level++;
         this.statPoints += (this.level % 5 === 0) ? 3 : 2;
-        this.skillPoints += 1;
 
         this.baseMaxHp += 5;
         this.baseMaxMp += 2;
@@ -316,22 +315,32 @@ export class Hero {
         return changed;
     }
 
-    learnSkill(skillId, unlockCost) {
-        if (this.skillPoints < unlockCost) return Result.fail('error_no_skill_points');
+    getUsedSkillSlots() {
+        return Object.keys(this.skills).filter(s => s !== 'basic_attack').length;
+    }
+
+    learnSkill(skillId) {
         if (this.skills[skillId] !== undefined) return Result.fail('error_skill_already_unlocked');
+        if (this.getUsedSkillSlots() >= this.maxSkillSlots) return Result.fail('error_no_skill_slots');
 
         this.skills[skillId] = 0;
-        this.skillPoints -= unlockCost;
         return Result.ok(this.skills[skillId]);
     }
 
-    upgradeSkill(skillId, upgradeCost) {
+    upgradeSkill(skillId) {
         if (this.skills[skillId] === undefined) return Result.fail('error_skill_locked');
-        if (this.skillPoints < upgradeCost) return Result.fail('error_no_skill_points');
+        if (this.skills[skillId] >= 5) return Result.fail('error_skill_max_level');
 
         this.skills[skillId]++;
-        this.skillPoints -= upgradeCost;
         return Result.ok(this.skills[skillId]);
+    }
+
+    unequipSkill(skillId) {
+        if (this.skills[skillId] === undefined) return Result.fail('error_skill_locked');
+        if (skillId === 'basic_attack') return Result.fail('error_cannot_unequip_basic');
+
+        delete this.skills[skillId];
+        return Result.ok(true);
     }
 
     toJSON() {
@@ -343,7 +352,7 @@ export class Hero {
             exp: this.exp,
             expToNextLevel: this.getExpToNextLevel(),
             statPoints: this.statPoints,
-            skillPoints: this.skillPoints,
+            maxSkillSlots: this.maxSkillSlots,
             baseMaxHp: this.baseMaxHp,
             baseMaxMp: this.baseMaxMp,
             baseStrength: this.baseStrength,

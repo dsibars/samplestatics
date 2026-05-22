@@ -125,6 +125,14 @@ export const eu = {
     nav_town: "Herria",
     nav_inventory: "Inbentarioa",
     nav_explore: "Arakatu",
+    error_no_skill_slots: "Ez dago trebetasun zirrikiturik hutsik",
+    error_skill_max_level: "Trebetasuna dagoeneko maila maximoa da",
+    error_cannot_unequip_basic: "Ezin da oinarrizko erasoa kendu",
+    ui_skill_slots: "Zirrikituak: {current}/{max}",
+    ui_equip: "Ekipatu",
+    ui_unequip: "Kendu",
+    ui_no_slots: "Beteta",
+    ui_busy: "Lanpetuta",
 
     // Domain: Village
     ui_village_status: "Herriaren Egoera",

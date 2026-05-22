@@ -180,38 +180,85 @@ test('HeroService: auto-unequip when equipping to occupied slot', () => {
 test('HeroService: learn and upgrade skill', () => {
     const inventory = new InventoryService();
     const service = new HeroService(inventory);
-    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5, skillPoints: 5 });
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
     const heroId = added.data.id;
 
-    const learnResult = service.learnHeroSkill(heroId, 'double_attack', 2);
+    const learnResult = service.learnHeroSkill(heroId, 'double_attack');
     assert.strictEqual(learnResult.success, true);
     assert.strictEqual(service.get(heroId).skills.double_attack, 0);
 
-    const upgradeResult = service.upgradeHeroSkill(heroId, 'double_attack', 1);
+    const upgradeResult = service.upgradeHeroSkill(heroId, 'double_attack');
     assert.strictEqual(upgradeResult.success, true);
     assert.strictEqual(service.get(heroId).skills.double_attack, 1);
 });
 
-test('HeroService: learn skill fails without points', () => {
+test('HeroService: learn skill fails without slots', () => {
     const inventory = new InventoryService();
     const service = new HeroService(inventory);
-    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5, skillPoints: 0 });
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+    const hero = service.get(added.data.id);
+    // Fill all 4 slots (basic_attack is free)
+    hero.skills.double_attack = 0;
+    hero.skills.whirlwind = 0;
+    hero.skills.small_fire_ball = 0;
+    hero.skills.small_heal = 0;
 
-    const result = service.learnHeroSkill(added.data.id, 'double_attack', 2);
+    const result = service.learnHeroSkill(added.data.id, 'triple_attack');
     assert.strictEqual(result.success, false);
-    assert.strictEqual(result.error, 'error_no_skill_points');
+    assert.strictEqual(result.error, 'error_no_skill_slots');
 });
 
 test('HeroService: learn skill fails if already learned', () => {
     const inventory = new InventoryService();
     const service = new HeroService(inventory);
-    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5, skillPoints: 5 });
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
     const heroId = added.data.id;
 
-    service.learnHeroSkill(heroId, 'double_attack', 2);
-    const result = service.learnHeroSkill(heroId, 'double_attack', 2);
+    service.learnHeroSkill(heroId, 'double_attack');
+    const result = service.learnHeroSkill(heroId, 'double_attack');
     assert.strictEqual(result.success, false);
     assert.strictEqual(result.error, 'error_skill_already_unlocked');
+});
+
+test('HeroService: skill slots increase with level', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+    const hero = service.get(added.data.id);
+
+    assert.strictEqual(hero.maxSkillSlots, 4);
+
+    hero.level = 10;
+    hero.recalculateStats();
+    assert.strictEqual(hero.maxSkillSlots, 5);
+
+    hero.level = 40;
+    hero.recalculateStats();
+    assert.strictEqual(hero.maxSkillSlots, 8);
+});
+
+test('HeroService: unequip skill frees slot', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+    const heroId = added.data.id;
+
+    service.learnHeroSkill(heroId, 'double_attack');
+    assert.strictEqual(service.get(heroId).skills.double_attack, 0);
+
+    const unequipResult = service.unequipHeroSkill(heroId, 'double_attack');
+    assert.strictEqual(unequipResult.success, true);
+    assert.strictEqual(service.get(heroId).skills.double_attack, undefined);
+});
+
+test('HeroService: cannot unequip basic attack', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+
+    const result = service.unequipHeroSkill(added.data.id, 'basic_attack');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_cannot_unequip_basic');
 });
 
 test('HeroService: tick meal buffs', () => {
