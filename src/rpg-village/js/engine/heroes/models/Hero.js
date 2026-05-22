@@ -27,6 +27,9 @@ export class Hero {
         this.skills = data.skills || { basic_attack: 0 };
         this.techniqueUses = data.techniqueUses || {};
         this.techniqueTiers = data.techniqueTiers || {};
+        this.magicXp = data.magicXp || 0;
+        this.glyphRepertoire = data.glyphRepertoire || ['core_fire', 'power_plus'];
+        this.spellCodex = data.spellCodex || [];
         this.statusEffects = data.statusEffects || [];
         this.phoenixUsed = data.phoenixUsed || false;
         this.mealBuffs = data.mealBuffs || [];
@@ -407,6 +410,9 @@ export class Hero {
             skills: JSON.parse(JSON.stringify(this.skills)),
             techniqueUses: JSON.parse(JSON.stringify(this.techniqueUses)),
             techniqueTiers: JSON.parse(JSON.stringify(this.techniqueTiers)),
+            magicXp: this.magicXp,
+            glyphRepertoire: JSON.parse(JSON.stringify(this.glyphRepertoire)),
+            spellCodex: JSON.parse(JSON.stringify(this.spellCodex)),
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
             phoenixUsed: this.phoenixUsed,
             equipment: JSON.parse(JSON.stringify(this.equipment)),

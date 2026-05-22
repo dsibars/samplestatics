@@ -143,6 +143,18 @@ export const ca = {
     ui_no_slots: "Ple",
     ui_busy: "Ocupat",
     ui_mastery: "Domini",
+    glyph_core_fire: "Nucli de Foc",
+    glyph_core_water: "Nucli d'Aigua",
+    glyph_core_wind: "Nucli de Vent",
+    glyph_core_storm: "Nucli de Tempesta",
+    glyph_power_plus: "Potenciar +",
+    glyph_power_plus2: "Potenciar ++",
+    glyph_power_plus3: "Potenciar +++",
+    glyph_effect_multi: "Multi-Objectiu",
+    glyph_effect_repeat: "Repetir",
+    glyph_efficiency_stream: "Optimitzar",
+    magic_circle_title: "Cercle Màgic",
+    error_no_core_glyph: "L'encanteri necessita un Glif Nucli",
     technique_evolved: "Tècnica evolucionada!",
 
     // Domain: Village

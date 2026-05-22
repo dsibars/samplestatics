@@ -531,3 +531,30 @@ export function getRefineCost(item) {
 
     return cost;
 }
+
+
+// --- Magic Circle System ---
+
+export const GLYPH_DATA = {
+    // Core Glyphs
+    core_fire: { id: 'core_fire', type: 'core', nameKey: 'glyph_core_fire', element: 'fire', baseDamage: 12, baseCost: 5, tier: 1 },
+    core_water: { id: 'core_water', type: 'core', nameKey: 'glyph_core_water', element: 'water', baseDamage: 10, baseCost: 5, tier: 1 },
+    core_wind: { id: 'core_wind', type: 'core', nameKey: 'glyph_core_wind', element: 'wind', baseDamage: 11, baseCost: 5, tier: 1 },
+    core_storm: { id: 'core_storm', type: 'core', nameKey: 'glyph_core_storm', element: 'storm', baseDamage: 13, baseCost: 6, tier: 1 },
+
+    // Power Glyphs
+    power_plus: { id: 'power_plus', type: 'power', nameKey: 'glyph_power_plus', damageMult: 1.20, costMult: 1.15, tier: 1 },
+    power_plus2: { id: 'power_plus2', type: 'power', nameKey: 'glyph_power_plus2', damageMult: 1.50, costMult: 1.30, tier: 2 },
+    power_plus3: { id: 'power_plus3', type: 'power', nameKey: 'glyph_power_plus3', damageMult: 2.00, costMult: 1.60, tier: 3 },
+
+    // Effect Glyphs
+    effect_multi: { id: 'effect_multi', type: 'effect', nameKey: 'glyph_effect_multi', targetType: 'all_enemies', costMult: 2.50, tier: 2 },
+    effect_repeat: { id: 'effect_repeat', type: 'effect', nameKey: 'glyph_effect_repeat', waves: 2, costMult: 1.80, tier: 2 },
+
+    // Efficiency Glyphs
+    efficiency_stream: { id: 'efficiency_stream', type: 'efficiency', nameKey: 'glyph_efficiency_stream', costMult: 0.80, tier: 1 },
+};
+
+export const MAGIC_CIRCLE_SLOTS = 4; // 1 Core + 3 Ring
+
+export const MAGIC_TIER_THRESHOLDS = [0, 5, 15, 30, 50]; // XP thresholds for magic tiers 1-4

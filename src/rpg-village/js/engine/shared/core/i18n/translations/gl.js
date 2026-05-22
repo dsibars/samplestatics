@@ -143,6 +143,18 @@ export const gl = {
     ui_no_slots: "Cheo",
     ui_busy: "Ocupado",
     ui_mastery: "Maestría",
+    glyph_core_fire: "Núcleo de Lume",
+    glyph_core_water: "Núcleo de Auga",
+    glyph_core_wind: "Núcleo de Vento",
+    glyph_core_storm: "Núcleo de Tormenta",
+    glyph_power_plus: "Potenciar +",
+    glyph_power_plus2: "Potenciar ++",
+    glyph_power_plus3: "Potenciar +++",
+    glyph_effect_multi: "Multi-Obxectivo",
+    glyph_effect_repeat: "Repetir",
+    glyph_efficiency_stream: "Optimizar",
+    magic_circle_title: "Círculo Máxico",
+    error_no_core_glyph: "O feitizo necesita un Glifo Núcleo",
     technique_evolved: "¡Técnica evolucionada!",
 
     // Domain: Village

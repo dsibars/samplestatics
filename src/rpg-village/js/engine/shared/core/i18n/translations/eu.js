@@ -143,6 +143,18 @@ export const eu = {
     ui_no_slots: "Beteta",
     ui_busy: "Lanpetuta",
     ui_mastery: "Masterra",
+    glyph_core_fire: "Su Nukleoa",
+    glyph_core_water: "Ur Nukleoa",
+    glyph_core_wind: "Haize Nukleoa",
+    glyph_core_storm: "Ekaitz Nukleoa",
+    glyph_power_plus: "Indartu +",
+    glyph_power_plus2: "Indartu ++",
+    glyph_power_plus3: "Indartu +++",
+    glyph_effect_multi: "Helburu Anitz",
+    glyph_effect_repeat: "Errepikatu",
+    glyph_efficiency_stream: "Hobetu",
+    magic_circle_title: "Zirkulu Magikoa",
+    error_no_core_glyph: "Sorginkariak Glifo Nukleoa behar du",
     technique_evolved: "Teknika eboluzionatu da!",
 
     // Domain: Village
