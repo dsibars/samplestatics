@@ -45,6 +45,8 @@ export class Persistence {
                 localStorage.removeItem(key);
             }
         });
+        // Cleanup legacy raw keys that bypassed the prefix
+        localStorage.removeItem('academy_designs');
     }
 }
 

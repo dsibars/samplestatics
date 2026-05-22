@@ -2268,6 +2268,7 @@ class Persistence {
         localStorage.removeItem(key);
       }
     });
+    localStorage.removeItem("academy_designs");
   }
 }
 const persistence = new Persistence();
@@ -4583,18 +4584,14 @@ class CalendarService {
 class AcademyService {
   constructor(heroService) {
     this.heroService = heroService;
+    this.STORAGE_KEY = "academy_designs";
     this.designLibrary = this._loadDesigns();
   }
   _loadDesigns() {
-    try {
-      const raw = localStorage.getItem("academy_designs");
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return persistence.load(this.STORAGE_KEY, []);
   }
   _saveDesigns() {
-    localStorage.setItem("academy_designs", JSON.stringify(this.designLibrary));
+    persistence.save(this.STORAGE_KEY, this.designLibrary);
   }
   /**
    * Teach a glyph from teacher to student.

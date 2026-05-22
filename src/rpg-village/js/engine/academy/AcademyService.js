@@ -1,5 +1,6 @@
 import { Result } from '../shared/core/Result.js';
 import { GLYPH_DATA } from '../shared/data/GameConstants.js';
+import { persistence } from '../shared/core/Persistence.js';
 
 /**
  * AcademyService manages glyph teaching and the Design Library.
@@ -7,20 +8,16 @@ import { GLYPH_DATA } from '../shared/data/GameConstants.js';
 export class AcademyService {
     constructor(heroService) {
         this.heroService = heroService;
+        this.STORAGE_KEY = 'academy_designs';
         this.designLibrary = this._loadDesigns();
     }
 
     _loadDesigns() {
-        try {
-            const raw = localStorage.getItem('academy_designs');
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
-        }
+        return persistence.load(this.STORAGE_KEY, []);
     }
 
     _saveDesigns() {
-        localStorage.setItem('academy_designs', JSON.stringify(this.designLibrary));
+        persistence.save(this.STORAGE_KEY, this.designLibrary);
     }
 
     /**
