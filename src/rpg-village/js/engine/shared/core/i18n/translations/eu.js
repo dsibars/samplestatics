@@ -460,6 +460,10 @@ export const eu = {
     ui_tomorrow: "Bihar",
     ui_report_raid_victory: "🛡️ Erasoa uxitu da! Defentsa Indarra: {defense} vs Eraso Indarra: {raid}. Irabazitako {gold}g.",
     ui_report_raid_defeat: "⚠️ Erasoak zeharkatu du! Defentsa Indarra: {defense} vs Eraso Indarra: {raid}. Galdu {wood} egur, {stone} harri.{damaged}",
+    village_tavern: "Taberna",
+    ui_report_tavern_recruit: "Heroi berria iritsi da tabernara: {name} {origin}!",
+    building_tavern: "Taberna",
+    new_hero_arrived: "Heroi berria iritsi da",
     ui_report_raid_damaged: " {building} eraikina kaltetu da!",
 
     // Combat UI

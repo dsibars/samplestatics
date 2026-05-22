@@ -459,6 +459,10 @@ export const ca = {
     ui_tomorrow: "Demà",
     ui_report_raid_victory: "🛡️ ¡Incursió repel·lida! Poder de Defensa: {defense} vs Poder d'Incursió: {raid}. Guanyat {gold}g.",
     ui_report_raid_defeat: "⚠️ ¡La incursió va travessar les defenses! Poder de Defensa: {defense} vs Poder d'Incursió: {raid}. Perdut {wood} fusta, {stone} pedra.{damaged}",
+    village_tavern: "Taverna",
+    ui_report_tavern_recruit: "Un nou heroi ha arribat a la taverna: {name} el {origin}!",
+    building_tavern: "Taverna",
+    new_hero_arrived: "Nou heroi arribat",
     ui_report_raid_damaged: " ¡L'edifici {building} va ser danyat!",
 
     // Combat UI

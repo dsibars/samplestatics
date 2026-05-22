@@ -33,6 +33,18 @@ export class HeroService {
         return [...this.heroes];
     }
 
+    static HERO_NAMES = ['Elena', 'Thorne', 'Mira', 'Gareth', 'Lila', 'Doran', 'Sera', 'Kael', 'Nora', 'Finn', 'Aria', 'Bran', 'Cora', 'Dante', 'Elara'];
+    static HERO_ORIGINS = [
+        'origin_warrior', 'origin_thief', 'origin_clown', 'origin_farmer',
+        'origin_monk', 'origin_cook', 'origin_guard', 'origin_poet'
+    ];
+
+    generateRandomHero() {
+        const name = HeroService.HERO_NAMES[Math.floor(Math.random() * HeroService.HERO_NAMES.length)];
+        const origin = HeroService.HERO_ORIGINS[Math.floor(Math.random() * HeroService.HERO_ORIGINS.length)];
+        return this.add({ name, origin, level: 1, statPoints: 5 });
+    }
+
     add(heroData) {
         const newHero = new Hero(heroData);
         // For MVP, we pass empty village upgrades

@@ -143,7 +143,8 @@ export class VillageView extends BaseView {
             { id: 'blacksmith', name: this.t('village_blacksmith') || 'Blacksmith', icon: '⚒️', lvl: infra.blacksmith || 0, active: (infra.blacksmith || 0) > 0 },
             { id: 'training_grounds', name: this.t('village_training_grounds') || 'Training Grounds', icon: '💪', lvl: infra.training_grounds || 0, active: (infra.training_grounds || 0) > 0 },
             { id: 'explorer_guild', name: this.t('village_explorer_guild') || 'Explorer Guild', icon: '🧭', lvl: infra.explorer_guild || 0, active: (infra.explorer_guild || 0) > 0 },
-            { id: 'infirmary', name: this.t('village_infirmary') || 'Infirmary', icon: '🏥', lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 }
+            { id: 'infirmary', name: this.t('village_infirmary') || 'Infirmary', icon: '🏥', lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 },
+            { id: 'tavern', name: this.t('village_tavern') || 'Tavern', icon: '🍺', lvl: infra.tavern || 0, active: (infra.tavern || 0) > 0 }
         ];
 
         canvas.innerHTML = `
@@ -281,6 +282,17 @@ export class VillageView extends BaseView {
             }
         }
 
+        let tavernHtml = '';
+        if (report.tavernRecruit) {
+            const hero = report.tavernRecruit;
+            tavernHtml = `
+                <div class="report-section success">
+                    <span class="report-icon">🍺</span>
+                    <span>${this.t('ui_report_tavern_recruit').replace('{name}', hero.name).replace('{origin}', this.t(hero.origin))}</span>
+                </div>
+            `;
+        }
+
         let raidHtml = '';
         if (report.raid) {
             const raid = report.raid;
@@ -326,6 +338,7 @@ export class VillageView extends BaseView {
                     ${recoveryHtml}
                     ${trainingHtml}
                     ${expHtml}
+                    ${tavernHtml}
                     ${raidHtml}
                 </div>
             </div>

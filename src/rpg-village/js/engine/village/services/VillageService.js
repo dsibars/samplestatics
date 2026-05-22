@@ -33,7 +33,8 @@ export class VillageService {
             },
             constructionQueue: [],
             day: 1,
-            lastUpdate: Date.now()
+            lastUpdate: Date.now(),
+            daysSinceLastRecruit: 0
         };
         const loaded = persistence.load(this.STORAGE_KEY, defaultState);
         
@@ -181,7 +182,21 @@ export class VillageService {
             }
         }
 
-        // 4. Calendar Update
+        // 4. Tavern Auto-Recruit Phase
+        const tavernLevel = this.state.infrastructure.tavern || 0;
+        let tavernRecruit = null;
+        if (tavernLevel > 0) {
+            this.state.daysSinceLastRecruit++;
+            const recruitThreshold = 5 + Math.floor(Math.random() * 3); // 5-7 days
+            if (this.state.daysSinceLastRecruit >= recruitThreshold) {
+                // Trigger auto-recruit (GameEngine will handle hero generation)
+                tavernRecruit = { threshold: recruitThreshold, ready: true };
+                this.state.daysSinceLastRecruit = 0;
+            }
+        }
+        report.tavernRecruit = tavernRecruit;
+
+        // 5. Calendar Update
         this.state.day++;
         this.state.lastUpdate = Date.now();
         this.save();

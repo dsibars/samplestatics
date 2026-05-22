@@ -167,23 +167,10 @@ export class GameEngine {
             return Result.fail('error_not_enough_gold');
         }
 
-        const names = ['Elena', 'Thorne', 'Mira', 'Gareth', 'Lila', 'Doran', 'Sera', 'Kael', 'Nora', 'Finn'];
-        const origins = [
-            'origin_warrior', 'origin_thief', 'origin_clown', 'origin_farmer',
-            'origin_monk', 'origin_cook', 'origin_guard', 'origin_poet'
-        ];
-        const name = names[Math.floor(Math.random() * names.length)];
-        const origin = origins[Math.floor(Math.random() * origins.length)];
-
         this.villageService.state.gold -= cost;
         this.villageService.save();
 
-        const result = this.heroService.add({
-            name,
-            origin,
-            level: 1,
-            statPoints: 5
-        });
+        const result = this.heroService.generateRandomHero();
 
         if (result.success) {
             this.dailyObjectivesService.track('recruit_hero', 1);
@@ -534,6 +521,16 @@ export class GameEngine {
             }
         }
 
+        // --- Tavern Auto-Recruit ---
+        let tavernRecruitHero = null;
+        if (villageReport.tavernRecruit && villageReport.tavernRecruit.ready) {
+            const heroResult = this.heroService.generateRandomHero();
+            if (heroResult.success) {
+                tavernRecruitHero = heroResult.data;
+                this.dailyObjectivesService.track('recruit_hero', 1);
+            }
+        }
+
         // Tick meal buffs after any combat
         this.heroService.tickAllMealBuffs();
 
@@ -551,7 +548,8 @@ export class GameEngine {
             expedition: expeditionResult.success ? expeditionResult.data : null,
             recovery: healedLog,
             training: xpLog,
-            raid: raidResult
+            raid: raidResult,
+            tavernRecruit: tavernRecruitHero
         };
         
         this.villageService.setDailyReport(dailyReport);

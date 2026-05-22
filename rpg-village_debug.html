@@ -2011,7 +2011,7 @@ class Persistence {
   }
 }
 const persistence = new Persistence();
-class HeroService {
+const _HeroService = class _HeroService {
   constructor(inventoryService) {
     this.STORAGE_KEY = "heroes_data";
     this.inventory = inventoryService;
@@ -2036,6 +2036,11 @@ class HeroService {
       return this.heroes.filter((h) => h.status === status);
     }
     return [...this.heroes];
+  }
+  generateRandomHero() {
+    const name = _HeroService.HERO_NAMES[Math.floor(Math.random() * _HeroService.HERO_NAMES.length)];
+    const origin = _HeroService.HERO_ORIGINS[Math.floor(Math.random() * _HeroService.HERO_ORIGINS.length)];
+    return this.add({ name, origin, level: 1, statPoints: 5 });
   }
   add(heroData) {
     const newHero = new Hero(heroData);
@@ -2138,7 +2143,19 @@ class HeroService {
     this.saveAll();
     return Result.ok(hero);
   }
-}
+};
+__publicField(_HeroService, "HERO_NAMES", ["Elena", "Thorne", "Mira", "Gareth", "Lila", "Doran", "Sera", "Kael", "Nora", "Finn", "Aria", "Bran", "Cora", "Dante", "Elara"]);
+__publicField(_HeroService, "HERO_ORIGINS", [
+  "origin_warrior",
+  "origin_thief",
+  "origin_clown",
+  "origin_farmer",
+  "origin_monk",
+  "origin_cook",
+  "origin_guard",
+  "origin_poet"
+]);
+let HeroService = _HeroService;
 class CombatCalculator {
   /**
    * Extracts the effective stat from an entity
@@ -2829,7 +2846,8 @@ class VillageService {
       },
       constructionQueue: [],
       day: 1,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      daysSinceLastRecruit: 0
     };
     const loaded = persistence.load(this.STORAGE_KEY, defaultState);
     if (typeof loaded.population === "number") {
@@ -2941,6 +2959,17 @@ class VillageService {
         report.growth = 1;
       }
     }
+    const tavernLevel = this.state.infrastructure.tavern || 0;
+    let tavernRecruit = null;
+    if (tavernLevel > 0) {
+      this.state.daysSinceLastRecruit++;
+      const recruitThreshold = 5 + Math.floor(Math.random() * 3);
+      if (this.state.daysSinceLastRecruit >= recruitThreshold) {
+        tavernRecruit = { threshold: recruitThreshold, ready: true };
+        this.state.daysSinceLastRecruit = 0;
+      }
+    }
+    report.tavernRecruit = tavernRecruit;
     this.state.day++;
     this.state.lastUpdate = Date.now();
     this.save();
@@ -4568,6 +4597,10 @@ const en = {
   ui_tomorrow: "Tomorrow",
   ui_report_raid_victory: "🛡️ Raid repelled! Defense Power: {defense} vs Raid Power: {raid}. Earned {gold}g.",
   ui_report_raid_defeat: "⚠️ Raid broke through! Defense Power: {defense} vs Raid Power: {raid}. Lost {wood} wood, {stone} stone.{damaged}",
+  village_tavern: "Tavern",
+  ui_report_tavern_recruit: "A new hero arrived at the tavern: {name} the {origin}!",
+  building_tavern: "Tavern",
+  new_hero_arrived: "New hero arrived",
   ui_report_raid_damaged: " Building {building} was damaged!",
   // Combat UI
   combat_items: "Items",
@@ -5034,6 +5067,10 @@ const es = {
   ui_tomorrow: "Mañana",
   ui_report_raid_victory: "🛡️ ¡Incursión repelida! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Ganado {gold}g.",
   ui_report_raid_defeat: "⚠️ ¡La incursión atravesó las defensas! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Perdido {wood} madera, {stone} piedra.{damaged}",
+  village_tavern: "Taberna",
+  ui_report_tavern_recruit: "¡Un nuevo héroe llegó a la taberna: {name} el {origin}!",
+  building_tavern: "Taberna",
+  new_hero_arrived: "Nuevo héroe llegó",
   ui_report_raid_damaged: " ¡El edificio {building} fue dañado!",
   // Combat UI
   combat_items: "Objetos",
@@ -5515,6 +5552,10 @@ const ca = {
   ui_tomorrow: "Demà",
   ui_report_raid_victory: "🛡️ ¡Incursió repel·lida! Poder de Defensa: {defense} vs Poder d'Incursió: {raid}. Guanyat {gold}g.",
   ui_report_raid_defeat: "⚠️ ¡La incursió va travessar les defenses! Poder de Defensa: {defense} vs Poder d'Incursió: {raid}. Perdut {wood} fusta, {stone} pedra.{damaged}",
+  village_tavern: "Taverna",
+  ui_report_tavern_recruit: "Un nou heroi ha arribat a la taverna: {name} el {origin}!",
+  building_tavern: "Taverna",
+  new_hero_arrived: "Nou heroi arribat",
   ui_report_raid_damaged: " ¡L'edifici {building} va ser danyat!",
   // Combat UI
   combat_items: "Objectes",
@@ -6001,6 +6042,10 @@ const eu = {
   ui_tomorrow: "Bihar",
   ui_report_raid_victory: "🛡️ Erasoa uxitu da! Defentsa Indarra: {defense} vs Eraso Indarra: {raid}. Irabazitako {gold}g.",
   ui_report_raid_defeat: "⚠️ Erasoak zeharkatu du! Defentsa Indarra: {defense} vs Eraso Indarra: {raid}. Galdu {wood} egur, {stone} harri.{damaged}",
+  village_tavern: "Taberna",
+  ui_report_tavern_recruit: "Heroi berria iritsi da tabernara: {name} {origin}!",
+  building_tavern: "Taberna",
+  new_hero_arrived: "Heroi berria iritsi da",
   ui_report_raid_damaged: " {building} eraikina kaltetu da!",
   // Combat UI
   combat_items: "Items",
@@ -6484,6 +6529,10 @@ const gl = {
   ui_tomorrow: "Mañá",
   ui_report_raid_victory: "🛡️ ¡Incursión repelida! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Gañado {gold}g.",
   ui_report_raid_defeat: "⚠️ ¡A incursión atravesou as defensas! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Perdido {wood} madeira, {stone} pedra.{damaged}",
+  village_tavern: "Taberna",
+  ui_report_tavern_recruit: "¡Un novo heroe chegou á taberna: {name} o {origin}!",
+  building_tavern: "Taberna",
+  new_hero_arrived: "Novo heroe chegou",
   ui_report_raid_damaged: " ¡O edificio {building} foi danado!",
   // Combat UI
   combat_items: "Obxectos",
@@ -6670,27 +6719,9 @@ const _GameEngine = class _GameEngine {
     if (this.villageService.state.gold < cost) {
       return Result.fail("error_not_enough_gold");
     }
-    const names = ["Elena", "Thorne", "Mira", "Gareth", "Lila", "Doran", "Sera", "Kael", "Nora", "Finn"];
-    const origins = [
-      "origin_warrior",
-      "origin_thief",
-      "origin_clown",
-      "origin_farmer",
-      "origin_monk",
-      "origin_cook",
-      "origin_guard",
-      "origin_poet"
-    ];
-    const name = names[Math.floor(Math.random() * names.length)];
-    const origin = origins[Math.floor(Math.random() * origins.length)];
     this.villageService.state.gold -= cost;
     this.villageService.save();
-    const result = this.heroService.add({
-      name,
-      origin,
-      level: 1,
-      statPoints: 5
-    });
+    const result = this.heroService.generateRandomHero();
     if (result.success) {
       this.dailyObjectivesService.track("recruit_hero", 1);
       this.dailyObjectivesService.track("spend_gold", cost);
@@ -6955,6 +6986,14 @@ const _GameEngine = class _GameEngine {
         this.dailyObjectivesService.track("defeat_enemies", expData.combatLog.enemies.length);
       }
     }
+    let tavernRecruitHero = null;
+    if (villageReport.tavernRecruit && villageReport.tavernRecruit.ready) {
+      const heroResult = this.heroService.generateRandomHero();
+      if (heroResult.success) {
+        tavernRecruitHero = heroResult.data;
+        this.dailyObjectivesService.track("recruit_hero", 1);
+      }
+    }
     this.heroService.tickAllMealBuffs();
     this.calendarService.generateEvents(villageState.day);
     let raidResult = null;
@@ -6967,7 +7006,8 @@ const _GameEngine = class _GameEngine {
       expedition: expeditionResult.success ? expeditionResult.data : null,
       recovery: healedLog,
       training: xpLog,
-      raid: raidResult
+      raid: raidResult,
+      tavernRecruit: tavernRecruitHero
     };
     this.villageService.setDailyReport(dailyReport);
     return dailyReport;
@@ -7466,7 +7506,8 @@ class VillageView extends BaseView {
       { id: "blacksmith", name: this.t("village_blacksmith") || "Blacksmith", icon: "⚒️", lvl: infra.blacksmith || 0, active: (infra.blacksmith || 0) > 0 },
       { id: "training_grounds", name: this.t("village_training_grounds") || "Training Grounds", icon: "💪", lvl: infra.training_grounds || 0, active: (infra.training_grounds || 0) > 0 },
       { id: "explorer_guild", name: this.t("village_explorer_guild") || "Explorer Guild", icon: "🧭", lvl: infra.explorer_guild || 0, active: (infra.explorer_guild || 0) > 0 },
-      { id: "infirmary", name: this.t("village_infirmary") || "Infirmary", icon: "🏥", lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 }
+      { id: "infirmary", name: this.t("village_infirmary") || "Infirmary", icon: "🏥", lvl: infra.infirmary || 0, active: (infra.infirmary || 0) > 0 },
+      { id: "tavern", name: this.t("village_tavern") || "Tavern", icon: "🍺", lvl: infra.tavern || 0, active: (infra.tavern || 0) > 0 }
     ];
     canvas.innerHTML = `
             <div class="village-grid">
@@ -7591,6 +7632,16 @@ class VillageView extends BaseView {
                 `;
       }
     }
+    let tavernHtml = "";
+    if (report.tavernRecruit) {
+      const hero = report.tavernRecruit;
+      tavernHtml = `
+                <div class="report-section success">
+                    <span class="report-icon">🍺</span>
+                    <span>${this.t("ui_report_tavern_recruit").replace("{name}", hero.name).replace("{origin}", this.t(hero.origin))}</span>
+                </div>
+            `;
+    }
     let raidHtml = "";
     if (report.raid) {
       const raid = report.raid;
@@ -7625,6 +7676,7 @@ class VillageView extends BaseView {
                     ${recoveryHtml}
                     ${trainingHtml}
                     ${expHtml}
+                    ${tavernHtml}
                     ${raidHtml}
                 </div>
             </div>

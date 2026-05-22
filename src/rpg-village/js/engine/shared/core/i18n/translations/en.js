@@ -492,6 +492,10 @@ export const en = {
     ui_tomorrow: "Tomorrow",
     ui_report_raid_victory: "🛡️ Raid repelled! Defense Power: {defense} vs Raid Power: {raid}. Earned {gold}g.",
     ui_report_raid_defeat: "⚠️ Raid broke through! Defense Power: {defense} vs Raid Power: {raid}. Lost {wood} wood, {stone} stone.{damaged}",
+    village_tavern: "Tavern",
+    ui_report_tavern_recruit: "A new hero arrived at the tavern: {name} the {origin}!",
+    building_tavern: "Tavern",
+    new_hero_arrived: "New hero arrived",
     ui_report_raid_damaged: " Building {building} was damaged!",
 
     // Combat UI

@@ -457,6 +457,10 @@ export const gl = {
     ui_tomorrow: "Mañá",
     ui_report_raid_victory: "🛡️ ¡Incursión repelida! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Gañado {gold}g.",
     ui_report_raid_defeat: "⚠️ ¡A incursión atravesou as defensas! Poder de Defensa: {defense} vs Poder de Incursión: {raid}. Perdido {wood} madeira, {stone} pedra.{damaged}",
+    village_tavern: "Taberna",
+    ui_report_tavern_recruit: "¡Un novo heroe chegou á taberna: {name} o {origin}!",
+    building_tavern: "Taberna",
+    new_hero_arrived: "Novo heroe chegou",
     ui_report_raid_damaged: " ¡O edificio {building} foi danado!",
 
     // Combat UI

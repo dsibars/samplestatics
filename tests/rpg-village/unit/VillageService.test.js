@@ -105,3 +105,46 @@ test('VillageService: Multiple concurrent projects complete independently', () =
     assert.strictEqual(villageService.state.constructionQueue.length, 0);
     assert.strictEqual(villageService.state.population.assigned, 0);
 });
+
+
+test('VillageService: tavern auto-recruit cooldown increments each day', () => {
+    const { villageService } = createVillage();
+    villageService.state.infrastructure.tavern = 1;
+    villageService.state.daysSinceLastRecruit = 0;
+
+    const report = villageService.nextDay();
+    assert.strictEqual(villageService.state.daysSinceLastRecruit, 1);
+    assert.strictEqual(report.tavernRecruit, null);
+});
+
+test('VillageService: tavern auto-recruit triggers after threshold', () => {
+    const { villageService } = createVillage();
+    villageService.state.infrastructure.tavern = 1;
+    villageService.state.daysSinceLastRecruit = 10; // Way past threshold
+
+    const report = villageService.nextDay();
+    assert.ok(report.tavernRecruit);
+    assert.strictEqual(report.tavernRecruit.ready, true);
+    assert.strictEqual(villageService.state.daysSinceLastRecruit, 0);
+});
+
+test('VillageService: no tavern means no auto-recruit', () => {
+    const { villageService } = createVillage();
+    villageService.state.infrastructure.tavern = 0;
+    villageService.state.daysSinceLastRecruit = 10;
+
+    const report = villageService.nextDay();
+    assert.strictEqual(report.tavernRecruit, null);
+    // Counter should not increment when tavern is 0
+    assert.strictEqual(villageService.state.daysSinceLastRecruit, 10);
+});
+
+test('VillageService: daysSinceLastRecruit migration from old save', () => {
+    const { villageService } = createVillage();
+    // Simulate old save without daysSinceLastRecruit
+    delete villageService.state.daysSinceLastRecruit;
+    
+    // Reload triggers migration
+    const fresh = new VillageService(villageService.inventoryService);
+    assert.strictEqual(fresh.state.daysSinceLastRecruit, 0);
+});
