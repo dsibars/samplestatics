@@ -176,6 +176,34 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
+                view.on('addGambit', (data) => {
+                    const result = this.engine.addHeroGambit(data.heroId, data.gambit);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('removeGambit', (data) => {
+                    const result = this.engine.removeHeroGambit(data.heroId, data.gambitId);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('toggleGambit', (data) => {
+                    const result = this.engine.toggleHeroGambit(data.heroId, data.gambitId);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('moveGambit', (data) => {
+                    const result = this.engine.moveHeroGambit(data.heroId, data.gambitId, data.direction);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
             }
 
             if (domain === 'shop') {

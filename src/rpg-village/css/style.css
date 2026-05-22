@@ -1626,3 +1626,87 @@ body {
     border-color: rgba(156, 39, 176, 0.5) !important;
     background: linear-gradient(135deg, rgba(156, 39, 176, 0.1), rgba(156, 39, 176, 0.02)) !important;
 }
+
+
+/* Gambit Styles */
+
+.gambit-dialogue-box {
+    border-color: rgba(33, 150, 243, 0.3);
+    background: linear-gradient(180deg, rgba(15, 20, 30, 0.98), rgba(18, 25, 35, 0.98));
+}
+
+.gambit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.gambit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    gap: 10px;
+}
+
+.gambit-row.gambit-disabled {
+    opacity: 0.5;
+}
+
+.gambit-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.gambit-priority {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    min-width: 20px;
+}
+
+.gambit-rule {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gambit-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.gambit-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gambit-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 140px;
+}
+
+.gambit-select option {
+    background: #1a1a2e;
+    color: var(--text-primary);
+}

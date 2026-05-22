@@ -98,6 +98,12 @@ export class HeroesView extends BaseView {
                     this._openBodyInscriptionModal();
                     return;
                 }
+
+                const gambitBtn = e.target.closest('.btn-gambit');
+                if (gambitBtn) {
+                    this._openGambitModal();
+                    return;
+                }
             });
         }
     }
@@ -365,6 +371,9 @@ export class HeroesView extends BaseView {
                             ✦ ${this.t('body_inscription_title') || 'Body Inscription'}
                         </button>
                         ` : ''}
+                        <button class="btn btn-secondary btn-sm btn-gambit" data-action="open-gambit" style="margin-top: 8px; margin-left: 6px;">
+                            🎲 ${this.t('gambit_title') || 'Gambits'}
+                        </button>
                     </div>
                 </div>
                 <div class="stats-grid">
@@ -839,6 +848,135 @@ export class HeroesView extends BaseView {
                 close();
             });
         });
+    }
+
+    _openGambitModal() {
+        const hero = this.lastRawState?.heroes?.find(h => h.id === this.selectedHeroId);
+        if (!hero) return;
+
+        const gambits = hero.gambits || [];
+        const allSkills = Object.values(SKILLS_DATA);
+        const learnedSkills = allSkills.filter(s => hero.skills[s.id] !== undefined);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay trainer-modal-overlay';
+        overlay.innerHTML = `
+            <div class="trainer-dialogue-box gambit-dialogue-box" style="max-width: 560px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">🎲</span>
+                    <h3>${this.t('gambit_title') || 'Gambits'}</h3>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    ${this.t('gambit_desc') || 'Set conditional battle behaviors. Gambits are evaluated top-to-bottom; the first matching rule wins.'}
+                </p>
+                <div style="margin-bottom: 12px;">
+                    <strong>${this.t('ui_gambit_count') || 'Gambits'}:</strong> ${gambits.length} / 12
+                </div>
+                <div class="gambit-list">
+                    ${gambits.map((g, idx) => `
+                        <div class="gambit-row ${g.enabled === false ? 'gambit-disabled' : ''}">
+                            <div class="gambit-info">
+                                <span class="gambit-priority">${idx + 1}.</span>
+                                <span class="gambit-rule">${this._formatGambitRule(g)}</span>
+                            </div>
+                            <div class="gambit-actions">
+                                <button class="btn btn-sm btn-move-gambit" data-id="${g.id}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                                <button class="btn btn-sm btn-move-gambit" data-id="${g.id}" data-dir="1" ${idx === gambits.length - 1 ? 'disabled' : ''}>▼</button>
+                                <button class="btn btn-sm btn-toggle-gambit ${g.enabled === false ? 'btn-primary' : 'btn-secondary'}" data-id="${g.id}">${g.enabled === false ? (this.t('ui_enable') || 'Enable') : (this.t('ui_disable') || 'Disable')}</button>
+                                <button class="btn btn-danger btn-sm btn-remove-gambit" data-id="${g.id}">${this.t('ui_remove') || 'Remove'}</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${gambits.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.85rem;">${this.t('ui_no_gambits') || 'No gambits set.'}</p>` : ''}
+                </div>
+                <div class="gambit-add-section" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--glass-border);">
+                    <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">${this.t('ui_add_gambit') || 'Add Gambit'}</h4>
+                    <div class="gambit-form">
+                        <select id="gambit-condition" class="gambit-select">
+                            <option value="self_hp_below">${this.t('gambit_self_hp_below') || 'Self HP below'} 50%</option>
+                            <option value="ally_hp_below">${this.t('gambit_ally_hp_below') || 'Ally HP below'} 50%</option>
+                            <option value="self_mp_below">${this.t('gambit_self_mp_below') || 'Self MP below'} 30%</option>
+                            <option value="self_stamina_below">${this.t('gambit_self_stamina_below') || 'Self STA below'} 30%</option>
+                            <option value="always">${this.t('gambit_always') || 'Always'}</option>
+                        </select>
+                        <select id="gambit-skill" class="gambit-select">
+                            ${learnedSkills.map(s => `<option value="${s.id}">${this.t(s.id)}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-primary btn-sm" id="btn-add-gambit">${this.t('ui_add') || 'Add'}</button>
+                    </div>
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-gambit-close">${this.t('ui_btn_close') || 'Close'}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#btn-gambit-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+        });
+
+        overlay.querySelectorAll('.btn-remove-gambit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.emit('removeGambit', { heroId: this.selectedHeroId, gambitId: e.target.dataset.id });
+                close();
+            });
+        });
+
+        overlay.querySelectorAll('.btn-toggle-gambit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.emit('toggleGambit', { heroId: this.selectedHeroId, gambitId: e.target.dataset.id });
+                close();
+            });
+        });
+
+        overlay.querySelectorAll('.btn-move-gambit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.emit('moveGambit', { heroId: this.selectedHeroId, gambitId: e.target.dataset.id, direction: parseInt(e.target.dataset.dir) });
+                close();
+            });
+        });
+
+        const addBtn = overlay.querySelector('#btn-add-gambit');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                const condition = overlay.querySelector('#gambit-condition').value;
+                const skillId = overlay.querySelector('#gambit-skill').value;
+                if (!skillId) return;
+                const gambit = {
+                    id: 'gambit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    condition,
+                    threshold: condition === 'self_hp_below' || condition === 'ally_hp_below' ? 0.5 :
+                               condition === 'self_mp_below' || condition === 'self_stamina_below' ? 0.3 : undefined,
+                    action: 'use_skill',
+                    skillId,
+                    enabled: true
+                };
+                this.emit('addGambit', { heroId: this.selectedHeroId, gambit });
+                close();
+            });
+        }
+    }
+
+    _formatGambitRule(gambit) {
+        const conditionLabels = {
+            self_hp_below: 'HP < 50%',
+            ally_hp_below: 'Ally HP < 50%',
+            self_mp_below: 'MP < 30%',
+            self_stamina_below: 'STA < 30%',
+            always: 'Always'
+        };
+        const cond = conditionLabels[gambit.condition] || gambit.condition;
+        const skillName = this.t(gambit.skillId) || gambit.skillId;
+        return `${cond} → ${skillName}`;
     }
 }
 

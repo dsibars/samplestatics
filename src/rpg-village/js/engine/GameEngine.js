@@ -231,6 +231,38 @@ export class GameEngine {
         return this.heroService.eraseHeroInscription(heroId, skillId);
     }
 
+    addHeroGambit(heroId, gambit) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.addHeroGambit(heroId, gambit);
+    }
+
+    removeHeroGambit(heroId, gambitId) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.removeHeroGambit(heroId, gambitId);
+    }
+
+    toggleHeroGambit(heroId, gambitId) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.toggleHeroGambit(heroId, gambitId);
+    }
+
+    moveHeroGambit(heroId, gambitId, direction) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.moveHeroGambit(heroId, gambitId, direction);
+    }
+
     equipHeroItem(heroId, slot, equipmentId) {
         const activityInfo = this.expeditionService.getHeroActivity(heroId);
         if (activityInfo && activityInfo.type === 'expedition') {

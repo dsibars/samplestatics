@@ -1693,6 +1693,7 @@ class Hero {
     };
     this.titles = data.titles || [];
     this.bodyInscription = data.bodyInscription || null;
+    this.gambits = data.gambits || [];
     this.statusEffects = data.statusEffects || [];
     this.phoenixUsed = data.phoenixUsed || false;
     this.mealBuffs = data.mealBuffs || [];
@@ -1990,6 +1991,35 @@ class Hero {
     this.bodyInscription = this.bodyInscription.filter((id) => id !== skillId);
     return Result.ok(true);
   }
+  addGambit(gambit) {
+    if (!gambit || !gambit.id) return Result.fail("error_invalid_gambit");
+    this.gambits = this.gambits || [];
+    if (this.gambits.length >= 12) return Result.fail("error_gambit_limit_reached");
+    if (this.gambits.find((g) => g.id === gambit.id)) return Result.fail("error_gambit_duplicate_id");
+    this.gambits.push({ ...gambit, enabled: gambit.enabled !== false });
+    return Result.ok(true);
+  }
+  removeGambit(gambitId) {
+    this.gambits = (this.gambits || []).filter((g) => g.id !== gambitId);
+    return Result.ok(true);
+  }
+  toggleGambit(gambitId) {
+    const gambit = (this.gambits || []).find((g) => g.id === gambitId);
+    if (!gambit) return Result.fail("error_gambit_not_found");
+    gambit.enabled = !gambit.enabled;
+    return Result.ok(gambit.enabled);
+  }
+  moveGambit(gambitId, direction) {
+    const gambits = this.gambits || [];
+    const idx = gambits.findIndex((g) => g.id === gambitId);
+    if (idx === -1) return Result.fail("error_gambit_not_found");
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= gambits.length) return Result.fail("error_gambit_cannot_move");
+    const temp = gambits[idx];
+    gambits[idx] = gambits[newIdx];
+    gambits[newIdx] = temp;
+    return Result.ok(true);
+  }
   /**
    * Records a technique use and checks for infinite tier evolution.
    * @returns {Object|null} evolution info if tier increased, null otherwise
@@ -2046,6 +2076,7 @@ class Hero {
       lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
       titles: JSON.parse(JSON.stringify(this.titles)),
       bodyInscription: this.bodyInscription ? JSON.parse(JSON.stringify(this.bodyInscription)) : null,
+      gambits: JSON.parse(JSON.stringify(this.gambits)),
       statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
       phoenixUsed: this.phoenixUsed,
       equipment: JSON.parse(JSON.stringify(this.equipment)),
@@ -2206,6 +2237,34 @@ const _HeroService = class _HeroService {
     if (result.success) this.saveAll();
     return result;
   }
+  addHeroGambit(heroId, gambit) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.addGambit(gambit);
+    if (result.success) this.saveAll();
+    return result;
+  }
+  removeHeroGambit(heroId, gambitId) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.removeGambit(gambitId);
+    if (result.success) this.saveAll();
+    return result;
+  }
+  toggleHeroGambit(heroId, gambitId) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.toggleGambit(gambitId);
+    if (result.success) this.saveAll();
+    return result;
+  }
+  moveHeroGambit(heroId, gambitId, direction) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.moveGambit(gambitId, direction);
+    if (result.success) this.saveAll();
+    return result;
+  }
   // --- Equipment ---
   equipItem(heroId, slot, equipmentId) {
     const hero = this.get(heroId);
@@ -2359,6 +2418,96 @@ class CombatCalculator {
     }
   }
 }
+class GambitService {
+  /**
+   * Evaluate a hero's gambits against combat context and return the first matching action.
+   * @param {Object} hero - the actor
+   * @param {Array} allies - all allies
+   * @param {Array} enemies - all enemies
+   * @returns {Object|null} { skillId, targetIndex } or null if no gambit matches
+   */
+  static evaluate(hero, allies, enemies) {
+    const gambits = hero.gambits || [];
+    const activeGambits = gambits.filter((g) => g.enabled !== false);
+    for (const gambit of activeGambits) {
+      const match = this._checkCondition(gambit.condition, gambit.threshold, hero, allies, enemies);
+      if (!match) continue;
+      const action = this._resolveAction(gambit, hero, allies, enemies);
+      if (action) return action;
+    }
+    return null;
+  }
+  static _checkCondition(condition, threshold, hero, allies, enemies) {
+    switch (condition) {
+      case "self_hp_below":
+        return hero.hp / hero.maxHp <= (threshold ?? 0.5);
+      case "ally_hp_below": {
+        const injured = allies.filter((a) => a.id !== hero.id && a.hp > 0 && a.hp / a.maxHp <= (threshold ?? 0.5));
+        return injured.length > 0;
+      }
+      case "self_mp_below":
+        return hero.mp / hero.maxMp <= (threshold ?? 0.3);
+      case "self_stamina_below":
+        return (hero.stamina || 0) / (hero.maxStamina || 1) <= (threshold ?? 0.3);
+      case "always":
+        return true;
+      default:
+        return false;
+    }
+  }
+  static _resolveAction(gambit, hero, allies, enemies) {
+    if (gambit.action === "use_skill" && gambit.skillId) {
+      const skillData = SKILLS_DATA[gambit.skillId];
+      if (!skillData) return null;
+      if (skillData.category === "physical") {
+        if ((hero.stamina || 0) < (skillData.staminaCost || 0)) return null;
+      } else {
+        if (hero.mp < skillData.mpCost) return null;
+      }
+      const targetIndex = this._pickTarget(skillData, hero, allies, enemies);
+      return { skillId: gambit.skillId, targetIndex };
+    }
+    return null;
+  }
+  static _pickTarget(skillData, hero, allies, enemies) {
+    if (skillData.targetType === "all_enemies" || skillData.targetType === "all_allies") {
+      return null;
+    }
+    if (skillData.targetType === "single_ally" || skillData.category === "support" && skillData.power > 0) {
+      const validAllies = allies.filter((a) => a.hp > 0).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+      if (validAllies.length === 0) return null;
+      const bestTarget = validAllies[0];
+      return allies.indexOf(bestTarget);
+    }
+    if (skillData.targetType === "self") {
+      return allies.findIndex((a) => a.id === hero.id);
+    }
+    const aliveEnemies = enemies.map((e, idx) => ({ e, idx })).filter((item) => item.e.hp > 0);
+    if (aliveEnemies.length === 0) return null;
+    aliveEnemies.sort((a, b) => a.e.hp - b.e.hp);
+    return aliveEnemies[0].idx;
+  }
+  static validateGambit(gambit) {
+    if (!gambit) return { valid: false, error: "error_invalid_gambit" };
+    if (!this.CONDITION_TYPES.includes(gambit.condition)) {
+      return { valid: false, error: "error_invalid_gambit_condition" };
+    }
+    if (gambit.action === "use_skill" && !gambit.skillId) {
+      return { valid: false, error: "error_invalid_gambit_action" };
+    }
+    if (gambit.skillId && !SKILLS_DATA[gambit.skillId]) {
+      return { valid: false, error: "error_invalid_skill" };
+    }
+    return { valid: true };
+  }
+}
+__publicField(GambitService, "CONDITION_TYPES", [
+  "self_hp_below",
+  "ally_hp_below",
+  "self_mp_below",
+  "self_stamina_below",
+  "always"
+]);
 class CombatAI {
   /**
    * Decides the best action for the actor based on the combat context.
@@ -2367,6 +2516,10 @@ class CombatAI {
    */
   static decideAction(context) {
     const { actor, allies, enemies, type } = context;
+    if (actor.gambits && actor.gambits.length > 0) {
+      const gambitAction = GambitService.evaluate(actor, allies, enemies);
+      if (gambitAction) return gambitAction;
+    }
     const availableSkills = Object.keys(actor.skills || {}).filter((sId) => {
       const data = SKILLS_DATA[sId];
       if (!data) return false;
@@ -4580,6 +4733,27 @@ const en = {
   error_already_inscribed: "Skill is already inscribed.",
   error_body_circle_full: "Body circle is full (max 7 skills).",
   error_not_inscribed: "Skill is not inscribed.",
+  gambit_title: "Gambits",
+  gambit_desc: "Set conditional battle behaviors. Gambits are evaluated top-to-bottom; the first matching rule wins.",
+  ui_gambit_count: "Gambits",
+  ui_add_gambit: "Add Gambit",
+  ui_no_gambits: "No gambits set.",
+  ui_enable: "Enable",
+  ui_disable: "Disable",
+  ui_remove: "Remove",
+  ui_add: "Add",
+  gambit_self_hp_below: "Self HP below",
+  gambit_ally_hp_below: "Ally HP below",
+  gambit_self_mp_below: "Self MP below",
+  gambit_self_stamina_below: "Self STA below",
+  gambit_always: "Always",
+  error_invalid_gambit: "Invalid gambit.",
+  error_invalid_gambit_condition: "Invalid gambit condition.",
+  error_invalid_gambit_action: "Invalid gambit action.",
+  error_gambit_limit_reached: "Gambit limit reached (max 12).",
+  error_gambit_duplicate_id: "Gambit already exists.",
+  error_gambit_not_found: "Gambit not found.",
+  error_gambit_cannot_move: "Cannot move gambit further.",
   witch_novice_1: "The threads of fate are... tangled around you.",
   witch_novice_2: "Come back when you've seen the unseen.",
   witch_awakened_1: "Ah, {name}... the spark is in you.",
@@ -5142,6 +5316,27 @@ const es = {
   error_already_inscribed: "La habilidad ya está inscrita.",
   error_body_circle_full: "El círculo corporal está lleno (máx 7 habilidades).",
   error_not_inscribed: "La habilidad no está inscrita.",
+  gambit_title: "Estrategias",
+  gambit_desc: "Configura comportamientos de batalla condicionales. Las estrategias se evalúan de arriba a abajo; la primera regla que coincite gana.",
+  ui_gambit_count: "Estrategias",
+  ui_add_gambit: "Añadir Estrategia",
+  ui_no_gambits: "No hay estrategias configuradas.",
+  ui_enable: "Activar",
+  ui_disable: "Desactivar",
+  ui_remove: "Eliminar",
+  ui_add: "Añadir",
+  gambit_self_hp_below: "HP propio inferior al",
+  gambit_ally_hp_below: "HP aliado inferior al",
+  gambit_self_mp_below: "MP propio inferior al",
+  gambit_self_stamina_below: "STA propia inferior a",
+  gambit_always: "Siempre",
+  error_invalid_gambit: "Estrategia inválida.",
+  error_invalid_gambit_condition: "Condición de estrategia inválida.",
+  error_invalid_gambit_action: "Acción de estrategia inválida.",
+  error_gambit_limit_reached: "Límite de estrategias alcanzado (máx 12).",
+  error_gambit_duplicate_id: "La estrategia ya existe.",
+  error_gambit_not_found: "Estrategia no encontrada.",
+  error_gambit_cannot_move: "No se puede mover más la estrategia.",
   witch_novice_1: "Los hilos del destino están... enredados a tu alrededor.",
   witch_novice_2: "Vuelve cuando hayas visto lo invisible.",
   witch_awakened_1: "Ah, {name}... la chispa está en ti.",
@@ -6043,6 +6238,27 @@ const ca = {
   error_already_inscribed: "L'habilitat ja està inscrita.",
   error_body_circle_full: "El cercle corporal està ple (màx 7 habilitats).",
   error_not_inscribed: "L'habilitat no està inscrita.",
+  gambit_title: "Estratègies",
+  gambit_desc: "Configura comportaments de batalla condicionals. Les estratègies s'avaluen de dalt a baix; la primera regla que coincideix guanya.",
+  ui_gambit_count: "Estratègies",
+  ui_add_gambit: "Afegir Estratègia",
+  ui_no_gambits: "No hi ha estratègies configurades.",
+  ui_enable: "Activar",
+  ui_disable: "Desactivar",
+  ui_remove: "Eliminar",
+  ui_add: "Afegir",
+  gambit_self_hp_below: "HP propi inferior al",
+  gambit_ally_hp_below: "HP aliat inferior al",
+  gambit_self_mp_below: "MP propi inferior al",
+  gambit_self_stamina_below: "STA pròpia inferior a",
+  gambit_always: "Sempre",
+  error_invalid_gambit: "Estratègia invàlida.",
+  error_invalid_gambit_condition: "Condició d'estratègia invàlida.",
+  error_invalid_gambit_action: "Acció d'estratègia invàlida.",
+  error_gambit_limit_reached: "Límit d'estratègies assolit (màx 12).",
+  error_gambit_duplicate_id: "L'estratègia ja existeix.",
+  error_gambit_not_found: "Estratègia no trobada.",
+  error_gambit_cannot_move: "No es pot moure més l'estratègia.",
   witch_novice_1: "Els fils del destí estan... embolicats al teu voltant.",
   witch_novice_2: "Torna quan hagis vist allò invisible.",
   witch_awakened_1: "Ah, {name}... la espurna és en tu.",
@@ -6604,6 +6820,27 @@ const eu = {
   error_already_inscribed: "Gaitasuna dagoeneko idatzita dago.",
   error_body_circle_full: "Gorputz zirkulua beteta dago (geh. 7 gaitasun).",
   error_not_inscribed: "Gaitasuna ez dago idatzita.",
+  gambit_title: "Estrategiak",
+  gambit_desc: "Konfiguratu baldintzapeko borroka-portaerak. Estrategiak goitik behera ebaluatzen dira; lehenengo bat datozen arauak irabazten du.",
+  ui_gambit_count: "Estrategiak",
+  ui_add_gambit: "Estrategia Gehitu",
+  ui_no_gambits: "Ez dago estrategiarik konfiguratuta.",
+  ui_enable: "Gaitu",
+  ui_disable: "Desgaitu",
+  ui_remove: "Kendu",
+  ui_add: "Gehitu",
+  gambit_self_hp_below: "Norberaren HP baino txikiagoa",
+  gambit_ally_hp_below: "Bazkidearen HP baino txikiagoa",
+  gambit_self_mp_below: "Norberaren MP baino txikiagoa",
+  gambit_self_stamina_below: "Norberaren STA baino txikiagoa",
+  gambit_always: "Beti",
+  error_invalid_gambit: "Estrategia baliogabea.",
+  error_invalid_gambit_condition: "Estrategia-baldintza baliogabea.",
+  error_invalid_gambit_action: "Estrategia-ekintza baliogabea.",
+  error_gambit_limit_reached: "Estrategia-muga gaindituta (geh. 12).",
+  error_gambit_duplicate_id: "Estrategia dagoeneko existitzen da.",
+  error_gambit_not_found: "Estrategia ez da aurkitu.",
+  error_gambit_cannot_move: "Ezin da estrategia gehiago mugitu.",
   witch_novice_1: "Kondairaren harizpiak... zure inguruan nahastuta daude.",
   witch_novice_2: "Ikusi ezinezkoa ikusi duzunean itzuli zaitez.",
   witch_awakened_1: "Ah, {name}... txinparta zugan dago.",
@@ -7163,6 +7400,27 @@ const gl = {
   error_already_inscribed: "A habilidade xa está inscrita.",
   error_body_circle_full: "O círculo corporal está cheo (máx 7 habilidades).",
   error_not_inscribed: "A habilidade non está inscrita.",
+  gambit_title: "Estratexias",
+  gambit_desc: "Configura comportamentos de batalla condicionais. As estratexias evalúanse de arriba a abaixo; a primeira regra que coincida gaña.",
+  ui_gambit_count: "Estratexias",
+  ui_add_gambit: "Engadir Estratexia",
+  ui_no_gambits: "Non hai estratexias configuradas.",
+  ui_enable: "Activar",
+  ui_disable: "Desactivar",
+  ui_remove: "Eliminar",
+  ui_add: "Engadir",
+  gambit_self_hp_below: "HP propio inferior ao",
+  gambit_ally_hp_below: "HP aliado inferior ao",
+  gambit_self_mp_below: "MP propio inferior ao",
+  gambit_self_stamina_below: "STA propia inferior a",
+  gambit_always: "Sempre",
+  error_invalid_gambit: "Estratexia inválida.",
+  error_invalid_gambit_condition: "Condición de estratexia inválida.",
+  error_invalid_gambit_action: "Acción de estratexia inválida.",
+  error_gambit_limit_reached: "Límite de estratexias alcanzado (máx 12).",
+  error_gambit_duplicate_id: "A estratexia xa existe.",
+  error_gambit_not_found: "Estratexia non atopada.",
+  error_gambit_cannot_move: "Non se pode mover máis a estratexia.",
   witch_novice_1: "Os fíos do destino están... enredados ao teu redor.",
   witch_novice_2: "Volve cando vexas o invisible.",
   witch_awakened_1: "Ah, {name}... a chispa está en ti.",
@@ -7386,6 +7644,34 @@ const _GameEngine = class _GameEngine {
       return Result.fail("error_hero_busy");
     }
     return this.heroService.eraseHeroInscription(heroId, skillId);
+  }
+  addHeroGambit(heroId, gambit) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.addHeroGambit(heroId, gambit);
+  }
+  removeHeroGambit(heroId, gambitId) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.removeHeroGambit(heroId, gambitId);
+  }
+  toggleHeroGambit(heroId, gambitId) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.toggleHeroGambit(heroId, gambitId);
+  }
+  moveHeroGambit(heroId, gambitId, direction) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.moveHeroGambit(heroId, gambitId, direction);
   }
   equipHeroItem(heroId, slot, equipmentId) {
     const activityInfo = this.expeditionService.getHeroActivity(heroId);
@@ -7866,6 +8152,34 @@ class EngineAdapter {
         });
         view.on("eraseInscription", (data) => {
           const result = this.engine.eraseHeroInscription(data.heroId, data.skillId);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("addGambit", (data) => {
+          const result = this.engine.addHeroGambit(data.heroId, data.gambit);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("removeGambit", (data) => {
+          const result = this.engine.removeHeroGambit(data.heroId, data.gambitId);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("toggleGambit", (data) => {
+          const result = this.engine.toggleHeroGambit(data.heroId, data.gambitId);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("moveGambit", (data) => {
+          const result = this.engine.moveHeroGambit(data.heroId, data.gambitId, data.direction);
           if (!result.success) {
             this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
@@ -9080,6 +9394,11 @@ class HeroesView extends BaseView {
           this._openBodyInscriptionModal();
           return;
         }
+        const gambitBtn = e.target.closest(".btn-gambit");
+        if (gambitBtn) {
+          this._openGambitModal();
+          return;
+        }
       });
     }
   }
@@ -9313,6 +9632,9 @@ class HeroesView extends BaseView {
                             ✦ ${this.t("body_inscription_title") || "Body Inscription"}
                         </button>
                         ` : ""}
+                        <button class="btn btn-secondary btn-sm btn-gambit" data-action="open-gambit" style="margin-top: 8px; margin-left: 6px;">
+                            🎲 ${this.t("gambit_title") || "Gambits"}
+                        </button>
                     </div>
                 </div>
                 <div class="stats-grid">
@@ -9733,6 +10055,124 @@ class HeroesView extends BaseView {
         close();
       });
     });
+  }
+  _openGambitModal() {
+    var _a, _b;
+    const hero = (_b = (_a = this.lastRawState) == null ? void 0 : _a.heroes) == null ? void 0 : _b.find((h) => h.id === this.selectedHeroId);
+    if (!hero) return;
+    const gambits = hero.gambits || [];
+    const allSkills = Object.values(SKILLS_DATA);
+    const learnedSkills = allSkills.filter((s) => hero.skills[s.id] !== void 0);
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay trainer-modal-overlay";
+    overlay.innerHTML = `
+            <div class="trainer-dialogue-box gambit-dialogue-box" style="max-width: 560px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">🎲</span>
+                    <h3>${this.t("gambit_title") || "Gambits"}</h3>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    ${this.t("gambit_desc") || "Set conditional battle behaviors. Gambits are evaluated top-to-bottom; the first matching rule wins."}
+                </p>
+                <div style="margin-bottom: 12px;">
+                    <strong>${this.t("ui_gambit_count") || "Gambits"}:</strong> ${gambits.length} / 12
+                </div>
+                <div class="gambit-list">
+                    ${gambits.map((g, idx) => `
+                        <div class="gambit-row ${g.enabled === false ? "gambit-disabled" : ""}">
+                            <div class="gambit-info">
+                                <span class="gambit-priority">${idx + 1}.</span>
+                                <span class="gambit-rule">${this._formatGambitRule(g)}</span>
+                            </div>
+                            <div class="gambit-actions">
+                                <button class="btn btn-sm btn-move-gambit" data-id="${g.id}" data-dir="-1" ${idx === 0 ? "disabled" : ""}>▲</button>
+                                <button class="btn btn-sm btn-move-gambit" data-id="${g.id}" data-dir="1" ${idx === gambits.length - 1 ? "disabled" : ""}>▼</button>
+                                <button class="btn btn-sm btn-toggle-gambit ${g.enabled === false ? "btn-primary" : "btn-secondary"}" data-id="${g.id}">${g.enabled === false ? this.t("ui_enable") || "Enable" : this.t("ui_disable") || "Disable"}</button>
+                                <button class="btn btn-danger btn-sm btn-remove-gambit" data-id="${g.id}">${this.t("ui_remove") || "Remove"}</button>
+                            </div>
+                        </div>
+                    `).join("")}
+                    ${gambits.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.85rem;">${this.t("ui_no_gambits") || "No gambits set."}</p>` : ""}
+                </div>
+                <div class="gambit-add-section" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--glass-border);">
+                    <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">${this.t("ui_add_gambit") || "Add Gambit"}</h4>
+                    <div class="gambit-form">
+                        <select id="gambit-condition" class="gambit-select">
+                            <option value="self_hp_below">${this.t("gambit_self_hp_below") || "Self HP below"} 50%</option>
+                            <option value="ally_hp_below">${this.t("gambit_ally_hp_below") || "Ally HP below"} 50%</option>
+                            <option value="self_mp_below">${this.t("gambit_self_mp_below") || "Self MP below"} 30%</option>
+                            <option value="self_stamina_below">${this.t("gambit_self_stamina_below") || "Self STA below"} 30%</option>
+                            <option value="always">${this.t("gambit_always") || "Always"}</option>
+                        </select>
+                        <select id="gambit-skill" class="gambit-select">
+                            ${learnedSkills.map((s) => `<option value="${s.id}">${this.t(s.id)}</option>`).join("")}
+                        </select>
+                        <button class="btn btn-primary btn-sm" id="btn-add-gambit">${this.t("ui_add") || "Add"}</button>
+                    </div>
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-gambit-close">${this.t("ui_btn_close") || "Close"}</button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.3s ease";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    overlay.querySelector("#btn-gambit-close").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+    overlay.querySelectorAll(".btn-remove-gambit").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        this.emit("removeGambit", { heroId: this.selectedHeroId, gambitId: e.target.dataset.id });
+        close();
+      });
+    });
+    overlay.querySelectorAll(".btn-toggle-gambit").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        this.emit("toggleGambit", { heroId: this.selectedHeroId, gambitId: e.target.dataset.id });
+        close();
+      });
+    });
+    overlay.querySelectorAll(".btn-move-gambit").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        this.emit("moveGambit", { heroId: this.selectedHeroId, gambitId: e.target.dataset.id, direction: parseInt(e.target.dataset.dir) });
+        close();
+      });
+    });
+    const addBtn = overlay.querySelector("#btn-add-gambit");
+    if (addBtn) {
+      addBtn.addEventListener("click", () => {
+        const condition = overlay.querySelector("#gambit-condition").value;
+        const skillId = overlay.querySelector("#gambit-skill").value;
+        if (!skillId) return;
+        const gambit = {
+          id: "gambit_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+          condition,
+          threshold: condition === "self_hp_below" || condition === "ally_hp_below" ? 0.5 : condition === "self_mp_below" || condition === "self_stamina_below" ? 0.3 : void 0,
+          action: "use_skill",
+          skillId,
+          enabled: true
+        };
+        this.emit("addGambit", { heroId: this.selectedHeroId, gambit });
+        close();
+      });
+    }
+  }
+  _formatGambitRule(gambit) {
+    const conditionLabels = {
+      self_hp_below: "HP < 50%",
+      ally_hp_below: "Ally HP < 50%",
+      self_mp_below: "MP < 30%",
+      self_stamina_below: "STA < 30%",
+      always: "Always"
+    };
+    const cond = conditionLabels[gambit.condition] || gambit.condition;
+    const skillName = this.t(gambit.skillId) || gambit.skillId;
+    return `${cond} → ${skillName}`;
   }
 }
 class InventoryView extends BaseView {
@@ -13095,6 +13535,90 @@ body {
 .skill-inscribed {
     border-color: rgba(156, 39, 176, 0.5) !important;
     background: linear-gradient(135deg, rgba(156, 39, 176, 0.1), rgba(156, 39, 176, 0.02)) !important;
+}
+
+
+/* Gambit Styles */
+
+.gambit-dialogue-box {
+    border-color: rgba(33, 150, 243, 0.3);
+    background: linear-gradient(180deg, rgba(15, 20, 30, 0.98), rgba(18, 25, 35, 0.98));
+}
+
+.gambit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.gambit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    gap: 10px;
+}
+
+.gambit-row.gambit-disabled {
+    opacity: 0.5;
+}
+
+.gambit-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.gambit-priority {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    min-width: 20px;
+}
+
+.gambit-rule {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gambit-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.gambit-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gambit-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 140px;
+}
+
+.gambit-select option {
+    background: #1a1a2e;
+    color: var(--text-primary);
 }</style>
 </head>
 <body>

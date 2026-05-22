@@ -143,6 +143,42 @@ export class HeroService {
         return result;
     }
 
+    addHeroGambit(heroId, gambit) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.addGambit(gambit);
+        if (result.success) this.saveAll();
+        return result;
+    }
+
+    removeHeroGambit(heroId, gambitId) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.removeGambit(gambitId);
+        if (result.success) this.saveAll();
+        return result;
+    }
+
+    toggleHeroGambit(heroId, gambitId) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.toggleGambit(gambitId);
+        if (result.success) this.saveAll();
+        return result;
+    }
+
+    moveHeroGambit(heroId, gambitId, direction) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.moveGambit(gambitId, direction);
+        if (result.success) this.saveAll();
+        return result;
+    }
+
     // --- Equipment ---
     equipItem(heroId, slot, equipmentId) {
         const hero = this.get(heroId);

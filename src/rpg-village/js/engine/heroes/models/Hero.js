@@ -41,6 +41,7 @@ export class Hero {
         };
         this.titles = data.titles || [];
         this.bodyInscription = data.bodyInscription || null;
+        this.gambits = data.gambits || [];
         this.statusEffects = data.statusEffects || [];
         this.phoenixUsed = data.phoenixUsed || false;
         this.mealBuffs = data.mealBuffs || [];
@@ -385,6 +386,39 @@ export class Hero {
         return Result.ok(true);
     }
 
+    addGambit(gambit) {
+        if (!gambit || !gambit.id) return Result.fail('error_invalid_gambit');
+        this.gambits = this.gambits || [];
+        if (this.gambits.length >= 12) return Result.fail('error_gambit_limit_reached');
+        if (this.gambits.find(g => g.id === gambit.id)) return Result.fail('error_gambit_duplicate_id');
+        this.gambits.push({ ...gambit, enabled: gambit.enabled !== false });
+        return Result.ok(true);
+    }
+
+    removeGambit(gambitId) {
+        this.gambits = (this.gambits || []).filter(g => g.id !== gambitId);
+        return Result.ok(true);
+    }
+
+    toggleGambit(gambitId) {
+        const gambit = (this.gambits || []).find(g => g.id === gambitId);
+        if (!gambit) return Result.fail('error_gambit_not_found');
+        gambit.enabled = !gambit.enabled;
+        return Result.ok(gambit.enabled);
+    }
+
+    moveGambit(gambitId, direction) {
+        const gambits = this.gambits || [];
+        const idx = gambits.findIndex(g => g.id === gambitId);
+        if (idx === -1) return Result.fail('error_gambit_not_found');
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= gambits.length) return Result.fail('error_gambit_cannot_move');
+        const temp = gambits[idx];
+        gambits[idx] = gambits[newIdx];
+        gambits[newIdx] = temp;
+        return Result.ok(true);
+    }
+
     /**
      * Records a technique use and checks for infinite tier evolution.
      * @returns {Object|null} evolution info if tier increased, null otherwise
@@ -447,6 +481,7 @@ export class Hero {
             lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
             titles: JSON.parse(JSON.stringify(this.titles)),
             bodyInscription: this.bodyInscription ? JSON.parse(JSON.stringify(this.bodyInscription)) : null,
+            gambits: JSON.parse(JSON.stringify(this.gambits)),
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
             phoenixUsed: this.phoenixUsed,
             equipment: JSON.parse(JSON.stringify(this.equipment)),

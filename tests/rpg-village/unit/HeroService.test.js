@@ -479,3 +479,95 @@ test('HeroService: erase inscription fails for non-inscribed skill', () => {
     assert.strictEqual(result.success, false);
     assert.strictEqual(result.error, 'error_not_inscribed');
 });
+
+
+test('HeroService: add gambit to hero', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+
+    const gambit = { id: 'g1', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true };
+    const result = service.addHeroGambit(added.data.id, gambit);
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(hero.gambits.length, 1);
+    assert.strictEqual(hero.gambits[0].id, 'g1');
+});
+
+test('HeroService: gambit limit is 12', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.gambits = Array.from({ length: 12 }, (_, i) => ({ id: 'g' + i, condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true }));
+
+    const result = service.addHeroGambit(added.data.id, { id: 'g13', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true });
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_gambit_limit_reached');
+});
+
+test('HeroService: remove gambit from hero', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.gambits = [{ id: 'g1', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true }];
+
+    const result = service.removeHeroGambit(added.data.id, 'g1');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(hero.gambits.length, 0);
+});
+
+test('HeroService: toggle gambit enabled state', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.gambits = [{ id: 'g1', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true }];
+
+    const result = service.toggleHeroGambit(added.data.id, 'g1');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.data, false);
+    assert.strictEqual(hero.gambits[0].enabled, false);
+});
+
+test('HeroService: move gambit up and down', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.gambits = [
+        { id: 'g1', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true },
+        { id: 'g2', condition: 'self_hp_below', threshold: 0.5, action: 'use_skill', skillId: 'basic_attack', enabled: true }
+    ];
+
+    const result = service.moveHeroGambit(added.data.id, 'g2', -1);
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(hero.gambits[0].id, 'g2');
+    assert.strictEqual(hero.gambits[1].id, 'g1');
+});
+
+test('HeroService: move gambit fails at boundaries', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.gambits = [{ id: 'g1', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true }];
+
+    const result = service.moveHeroGambit(added.data.id, 'g1', -1);
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_gambit_cannot_move');
+});
+
+test('HeroService: duplicate gambit id rejected', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.gambits = [{ id: 'g1', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true }];
+
+    const result = service.addHeroGambit(added.data.id, { id: 'g1', condition: 'always', action: 'use_skill', skillId: 'basic_attack', enabled: true });
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_gambit_duplicate_id');
+});

@@ -1,4 +1,5 @@
 import { SKILLS_DATA } from '../../data/GameConstants.js';
+import { GambitService } from '../../../gambit/GambitService.js';
 
 export class CombatAI {
     /**
@@ -8,6 +9,12 @@ export class CombatAI {
      */
     static decideAction(context) {
         const { actor, allies, enemies, type } = context;
+
+        // 0. Check hero gambits first (they override AI)
+        if (actor.gambits && actor.gambits.length > 0) {
+            const gambitAction = GambitService.evaluate(actor, allies, enemies);
+            if (gambitAction) return gambitAction;
+        }
         
         // Filter skills by resource availability (stamina for physical, MP for magic/support)
         const availableSkills = Object.keys(actor.skills || {}).filter(sId => {
