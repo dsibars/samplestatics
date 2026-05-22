@@ -1475,3 +1475,22 @@ body {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+
+
+/* Witch's Hut Styles */
+
+.witch-dialogue-box {
+    border-color: rgba(156, 39, 176, 0.3);
+    background: linear-gradient(180deg, rgba(20, 18, 28, 0.98), rgba(25, 20, 35, 0.98));
+}
+
+.witch-line {
+    border-left-color: #9c27b0;
+    font-style: italic;
+    color: #e1bee7;
+}
+
+.witch-category {
+    background: rgba(156, 39, 176, 0.15);
+    color: #ce93d8;
+}

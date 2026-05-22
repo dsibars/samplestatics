@@ -2,6 +2,7 @@ import { BaseView } from '../BaseView.js';
 import { getEquipmentName, getEquipmentStats } from '../shared/EquipmentHelper.js';
 import { SKILLS_DATA } from '../../../engine/shared/data/GameConstants.js';
 import { TrainerService } from '../../../engine/trainer/TrainerService.js';
+import { WitchService } from '../../../engine/witch/WitchService.js';
 
 export class HeroesView extends BaseView {
     constructor() {
@@ -71,6 +72,12 @@ export class HeroesView extends BaseView {
                 const trainerBtn = e.target.closest('.btn-trainer');
                 if (trainerBtn) {
                     this._openTrainerModal();
+                    return;
+                }
+
+                const witchBtn = e.target.closest('.btn-witch');
+                if (witchBtn) {
+                    this._openWitchModal();
                     return;
                 }
             });
@@ -322,6 +329,9 @@ export class HeroesView extends BaseView {
                         </div>
                         <button class="btn btn-secondary btn-sm btn-trainer" data-action="open-trainer" style="margin-top: 8px;">
                             💪 ${this.t('trainer_title') || 'Training Grounds'}
+                        </button>
+                        <button class="btn btn-secondary btn-sm btn-witch" data-action="open-witch" style="margin-top: 8px; margin-left: 6px;">
+                            🔮 ${this.t('witch_title') || 'Witch\'s Hut'}
                         </button>
                     </div>
                 </div>
@@ -588,6 +598,44 @@ export class HeroesView extends BaseView {
         };
 
         overlay.querySelector('#btn-trainer-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+        });
+    }
+
+    _openWitchModal() {
+        const hero = this.lastRawState?.heroes?.find(h => h.id === this.selectedHeroId);
+        if (!hero) return;
+
+        const dialogue = WitchService.getDialogue(hero, this.ui?.i18n);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay trainer-modal-overlay';
+        overlay.innerHTML = `
+            <div class="trainer-dialogue-box witch-dialogue-box">
+                <div class="trainer-header">
+                    <span class="trainer-icon">🔮</span>
+                    <h3>${this.t('witch_title') || 'Witch\'s Hut'}</h3>
+                </div>
+                <div class="trainer-lines">
+                    ${dialogue.lines.map(line => `<p class="trainer-line witch-line">"${line}"</p>`).join('')}
+                </div>
+                <div class="trainer-footer">
+                    <span class="trainer-category witch-category">${dialogue.category}</span>
+                    <button class="btn btn-secondary btn-sm" id="btn-witch-close">${this.t('ui_btn_close') || 'Close'}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#btn-witch-close').addEventListener('click', close);
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) close();
         });
