@@ -1,3 +1,5 @@
+import { TECHNIQUE_FAMILIES } from '../../data/GameConstants.js';
+
 export class CombatCalculator {
     /**
      * Extracts the effective stat from an entity
@@ -93,7 +95,26 @@ export class CombatCalculator {
             const finalPercentage = power * multiplier;
             return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1, isCrit: false };
         } else {
-            const damageMultiplier = skillData.baseMultiplier || 1.0;
+            // Family-based damage calculation
+            const familyData = skillData.family ? TECHNIQUE_FAMILIES[skillData.family] : null;
+            let damageMultiplier = skillData.baseMultiplier || 1.0;
+            let hits = 1;
+            let effect = null;
+
+            if (familyData) {
+                const tier = skillData.tier || 1;
+                if (familyData.id === 'multiple_attack') {
+                    // Multi-hit: hits = tier, per-hit decays slightly
+                    hits = Math.max(1, tier);
+                    const perHit = Math.max(0.4, familyData.baseMult - familyData.hitDecay * Math.max(0, tier - 2));
+                    damageMultiplier = hits * perHit;
+                } else {
+                    // Single-hit families: base + growth per tier above 1
+                    damageMultiplier = familyData.baseMult + familyData.growth * (tier - 1);
+                }
+                effect = familyData.effect || null;
+            }
+
             let rawDamage = baseStatValue * damageMultiplier * multiplier;
             if (isCrit) rawDamage *= 1.5;
             
@@ -108,7 +129,7 @@ export class CombatCalculator {
                 finalDamage = Math.floor(finalDamage * (1 - partyTraits.physicalDamageReduction));
             }
 
-            return { amount: finalDamage, evasionChance, isMiss: false, elementMult, isCrit };
+            return { amount: finalDamage, evasionChance, isMiss: false, elementMult, isCrit, hits, effect };
         }
     }
 }

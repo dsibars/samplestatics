@@ -1,6 +1,54 @@
+export const TECHNIQUE_FAMILIES = {
+    single_strike: {
+        id: 'single_strike',
+        baseMult: 1.0,
+        growth: 0.0,
+        hits: 1,
+        hitDecay: 0
+    },
+    multiple_attack: {
+        id: 'multiple_attack',
+        baseMult: 0.7,
+        growth: 0.0,
+        hits: 1,
+        hitDecay: 0.05
+    },
+    power_strike: {
+        id: 'power_strike',
+        baseMult: 1.5,
+        growth: 0.3,
+        hits: 1,
+        hitDecay: 0
+    },
+    cleave: {
+        id: 'cleave',
+        baseMult: 0.6,
+        growth: 0.1,
+        hits: 1,
+        hitDecay: 0
+    },
+    shield_bash: {
+        id: 'shield_bash',
+        baseMult: 0.8,
+        growth: 0.1,
+        hits: 1,
+        hitDecay: 0,
+        effect: 'stun'
+    },
+    poison_strike: {
+        id: 'poison_strike',
+        baseMult: 0.6,
+        growth: 0.05,
+        hits: 1,
+        hitDecay: 0,
+        effect: 'poison'
+    }
+};
+
 export const SKILLS_DATA = {
     basic_attack: {
         id: 'basic_attack',
+        family: 'single_strike',
         category: 'physical',
         stat: 'strength',
         baseMultiplier: 1.0,
@@ -12,6 +60,7 @@ export const SKILLS_DATA = {
     },
     double_attack: {
         id: 'double_attack',
+        family: 'multiple_attack',
         category: 'physical',
         stat: 'strength',
         baseMultiplier: 0.7,
@@ -24,6 +73,7 @@ export const SKILLS_DATA = {
     },
     triple_attack: {
         id: 'triple_attack',
+        family: 'multiple_attack',
         category: 'physical',
         stat: 'strength',
         baseMultiplier: 0.6,
@@ -36,6 +86,7 @@ export const SKILLS_DATA = {
     },
     whirlwind: {
         id: 'whirlwind',
+        family: 'cleave',
         category: 'physical',
         stat: 'strength',
         baseMultiplier: 0.6,
@@ -48,6 +99,7 @@ export const SKILLS_DATA = {
     },
     blade_dance: {
         id: 'blade_dance',
+        family: 'cleave',
         category: 'physical',
         stat: 'strength',
         baseMultiplier: 0.4,
@@ -57,6 +109,45 @@ export const SKILLS_DATA = {
         unlockCost: 7,
         dependency: 'whirlwind',
         targetType: 'all_enemies'
+    },
+    power_strike: {
+        id: 'power_strike',
+        family: 'power_strike',
+        category: 'physical',
+        stat: 'strength',
+        baseMultiplier: 1.5,
+        mpCost: 0,
+        staminaCost: 12,
+        tier: 2,
+        unlockCost: 3,
+        dependency: 'basic_attack',
+        targetType: 'single_enemy'
+    },
+    shield_bash: {
+        id: 'shield_bash',
+        family: 'shield_bash',
+        category: 'physical',
+        stat: 'strength',
+        baseMultiplier: 0.8,
+        mpCost: 0,
+        staminaCost: 8,
+        tier: 2,
+        unlockCost: 2,
+        dependency: 'basic_attack',
+        targetType: 'single_enemy'
+    },
+    poison_strike: {
+        id: 'poison_strike',
+        family: 'poison_strike',
+        category: 'physical',
+        stat: 'strength',
+        baseMultiplier: 0.6,
+        mpCost: 0,
+        staminaCost: 10,
+        tier: 2,
+        unlockCost: 3,
+        dependency: 'basic_attack',
+        targetType: 'single_enemy'
     },
     small_fire_ball: {
         id: 'small_fire_ball',

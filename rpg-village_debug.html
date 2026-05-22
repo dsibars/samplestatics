@@ -52,9 +52,56 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     fetch(link.href, fetchOpts);
   }
 })();
+const TECHNIQUE_FAMILIES = {
+  single_strike: {
+    id: "single_strike",
+    baseMult: 1,
+    growth: 0,
+    hits: 1,
+    hitDecay: 0
+  },
+  multiple_attack: {
+    id: "multiple_attack",
+    baseMult: 0.7,
+    growth: 0,
+    hits: 1,
+    hitDecay: 0.05
+  },
+  power_strike: {
+    id: "power_strike",
+    baseMult: 1.5,
+    growth: 0.3,
+    hits: 1,
+    hitDecay: 0
+  },
+  cleave: {
+    id: "cleave",
+    baseMult: 0.6,
+    growth: 0.1,
+    hits: 1,
+    hitDecay: 0
+  },
+  shield_bash: {
+    id: "shield_bash",
+    baseMult: 0.8,
+    growth: 0.1,
+    hits: 1,
+    hitDecay: 0,
+    effect: "stun"
+  },
+  poison_strike: {
+    id: "poison_strike",
+    baseMult: 0.6,
+    growth: 0.05,
+    hits: 1,
+    hitDecay: 0,
+    effect: "poison"
+  }
+};
 const SKILLS_DATA = {
   basic_attack: {
     id: "basic_attack",
+    family: "single_strike",
     category: "physical",
     stat: "strength",
     baseMultiplier: 1,
@@ -66,6 +113,7 @@ const SKILLS_DATA = {
   },
   double_attack: {
     id: "double_attack",
+    family: "multiple_attack",
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.7,
@@ -78,6 +126,7 @@ const SKILLS_DATA = {
   },
   triple_attack: {
     id: "triple_attack",
+    family: "multiple_attack",
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.6,
@@ -90,6 +139,7 @@ const SKILLS_DATA = {
   },
   whirlwind: {
     id: "whirlwind",
+    family: "cleave",
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.6,
@@ -102,6 +152,7 @@ const SKILLS_DATA = {
   },
   blade_dance: {
     id: "blade_dance",
+    family: "cleave",
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.4,
@@ -111,6 +162,45 @@ const SKILLS_DATA = {
     unlockCost: 7,
     dependency: "whirlwind",
     targetType: "all_enemies"
+  },
+  power_strike: {
+    id: "power_strike",
+    family: "power_strike",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 1.5,
+    mpCost: 0,
+    staminaCost: 12,
+    tier: 2,
+    unlockCost: 3,
+    dependency: "basic_attack",
+    targetType: "single_enemy"
+  },
+  shield_bash: {
+    id: "shield_bash",
+    family: "shield_bash",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.8,
+    mpCost: 0,
+    staminaCost: 8,
+    tier: 2,
+    unlockCost: 2,
+    dependency: "basic_attack",
+    targetType: "single_enemy"
+  },
+  poison_strike: {
+    id: "poison_strike",
+    family: "poison_strike",
+    category: "physical",
+    stat: "strength",
+    baseMultiplier: 0.6,
+    mpCost: 0,
+    staminaCost: 10,
+    tier: 2,
+    unlockCost: 3,
+    dependency: "basic_attack",
+    targetType: "single_enemy"
   },
   small_fire_ball: {
     id: "small_fire_ball",
@@ -985,10 +1075,13 @@ class CombatView {
       } else if (menuState === "skills") {
         const skillsButtons = Object.keys(currentHero.skills || {}).map((skillId) => {
           const skillData = SKILLS_DATA[skillId];
-          const mpCost = skillData ? skillData.mpCost : 0;
-          const canAfford = currentHero.mp >= mpCost;
+          const isPhysical = skillData && skillData.category === "physical";
+          const resourceCost = isPhysical ? skillData.staminaCost || 0 : skillData ? skillData.mpCost : 0;
+          const currentResource = isPhysical ? currentHero.stamina || 0 : currentHero.mp;
+          const canAfford = currentResource >= resourceCost;
+          const costLabel = isPhysical ? "STA" : "MP";
           const skillName = this.t(skillId) || skillId;
-          return `<button class="btn btn-secondary" data-skill-id="${skillId}" ${!canAfford ? "disabled" : ""} style="flex:1 1 140px;">${skillName} <span style="font-size:0.8rem;opacity:0.8;">(${mpCost} MP)</span></button>`;
+          return `<button class="btn btn-secondary" data-skill-id="${skillId}" ${!canAfford ? "disabled" : ""} style="flex:1 1 140px;">${skillName} <span style="font-size:0.8rem;opacity:0.8;">(${resourceCost} ${costLabel})</span></button>`;
         }).join("");
         controlPanel.innerHTML = `
           <div class="combat-control-back"><button class="btn btn-secondary btn-sm" id="btn-skill-back">◀ ${this.t("btn_back")}</button></div>
@@ -2121,7 +2214,21 @@ class CombatCalculator {
       const finalPercentage = power * multiplier;
       return { amount: finalPercentage, evasionChance: 0, isMiss: false, elementMult: 1, isCrit: false };
     } else {
-      const damageMultiplier = skillData.baseMultiplier || 1;
+      const familyData = skillData.family ? TECHNIQUE_FAMILIES[skillData.family] : null;
+      let damageMultiplier = skillData.baseMultiplier || 1;
+      let hits = 1;
+      let effect = null;
+      if (familyData) {
+        const tier = skillData.tier || 1;
+        if (familyData.id === "multiple_attack") {
+          hits = Math.max(1, tier);
+          const perHit = Math.max(0.4, familyData.baseMult - familyData.hitDecay * Math.max(0, tier - 2));
+          damageMultiplier = hits * perHit;
+        } else {
+          damageMultiplier = familyData.baseMult + familyData.growth * (tier - 1);
+        }
+        effect = familyData.effect || null;
+      }
       let rawDamage = baseStatValue * damageMultiplier * multiplier;
       if (isCrit) rawDamage *= 1.5;
       const targetDefense = this.getFinalStat(defender, "defense");
@@ -2131,7 +2238,7 @@ class CombatCalculator {
       if (skillData.category === "physical" && partyTraits.physicalDamageReduction) {
         finalDamage = Math.floor(finalDamage * (1 - partyTraits.physicalDamageReduction));
       }
-      return { amount: finalDamage, evasionChance, isMiss: false, elementMult, isCrit };
+      return { amount: finalDamage, evasionChance, isMiss: false, elementMult, isCrit, hits, effect };
     }
   }
 }
@@ -4116,6 +4223,15 @@ const en = {
   nav_town: "Town",
   nav_inventory: "Inventory",
   nav_explore: "Explore",
+  family_single_strike: "Single Strike",
+  family_multiple_attack: "Multiple Attack",
+  family_power_strike: "Power Strike",
+  family_cleave: "Cleave",
+  family_shield_bash: "Shield Bash",
+  family_poison_strike: "Poison Strike",
+  power_strike: "Power Strike",
+  shield_bash: "Shield Bash",
+  poison_strike: "Poison Strike",
   error_no_skill_slots: "No empty skill slots",
   error_skill_max_level: "Skill is already at max level",
   error_cannot_unequip_basic: "Cannot unequip basic attack",
@@ -4594,6 +4710,15 @@ const es = {
   nav_town: "Pueblo",
   nav_inventory: "Inventario",
   nav_explore: "Explorar",
+  family_single_strike: "Golpe Único",
+  family_multiple_attack: "Ataque Múltiple",
+  family_power_strike: "Golpe Poderoso",
+  family_cleave: "Cuchillada",
+  family_shield_bash: "Golpe de Escudo",
+  family_poison_strike: "Golpe Venenoso",
+  power_strike: "Golpe Poderoso",
+  shield_bash: "Golpe de Escudo",
+  poison_strike: "Golpe Venenoso",
   error_no_skill_slots: "No hay ranuras de habilidad vacías",
   error_skill_max_level: "La habilidad ya está al máximo nivel",
   error_cannot_unequip_basic: "No se puede desequipar el ataque básico",
@@ -5070,6 +5195,15 @@ const ca = {
   nav_town: "Poble",
   nav_inventory: "Inventari",
   nav_explore: "Explorar",
+  family_single_strike: "Cop Únic",
+  family_multiple_attack: "Atac Múltiple",
+  family_power_strike: "Cop Poderós",
+  family_cleave: "Talla",
+  family_shield_bash: "Cop d'Escut",
+  family_poison_strike: "Cop Verní",
+  power_strike: "Cop Poderós",
+  shield_bash: "Cop d'Escut",
+  poison_strike: "Cop Verní",
   error_no_skill_slots: "No hi ha ranures d'habilitat buides",
   error_skill_max_level: "L'habilitat ja està al nivell màxim",
   error_cannot_unequip_basic: "No es pot desequipar l'atac bàsic",
@@ -5546,6 +5680,15 @@ const eu = {
   nav_town: "Herria",
   nav_inventory: "Inbentarioa",
   nav_explore: "Arakatu",
+  family_single_strike: "Kolpe Bakarra",
+  family_multiple_attack: "Eraso Anitz",
+  family_power_strike: "Kolpe Indartsua",
+  family_cleave: "Zatiketa",
+  family_shield_bash: "Ezkutu-kolpea",
+  family_poison_strike: "Sorgin-kolpea",
+  power_strike: "Kolpe Indartsua",
+  shield_bash: "Ezkutu-kolpea",
+  poison_strike: "Sorgin-kolpea",
   error_no_skill_slots: "Ez dago trebetasun zirrikiturik hutsik",
   error_skill_max_level: "Trebetasuna dagoeneko maila maximoa da",
   error_cannot_unequip_basic: "Ezin da oinarrizko erasoa kendu",
@@ -6023,6 +6166,15 @@ const gl = {
   nav_town: "Vila",
   nav_inventory: "Inventario",
   nav_explore: "Explorar",
+  family_single_strike: "Golpe Único",
+  family_multiple_attack: "Ataque Múltiple",
+  family_power_strike: "Golpe Poderoso",
+  family_cleave: "Fendedura",
+  family_shield_bash: "Golpe de Escudo",
+  family_poison_strike: "Golpe Velenoso",
+  power_strike: "Golpe Poderoso",
+  shield_bash: "Golpe de Escudo",
+  poison_strike: "Golpe Velenoso",
   error_no_skill_slots: "Non hai rañuras de habilidade baleiras",
   error_skill_max_level: "A habilidade xa está ao máximo nivel",
   error_cannot_unequip_basic: "Non se pode desequipar o ataque básico",

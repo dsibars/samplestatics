@@ -457,10 +457,13 @@ export class CombatView {
       } else if (menuState === 'skills') {
         const skillsButtons = Object.keys(currentHero.skills || {}).map(skillId => {
           const skillData = SKILLS_DATA[skillId];
-          const mpCost = skillData ? skillData.mpCost : 0;
-          const canAfford = currentHero.mp >= mpCost;
+          const isPhysical = skillData && skillData.category === 'physical';
+          const resourceCost = isPhysical ? (skillData.staminaCost || 0) : (skillData ? skillData.mpCost : 0);
+          const currentResource = isPhysical ? (currentHero.stamina || 0) : currentHero.mp;
+          const canAfford = currentResource >= resourceCost;
+          const costLabel = isPhysical ? 'STA' : 'MP';
           const skillName = this.t(skillId) || skillId;
-          return `<button class="btn btn-secondary" data-skill-id="${skillId}" ${!canAfford ? 'disabled' : ''} style="flex:1 1 140px;">${skillName} <span style="font-size:0.8rem;opacity:0.8;">(${mpCost} MP)</span></button>`;
+          return `<button class="btn btn-secondary" data-skill-id="${skillId}" ${!canAfford ? 'disabled' : ''} style="flex:1 1 140px;">${skillName} <span style="font-size:0.8rem;opacity:0.8;">(${resourceCost} ${costLabel})</span></button>`;
         }).join('');
         controlPanel.innerHTML = `
           <div class="combat-control-back"><button class="btn btn-secondary btn-sm" id="btn-skill-back">◀ ${this.t('btn_back')}</button></div>

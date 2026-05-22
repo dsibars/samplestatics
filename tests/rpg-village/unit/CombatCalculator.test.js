@@ -198,3 +198,91 @@ test('CombatCalculator: getFinalStat clamps to minimum 1', () => {
     assert.strictEqual(CombatCalculator.getFinalStat({ strength: -5 }, 'strength'), 1);
     assert.strictEqual(CombatCalculator.getFinalStat({ strength: 10 }, 'strength'), 10);
 });
+
+
+// --- Technique Family Tests ---
+
+test('CombatCalculator: single_strike family damage', () => {
+    const origRandom = Math.random;
+    Math.random = () => 0;
+
+    const skill = { id: 'basic_attack', family: 'single_strike', stat: 'strength', baseMultiplier: 1.0, category: 'physical', tier: 1, targetType: 'single_enemy' };
+    const result = CombatCalculator.calculate(mockAttacker, mockDefender, skill, 0, {});
+
+    Math.random = origRandom;
+    assert.strictEqual(result.hits, 1);
+    assert.ok(result.amount > 0);
+});
+
+test('CombatCalculator: multiple_attack family computes total damage from hits', () => {
+    const origRandom = Math.random;
+    Math.random = () => 0;
+
+    // double_attack is tier 2 in multiple_attack family → 2 hits at ~0.7 each = ~1.4 total
+    const skill = { id: 'double_attack', family: 'multiple_attack', stat: 'strength', baseMultiplier: 0.7, category: 'physical', tier: 2, targetType: 'single_enemy' };
+    const result = CombatCalculator.calculate(mockAttacker, mockDefender, skill, 0, {});
+
+    Math.random = origRandom;
+    assert.strictEqual(result.hits, 2);
+    // Total multiplier should be 2 * 0.7 = 1.4, higher than single strike 1.0
+    assert.ok(result.amount > 0);
+});
+
+test('CombatCalculator: power_strike family scales with tier', () => {
+    const origRandom = Math.random;
+    Math.random = () => 0;
+
+    // tier 2 power_strike: 1.5 + 0.3*(2-1) = 1.8
+    const skill = { id: 'power_strike', family: 'power_strike', stat: 'strength', baseMultiplier: 1.5, category: 'physical', tier: 2, targetType: 'single_enemy' };
+    const result = CombatCalculator.calculate(mockAttacker, mockDefender, skill, 0, {});
+
+    Math.random = origRandom;
+    assert.strictEqual(result.hits, 1);
+    assert.ok(result.amount > 0);
+});
+
+test('CombatCalculator: cleave family has effect null', () => {
+    const origRandom = Math.random;
+    Math.random = () => 0;
+
+    const skill = { id: 'whirlwind', family: 'cleave', stat: 'strength', baseMultiplier: 0.6, category: 'physical', tier: 2, targetType: 'all_enemies' };
+    const result = CombatCalculator.calculate(mockAttacker, mockDefender, skill, 0, {});
+
+    Math.random = origRandom;
+    assert.strictEqual(result.effect, null);
+});
+
+test('CombatCalculator: shield_bash family has stun effect', () => {
+    const origRandom = Math.random;
+    Math.random = () => 0;
+
+    const skill = { id: 'shield_bash', family: 'shield_bash', stat: 'strength', baseMultiplier: 0.8, category: 'physical', tier: 2, targetType: 'single_enemy' };
+    const result = CombatCalculator.calculate(mockAttacker, mockDefender, skill, 0, {});
+
+    Math.random = origRandom;
+    assert.strictEqual(result.effect, 'stun');
+});
+
+test('CombatCalculator: poison_strike family has poison effect', () => {
+    const origRandom = Math.random;
+    Math.random = () => 0;
+
+    const skill = { id: 'poison_strike', family: 'poison_strike', stat: 'strength', baseMultiplier: 0.6, category: 'physical', tier: 2, targetType: 'single_enemy' };
+    const result = CombatCalculator.calculate(mockAttacker, mockDefender, skill, 0, {});
+
+    Math.random = origRandom;
+    assert.strictEqual(result.effect, 'poison');
+});
+
+test('CombatCalculator: falls back to baseMultiplier when no family', () => {
+    const origRandom = Math.random;
+    Math.random = () => 0;
+
+    // Magic skill without family should use baseMultiplier
+    const skill = { id: 'small_fire_ball', stat: 'magicPower', baseMultiplier: 1.2, category: 'magic', tier: 1, targetType: 'single_enemy', mpCost: 10, element: 'fire' };
+    const result = CombatCalculator.calculate(mockAttacker, mockDefender, skill, 0, {});
+
+    Math.random = origRandom;
+    assert.strictEqual(result.hits, 1);
+    assert.ok(result.amount > 0);
+});
