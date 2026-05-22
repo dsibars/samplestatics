@@ -162,6 +162,20 @@ export class EngineAdapter {
                     }
                     this.forceUpdate();
                 });
+                view.on('inscribeSkill', (data) => {
+                    const result = this.engine.inscribeHeroSkill(data.heroId, data.skillId);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
+                view.on('eraseInscription', (data) => {
+                    const result = this.engine.eraseHeroInscription(data.heroId, data.skillId);
+                    if (!result.success) {
+                        this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+                    }
+                    this.forceUpdate();
+                });
             }
 
             if (domain === 'shop') {

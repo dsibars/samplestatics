@@ -1692,6 +1692,7 @@ class Hero {
       highestDamageDealt: 0
     };
     this.titles = data.titles || [];
+    this.bodyInscription = data.bodyInscription || null;
     this.statusEffects = data.statusEffects || [];
     this.phoenixUsed = data.phoenixUsed || false;
     this.mealBuffs = data.mealBuffs || [];
@@ -1971,6 +1972,24 @@ class Hero {
     delete this.skills[skillId];
     return Result.ok(true);
   }
+  inscribeSkill(skillId) {
+    const totalSkillPoints = Object.values(this.skills || {}).reduce((sum, lvl) => sum + (lvl || 0), 0);
+    if (totalSkillPoints < 12) return Result.fail("error_body_inscription_not_enough_skills");
+    if ((this.magicTier || 0) < 7) return Result.fail("error_body_inscription_not_enough_magic");
+    if (this.skills[skillId] === void 0) return Result.fail("error_skill_locked");
+    this.bodyInscription = this.bodyInscription || [];
+    if (this.bodyInscription.includes(skillId)) return Result.fail("error_already_inscribed");
+    if (this.bodyInscription.length >= 7) return Result.fail("error_body_circle_full");
+    this.bodyInscription.push(skillId);
+    return Result.ok(true);
+  }
+  eraseInscription(skillId) {
+    if (!this.bodyInscription || !this.bodyInscription.includes(skillId)) {
+      return Result.fail("error_not_inscribed");
+    }
+    this.bodyInscription = this.bodyInscription.filter((id) => id !== skillId);
+    return Result.ok(true);
+  }
   /**
    * Records a technique use and checks for infinite tier evolution.
    * @returns {Object|null} evolution info if tier increased, null otherwise
@@ -2026,6 +2045,7 @@ class Hero {
       spellCodex: JSON.parse(JSON.stringify(this.spellCodex)),
       lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
       titles: JSON.parse(JSON.stringify(this.titles)),
+      bodyInscription: this.bodyInscription ? JSON.parse(JSON.stringify(this.bodyInscription)) : null,
       statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
       phoenixUsed: this.phoenixUsed,
       equipment: JSON.parse(JSON.stringify(this.equipment)),
@@ -2169,6 +2189,20 @@ const _HeroService = class _HeroService {
     const hero = this.get(heroId);
     if (!hero) return Result.fail("error_hero_not_found");
     const result = hero.unequipSkill(skillId);
+    if (result.success) this.saveAll();
+    return result;
+  }
+  inscribeHeroSkill(heroId, skillId) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.inscribeSkill(skillId);
+    if (result.success) this.saveAll();
+    return result;
+  }
+  eraseHeroInscription(heroId, skillId) {
+    const hero = this.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    const result = hero.eraseInscription(skillId);
     if (result.success) this.saveAll();
     return result;
   }
@@ -2532,18 +2566,29 @@ class BattleService {
     if (this.isOver) return Result.fail("error_battle_over");
     const skillData = SKILLS_DATA[skillId];
     if (!skillData) return Result.fail("error_invalid_skill");
+    const isActorHero = this.heroes.includes(actor);
+    const isBodyInscribed = isActorHero && actor.bodyInscription && actor.bodyInscription.includes(skillId);
     if (skillData.category === "physical") {
       if (actor.stamina < skillData.staminaCost) return Result.fail("error_not_enough_stamina");
       actor.stamina -= skillData.staminaCost;
+      if (isBodyInscribed) {
+        const mpCost = skillData.mpCost || Math.ceil(skillData.staminaCost * 0.5);
+        if (actor.mp < mpCost) return Result.fail("error_not_enough_mp");
+        actor.mp -= mpCost;
+      }
     } else {
       if (actor.mp < skillData.mpCost) return Result.fail("error_not_enough_mp");
       actor.mp -= skillData.mpCost;
+      if (isBodyInscribed) {
+        const staCost = skillData.staminaCost || Math.ceil(skillData.mpCost * 0.5);
+        if (actor.stamina < staCost) return Result.fail("error_not_enough_stamina");
+        actor.stamina -= staCost;
+      }
     }
     if (skillData.family && actor.recordTechniqueUse) {
       actor.recordTechniqueUse(skillData.family);
     }
     const skillLevel = actor.skills && actor.skills[skillId] || 0;
-    const isActorHero = this.heroes.includes(actor);
     const allies = isActorHero ? this.heroes : this.enemies;
     const enemies = isActorHero ? this.enemies : this.heroes;
     let baseTargets = [];
@@ -4523,6 +4568,18 @@ const en = {
   ui_stats_damage_dealt: "Damage Dealt",
   ui_stats_expeditions: "Expeditions",
   ui_stats_battles_won: "Battles Won",
+  body_inscription_title: "Body Inscription",
+  body_inscription_desc: "Inscribe skills onto your body circle. Inscribed skills cost both STA and MP but are permanently available.",
+  ui_inscribed: "Inscribed",
+  ui_inscribe: "Inscribe",
+  ui_erase: "Erase",
+  ui_not_learned: "Not learned",
+  ui_inscribed_slots: "Inscribed",
+  error_body_inscription_not_enough_skills: "Need at least 12 total skill levels to unlock Body Inscription.",
+  error_body_inscription_not_enough_magic: "Need Magic Tier 7 to unlock Body Inscription.",
+  error_already_inscribed: "Skill is already inscribed.",
+  error_body_circle_full: "Body circle is full (max 7 skills).",
+  error_not_inscribed: "Skill is not inscribed.",
   witch_novice_1: "The threads of fate are... tangled around you.",
   witch_novice_2: "Come back when you've seen the unseen.",
   witch_awakened_1: "Ah, {name}... the spark is in you.",
@@ -5073,6 +5130,18 @@ const es = {
   ui_stats_damage_dealt: "Daño Infligido",
   ui_stats_expeditions: "Expediciones",
   ui_stats_battles_won: "Batallas Ganadas",
+  body_inscription_title: "Inscripción Corporal",
+  body_inscription_desc: "Inscribe habilidades en tu círculo corporal. Las habilidades inscritas cuestan STA y MP pero están permanentemente disponibles.",
+  ui_inscribed: "Inscrita",
+  ui_inscribe: "Inscribir",
+  ui_erase: "Borrar",
+  ui_not_learned: "No aprendida",
+  ui_inscribed_slots: "Inscritas",
+  error_body_inscription_not_enough_skills: "Necesitas al menos 12 niveles de habilidad totales para desbloquear la Inscripción Corporal.",
+  error_body_inscription_not_enough_magic: "Necesitas Magia Nivel 7 para desbloquear la Inscripción Corporal.",
+  error_already_inscribed: "La habilidad ya está inscrita.",
+  error_body_circle_full: "El círculo corporal está lleno (máx 7 habilidades).",
+  error_not_inscribed: "La habilidad no está inscrita.",
   witch_novice_1: "Los hilos del destino están... enredados a tu alrededor.",
   witch_novice_2: "Vuelve cuando hayas visto lo invisible.",
   witch_awakened_1: "Ah, {name}... la chispa está en ti.",
@@ -5962,6 +6031,18 @@ const ca = {
   ui_stats_damage_dealt: "Dany Infligit",
   ui_stats_expeditions: "Expedicions",
   ui_stats_battles_won: "Batalles Guanyades",
+  body_inscription_title: "Inscripció Corporal",
+  body_inscription_desc: "Inscriu habilitats al teu cercle corporal. Les habilitats inscrites costen STA i MP però estan permanentment disponibles.",
+  ui_inscribed: "Inscrita",
+  ui_inscribe: "Inscriure",
+  ui_erase: "Esborrar",
+  ui_not_learned: "No apresa",
+  ui_inscribed_slots: "Inscrites",
+  error_body_inscription_not_enough_skills: "Necessites almenys 12 nivells d'habilitat totals per desbloquejar la Inscripció Corporal.",
+  error_body_inscription_not_enough_magic: "Necessites Nivell de Màgia 7 per desbloquejar la Inscripció Corporal.",
+  error_already_inscribed: "L'habilitat ja està inscrita.",
+  error_body_circle_full: "El cercle corporal està ple (màx 7 habilitats).",
+  error_not_inscribed: "L'habilitat no està inscrita.",
   witch_novice_1: "Els fils del destí estan... embolicats al teu voltant.",
   witch_novice_2: "Torna quan hagis vist allò invisible.",
   witch_awakened_1: "Ah, {name}... la espurna és en tu.",
@@ -6511,6 +6592,18 @@ const eu = {
   ui_stats_damage_dealt: "Eginiko Kaltea",
   ui_stats_expeditions: "Espedizioak",
   ui_stats_battles_won: "Irabazitako Guduak",
+  body_inscription_title: "Gorputz Inskripzioa",
+  body_inscription_desc: "Gaitasunak zure gorputz zirkuluan idatzi. Idatzitako gaitasunek STA eta MP kostatzen dute baina betirako eskuragarri daude.",
+  ui_inscribed: "Idatzita",
+  ui_inscribe: "Idatzi",
+  ui_erase: "Ezabatu",
+  ui_not_learned: "Ikasi gabe",
+  ui_inscribed_slots: "Idatzitakoak",
+  error_body_inscription_not_enough_skills: "Gorputz Inskripzioa desblokeatzeko gutxienez 12 gaitasun maila behar dira.",
+  error_body_inscription_not_enough_magic: "Gorputz Inskripzioa desblokeatzeko Magia Maila 7 behar da.",
+  error_already_inscribed: "Gaitasuna dagoeneko idatzita dago.",
+  error_body_circle_full: "Gorputz zirkulua beteta dago (geh. 7 gaitasun).",
+  error_not_inscribed: "Gaitasuna ez dago idatzita.",
   witch_novice_1: "Kondairaren harizpiak... zure inguruan nahastuta daude.",
   witch_novice_2: "Ikusi ezinezkoa ikusi duzunean itzuli zaitez.",
   witch_awakened_1: "Ah, {name}... txinparta zugan dago.",
@@ -7058,6 +7151,18 @@ const gl = {
   ui_stats_damage_dealt: "Danho Infligido",
   ui_stats_expeditions: "Expedicións",
   ui_stats_battles_won: "Batallas Gañadas",
+  body_inscription_title: "Inscrición Corporal",
+  body_inscription_desc: "Inscribe habilidades no teu círculo corporal. As habilidades inscritas custan STA e MP pero están permanentemente dispoñibles.",
+  ui_inscribed: "Inscrita",
+  ui_inscribe: "Inscribir",
+  ui_erase: "Borrar",
+  ui_not_learned: "Non aprendida",
+  ui_inscribed_slots: "Inscritas",
+  error_body_inscription_not_enough_skills: "Necesitas polo menos 12 niveis de habilidade totais para desbloquear a Inscrición Corporal.",
+  error_body_inscription_not_enough_magic: "Necesitas Nivel de Maxia 7 para desbloquear a Inscrición Corporal.",
+  error_already_inscribed: "A habilidade xa está inscrita.",
+  error_body_circle_full: "O círculo corporal está cheo (máx 7 habilidades).",
+  error_not_inscribed: "A habilidade non está inscrita.",
   witch_novice_1: "Os fíos do destino están... enredados ao teu redor.",
   witch_novice_2: "Volve cando vexas o invisible.",
   witch_awakened_1: "Ah, {name}... a chispa está en ti.",
@@ -7267,6 +7372,20 @@ const _GameEngine = class _GameEngine {
       return Result.fail("error_hero_busy");
     }
     return this.heroService.unequipHeroSkill(heroId, skillId);
+  }
+  inscribeHeroSkill(heroId, skillId) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.inscribeHeroSkill(heroId, skillId);
+  }
+  eraseHeroInscription(heroId, skillId) {
+    const activityInfo = this.expeditionService.getHeroActivity(heroId);
+    if (activityInfo && activityInfo.type === "expedition") {
+      return Result.fail("error_hero_busy");
+    }
+    return this.heroService.eraseHeroInscription(heroId, skillId);
   }
   equipHeroItem(heroId, slot, equipmentId) {
     const activityInfo = this.expeditionService.getHeroActivity(heroId);
@@ -7733,6 +7852,20 @@ class EngineAdapter {
         });
         view.on("unequipSkill", (data) => {
           const result = this.engine.unequipHeroSkill(data.heroId, data.skillId);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("inscribeSkill", (data) => {
+          const result = this.engine.inscribeHeroSkill(data.heroId, data.skillId);
+          if (!result.success) {
+            this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
+          }
+          this.forceUpdate();
+        });
+        view.on("eraseInscription", (data) => {
+          const result = this.engine.eraseHeroInscription(data.heroId, data.skillId);
           if (!result.success) {
             this.ui.showToast(this.engine.i18n.t(result.error) || result.error);
           }
@@ -8942,6 +9075,11 @@ class HeroesView extends BaseView {
           this._openHallOfFameModal();
           return;
         }
+        const inscribeBtn = e.target.closest(".btn-inscribe");
+        if (inscribeBtn) {
+          this._openBodyInscriptionModal();
+          return;
+        }
       });
     }
   }
@@ -9095,13 +9233,16 @@ class HeroesView extends BaseView {
       const categoryClass = `skill-cat-${skill.category}`;
       const tierClass = `skill-tier-${skill.tier}`;
       const learnedClass = learned ? "skill-learned" : "skill-locked";
+      const isInscribed = hero.bodyInscription && hero.bodyInscription.includes(skillId);
+      const inscribedClass = isInscribed ? "skill-inscribed" : "";
       const techTier = skill.family && hero.techniqueTiers && hero.techniqueTiers[skill.family] || skill.tier;
       const techUses = skill.family && hero.techniqueUses && hero.techniqueUses[skill.family] || 0;
       const masteryLabel = skill.family && learned ? ` · ${this.t("ui_mastery") || "Mastery"} ${techTier} (${techUses})` : "";
+      const inscribedLabel = isInscribed ? ` · ✦${this.t("ui_inscribed") || "Inscribed"}` : "";
       return `
-                <div class="skill-item ${categoryClass} ${tierClass} ${learnedClass}">
+                <div class="skill-item ${categoryClass} ${tierClass} ${learnedClass} ${inscribedClass}">
                     <div class="skill-info">
-                        <span class="skill-name">${this.t(skillId)}</span>
+                        <span class="skill-name">${this.t(skillId)}${inscribedLabel}</span>
                         <span class="skill-meta">${skill.category === "physical" ? skill.staminaCost + " STA" : skill.mpCost + " MP"} · ${this.t("cat_" + skill.category) || skill.category}${masteryLabel}</span>
                     </div>
                     <div class="skill-actions">
@@ -9167,6 +9308,11 @@ class HeroesView extends BaseView {
                         <button class="btn btn-secondary btn-sm btn-hall" data-action="open-hall" style="margin-top: 8px; margin-left: 6px;">
                             🏆 ${this.t("hall_of_fame_title") || "Hall of Fame"}
                         </button>
+                        ${this._canBodyInscribe(hero) ? `
+                        <button class="btn btn-secondary btn-sm btn-inscribe" data-action="open-inscribe" style="margin-top: 8px; margin-left: 6px;">
+                            ✦ ${this.t("body_inscription_title") || "Body Inscription"}
+                        </button>
+                        ` : ""}
                     </div>
                 </div>
                 <div class="stats-grid">
@@ -9519,6 +9665,73 @@ class HeroesView extends BaseView {
     overlay.querySelector("#btn-hall-close").addEventListener("click", close);
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) close();
+    });
+  }
+  _canBodyInscribe(hero) {
+    const totalSkillPoints = Object.values(hero.skills || {}).reduce((sum, lvl) => sum + (lvl || 0), 0);
+    return totalSkillPoints >= 12 && (hero.magicTier || 0) >= 7;
+  }
+  _openBodyInscriptionModal() {
+    var _a, _b;
+    const hero = (_b = (_a = this.lastRawState) == null ? void 0 : _a.heroes) == null ? void 0 : _b.find((h) => h.id === this.selectedHeroId);
+    if (!hero) return;
+    const inscribed = hero.bodyInscription || [];
+    const maxSlots = 7;
+    const allSkills = Object.values(SKILLS_DATA);
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay trainer-modal-overlay";
+    overlay.innerHTML = `
+            <div class="trainer-dialogue-box inscribe-dialogue-box" style="max-width: 520px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">✦</span>
+                    <h3>${this.t("body_inscription_title") || "Body Inscription"}</h3>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    ${this.t("body_inscription_desc") || "Inscribe skills onto your body circle. Inscribed skills cost both STA and MP but are permanently available."}
+                </p>
+                <div style="margin-bottom: 12px;">
+                    <strong>${this.t("ui_inscribed_slots") || "Inscribed"}:</strong> ${inscribed.length} / ${maxSlots}
+                </div>
+                <div class="inscribe-skill-list">
+                    ${allSkills.map((skill) => {
+      const isLearned = hero.skills[skill.id] !== void 0;
+      const isInscribed = inscribed.includes(skill.id);
+      const canInscribe = isLearned && !isInscribed && inscribed.length < maxSlots;
+      return `
+                        <div class="inscribe-skill-row ${isInscribed ? "inscribed" : ""} ${!isLearned ? "not-learned" : ""}">
+                            <span class="inscribe-skill-name">${this.t(skill.id)}</span>
+                            <span class="inscribe-skill-cost">${skill.category === "physical" ? skill.staminaCost + " STA" : skill.mpCost + " MP"}</span>
+                            ${isInscribed ? `<button class="btn btn-danger btn-sm btn-erase-inscription" data-skill="${skill.id}">${this.t("ui_erase") || "Erase"}</button>` : canInscribe ? `<button class="btn btn-primary btn-sm btn-inscribe-skill" data-skill="${skill.id}">${this.t("ui_inscribe") || "Inscribe"}</button>` : `<span class="inscribe-locked">${!isLearned ? this.t("ui_not_learned") || "Not learned" : this.t("ui_no_slots") || "No slots"}</span>`}
+                        </div>
+                        `;
+    }).join("")}
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-inscribe-close">${this.t("ui_btn_close") || "Close"}</button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.3s ease";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    overlay.querySelector("#btn-inscribe-close").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+    overlay.querySelectorAll(".btn-inscribe-skill").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        this.emit("inscribeSkill", { heroId: this.selectedHeroId, skillId: e.target.dataset.skill });
+        close();
+      });
+    });
+    overlay.querySelectorAll(".btn-erase-inscription").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        this.emit("eraseInscription", { heroId: this.selectedHeroId, skillId: e.target.dataset.skill });
+        close();
+      });
     });
   }
 }
@@ -12821,6 +13034,67 @@ body {
     font-size: 0.8rem;
     font-weight: 700;
     color: #ffc107;
+}
+
+
+/* Body Inscription Styles */
+
+.inscribe-dialogue-box {
+    border-color: rgba(156, 39, 176, 0.3);
+    background: linear-gradient(180deg, rgba(25, 15, 25, 0.98), rgba(30, 18, 30, 0.98));
+}
+
+.inscribe-skill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+}
+
+.inscribe-skill-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    gap: 10px;
+}
+
+.inscribe-skill-row.inscribed {
+    background: linear-gradient(135deg, rgba(156, 39, 176, 0.15), rgba(156, 39, 176, 0.05));
+    border-color: rgba(156, 39, 176, 0.4);
+}
+
+.inscribe-skill-row.not-learned {
+    opacity: 0.5;
+}
+
+.inscribe-skill-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.inscribe-skill-cost {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.inscribe-locked {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.skill-inscribed {
+    border-color: rgba(156, 39, 176, 0.5) !important;
+    background: linear-gradient(135deg, rgba(156, 39, 176, 0.1), rgba(156, 39, 176, 0.02)) !important;
 }</style>
 </head>
 <body>

@@ -93,3 +93,84 @@ test('BattleService: Potion Usage Rules', () => {
     assert.strictEqual(secondResult.success, false);
     assert.strictEqual(secondResult.error, 'error_item_already_used');
 });
+
+
+test('BattleService: inscribed physical skill costs both STA and MP', () => {
+    const inventory = new InventoryService();
+    const battle = new BattleService(inventory);
+    const hero = {
+        id: 'h1', name: 'Hero 1', type: 'Hero', origin: 'origin_warrior', level: 1,
+        hp: 100, maxHp: 100, mp: 20, maxMp: 20, stamina: 50, maxStamina: 50,
+        strength: 10, defense: 5, speed: 10, avatar: '⚔️',
+        skills: { power_strike: 1 }, bodyInscription: ['power_strike']
+    };
+    const enemy = { ...mockEnemy };
+    battle.startBattle([hero], [enemy]);
+
+    const initialSta = hero.stamina;
+    const initialMp = hero.mp;
+    const result = battle.executeAction(hero, 'power_strike', 0);
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(hero.stamina, initialSta - 12); // power_strike staminaCost
+    assert.strictEqual(hero.mp, initialMp - 6); // 50% of staminaCost rounded up
+});
+
+test('BattleService: inscribed magic skill costs both MP and STA', () => {
+    const inventory = new InventoryService();
+    const battle = new BattleService(inventory);
+    const hero = {
+        id: 'h1', name: 'Hero 1', type: 'Hero', origin: 'origin_warrior', level: 1,
+        hp: 100, maxHp: 100, mp: 20, maxMp: 20, stamina: 50, maxStamina: 50,
+        strength: 10, defense: 5, speed: 10, magicPower: 10, avatar: '⚔️',
+        skills: { small_fire_ball: 1 }, bodyInscription: ['small_fire_ball']
+    };
+    const enemy = { ...mockEnemy };
+    battle.startBattle([hero], [enemy]);
+
+    const initialSta = hero.stamina;
+    const initialMp = hero.mp;
+    const result = battle.executeAction(hero, 'small_fire_ball', 0);
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(hero.mp, initialMp - 10); // small_fire_ball mpCost
+    assert.strictEqual(hero.stamina, initialSta - 5); // 50% of mpCost rounded up
+});
+
+test('BattleService: non-inscribed skill costs only primary resource', () => {
+    const inventory = new InventoryService();
+    const battle = new BattleService(inventory);
+    const hero = {
+        id: 'h1', name: 'Hero 1', type: 'Hero', origin: 'origin_warrior', level: 1,
+        hp: 100, maxHp: 100, mp: 20, maxMp: 20, stamina: 50, maxStamina: 50,
+        strength: 10, defense: 5, speed: 10, avatar: '⚔️',
+        skills: { power_strike: 1 }, bodyInscription: []
+    };
+    const enemy = { ...mockEnemy };
+    battle.startBattle([hero], [enemy]);
+
+    const initialSta = hero.stamina;
+    const initialMp = hero.mp;
+    const result = battle.executeAction(hero, 'power_strike', 0);
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(hero.stamina, initialSta - 12);
+    assert.strictEqual(hero.mp, initialMp); // MP unchanged
+});
+
+test('BattleService: inscribed physical skill fails if not enough MP', () => {
+    const inventory = new InventoryService();
+    const battle = new BattleService(inventory);
+    const hero = {
+        id: 'h1', name: 'Hero 1', type: 'Hero', origin: 'origin_warrior', level: 1,
+        hp: 100, maxHp: 100, mp: 3, maxMp: 3, stamina: 50, maxStamina: 50,
+        strength: 10, defense: 5, speed: 10, avatar: '⚔️',
+        skills: { power_strike: 1 }, bodyInscription: ['power_strike']
+    };
+    const enemy = { ...mockEnemy };
+    battle.startBattle([hero], [enemy]);
+
+    const result = battle.executeAction(hero, 'power_strike', 0);
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_not_enough_mp');
+});

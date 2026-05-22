@@ -40,6 +40,7 @@ export class Hero {
             highestDamageDealt: 0
         };
         this.titles = data.titles || [];
+        this.bodyInscription = data.bodyInscription || null;
         this.statusEffects = data.statusEffects || [];
         this.phoenixUsed = data.phoenixUsed || false;
         this.mealBuffs = data.mealBuffs || [];
@@ -364,6 +365,26 @@ export class Hero {
         return Result.ok(true);
     }
 
+    inscribeSkill(skillId) {
+        const totalSkillPoints = Object.values(this.skills || {}).reduce((sum, lvl) => sum + (lvl || 0), 0);
+        if (totalSkillPoints < 12) return Result.fail('error_body_inscription_not_enough_skills');
+        if ((this.magicTier || 0) < 7) return Result.fail('error_body_inscription_not_enough_magic');
+        if (this.skills[skillId] === undefined) return Result.fail('error_skill_locked');
+        this.bodyInscription = this.bodyInscription || [];
+        if (this.bodyInscription.includes(skillId)) return Result.fail('error_already_inscribed');
+        if (this.bodyInscription.length >= 7) return Result.fail('error_body_circle_full');
+        this.bodyInscription.push(skillId);
+        return Result.ok(true);
+    }
+
+    eraseInscription(skillId) {
+        if (!this.bodyInscription || !this.bodyInscription.includes(skillId)) {
+            return Result.fail('error_not_inscribed');
+        }
+        this.bodyInscription = this.bodyInscription.filter(id => id !== skillId);
+        return Result.ok(true);
+    }
+
     /**
      * Records a technique use and checks for infinite tier evolution.
      * @returns {Object|null} evolution info if tier increased, null otherwise
@@ -425,6 +446,7 @@ export class Hero {
             spellCodex: JSON.parse(JSON.stringify(this.spellCodex)),
             lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
             titles: JSON.parse(JSON.stringify(this.titles)),
+            bodyInscription: this.bodyInscription ? JSON.parse(JSON.stringify(this.bodyInscription)) : null,
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
             phoenixUsed: this.phoenixUsed,
             equipment: JSON.parse(JSON.stringify(this.equipment)),

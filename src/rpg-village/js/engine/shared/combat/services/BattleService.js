@@ -181,13 +181,26 @@ export class BattleService {
         const skillData = SKILLS_DATA[skillId];
         if (!skillData) return Result.fail('error_invalid_skill');
 
+        const isActorHero = this.heroes.includes(actor);
+
         // Resource cost: physical uses stamina, magic uses MP
+        const isBodyInscribed = isActorHero && actor.bodyInscription && actor.bodyInscription.includes(skillId);
         if (skillData.category === 'physical') {
             if (actor.stamina < skillData.staminaCost) return Result.fail('error_not_enough_stamina');
             actor.stamina -= skillData.staminaCost;
+            if (isBodyInscribed) {
+                const mpCost = skillData.mpCost || Math.ceil(skillData.staminaCost * 0.5);
+                if (actor.mp < mpCost) return Result.fail('error_not_enough_mp');
+                actor.mp -= mpCost;
+            }
         } else {
             if (actor.mp < skillData.mpCost) return Result.fail('error_not_enough_mp');
             actor.mp -= skillData.mpCost;
+            if (isBodyInscribed) {
+                const staCost = skillData.staminaCost || Math.ceil(skillData.mpCost * 0.5);
+                if (actor.stamina < staCost) return Result.fail('error_not_enough_stamina');
+                actor.stamina -= staCost;
+            }
         }
 
         // Record technique use for infinite tier progression
@@ -198,7 +211,6 @@ export class BattleService {
 
         const skillLevel = (actor.skills && actor.skills[skillId]) || 0;
 
-        const isActorHero = this.heroes.includes(actor);
         const allies = isActorHero ? this.heroes : this.enemies;
         const enemies = isActorHero ? this.enemies : this.heroes;
 

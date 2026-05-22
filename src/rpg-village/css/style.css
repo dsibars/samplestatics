@@ -1565,3 +1565,64 @@ body {
     font-weight: 700;
     color: #ffc107;
 }
+
+
+/* Body Inscription Styles */
+
+.inscribe-dialogue-box {
+    border-color: rgba(156, 39, 176, 0.3);
+    background: linear-gradient(180deg, rgba(25, 15, 25, 0.98), rgba(30, 18, 30, 0.98));
+}
+
+.inscribe-skill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+}
+
+.inscribe-skill-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    gap: 10px;
+}
+
+.inscribe-skill-row.inscribed {
+    background: linear-gradient(135deg, rgba(156, 39, 176, 0.15), rgba(156, 39, 176, 0.05));
+    border-color: rgba(156, 39, 176, 0.4);
+}
+
+.inscribe-skill-row.not-learned {
+    opacity: 0.5;
+}
+
+.inscribe-skill-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.inscribe-skill-cost {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.inscribe-locked {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.skill-inscribed {
+    border-color: rgba(156, 39, 176, 0.5) !important;
+    background: linear-gradient(135deg, rgba(156, 39, 176, 0.1), rgba(156, 39, 176, 0.02)) !important;
+}

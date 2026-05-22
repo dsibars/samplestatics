@@ -125,6 +125,24 @@ export class HeroService {
         return result;
     }
 
+    inscribeHeroSkill(heroId, skillId) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.inscribeSkill(skillId);
+        if (result.success) this.saveAll();
+        return result;
+    }
+
+    eraseHeroInscription(heroId, skillId) {
+        const hero = this.get(heroId);
+        if (!hero) return Result.fail('error_hero_not_found');
+
+        const result = hero.eraseInscription(skillId);
+        if (result.success) this.saveAll();
+        return result;
+    }
+
     // --- Equipment ---
     equipItem(heroId, slot, equipmentId) {
         const hero = this.get(heroId);

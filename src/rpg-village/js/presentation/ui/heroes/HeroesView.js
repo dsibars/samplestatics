@@ -92,6 +92,12 @@ export class HeroesView extends BaseView {
                     this._openHallOfFameModal();
                     return;
                 }
+
+                const inscribeBtn = e.target.closest('.btn-inscribe');
+                if (inscribeBtn) {
+                    this._openBodyInscriptionModal();
+                    return;
+                }
             });
         }
     }
@@ -273,14 +279,17 @@ export class HeroesView extends BaseView {
             const categoryClass = `skill-cat-${skill.category}`;
             const tierClass = `skill-tier-${skill.tier}`;
             const learnedClass = learned ? 'skill-learned' : 'skill-locked';
+            const isInscribed = hero.bodyInscription && hero.bodyInscription.includes(skillId);
+            const inscribedClass = isInscribed ? 'skill-inscribed' : '';
             const techTier = (skill.family && hero.techniqueTiers && hero.techniqueTiers[skill.family]) || skill.tier;
             const techUses = (skill.family && hero.techniqueUses && hero.techniqueUses[skill.family]) || 0;
             const masteryLabel = skill.family && learned ? ` · ${this.t('ui_mastery') || 'Mastery'} ${techTier} (${techUses})` : '';
+            const inscribedLabel = isInscribed ? ` · ✦${this.t('ui_inscribed') || 'Inscribed'}` : '';
 
             return `
-                <div class="skill-item ${categoryClass} ${tierClass} ${learnedClass}">
+                <div class="skill-item ${categoryClass} ${tierClass} ${learnedClass} ${inscribedClass}">
                     <div class="skill-info">
-                        <span class="skill-name">${this.t(skillId)}</span>
+                        <span class="skill-name">${this.t(skillId)}${inscribedLabel}</span>
                         <span class="skill-meta">${skill.category === 'physical' ? (skill.staminaCost + ' STA') : (skill.mpCost + ' MP')} · ${this.t('cat_' + skill.category) || skill.category}${masteryLabel}</span>
                     </div>
                     <div class="skill-actions">
@@ -351,6 +360,11 @@ export class HeroesView extends BaseView {
                         <button class="btn btn-secondary btn-sm btn-hall" data-action="open-hall" style="margin-top: 8px; margin-left: 6px;">
                             🏆 ${this.t('hall_of_fame_title') || 'Hall of Fame'}
                         </button>
+                        ${this._canBodyInscribe(hero) ? `
+                        <button class="btn btn-secondary btn-sm btn-inscribe" data-action="open-inscribe" style="margin-top: 8px; margin-left: 6px;">
+                            ✦ ${this.t('body_inscription_title') || 'Body Inscription'}
+                        </button>
+                        ` : ''}
                     </div>
                 </div>
                 <div class="stats-grid">
@@ -747,6 +761,83 @@ export class HeroesView extends BaseView {
         overlay.querySelector('#btn-hall-close').addEventListener('click', close);
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) close();
+        });
+    }
+
+    _canBodyInscribe(hero) {
+        const totalSkillPoints = Object.values(hero.skills || {}).reduce((sum, lvl) => sum + (lvl || 0), 0);
+        return totalSkillPoints >= 12 && (hero.magicTier || 0) >= 7;
+    }
+
+    _openBodyInscriptionModal() {
+        const hero = this.lastRawState?.heroes?.find(h => h.id === this.selectedHeroId);
+        if (!hero) return;
+
+        const inscribed = hero.bodyInscription || [];
+        const maxSlots = 7;
+        const allSkills = Object.values(SKILLS_DATA);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay trainer-modal-overlay';
+        overlay.innerHTML = `
+            <div class="trainer-dialogue-box inscribe-dialogue-box" style="max-width: 520px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">✦</span>
+                    <h3>${this.t('body_inscription_title') || 'Body Inscription'}</h3>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    ${this.t('body_inscription_desc') || 'Inscribe skills onto your body circle. Inscribed skills cost both STA and MP but are permanently available.'}
+                </p>
+                <div style="margin-bottom: 12px;">
+                    <strong>${this.t('ui_inscribed_slots') || 'Inscribed'}:</strong> ${inscribed.length} / ${maxSlots}
+                </div>
+                <div class="inscribe-skill-list">
+                    ${allSkills.map(skill => {
+                        const isLearned = hero.skills[skill.id] !== undefined;
+                        const isInscribed = inscribed.includes(skill.id);
+                        const canInscribe = isLearned && !isInscribed && inscribed.length < maxSlots;
+                        return `
+                        <div class="inscribe-skill-row ${isInscribed ? 'inscribed' : ''} ${!isLearned ? 'not-learned' : ''}">
+                            <span class="inscribe-skill-name">${this.t(skill.id)}</span>
+                            <span class="inscribe-skill-cost">${skill.category === 'physical' ? skill.staminaCost + ' STA' : skill.mpCost + ' MP'}</span>
+                            ${isInscribed ? `<button class="btn btn-danger btn-sm btn-erase-inscription" data-skill="${skill.id}">${this.t('ui_erase') || 'Erase'}</button>` :
+                              canInscribe ? `<button class="btn btn-primary btn-sm btn-inscribe-skill" data-skill="${skill.id}">${this.t('ui_inscribe') || 'Inscribe'}</button>` :
+                              `<span class="inscribe-locked">${!isLearned ? (this.t('ui_not_learned') || 'Not learned') : (this.t('ui_no_slots') || 'No slots')}</span>`}
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-inscribe-close">${this.t('ui_btn_close') || 'Close'}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#btn-inscribe-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+        });
+
+        overlay.querySelectorAll('.btn-inscribe-skill').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.emit('inscribeSkill', { heroId: this.selectedHeroId, skillId: e.target.dataset.skill });
+                close();
+            });
+        });
+
+        overlay.querySelectorAll('.btn-erase-inscription').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.emit('eraseInscription', { heroId: this.selectedHeroId, skillId: e.target.dataset.skill });
+                close();
+            });
         });
     }
 }

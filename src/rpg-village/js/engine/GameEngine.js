@@ -215,6 +215,22 @@ export class GameEngine {
         return this.heroService.unequipHeroSkill(heroId, skillId);
     }
 
+    inscribeHeroSkill(heroId, skillId) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.inscribeHeroSkill(heroId, skillId);
+    }
+
+    eraseHeroInscription(heroId, skillId) {
+        const activityInfo = this.expeditionService.getHeroActivity(heroId);
+        if (activityInfo && activityInfo.type === 'expedition') {
+            return Result.fail('error_hero_busy');
+        }
+        return this.heroService.eraseHeroInscription(heroId, skillId);
+    }
+
     equipHeroItem(heroId, slot, equipmentId) {
         const activityInfo = this.expeditionService.getHeroActivity(heroId);
         if (activityInfo && activityInfo.type === 'expedition') {

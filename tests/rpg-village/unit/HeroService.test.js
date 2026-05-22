@@ -370,3 +370,112 @@ test('HeroService: assigning DEF increases maxStamina', () => {
     assert.ok(hero.maxStamina > preMaxStamina, 'maxStamina should increase after DEF allocation');
     assert.strictEqual(hero.maxStamina, preMaxStamina + 2, 'maxStamina should increase by 2 per DEF point');
 });
+
+
+test('HeroService: body inscription requires 12 skill points and magic tier 7', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { basic_attack: 0 };
+    hero.magicTier = 0;
+
+    const result = service.inscribeHeroSkill(added.data.id, 'basic_attack');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_body_inscription_not_enough_skills');
+});
+
+test('HeroService: body inscription requires magic tier 7', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { basic_attack: 5, power_strike: 5, shield_bash: 2 };
+    hero.magicTier = 6;
+
+    const result = service.inscribeHeroSkill(added.data.id, 'basic_attack');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_body_inscription_not_enough_magic');
+});
+
+test('HeroService: body inscription succeeds when requirements met', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { basic_attack: 5, power_strike: 5, shield_bash: 2 };
+    hero.magicTier = 7;
+
+    const result = service.inscribeHeroSkill(added.data.id, 'basic_attack');
+    assert.strictEqual(result.success, true);
+    assert.deepStrictEqual(hero.bodyInscription, ['basic_attack']);
+});
+
+test('HeroService: body inscription rejects unlearned skills', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { basic_attack: 5, power_strike: 5, shield_bash: 2 };
+    hero.magicTier = 7;
+
+    const result = service.inscribeHeroSkill(added.data.id, 'cleave');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_skill_locked');
+});
+
+test('HeroService: body inscription rejects duplicate inscription', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { basic_attack: 5, power_strike: 5, shield_bash: 2 };
+    hero.magicTier = 7;
+    hero.bodyInscription = ['basic_attack'];
+
+    const result = service.inscribeHeroSkill(added.data.id, 'basic_attack');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_already_inscribed');
+});
+
+test('HeroService: body inscription limits to 7 slots', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { s1: 2, s2: 2, s3: 2, s4: 2, s5: 2, s6: 2, s7: 2, s8: 2 };
+    hero.magicTier = 7;
+    hero.bodyInscription = ['s1', 's2', 's3', 's4', 's5', 's6', 's7'];
+
+    const result = service.inscribeHeroSkill(added.data.id, 's8');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_body_circle_full');
+});
+
+test('HeroService: erase inscription removes skill from body circle', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { basic_attack: 5, power_strike: 5, shield_bash: 2 };
+    hero.magicTier = 7;
+    hero.bodyInscription = ['basic_attack', 'power_strike'];
+
+    const result = service.eraseHeroInscription(added.data.id, 'basic_attack');
+    assert.strictEqual(result.success, true);
+    assert.deepStrictEqual(hero.bodyInscription, ['power_strike']);
+});
+
+test('HeroService: erase inscription fails for non-inscribed skill', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 0 });
+    const hero = service.get(added.data.id);
+    hero.skills = { basic_attack: 5, power_strike: 5, shield_bash: 2 };
+    hero.magicTier = 7;
+    hero.bodyInscription = ['basic_attack'];
+
+    const result = service.eraseHeroInscription(added.data.id, 'power_strike');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.error, 'error_not_inscribed');
+});
