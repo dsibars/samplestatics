@@ -121,9 +121,12 @@ export const es = {
     nav_village: "Aldea",
     nav_buildings: "Edificios",
     nav_heroes: "Héroes",
+    nav_adventure: "Aventura",
+    nav_town: "Pueblo",
     nav_inventory: "Inventario",
     nav_explore: "Explorar",
     nav_settings: "Ajustes",
+    ui_back: "Volver",
 
     // Domain: Village
     ui_village_status: "Estado de la Aldea",

@@ -13,6 +13,14 @@ export class BuildingsView extends BaseView {
             cardTemplate: this.$('#tpl-building-card')
         };
 
+        this.root.addEventListener('click', (e) => {
+            const backBtn = e.target.closest('[data-action="back-to-village"]');
+            if (backBtn) {
+                this.ui.switchView('village');
+                return;
+            }
+        });
+
         // Event Delegation for the list
         if (this.elements.list) {
             this.elements.list.addEventListener('click', (e) => {

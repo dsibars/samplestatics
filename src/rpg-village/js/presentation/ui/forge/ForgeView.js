@@ -14,6 +14,14 @@ export class ForgeView extends BaseView {
             itemsList: this.$('#forge-items-list'),
             detailContent: this.$('#forge-detail-content')
         };
+
+        this.root.addEventListener('click', (e) => {
+            const subviewBtn = e.target.closest('[data-subview]');
+            if (subviewBtn) {
+                this.ui.switchView(subviewBtn.dataset.subview);
+                return;
+            }
+        });
     }
 
     update(state) {

@@ -19,6 +19,14 @@ export class InventoryView extends BaseView {
             detail: this.$('#inventory-detail-content')
         };
 
+        this.root.addEventListener('click', (e) => {
+            const subviewBtn = e.target.closest('[data-subview]');
+            if (subviewBtn) {
+                this.ui.switchView(subviewBtn.dataset.subview);
+                return;
+            }
+        });
+
         // Bind filter tabs click events
         const filtersContainer = this.$('.inventory-filters');
         if (filtersContainer) {

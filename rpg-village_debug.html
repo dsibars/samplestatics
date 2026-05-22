@@ -1203,9 +1203,24 @@ class UIController {
       villagerCount: document.getElementById("villager-count"),
       woodCount: document.getElementById("wood-count"),
       globalDay: document.getElementById("global-day"),
-      navItems: document.querySelectorAll(".nav-item"),
-      shopNav: document.querySelector('.nav-item[data-view="shop"]'),
-      forgeNav: document.querySelector('.nav-item[data-view="forge"]')
+      navItems: document.querySelectorAll(".nav-item")
+    };
+    this.VIEW_CATEGORIES = {
+      village: "village",
+      buildings: "village",
+      heroes: "heroes",
+      explore: "adventure",
+      bestiary: "adventure",
+      shop: "town",
+      forge: "town",
+      inventory: "town",
+      settings: "town"
+    };
+    this.CATEGORY_DEFAULTS = {
+      village: "village",
+      heroes: "heroes",
+      adventure: "explore",
+      town: "shop"
     };
     this.isShopUnlocked = false;
     this.isForgeUnlocked = false;
@@ -1227,10 +1242,13 @@ class UIController {
   setupEventListeners() {
     this.elements.navItems.forEach((item) => {
       item.addEventListener("click", () => {
-        const domain = item.getAttribute("data-view");
-        if (domain === "shop" && !this.isShopUnlocked) return;
-        if (domain === "forge" && !this.isForgeUnlocked) return;
-        this.switchView(domain);
+        const category = item.getAttribute("data-category");
+        const defaultView = item.getAttribute("data-default");
+        if (category === "town") {
+          this.switchView("shop");
+        } else {
+          this.switchView(defaultView);
+        }
       });
     });
   }
@@ -1238,11 +1256,10 @@ class UIController {
    * Transitions to a new domain view.
    */
   async switchView(domain) {
-    if (domain === "shop" && !this.isShopUnlocked) return;
-    if (domain === "forge" && !this.isForgeUnlocked) return;
     if (this.activeDomain === domain) return;
+    const category = this.VIEW_CATEGORIES[domain] || domain;
     this.elements.navItems.forEach((item) => {
-      if (item.getAttribute("data-view") === domain) {
+      if (item.getAttribute("data-category") === category) {
         item.classList.add("active");
       } else {
         item.classList.remove("active");
@@ -1312,49 +1329,8 @@ class UIController {
     const isShopUnlocked = completed.includes("exp_tutorial_cave");
     const blacksmithLvl = ((_b = (_a = state.village) == null ? void 0 : _a.infrastructure) == null ? void 0 : _b.blacksmith) || 0;
     const isForgeUnlocked = blacksmithLvl >= 1;
-    if (this.isShopUnlocked === isShopUnlocked && this.isForgeUnlocked === isForgeUnlocked) {
-      return;
-    }
     this.isShopUnlocked = isShopUnlocked;
     this.isForgeUnlocked = isForgeUnlocked;
-    if (this.elements.shopNav) {
-      const iconEl = this.elements.shopNav.querySelector(".nav-icon");
-      const labelEl = this.elements.shopNav.querySelector(".nav-label");
-      if (this.isShopUnlocked) {
-        this.elements.shopNav.classList.remove("nav-locked");
-        if (iconEl) iconEl.textContent = "🛒";
-        if (labelEl) {
-          labelEl.textContent = this.t("nav_shop");
-          labelEl.setAttribute("data-i18n", "nav_shop");
-        }
-      } else {
-        this.elements.shopNav.classList.add("nav-locked");
-        if (iconEl) iconEl.textContent = "🔒";
-        if (labelEl) {
-          labelEl.textContent = "???";
-          labelEl.removeAttribute("data-i18n");
-        }
-      }
-    }
-    if (this.elements.forgeNav) {
-      const iconEl = this.elements.forgeNav.querySelector(".nav-icon");
-      const labelEl = this.elements.forgeNav.querySelector(".nav-label");
-      if (this.isForgeUnlocked) {
-        this.elements.forgeNav.classList.remove("nav-locked");
-        if (iconEl) iconEl.textContent = "🔥";
-        if (labelEl) {
-          labelEl.textContent = this.t("nav_forge");
-          labelEl.setAttribute("data-i18n", "nav_forge");
-        }
-      } else {
-        this.elements.forgeNav.classList.add("nav-locked");
-        if (iconEl) iconEl.textContent = "🔒";
-        if (labelEl) {
-          labelEl.textContent = "???";
-          labelEl.removeAttribute("data-i18n");
-        }
-      }
-    }
   }
   /**
    * Updates the global shell stats and the active view.
@@ -4123,9 +4099,12 @@ const en = {
   nav_village: "Village",
   nav_buildings: "Buildings",
   nav_heroes: "Heroes",
+  nav_adventure: "Adventure",
+  nav_town: "Town",
   nav_inventory: "Inventory",
   nav_explore: "Explore",
   nav_settings: "Settings",
+  ui_back: "Back",
   // Domain: Village
   ui_village_status: "Village Status",
   ui_construction: "Construction",
@@ -4590,9 +4569,12 @@ const es = {
   nav_village: "Aldea",
   nav_buildings: "Edificios",
   nav_heroes: "Héroes",
+  nav_adventure: "Aventura",
+  nav_town: "Pueblo",
   nav_inventory: "Inventario",
   nav_explore: "Explorar",
   nav_settings: "Ajustes",
+  ui_back: "Volver",
   // Domain: Village
   ui_village_status: "Estado de la Aldea",
   ui_construction: "Construcción",
@@ -5055,6 +5037,8 @@ const ca = {
   nav_village: "Aldea",
   nav_buildings: "Edificis",
   nav_heroes: "Herois",
+  nav_adventure: "Aventura",
+  nav_town: "Poble",
   nav_inventory: "Inventari",
   nav_explore: "Explorar",
   // Domain: Village
@@ -5395,6 +5379,7 @@ const ca = {
   ui_no_items: "No s'han trobat objectes.",
   ui_skills: "Habilitats",
   nav_settings: "Ajustos",
+  ui_back: "Enrere",
   ui_btn_cancel: "Cancel·lar",
   ui_btn_confirm: "Confirmar Esborrat",
   ui_select_expedition: "Select an expedition node on the map.",
@@ -5520,6 +5505,8 @@ const eu = {
   nav_village: "Herria",
   nav_buildings: "Eraikinak",
   nav_heroes: "Heroiak",
+  nav_adventure: "Abentura",
+  nav_town: "Herria",
   nav_inventory: "Inbentarioa",
   nav_explore: "Arakatu",
   // Domain: Village
@@ -5861,6 +5848,7 @@ const eu = {
   ui_no_items: "Ez da elementurik aurkitu.",
   ui_skills: "Gaitasunak",
   nav_settings: "Ezarpenak",
+  ui_back: "Atzera",
   ui_btn_cancel: "Utzi",
   ui_btn_confirm: "Ezabapena Berretsi",
   ui_select_expedition: "Select an expedition node on the map.",
@@ -5986,6 +5974,8 @@ const gl = {
   nav_village: "Aldea",
   nav_buildings: "Edificios",
   nav_heroes: "Héroes",
+  nav_adventure: "Aventura",
+  nav_town: "Vila",
   nav_inventory: "Inventario",
   nav_explore: "Explorar",
   // Domain: Village
@@ -6325,6 +6315,7 @@ const gl = {
   ui_skills: "Habilidades",
   nav_bestiary: "Bestiario",
   nav_settings: "Axustes",
+  ui_back: "Volver",
   ui_bestiary_empty: "Aínda non hai criaturas catalogadas. Envía heroes a expedicións para descubrir novos inimigos!",
   ui_btn_cancel: "Cancelar",
   ui_btn_confirm: "Confirmar Borrado",
@@ -7608,6 +7599,13 @@ class BuildingsView extends BaseView {
       detail: this.$("#building-detail-content"),
       cardTemplate: this.$("#tpl-building-card")
     };
+    this.root.addEventListener("click", (e) => {
+      const backBtn = e.target.closest('[data-action="back-to-village"]');
+      if (backBtn) {
+        this.ui.switchView("village");
+        return;
+      }
+    });
     if (this.elements.list) {
       this.elements.list.addEventListener("click", (e) => {
         const card = e.target.closest(".building-card");
@@ -8426,6 +8424,13 @@ class InventoryView extends BaseView {
       itemsContainer: this.$("#inventory-items-container"),
       detail: this.$("#inventory-detail-content")
     };
+    this.root.addEventListener("click", (e) => {
+      const subviewBtn = e.target.closest("[data-subview]");
+      if (subviewBtn) {
+        this.ui.switchView(subviewBtn.dataset.subview);
+        return;
+      }
+    });
     const filtersContainer = this.$(".inventory-filters");
     if (filtersContainer) {
       filtersContainer.addEventListener("click", (e) => {
@@ -8729,6 +8734,13 @@ class ExploreView extends BaseView {
       tplRegion: this.$("#tpl-region-group"),
       tplNode: this.$("#tpl-expedition-node")
     };
+    this.root.addEventListener("click", (e) => {
+      const subviewBtn = e.target.closest("[data-subview]");
+      if (subviewBtn) {
+        this.ui.switchView(subviewBtn.dataset.subview);
+        return;
+      }
+    });
     if (this.elements.listContainer) {
       this.elements.listContainer.addEventListener("click", (e) => {
         const card = e.target.closest(".expedition-card");
@@ -8956,6 +8968,13 @@ class SettingsView extends BaseView {
       btnWipe: this.$("#btn-wipe-data"),
       btnDevCheat: this.$("#btn-dev-cheat")
     };
+    this.root.addEventListener("click", (e) => {
+      const subviewBtn = e.target.closest("[data-subview]");
+      if (subviewBtn) {
+        this.ui.switchView(subviewBtn.dataset.subview);
+        return;
+      }
+    });
     if (this.elements.langSelect) {
       this.elements.langSelect.value = this.ui.i18n.currentLang;
       this.elements.langSelect.addEventListener("change", (e) => {
@@ -9123,6 +9142,13 @@ class ShopView extends BaseView {
       catalog: this.$("#shop-catalog-container"),
       detailContent: this.$("#shop-detail-content")
     };
+    this.root.addEventListener("click", (e) => {
+      const subviewBtn = e.target.closest("[data-subview]");
+      if (subviewBtn) {
+        this.ui.switchView(subviewBtn.dataset.subview);
+        return;
+      }
+    });
     this.$$(".shop-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         const mode = tab.getAttribute("data-tab");
@@ -9810,6 +9836,13 @@ class ForgeView extends BaseView {
       itemsList: this.$("#forge-items-list"),
       detailContent: this.$("#forge-detail-content")
     };
+    this.root.addEventListener("click", (e) => {
+      const subviewBtn = e.target.closest("[data-subview]");
+      if (subviewBtn) {
+        this.ui.switchView(subviewBtn.dataset.subview);
+        return;
+      }
+    });
   }
   update(state) {
     var _a, _b, _c, _d, _e, _f;
@@ -10031,6 +10064,13 @@ class BestiaryView extends BaseView {
       count: this.$("#bestiary-count"),
       cardTemplate: this.$("#tpl-bestiary-card")
     };
+    this.root.addEventListener("click", (e) => {
+      const subviewBtn = e.target.closest("[data-subview]");
+      if (subviewBtn) {
+        this.ui.switchView(subviewBtn.dataset.subview);
+        return;
+      }
+    });
   }
   onUpdate(state) {
     this.renderBestiary(state);
@@ -11388,6 +11428,79 @@ body {
 
 .stamina-bar .stat-bar-fill {
     background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+
+/* Category-based Navigation Styles */
+
+/* Sub-navigation bar inside category views */
+.category-sub-nav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: var(--spacing-md);
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+}
+
+.sub-nav-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+}
+
+.sub-nav-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sub-nav-tab.active {
+    color: var(--accent-color);
+    background: rgba(90, 105, 250, 0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Back button for sub-pages */
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
+}
+
+/* Adjust main content padding for shorter nav (4 items vs 9) */
+#main-content {
+    padding-bottom: 90px;
+}
+
+/* Responsive: sub-nav wraps on small screens */
+@media (max-width: 480px) {
+    .sub-nav-tab {
+        font-size: 0.75rem;
+        padding: 6px 8px;
+    }
 }</style>
 </head>
 <body>
@@ -11429,41 +11542,21 @@ body {
 
         <!-- Global Navigation -->
         <nav class="main-nav">
-            <button class="nav-item active" data-view="village">
+            <button class="nav-item active" data-category="village" data-default="village">
                 <span class="nav-icon">🏡</span>
                 <span class="nav-label" data-i18n="nav_village">Village</span>
             </button>
-            <button class="nav-item" data-view="buildings">
-                <span class="nav-icon">⚒️</span>
-                <span class="nav-label" data-i18n="nav_buildings">Buildings</span>
-            </button>
-            <button class="nav-item" data-view="heroes">
+            <button class="nav-item" data-category="heroes" data-default="heroes">
                 <span class="nav-icon">⚔️</span>
                 <span class="nav-label" data-i18n="nav_heroes">Heroes</span>
             </button>
-            <button class="nav-item" data-view="inventory">
-                <span class="nav-icon">🎒</span>
-                <span class="nav-label" data-i18n="nav_inventory">Inventory</span>
-            </button>
-            <button class="nav-item" data-view="explore">
+            <button class="nav-item" data-category="adventure" data-default="explore">
                 <span class="nav-icon">🗺️</span>
-                <span class="nav-label" data-i18n="nav_explore">Explore</span>
+                <span class="nav-label" data-i18n="nav_adventure">Adventure</span>
             </button>
-            <button class="nav-item" data-view="shop">
-                <span class="nav-icon">🛒</span>
-                <span class="nav-label" data-i18n="nav_shop">Shop</span>
-            </button>
-            <button class="nav-item" data-view="forge">
-                <span class="nav-icon">🔥</span>
-                <span class="nav-label" data-i18n="nav_forge">Forge</span>
-            </button>
-            <button class="nav-item" data-view="bestiary">
-                <span class="nav-icon">📖</span>
-                <span class="nav-label" data-i18n="nav_bestiary">Bestiary</span>
-            </button>
-            <button class="nav-item" data-view="settings">
-                <span class="nav-icon">⚙️</span>
-                <span class="nav-label" data-i18n="nav_settings">Settings</span>
+            <button class="nav-item" data-category="town" data-default="shop">
+                <span class="nav-icon">🏘️</span>
+                <span class="nav-label" data-i18n="nav_town">Town</span>
             </button>
         </nav>
     </div>
@@ -11917,6 +12010,12 @@ body {
 </style>
 </template>
     <template id="tpl-buildings"><section id="buildings-view" class="domain-view">
+    <div class="view-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: var(--spacing-md);">
+        <button class="btn btn-sm btn-back" data-action="back-to-village">
+            <span>←</span> <span data-i18n="ui_back">Back</span>
+        </button>
+        <h2 data-i18n="nav_buildings">Buildings</h2>
+    </div>
     <div class="master-detail-layout">
         <!-- Master Pane: List of Buildings -->
         <aside class="master-pane card">
@@ -12441,6 +12540,12 @@ body {
 </style>
 </template>
     <template id="tpl-inventory"><section id="inventory-view" class="domain-view">
+    <div class="category-sub-nav">
+        <button class="sub-nav-tab" data-subview="shop" data-i18n="nav_shop">Shop</button>
+        <button class="sub-nav-tab" data-subview="forge" data-i18n="nav_forge">Forge</button>
+        <button class="sub-nav-tab active" data-subview="inventory" data-i18n="nav_inventory">Inventory</button>
+        <button class="sub-nav-tab" data-subview="settings" data-i18n="nav_settings">Settings</button>
+    </div>
     <!-- Storage Summary Widget -->
     <div class="card storage-summary" style="margin-bottom: var(--spacing-md);">
         <div class="list-item-header">
@@ -12679,6 +12784,10 @@ body {
 </style>
 </template>
     <template id="tpl-explore"><section id="explore-view" class="domain-view">
+    <div class="category-sub-nav">
+        <button class="sub-nav-tab active" data-subview="explore" data-i18n="nav_explore">Explore</button>
+        <button class="sub-nav-tab" data-subview="bestiary" data-i18n="nav_bestiary">Bestiary</button>
+    </div>
     <div class="explore-header">
         <h2 data-i18n="nav_explore">Explore</h2>
         <div id="explore-status-banner"></div>
@@ -12817,6 +12926,12 @@ body {
 </style>
 </template>
     <template id="tpl-settings"><section class="domain-view settings-view">
+    <div class="category-sub-nav">
+        <button class="sub-nav-tab" data-subview="shop" data-i18n="nav_shop">Shop</button>
+        <button class="sub-nav-tab" data-subview="forge" data-i18n="nav_forge">Forge</button>
+        <button class="sub-nav-tab" data-subview="inventory" data-i18n="nav_inventory">Inventory</button>
+        <button class="sub-nav-tab active" data-subview="settings" data-i18n="nav_settings">Settings</button>
+    </div>
     <div class="view-header">
         <h2 data-i18n="ui_settings_title">Game Settings</h2>
     </div>
@@ -12877,6 +12992,12 @@ body {
 </section>
 </template>
     <template id="tpl-shop"><section class="domain-view shop-view">
+    <div class="category-sub-nav">
+        <button class="sub-nav-tab active" data-subview="shop" data-i18n="nav_shop">Shop</button>
+        <button class="sub-nav-tab" data-subview="forge" data-i18n="nav_forge">Forge</button>
+        <button class="sub-nav-tab" data-subview="inventory" data-i18n="nav_inventory">Inventory</button>
+        <button class="sub-nav-tab" data-subview="settings" data-i18n="nav_settings">Settings</button>
+    </div>
     <!-- Locked Overlay -->
     <div class="lock-overlay" id="shop-lock-overlay" style="display: none;">
         <div class="lock-card">
@@ -13279,7 +13400,13 @@ body {
 </style>
 </template>
     <template id="tpl-forge"><section class="domain-view forge-view">
-    <!-- Locked Overlay -->
+    <div class="category-sub-nav">
+        <button class="sub-nav-tab" data-subview="shop" data-i18n="nav_shop">Shop</button>
+        <button class="sub-nav-tab active" data-subview="forge" data-i18n="nav_forge">Forge</button>
+        <button class="sub-nav-tab" data-subview="inventory" data-i18n="nav_inventory">Inventory</button>
+        <button class="sub-nav-tab" data-subview="settings" data-i18n="nav_settings">Settings</button>
+    </div>
+    <!-- Locked -->
     <div class="lock-overlay" id="forge-lock-overlay" style="display: none;">
         <div class="lock-card">
             <span class="lock-icon">🔥</span>
@@ -13461,6 +13588,10 @@ body {
 </style>
 </template>
     <template id="tpl-bestiary"><section id="bestiary-view" class="domain-view">
+    <div class="category-sub-nav">
+        <button class="sub-nav-tab" data-subview="explore" data-i18n="nav_explore">Explore</button>
+        <button class="sub-nav-tab active" data-subview="bestiary" data-i18n="nav_bestiary">Bestiary</button>
+    </div>
     <div class="card glass-pane" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
         <div class="pane-header" style="margin-bottom: 15px;">
             <h3 data-i18n="nav_bestiary">Bestiary</h3>

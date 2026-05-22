@@ -18,6 +18,14 @@ export class SettingsView extends BaseView {
             btnDevCheat: this.$('#btn-dev-cheat')
         };
 
+        this.root.addEventListener('click', (e) => {
+            const subviewBtn = e.target.closest('[data-subview]');
+            if (subviewBtn) {
+                this.ui.switchView(subviewBtn.dataset.subview);
+                return;
+            }
+        });
+
         // Initialize Select with current language
         if (this.elements.langSelect) {
             this.elements.langSelect.value = this.ui.i18n.currentLang;

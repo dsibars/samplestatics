@@ -121,6 +121,8 @@ export const gl = {
     nav_village: "Aldea",
     nav_buildings: "Edificios",
     nav_heroes: "Héroes",
+    nav_adventure: "Aventura",
+    nav_town: "Vila",
     nav_inventory: "Inventario",
     nav_explore: "Explorar",
 
@@ -475,6 +477,7 @@ export const gl = {
     ui_skills: "Habilidades",
     nav_bestiary: "Bestiario",
     nav_settings: "Axustes",
+    ui_back: "Volver",
     ui_bestiary_empty: "Aínda non hai criaturas catalogadas. Envía heroes a expedicións para descubrir novos inimigos!",
     ui_btn_cancel: "Cancelar",
     ui_btn_confirm: "Confirmar Borrado",

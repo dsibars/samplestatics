@@ -121,6 +121,8 @@ export const ca = {
     nav_village: "Aldea",
     nav_buildings: "Edificis",
     nav_heroes: "Herois",
+    nav_adventure: "Aventura",
+    nav_town: "Poble",
     nav_inventory: "Inventari",
     nav_explore: "Explorar",
 
@@ -476,6 +478,7 @@ export const ca = {
     ui_no_items: "No s'han trobat objectes.",
     ui_skills: "Habilitats",
     nav_settings: "Ajustos",
+    ui_back: "Enrere",
     ui_btn_cancel: "Cancel·lar",
     ui_btn_confirm: "Confirmar Esborrat",
     ui_select_expedition: "Select an expedition node on the map.",

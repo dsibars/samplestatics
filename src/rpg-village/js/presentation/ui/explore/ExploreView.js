@@ -16,6 +16,14 @@ export class ExploreView extends BaseView {
             tplNode: this.$('#tpl-expedition-node')
         };
 
+        this.root.addEventListener('click', (e) => {
+            const subviewBtn = e.target.closest('[data-subview]');
+            if (subviewBtn) {
+                this.ui.switchView(subviewBtn.dataset.subview);
+                return;
+            }
+        });
+
         if (this.elements.listContainer) {
             this.elements.listContainer.addEventListener('click', (e) => {
                 const card = e.target.closest('.expedition-card');

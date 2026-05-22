@@ -121,6 +121,8 @@ export const eu = {
     nav_village: "Herria",
     nav_buildings: "Eraikinak",
     nav_heroes: "Heroiak",
+    nav_adventure: "Abentura",
+    nav_town: "Herria",
     nav_inventory: "Inbentarioa",
     nav_explore: "Arakatu",
 
@@ -477,6 +479,7 @@ export const eu = {
     ui_no_items: "Ez da elementurik aurkitu.",
     ui_skills: "Gaitasunak",
     nav_settings: "Ezarpenak",
+    ui_back: "Atzera",
     ui_btn_cancel: "Utzi",
     ui_btn_confirm: "Ezabapena Berretsi",
     ui_select_expedition: "Select an expedition node on the map.",

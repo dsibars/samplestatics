@@ -1285,3 +1285,76 @@ body {
 .stamina-bar .stat-bar-fill {
     background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }
+
+
+/* Category-based Navigation Styles */
+
+/* Sub-navigation bar inside category views */
+.category-sub-nav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: var(--spacing-md);
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+}
+
+.sub-nav-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+}
+
+.sub-nav-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sub-nav-tab.active {
+    color: var(--accent-color);
+    background: rgba(90, 105, 250, 0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Back button for sub-pages */
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
+}
+
+/* Adjust main content padding for shorter nav (4 items vs 9) */
+#main-content {
+    padding-bottom: 90px;
+}
+
+/* Responsive: sub-nav wraps on small screens */
+@media (max-width: 480px) {
+    .sub-nav-tab {
+        font-size: 0.75rem;
+        padding: 6px 8px;
+    }
+}

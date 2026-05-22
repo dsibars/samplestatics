@@ -129,9 +129,12 @@ export const en = {
     nav_village: "Village",
     nav_buildings: "Buildings",
     nav_heroes: "Heroes",
+    nav_adventure: "Adventure",
+    nav_town: "Town",
     nav_inventory: "Inventory",
     nav_explore: "Explore",
     nav_settings: "Settings",
+    ui_back: "Back",
 
     // Domain: Village
     ui_village_status: "Village Status",

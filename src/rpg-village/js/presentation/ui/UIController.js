@@ -15,9 +15,26 @@ export class UIController {
             villagerCount: document.getElementById('villager-count'),
             woodCount: document.getElementById('wood-count'),
             globalDay: document.getElementById('global-day'),
-            navItems: document.querySelectorAll('.nav-item'),
-            shopNav: document.querySelector('.nav-item[data-view="shop"]'),
-            forgeNav: document.querySelector('.nav-item[data-view="forge"]')
+            navItems: document.querySelectorAll('.nav-item')
+        };
+
+        this.VIEW_CATEGORIES = {
+            village: 'village',
+            buildings: 'village',
+            heroes: 'heroes',
+            explore: 'adventure',
+            bestiary: 'adventure',
+            shop: 'town',
+            forge: 'town',
+            inventory: 'town',
+            settings: 'town'
+        };
+
+        this.CATEGORY_DEFAULTS = {
+            village: 'village',
+            heroes: 'heroes',
+            adventure: 'explore',
+            town: 'shop'
         };
         
         this.isShopUnlocked = false;
@@ -44,10 +61,14 @@ export class UIController {
     setupEventListeners() {
         this.elements.navItems.forEach(item => {
             item.addEventListener('click', () => {
-                const domain = item.getAttribute('data-view');
-                if (domain === 'shop' && !this.isShopUnlocked) return;
-                if (domain === 'forge' && !this.isForgeUnlocked) return;
-                this.switchView(domain);
+                const category = item.getAttribute('data-category');
+                const defaultView = item.getAttribute('data-default');
+                if (category === 'town') {
+                    // Town has locked sub-views; default to shop which handles its own lock
+                    this.switchView('shop');
+                } else {
+                    this.switchView(defaultView);
+                }
             });
         });
     }
@@ -56,15 +77,14 @@ export class UIController {
      * Transitions to a new domain view.
      */
     async switchView(domain) {
-        if (domain === 'shop' && !this.isShopUnlocked) return;
-        if (domain === 'forge' && !this.isForgeUnlocked) return;
         if (this.activeDomain === domain) return;
 
         if (DEBUG) console.log(`Switching to domain: ${domain}`);
 
-        // Update Nav UI
+        // Update Nav UI: highlight the category tab
+        const category = this.VIEW_CATEGORIES[domain] || domain;
         this.elements.navItems.forEach(item => {
-            if (item.getAttribute('data-view') === domain) {
+            if (item.getAttribute('data-category') === category) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');
@@ -155,54 +175,9 @@ export class UIController {
         const blacksmithLvl = state.village?.infrastructure?.blacksmith || 0;
         const isForgeUnlocked = blacksmithLvl >= 1;
 
-        // Skip DOM updates if nothing changed
-        if (this.isShopUnlocked === isShopUnlocked && this.isForgeUnlocked === isForgeUnlocked) {
-            return;
-        }
+        // Store state for views to use (lock overlays handle visual feedback now)
         this.isShopUnlocked = isShopUnlocked;
         this.isForgeUnlocked = isForgeUnlocked;
-
-        // Update Shop Tab
-        if (this.elements.shopNav) {
-            const iconEl = this.elements.shopNav.querySelector('.nav-icon');
-            const labelEl = this.elements.shopNav.querySelector('.nav-label');
-            if (this.isShopUnlocked) {
-                this.elements.shopNav.classList.remove('nav-locked');
-                if (iconEl) iconEl.textContent = '🛒';
-                if (labelEl) {
-                    labelEl.textContent = this.t('nav_shop');
-                    labelEl.setAttribute('data-i18n', 'nav_shop');
-                }
-            } else {
-                this.elements.shopNav.classList.add('nav-locked');
-                if (iconEl) iconEl.textContent = '🔒';
-                if (labelEl) {
-                    labelEl.textContent = '???';
-                    labelEl.removeAttribute('data-i18n');
-                }
-            }
-        }
-
-        // Update Forge Tab
-        if (this.elements.forgeNav) {
-            const iconEl = this.elements.forgeNav.querySelector('.nav-icon');
-            const labelEl = this.elements.forgeNav.querySelector('.nav-label');
-            if (this.isForgeUnlocked) {
-                this.elements.forgeNav.classList.remove('nav-locked');
-                if (iconEl) iconEl.textContent = '🔥';
-                if (labelEl) {
-                    labelEl.textContent = this.t('nav_forge');
-                    labelEl.setAttribute('data-i18n', 'nav_forge');
-                }
-            } else {
-                this.elements.forgeNav.classList.add('nav-locked');
-                if (iconEl) iconEl.textContent = '🔒';
-                if (labelEl) {
-                    labelEl.textContent = '???';
-                    labelEl.removeAttribute('data-i18n');
-                }
-            }
-        }
     }
 
     /**

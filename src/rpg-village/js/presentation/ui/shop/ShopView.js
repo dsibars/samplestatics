@@ -29,6 +29,14 @@ export class ShopView extends BaseView {
             detailContent: this.$('#shop-detail-content')
         };
 
+        this.root.addEventListener('click', (e) => {
+            const subviewBtn = e.target.closest('[data-subview]');
+            if (subviewBtn) {
+                this.ui.switchView(subviewBtn.dataset.subview);
+                return;
+            }
+        });
+
         // Bind tab switching
         this.$$('.shop-tab').forEach(tab => {
             tab.addEventListener('click', () => {

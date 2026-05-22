@@ -27,6 +27,14 @@ export class BestiaryView extends BaseView {
             count: this.$('#bestiary-count'),
             cardTemplate: this.$('#tpl-bestiary-card')
         };
+
+        this.root.addEventListener('click', (e) => {
+            const subviewBtn = e.target.closest('[data-subview]');
+            if (subviewBtn) {
+                this.ui.switchView(subviewBtn.dataset.subview);
+                return;
+            }
+        });
     }
 
     onUpdate(state) {
