@@ -504,6 +504,8 @@ export const eu = {
     nav_settings: "Ezarpenak",
     ui_back: "Atzera",
     trainer_title: "Entrenamendu Zelaiak",
+    origin_arcane_initiate: "Arkano Hasiberria",
+    origin_arcane_initiate_desc: "Magiazako afinidade naturalarekin jaioa. Gorputz ahula, baina elementuak zure borondateari men egiteko prest.",
     trainer_no_family_1: "Nekazari bat bezala mugitzen zara. Aukeratu teknika bat eta ERABIL ezazu.",
     trainer_no_family_2: "Familirik gabe, etorkizunik gabe. Ekipatu zerbait.",
     trainer_far_1: "Zure {family} ahula da. Jarraitu praktikatzen.",

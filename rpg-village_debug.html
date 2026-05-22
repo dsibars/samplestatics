@@ -1720,6 +1720,12 @@ class Hero {
         mults.maxMp *= 1.1;
         mults.magicPower *= 1.1;
         break;
+      case "origin_arcane_initiate":
+        mults.magicPower *= 1.25;
+        mults.maxMp *= 1.2;
+        mults.strength *= 0.85;
+        mults.defense *= 0.9;
+        break;
     }
     return mults;
   }
@@ -2177,7 +2183,8 @@ __publicField(_HeroService, "HERO_ORIGINS", [
   "origin_monk",
   "origin_cook",
   "origin_guard",
-  "origin_poet"
+  "origin_poet",
+  "origin_arcane_initiate"
 ]);
 let HeroService = _HeroService;
 class CombatCalculator {
@@ -4302,6 +4309,8 @@ const en = {
   nav_settings: "Settings",
   ui_back: "Back",
   trainer_title: "Training Grounds",
+  origin_arcane_initiate: "Arcane Initiate",
+  origin_arcane_initiate_desc: "Born with a natural affinity for magic. Weak in body, but the elements bend to your will.",
   trainer_no_family_1: "You swing like a farmer. Pick a technique and USE it.",
   trainer_no_family_2: "No family, no future. Equip something.",
   trainer_far_1: "Your {family} is weak. Keep grinding.",
@@ -4806,6 +4815,8 @@ const es = {
   nav_settings: "Ajustes",
   ui_back: "Volver",
   trainer_title: "Campos de Entrenamiento",
+  origin_arcane_initiate: "Iniciado Arcano",
+  origin_arcane_initiate_desc: "Nacido con afinidad natural por la magia. Débil de cuerpo, pero los elementos se doblegan ante tu voluntad.",
   trainer_no_family_1: "Balanceas como un granjero. Elige una técnica y ÚSALA.",
   trainer_no_family_2: "Sin familia, sin futuro. Equipa algo.",
   trainer_far_1: "Tu {family} es débil. Sigue practicando.",
@@ -5649,6 +5660,8 @@ const ca = {
   nav_settings: "Ajustos",
   ui_back: "Enrere",
   trainer_title: "Camps d'Entrenament",
+  origin_arcane_initiate: "Iniciat Arcà",
+  origin_arcane_initiate_desc: "Nascut amb afinidad natural per la màgia. Feble de cos, però els elements es dobleguen davant la teva voluntat.",
   trainer_no_family_1: "Balancejes com un pagès. Tria una tècnica i USA-LA.",
   trainer_no_family_2: "Sense família, sense futur. Equipa alguna cosa.",
   trainer_far_1: "El teu {family} és feble. Segueix practicant.",
@@ -6152,6 +6165,8 @@ const eu = {
   nav_settings: "Ezarpenak",
   ui_back: "Atzera",
   trainer_title: "Entrenamendu Zelaiak",
+  origin_arcane_initiate: "Arkano Hasiberria",
+  origin_arcane_initiate_desc: "Magiazako afinidade naturalarekin jaioa. Gorputz ahula, baina elementuak zure borondateari men egiteko prest.",
   trainer_no_family_1: "Nekazari bat bezala mugitzen zara. Aukeratu teknika bat eta ERABIL ezazu.",
   trainer_no_family_2: "Familirik gabe, etorkizunik gabe. Ekipatu zerbait.",
   trainer_far_1: "Zure {family} ahula da. Jarraitu praktikatzen.",
@@ -6653,6 +6668,8 @@ const gl = {
   nav_settings: "Axustes",
   ui_back: "Volver",
   trainer_title: "Campos de Adestramento",
+  origin_arcane_initiate: "Iniciado Arcano",
+  origin_arcane_initiate_desc: "Nado con afinidade natural pola maxia. Débil de corpo, pero os elementos doblan ante a túa vontade.",
   trainer_no_family_1: "Balanças como un labrego. Escolle unha técnica e ÚSAA.",
   trainer_no_family_2: "Sen familia, sen futuro. Equipa algo.",
   trainer_far_1: "O teu {family} é débil. Segue practicando.",
@@ -8628,7 +8645,8 @@ class HeroesView extends BaseView {
         origin_thief: "origin_thief.png",
         origin_monk: "origin_monk.png",
         origin_clown: "origin_clown.png",
-        origin_poet: "origin_poet.png"
+        origin_poet: "origin_poet.png",
+        origin_arcane_initiate: "elara.png"
       };
       const mapped = fallbackMap[hero.origin] || "arthur.png";
       avatarSrc = `assets/heroes/${mapped}`;

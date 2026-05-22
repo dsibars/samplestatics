@@ -155,6 +155,8 @@ export const en = {
     nav_settings: "Settings",
     ui_back: "Back",
     trainer_title: "Training Grounds",
+    origin_arcane_initiate: "Arcane Initiate",
+    origin_arcane_initiate_desc: "Born with a natural affinity for magic. Weak in body, but the elements bend to your will.",
     trainer_no_family_1: "You swing like a farmer. Pick a technique and USE it.",
     trainer_no_family_2: "No family, no future. Equip something.",
     trainer_far_1: "Your {family} is weak. Keep grinding.",

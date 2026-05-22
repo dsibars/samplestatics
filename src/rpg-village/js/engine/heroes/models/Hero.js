@@ -91,6 +91,12 @@ export class Hero {
                 mults.maxMp *= 1.10;
                 mults.magicPower *= 1.10;
                 break;
+            case 'origin_arcane_initiate':
+                mults.magicPower *= 1.25;
+                mults.maxMp *= 1.20;
+                mults.strength *= 0.85;
+                mults.defense *= 0.90;
+                break;
         }
 
         return mults;

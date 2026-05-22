@@ -502,6 +502,8 @@ export const gl = {
     nav_settings: "Axustes",
     ui_back: "Volver",
     trainer_title: "Campos de Adestramento",
+    origin_arcane_initiate: "Iniciado Arcano",
+    origin_arcane_initiate_desc: "Nado con afinidade natural pola maxia. Débil de corpo, pero os elementos doblan ante a túa vontade.",
     trainer_no_family_1: "Balanças como un labrego. Escolle unha técnica e ÚSAA.",
     trainer_no_family_2: "Sen familia, sen futuro. Equipa algo.",
     trainer_far_1: "O teu {family} é débil. Segue practicando.",

@@ -147,6 +147,8 @@ export const es = {
     nav_settings: "Ajustes",
     ui_back: "Volver",
     trainer_title: "Campos de Entrenamiento",
+    origin_arcane_initiate: "Iniciado Arcano",
+    origin_arcane_initiate_desc: "Nacido con afinidad natural por la magia. Débil de cuerpo, pero los elementos se doblegan ante tu voluntad.",
     trainer_no_family_1: "Balanceas como un granjero. Elige una técnica y ÚSALA.",
     trainer_no_family_2: "Sin familia, sin futuro. Equipa algo.",
     trainer_far_1: "Tu {family} es débil. Sigue practicando.",

@@ -36,7 +36,7 @@ export class HeroService {
     static HERO_NAMES = ['Elena', 'Thorne', 'Mira', 'Gareth', 'Lila', 'Doran', 'Sera', 'Kael', 'Nora', 'Finn', 'Aria', 'Bran', 'Cora', 'Dante', 'Elara'];
     static HERO_ORIGINS = [
         'origin_warrior', 'origin_thief', 'origin_clown', 'origin_farmer',
-        'origin_monk', 'origin_cook', 'origin_guard', 'origin_poet'
+        'origin_monk', 'origin_cook', 'origin_guard', 'origin_poet', 'origin_arcane_initiate'
     ];
 
     generateRandomHero() {

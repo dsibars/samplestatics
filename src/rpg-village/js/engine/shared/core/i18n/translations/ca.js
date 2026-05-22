@@ -503,6 +503,8 @@ export const ca = {
     nav_settings: "Ajustos",
     ui_back: "Enrere",
     trainer_title: "Camps d'Entrenament",
+    origin_arcane_initiate: "Iniciat Arcà",
+    origin_arcane_initiate_desc: "Nascut amb afinidad natural per la màgia. Feble de cos, però els elements es dobleguen davant la teva voluntat.",
     trainer_no_family_1: "Balancejes com un pagès. Tria una tècnica i USA-LA.",
     trainer_no_family_2: "Sense família, sense futur. Equipa alguna cosa.",
     trainer_far_1: "El teu {family} és feble. Segueix practicant.",

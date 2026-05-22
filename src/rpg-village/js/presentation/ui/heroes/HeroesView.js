@@ -289,7 +289,8 @@ export class HeroesView extends BaseView {
                 origin_thief: 'origin_thief.png',
                 origin_monk: 'origin_monk.png',
                 origin_clown: 'origin_clown.png',
-                origin_poet: 'origin_poet.png'
+                origin_poet: 'origin_poet.png',
+                origin_arcane_initiate: 'elara.png'
             };
             const mapped = fallbackMap[hero.origin] || 'arthur.png';
             avatarSrc = `assets/heroes/${mapped}`;
