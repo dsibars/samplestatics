@@ -1,6 +1,7 @@
 import { BaseView } from '../BaseView.js';
 import { getEquipmentName, getEquipmentStats } from '../shared/EquipmentHelper.js';
 import { SKILLS_DATA } from '../../../engine/shared/data/GameConstants.js';
+import { TrainerService } from '../../../engine/trainer/TrainerService.js';
 
 export class HeroesView extends BaseView {
     constructor() {
@@ -64,6 +65,12 @@ export class HeroesView extends BaseView {
                 const unequipBtn = e.target.closest('.btn-unequip-skill');
                 if (unequipBtn) {
                     this.emit('unequipSkill', { heroId: this.selectedHeroId, skillId: unequipBtn.dataset.skill });
+                    return;
+                }
+
+                const trainerBtn = e.target.closest('.btn-trainer');
+                if (trainerBtn) {
+                    this._openTrainerModal();
                     return;
                 }
             });
@@ -312,6 +319,9 @@ export class HeroesView extends BaseView {
                         <div class="skill-slots-alert ${canManageSkills ? '' : 'locked'}" style="margin-top: 6px; background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">
                             <strong>${this.t('ui_skill_slots').replace('{current}', usedSlots).replace('{max}', maxSlots)}${!canManageSkills ? ' (' + (this.t('ui_busy') || 'Busy') + ')' : ''}</strong>
                         </div>
+                        <button class="btn btn-secondary btn-sm btn-trainer" data-action="open-trainer" style="margin-top: 8px;">
+                            💪 ${this.t('trainer_title') || 'Training Grounds'}
+                        </button>
                     </div>
                 </div>
                 <div class="stats-grid">
@@ -541,6 +551,44 @@ export class HeroesView extends BaseView {
                 this.emit('equipItem', { heroId: this.selectedHeroId, slot, itemId });
                 closeModal();
             });
+        });
+    }
+
+    _openTrainerModal() {
+        const hero = this.lastRawState?.heroes?.find(h => h.id === this.selectedHeroId);
+        if (!hero) return;
+
+        const dialogue = TrainerService.getDialogue(hero, this.ui?.i18n);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay trainer-modal-overlay';
+        overlay.innerHTML = `
+            <div class="trainer-dialogue-box">
+                <div class="trainer-header">
+                    <span class="trainer-icon">💪</span>
+                    <h3>${this.t('trainer_title') || 'Training Grounds'}</h3>
+                </div>
+                <div class="trainer-lines">
+                    ${dialogue.lines.map(line => `<p class="trainer-line">"${line}"</p>`).join('')}
+                </div>
+                <div class="trainer-footer">
+                    <span class="trainer-category">${dialogue.category}</span>
+                    <button class="btn btn-secondary btn-sm" id="btn-trainer-close">${this.t('ui_btn_close') || 'Close'}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#btn-trainer-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
         });
     }
 }

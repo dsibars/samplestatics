@@ -4301,6 +4301,17 @@ const en = {
   technique_evolved: "Technique evolved!",
   nav_settings: "Settings",
   ui_back: "Back",
+  trainer_title: "Training Grounds",
+  trainer_no_family_1: "You swing like a farmer. Pick a technique and USE it.",
+  trainer_no_family_2: "No family, no future. Equip something.",
+  trainer_far_1: "Your {family} is weak. Keep grinding.",
+  trainer_far_2: "I've seen recruits do better. Use it more.",
+  trainer_approaching_1: "Your {family} is improving. Not terrible.",
+  trainer_approaching_2: "You're getting there. Push harder.",
+  trainer_near_1: "Your {family} is close to evolving. One more push!",
+  trainer_near_2: "I can feel the technique awakening. Don't stop now.",
+  trainer_high_tier_1: "Your {family} at tier {tier}... impressive. For a rookie.",
+  trainer_high_tier_2: "Keep going. Legends are forged, not born.",
   // Domain: Village
   ui_village_status: "Village Status",
   ui_construction: "Construction",
@@ -4794,6 +4805,17 @@ const es = {
   technique_evolved: "¡Técnica evolucionada!",
   nav_settings: "Ajustes",
   ui_back: "Volver",
+  trainer_title: "Campos de Entrenamiento",
+  trainer_no_family_1: "Balanceas como un granjero. Elige una técnica y ÚSALA.",
+  trainer_no_family_2: "Sin familia, sin futuro. Equipa algo.",
+  trainer_far_1: "Tu {family} es débil. Sigue practicando.",
+  trainer_far_2: "He visto reclutas hacerlo mejor. Úsalo más.",
+  trainer_approaching_1: "Tu {family} mejora. No es terrible.",
+  trainer_approaching_2: "Estás llegando. Esfuerza más.",
+  trainer_near_1: "¡Tu {family} está cerca de evolucionar. ¡Un empujón más!",
+  trainer_near_2: "Siento la técnica despertando. No pares ahora.",
+  trainer_high_tier_1: "Tu {family} en nivel {tier}... impresionante. Para un novato.",
+  trainer_high_tier_2: "Sigue adelante. Las leyendas se forjan, no nacen.",
   // Domain: Village
   ui_village_status: "Estado de la Aldea",
   ui_construction: "Construcción",
@@ -5626,6 +5648,17 @@ const ca = {
   ui_skills: "Habilitats",
   nav_settings: "Ajustos",
   ui_back: "Enrere",
+  trainer_title: "Camps d'Entrenament",
+  trainer_no_family_1: "Balancejes com un pagès. Tria una tècnica i USA-LA.",
+  trainer_no_family_2: "Sense família, sense futur. Equipa alguna cosa.",
+  trainer_far_1: "El teu {family} és feble. Segueix practicant.",
+  trainer_far_2: "He vist reclutes fer-ho millor. Usa-ho més.",
+  trainer_approaching_1: "El teu {family} millora. No és terrible.",
+  trainer_approaching_2: "Estàs arribant. Esforça més.",
+  trainer_near_1: "El teu {family} està a punt d'evolucionar. Un empenta més!",
+  trainer_near_2: "Noto la tècnica despertant. No aturis ara.",
+  trainer_high_tier_1: "El teu {family} a nivell {tier}... impressionant. Per a un novell.",
+  trainer_high_tier_2: "Segueix endavant. Les llegendes es forgen, no neixen.",
   ui_btn_cancel: "Cancel·lar",
   ui_btn_confirm: "Confirmar Esborrat",
   ui_select_expedition: "Select an expedition node on the map.",
@@ -6118,6 +6151,17 @@ const eu = {
   ui_skills: "Gaitasunak",
   nav_settings: "Ezarpenak",
   ui_back: "Atzera",
+  trainer_title: "Entrenamendu Zelaiak",
+  trainer_no_family_1: "Nekazari bat bezala mugitzen zara. Aukeratu teknika bat eta ERABIL ezazu.",
+  trainer_no_family_2: "Familirik gabe, etorkizunik gabe. Ekipatu zerbait.",
+  trainer_far_1: "Zure {family} ahula da. Jarraitu praktikatzen.",
+  trainer_far_2: "Erreklutak hobe egiten ikusi ditut. Gehiago erabili.",
+  trainer_approaching_1: "Zure {family} hobetzen ari da. Ez da txarra.",
+  trainer_approaching_2: "Hurbiltzen ari zara. Gehiago egin behar duzu.",
+  trainer_near_1: "Zure {family} eboluzionatzeko zorian dago. Bultzada bat gehiago!",
+  trainer_near_2: "Teknika esnatzen sentitzen dut. Ez gelditu orain.",
+  trainer_high_tier_1: "Zure {family} {tier}. mailan... inpresionantea. Hasiberri batentzat.",
+  trainer_high_tier_2: "Jarraitu. Kondairak sortzen dira, ez jaiotzen.",
   ui_btn_cancel: "Utzi",
   ui_btn_confirm: "Ezabapena Berretsi",
   ui_select_expedition: "Select an expedition node on the map.",
@@ -6608,6 +6652,17 @@ const gl = {
   nav_bestiary: "Bestiario",
   nav_settings: "Axustes",
   ui_back: "Volver",
+  trainer_title: "Campos de Adestramento",
+  trainer_no_family_1: "Balanças como un labrego. Escolle unha técnica e ÚSAA.",
+  trainer_no_family_2: "Sen familia, sen futuro. Equipa algo.",
+  trainer_far_1: "O teu {family} é débil. Segue practicando.",
+  trainer_far_2: "Vin reclutas facelo mellor. Usao máis.",
+  trainer_approaching_1: "O teu {family} mellora. Non é terrible.",
+  trainer_approaching_2: "Estás chegando. Esforza máis.",
+  trainer_near_1: "O teu {family} está preto de evolucionar. Un empurrón máis!",
+  trainer_near_2: "Sínto a técnica despertando. Non pares agora.",
+  trainer_high_tier_1: "O teu {family} en nivel {tier}... impresionante. Para un novato.",
+  trainer_high_tier_2: "Segue adiante. As lendas forxan, non nacen.",
   ui_bestiary_empty: "Aínda non hai criaturas catalogadas. Envía heroes a expedicións para descubrir novos inimigos!",
   ui_btn_cancel: "Cancelar",
   ui_btn_confirm: "Confirmar Borrado",
@@ -8251,6 +8306,84 @@ function getFormattedStats(item, t) {
   }
   return statLines.join(", ") || t("ui_no_item_stats") || "No stats modification.";
 }
+class TrainerService {
+  /**
+   * Get trainer dialogue for a hero.
+   * @param {Hero} hero
+   * @param {Object} i18n
+   * @returns {Object} { lines: string[], category: string }
+   */
+  static getDialogue(hero, i18n2) {
+    const families = Object.keys(hero.techniqueUses || {});
+    const tiers = hero.techniqueTiers || {};
+    const highTierFamily = families.find((f) => (tiers[f] || 1) >= 5);
+    if (highTierFamily) {
+      return {
+        category: "high_tier",
+        lines: this._getLines("high_tier", i18n2, { family: highTierFamily, tier: tiers[highTierFamily] })
+      };
+    }
+    let bestProgress = { family: null, progress: 0, threshold: 1 };
+    for (const family of families) {
+      const currentTier = tiers[family] || 1;
+      const uses = hero.techniqueUses[family] || 0;
+      const threshold = this._getTierThreshold(currentTier + 1);
+      const progress = uses / threshold;
+      if (progress > bestProgress.progress) {
+        bestProgress = { family, progress, threshold, uses };
+      }
+    }
+    if (families.length === 0) {
+      return {
+        category: "no_family",
+        lines: this._getLines("no_family", i18n2)
+      };
+    }
+    let category = "far";
+    if (bestProgress.progress >= 0.75) category = "near";
+    else if (bestProgress.progress >= 0.25) category = "approaching";
+    return {
+      category,
+      lines: this._getLines(category, i18n2, {
+        family: bestProgress.family,
+        uses: bestProgress.uses,
+        threshold: bestProgress.threshold
+      })
+    };
+  }
+  static _getTierThreshold(tier) {
+    if (tier <= 1) return 0;
+    return Math.floor(100 * Math.pow(3, tier - 2));
+  }
+  static _getLines(category, i18n2, ctx = {}) {
+    const t = (key) => i18n2 ? i18n2.t(key) : key;
+    const familyName = ctx.family ? t(`family_${ctx.family}`) : "";
+    const lines = [];
+    switch (category) {
+      case "no_family":
+        lines.push(t("trainer_no_family_1"));
+        lines.push(t("trainer_no_family_2"));
+        break;
+      case "far":
+        lines.push(t("trainer_far_1").replace("{family}", familyName));
+        lines.push(t("trainer_far_2").replace("{family}", familyName));
+        break;
+      case "approaching":
+        lines.push(t("trainer_approaching_1").replace("{family}", familyName));
+        lines.push(t("trainer_approaching_2").replace("{family}", familyName));
+        break;
+      case "near":
+        lines.push(t("trainer_near_1").replace("{family}", familyName));
+        lines.push(t("trainer_near_2").replace("{family}", familyName));
+        break;
+      case "high_tier":
+        lines.push(t("trainer_high_tier_1").replace("{family}", familyName).replace("{tier}", ctx.tier));
+        lines.push(t("trainer_high_tier_2").replace("{family}", familyName));
+        break;
+    }
+    return lines.filter(Boolean);
+  }
+}
 class HeroesView extends BaseView {
   constructor() {
     super("heroes");
@@ -8305,6 +8438,11 @@ class HeroesView extends BaseView {
         const unequipBtn = e.target.closest(".btn-unequip-skill");
         if (unequipBtn) {
           this.emit("unequipSkill", { heroId: this.selectedHeroId, skillId: unequipBtn.dataset.skill });
+          return;
+        }
+        const trainerBtn = e.target.closest(".btn-trainer");
+        if (trainerBtn) {
+          this._openTrainerModal();
           return;
         }
       });
@@ -8519,6 +8657,9 @@ class HeroesView extends BaseView {
                         <div class="skill-slots-alert ${canManageSkills ? "" : "locked"}" style="margin-top: 6px; background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">
                             <strong>${this.t("ui_skill_slots").replace("{current}", usedSlots).replace("{max}", maxSlots)}${!canManageSkills ? " (" + (this.t("ui_busy") || "Busy") + ")" : ""}</strong>
                         </div>
+                        <button class="btn btn-secondary btn-sm btn-trainer" data-action="open-trainer" style="margin-top: 8px;">
+                            💪 ${this.t("trainer_title") || "Training Grounds"}
+                        </button>
                     </div>
                 </div>
                 <div class="stats-grid">
@@ -8726,6 +8867,39 @@ class HeroesView extends BaseView {
         this.emit("equipItem", { heroId: this.selectedHeroId, slot, itemId });
         closeModal();
       });
+    });
+  }
+  _openTrainerModal() {
+    var _a, _b, _c;
+    const hero = (_b = (_a = this.lastRawState) == null ? void 0 : _a.heroes) == null ? void 0 : _b.find((h) => h.id === this.selectedHeroId);
+    if (!hero) return;
+    const dialogue = TrainerService.getDialogue(hero, (_c = this.ui) == null ? void 0 : _c.i18n);
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay trainer-modal-overlay";
+    overlay.innerHTML = `
+            <div class="trainer-dialogue-box">
+                <div class="trainer-header">
+                    <span class="trainer-icon">💪</span>
+                    <h3>${this.t("trainer_title") || "Training Grounds"}</h3>
+                </div>
+                <div class="trainer-lines">
+                    ${dialogue.lines.map((line) => `<p class="trainer-line">"${line}"</p>`).join("")}
+                </div>
+                <div class="trainer-footer">
+                    <span class="trainer-category">${dialogue.category}</span>
+                    <button class="btn btn-secondary btn-sm" id="btn-trainer-close">${this.t("ui_btn_close") || "Close"}</button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.3s ease";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    overlay.querySelector("#btn-trainer-close").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
     });
   }
 }
@@ -11858,6 +12032,86 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+
+/* Trainer NPC Styles */
+
+.trainer-modal-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+.trainer-dialogue-box {
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    max-width: 480px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s ease-out;
+}
+
+.trainer-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.trainer-icon {
+    font-size: 2rem;
+}
+
+.trainer-header h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.3rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.trainer-lines {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.trainer-line {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--accent-color);
+}
+
+.trainer-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.trainer-category {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }</style>
 </head>
 <body>

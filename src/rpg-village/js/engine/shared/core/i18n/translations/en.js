@@ -154,6 +154,17 @@ export const en = {
     technique_evolved: "Technique evolved!",
     nav_settings: "Settings",
     ui_back: "Back",
+    trainer_title: "Training Grounds",
+    trainer_no_family_1: "You swing like a farmer. Pick a technique and USE it.",
+    trainer_no_family_2: "No family, no future. Equip something.",
+    trainer_far_1: "Your {family} is weak. Keep grinding.",
+    trainer_far_2: "I've seen recruits do better. Use it more.",
+    trainer_approaching_1: "Your {family} is improving. Not terrible.",
+    trainer_approaching_2: "You're getting there. Push harder.",
+    trainer_near_1: "Your {family} is close to evolving. One more push!",
+    trainer_near_2: "I can feel the technique awakening. Don't stop now.",
+    trainer_high_tier_1: "Your {family} at tier {tier}... impressive. For a rookie.",
+    trainer_high_tier_2: "Keep going. Legends are forged, not born.",
 
     // Domain: Village
     ui_village_status: "Village Status",

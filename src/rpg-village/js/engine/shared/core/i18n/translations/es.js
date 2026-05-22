@@ -146,6 +146,17 @@ export const es = {
     technique_evolved: "¡Técnica evolucionada!",
     nav_settings: "Ajustes",
     ui_back: "Volver",
+    trainer_title: "Campos de Entrenamiento",
+    trainer_no_family_1: "Balanceas como un granjero. Elige una técnica y ÚSALA.",
+    trainer_no_family_2: "Sin familia, sin futuro. Equipa algo.",
+    trainer_far_1: "Tu {family} es débil. Sigue practicando.",
+    trainer_far_2: "He visto reclutas hacerlo mejor. Úsalo más.",
+    trainer_approaching_1: "Tu {family} mejora. No es terrible.",
+    trainer_approaching_2: "Estás llegando. Esfuerza más.",
+    trainer_near_1: "¡Tu {family} está cerca de evolucionar. ¡Un empujón más!",
+    trainer_near_2: "Siento la técnica despertando. No pares ahora.",
+    trainer_high_tier_1: "Tu {family} en nivel {tier}... impresionante. Para un novato.",
+    trainer_high_tier_2: "Sigue adelante. Las leyendas se forjan, no nacen.",
 
     // Domain: Village
     ui_village_status: "Estado de la Aldea",
