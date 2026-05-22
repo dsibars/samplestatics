@@ -251,3 +251,75 @@ test('HeroService: setStatus', () => {
     const missing = service.setStatus('nonexistent', 'resting');
     assert.strictEqual(missing.success, false);
 });
+
+
+test('HeroService: stamina initialized on creation', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+    const hero = service.get(added.data.id);
+
+    assert.ok(hero.maxStamina > 0, 'maxStamina should be calculated');
+    assert.strictEqual(hero.stamina, hero.maxStamina, 'stamina should start at max');
+});
+
+test('HeroService: stamina formula is correct', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ 
+        name: 'TestHero', 
+        origin: 'origin_warrior', 
+        level: 1, 
+        statPoints: 5,
+        baseStrength: 10,
+        baseDefense: 5
+    });
+    const hero = service.get(added.data.id);
+
+    // maxStamina = (strength * 3) + (defense * 2) + (level * 2)
+    const expected = (hero.strength * 3) + (hero.defense * 2) + (hero.level * 2);
+    assert.strictEqual(hero.maxStamina, expected, `maxStamina should be ${expected}`);
+});
+
+test('HeroService: stamina restores on level up', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+    const hero = service.get(added.data.id);
+
+    // Drain stamina
+    hero.stamina = 5;
+    const preLevelMax = hero.maxStamina;
+
+    // Level up
+    hero.levelUp();
+
+    assert.strictEqual(hero.stamina, hero.maxStamina, 'stamina should restore to max on level up');
+    assert.ok(hero.maxStamina > preLevelMax, 'maxStamina should increase with level');
+});
+
+test('HeroService: assigning STR increases maxStamina', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+    const hero = service.get(added.data.id);
+    const preMaxStamina = hero.maxStamina;
+
+    service.increaseHeroStat(added.data.id, 'baseStrength');
+
+    assert.ok(hero.maxStamina > preMaxStamina, 'maxStamina should increase after STR allocation');
+    assert.strictEqual(hero.maxStamina, preMaxStamina + 3, 'maxStamina should increase by 3 per STR point');
+});
+
+test('HeroService: assigning DEF increases maxStamina', () => {
+    const inventory = new InventoryService();
+    const service = new HeroService(inventory);
+    const added = service.add({ name: 'TestHero', origin: 'origin_warrior', level: 1, statPoints: 5 });
+    const hero = service.get(added.data.id);
+    const preMaxStamina = hero.maxStamina;
+
+    service.increaseHeroStat(added.data.id, 'baseDefense');
+
+    assert.ok(hero.maxStamina > preMaxStamina, 'maxStamina should increase after DEF allocation');
+    assert.strictEqual(hero.maxStamina, preMaxStamina + 2, 'maxStamina should increase by 2 per DEF point');
+});

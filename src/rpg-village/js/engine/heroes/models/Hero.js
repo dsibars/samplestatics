@@ -20,7 +20,7 @@ export class Hero {
         this.baseDefense = data.baseDefense || 4;
         this.baseMagicPower = data.baseMagicPower || 4;
 
-        // Dynamic state
+        // Dynamic state (hp/mp use base values which are already set)
         this.hp = data.hp ?? this.baseMaxHp;
         this.mp = data.mp ?? this.baseMaxMp;
         this.status = data.status || 'resting'; // 'active', 'resting', 'training'
@@ -41,6 +41,9 @@ export class Hero {
 
         // Final calculated stats
         this.recalculateStats();
+
+        // Stamina is derived from STR/DEF/Level, so it must be set AFTER recalculateStats
+        this.stamina = data.stamina ?? this.maxStamina;
     }
 
     getTraitMultipliers() {
@@ -221,6 +224,9 @@ export class Hero {
         this.defense = Math.floor((this.baseDefense + defBoost + equipBonus.defense) * traitMults.defense);
         this.magicPower = Math.floor((this.baseMagicPower + equipBonus.magicPower) * traitMults.magicPower);
 
+        // maxStamina depends on strength, defense, and level — must be calculated after those
+        this.maxStamina = Math.floor((this.strength * 3) + (this.defense * 2) + (this.level * 2));
+
         this.evasion = equipBonus.evasion;
         this.mpCostReduction = equipBonus.mpCostReduction;
         this.vampirism = equipBonus.vampirism;
@@ -230,6 +236,9 @@ export class Hero {
 
         this.hp = Math.min(this.hp, this.maxHp);
         this.mp = Math.min(this.mp, this.maxMp);
+        if (this.stamina !== undefined) {
+            this.stamina = Math.min(this.stamina, this.maxStamina);
+        }
     }
 
     getExpToNextLevel() {
@@ -264,6 +273,7 @@ export class Hero {
 
         this.hp = this.maxHp;
         this.mp = this.maxMp;
+        this.stamina = this.maxStamina;
     }
 
     increaseStat(statId) {
@@ -342,12 +352,14 @@ export class Hero {
             baseMagicPower: this.baseMagicPower,
             maxHp: this.maxHp,
             maxMp: this.maxMp,
+            maxStamina: this.maxStamina,
             strength: this.strength,
             speed: this.speed,
             defense: this.defense,
             magicPower: this.magicPower,
             hp: this.hp,
             mp: this.mp,
+            stamina: this.stamina,
             status: this.status,
             skills: JSON.parse(JSON.stringify(this.skills)),
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),

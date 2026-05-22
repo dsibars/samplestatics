@@ -15,6 +15,8 @@ const mockActor = {
     hp: 100,
     maxHp: 100,
     mp: 50,
+    stamina: 50,
+    maxStamina: 50,
     skills: { basic_attack: 1, double_attack: 1, whirlwind: 1, small_heal: 1, small_group_heal: 1 }
 };
 
@@ -107,7 +109,8 @@ test('CombatAI: falls back to basic_attack when no skills affordable', () => {
     const lowMpActor = {
         ...mockActor,
         mp: 0,
-        skills: { double_attack: 1, whirlwind: 1 } // both cost MP
+        stamina: 0,
+        skills: { double_attack: 1, whirlwind: 1 } // both cost stamina
     };
 
     const result = CombatAI.decideAction({
@@ -120,11 +123,11 @@ test('CombatAI: falls back to basic_attack when no skills affordable', () => {
     assert.strictEqual(result.skillId, 'basic_attack');
 });
 
-test('CombatAI: skill availability filter excludes unaffordable MP costs', () => {
+test('CombatAI: skill availability filter excludes unaffordable stamina/MP costs', () => {
     const lowMpActor = {
         ...mockActor,
         mp: 5,
-        skills: { basic_attack: 1, double_attack: 1 } // double_attack costs 10 MP
+        skills: { basic_attack: 1, small_fire_ball: 1 } // small_fire_ball costs 10 MP
     };
 
     const result = CombatAI.decideAction({

@@ -59,6 +59,7 @@ const SKILLS_DATA = {
     stat: "strength",
     baseMultiplier: 1,
     mpCost: 0,
+    staminaCost: 0,
     tier: 1,
     unlockCost: 0,
     targetType: "single_enemy"
@@ -68,7 +69,8 @@ const SKILLS_DATA = {
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.7,
-    mpCost: 10,
+    mpCost: 0,
+    staminaCost: 10,
     tier: 2,
     unlockCost: 2,
     dependency: "basic_attack",
@@ -79,7 +81,8 @@ const SKILLS_DATA = {
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.6,
-    mpCost: 20,
+    mpCost: 0,
+    staminaCost: 20,
     tier: 3,
     unlockCost: 5,
     dependency: "double_attack",
@@ -90,7 +93,8 @@ const SKILLS_DATA = {
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.6,
-    mpCost: 15,
+    mpCost: 0,
+    staminaCost: 15,
     tier: 2,
     unlockCost: 3,
     dependency: "basic_attack",
@@ -101,7 +105,8 @@ const SKILLS_DATA = {
     category: "physical",
     stat: "strength",
     baseMultiplier: 0.4,
-    mpCost: 35,
+    mpCost: 0,
+    staminaCost: 35,
     tier: 3,
     unlockCost: 7,
     dependency: "whirlwind",
@@ -1600,6 +1605,7 @@ class Hero {
       accessory: null
     };
     this.recalculateStats();
+    this.stamina = data.stamina ?? this.maxStamina;
   }
   getTraitMultipliers() {
     const mults = {
@@ -1764,6 +1770,7 @@ class Hero {
     this.speed = Math.floor((this.baseSpeed + equipBonus.speed) * traitMults.speed * hasteMult);
     this.defense = Math.floor((this.baseDefense + defBoost + equipBonus.defense) * traitMults.defense);
     this.magicPower = Math.floor((this.baseMagicPower + equipBonus.magicPower) * traitMults.magicPower);
+    this.maxStamina = Math.floor(this.strength * 3 + this.defense * 2 + this.level * 2);
     this.evasion = equipBonus.evasion;
     this.mpCostReduction = equipBonus.mpCostReduction;
     this.vampirism = equipBonus.vampirism;
@@ -1772,6 +1779,9 @@ class Hero {
     this.hasPhoenix = equipBonus.hasPhoenix;
     this.hp = Math.min(this.hp, this.maxHp);
     this.mp = Math.min(this.mp, this.maxMp);
+    if (this.stamina !== void 0) {
+      this.stamina = Math.min(this.stamina, this.maxStamina);
+    }
   }
   getExpToNextLevel() {
     return this.level * 20;
@@ -1800,6 +1810,7 @@ class Hero {
     this.recalculateStats();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
+    this.stamina = this.maxStamina;
   }
   increaseStat(statId) {
     if (this.statPoints <= 0) return Result.fail("error_no_stat_points");
@@ -1866,12 +1877,14 @@ class Hero {
       baseMagicPower: this.baseMagicPower,
       maxHp: this.maxHp,
       maxMp: this.maxMp,
+      maxStamina: this.maxStamina,
       strength: this.strength,
       speed: this.speed,
       defense: this.defense,
       magicPower: this.magicPower,
       hp: this.hp,
       mp: this.mp,
+      stamina: this.stamina,
       status: this.status,
       skills: JSON.parse(JSON.stringify(this.skills)),
       statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
@@ -2143,7 +2156,11 @@ class CombatAI {
     const { actor, allies, enemies, type } = context;
     const availableSkills = Object.keys(actor.skills || {}).filter((sId) => {
       const data = SKILLS_DATA[sId];
-      return data && actor.mp >= data.mpCost;
+      if (!data) return false;
+      if (data.category === "physical") {
+        return (actor.stamina || 0) >= (data.staminaCost || 0);
+      }
+      return actor.mp >= data.mpCost;
     });
     const injuredAllies = allies.filter((a) => a.hp > 0 && a.hp / a.maxHp <= 0.7);
     if (injuredAllies.length > 0 && type === "smart") {
@@ -2336,8 +2353,13 @@ class BattleService {
     if (this.isOver) return Result.fail("error_battle_over");
     const skillData = SKILLS_DATA[skillId];
     if (!skillData) return Result.fail("error_invalid_skill");
-    if (actor.mp < skillData.mpCost) return Result.fail("error_not_enough_mp");
-    actor.mp -= skillData.mpCost;
+    if (skillData.category === "physical") {
+      if (actor.stamina < skillData.staminaCost) return Result.fail("error_not_enough_stamina");
+      actor.stamina -= skillData.staminaCost;
+    } else {
+      if (actor.mp < skillData.mpCost) return Result.fail("error_not_enough_mp");
+      actor.mp -= skillData.mpCost;
+    }
     const skillLevel = actor.skills && actor.skills[skillId] || 0;
     const isActorHero = this.heroes.includes(actor);
     const allies = isActorHero ? this.heroes : this.enemies;
@@ -4208,6 +4230,7 @@ const en = {
   error_not_enough_gold: "Not enough gold to complete this action.",
   error_not_enough_materials: "Not enough materials to complete this action.",
   error_not_enough_items: "Not enough items available.",
+  error_not_enough_stamina: "Not enough stamina!",
   error_storage_full: "Storage is full! Build a Warehouse to increase capacity.",
   error_no_available_labor: "No idle workers available to start construction.",
   error_hero_not_found: "Hero not found.",
@@ -4318,6 +4341,7 @@ const en = {
   ui_stats_speed: "Speed",
   ui_stats_evasion: "Evasion",
   ui_stats_mpreduce: "MP Cost Reduction",
+  ui_stats_stamina: "STA",
   item_tiny_hp_potion: "Tiny HP Potion",
   item_tiny_hp_potion_desc: "Restores 20 HP.",
   item_tiny_mp_potion: "Tiny MP Potion",
@@ -4653,6 +4677,7 @@ const es = {
   error_not_enough_gold: "No tienes suficiente oro para completar esta acción.",
   error_not_enough_materials: "No tienes suficientes materiales para completar esta acción.",
   error_not_enough_items: "No hay suficientes objetos disponibles.",
+  error_not_enough_stamina: "¡Resistencia insuficiente!",
   error_storage_full: "¡El almacén está lleno! Construye un Almacén para aumentar la capacidad.",
   error_no_available_labor: "No hay trabajadores libres para iniciar la construcción.",
   error_hero_not_found: "Héroe no encontrado.",
@@ -4763,6 +4788,7 @@ const es = {
   ui_stats_speed: "Velocidad",
   ui_stats_evasion: "Evasión",
   ui_stats_mpreduce: "Reducción Coste MP",
+  ui_stats_stamina: "RES",
   item_tiny_hp_potion: "Poción HP Pequeña",
   item_tiny_hp_potion_desc: "Restaura 20 HP.",
   item_tiny_mp_potion: "Poción MP Pequeña",
@@ -5089,6 +5115,7 @@ const ca = {
   error_not_enough_gold: "No tens prou or per completar aquesta acció.",
   error_not_enough_materials: "No tens prou materials per completar aquesta acció.",
   error_not_enough_items: "No hi ha prou objectes disponibles.",
+  error_not_enough_stamina: "Resistència insuficient!",
   error_storage_full: "El magatzem és ple! Construeix un Magatzem per augmentar la capacitat.",
   error_no_available_labor: "No hi ha treballadors lliures per iniciar la construcció.",
   error_hero_not_found: "Heroi no trobat.",
@@ -5199,6 +5226,7 @@ const ca = {
   ui_stats_speed: "Velocitat",
   ui_stats_evasion: "Evasió",
   ui_stats_mpreduce: "Reducció Cost MP",
+  ui_stats_stamina: "RES",
   item_tiny_hp_potion: "Poció HP Petita",
   item_tiny_hp_potion_desc: "Restaura 20 HP.",
   item_tiny_mp_potion: "Poció MP Petita",
@@ -5552,6 +5580,7 @@ const eu = {
   error_not_enough_gold: "Ez duzu urre nahikorik ekintza hau osatzeko.",
   error_not_enough_materials: "Ez dituzu material nahikoak ekintza hau osatzeko.",
   error_not_enough_items: "Ez dago objektu nahikorik eskuragarri.",
+  error_not_enough_stamina: "Ez dago iraunkortasunik nahikorik!",
   error_storage_full: "Biltegiak beteta daude! Eraiki Biltegi bat edukiera handitzeko.",
   error_no_available_labor: "Ez dago langile librerik eraikuntza hasteko.",
   error_hero_not_found: "Heroia ez da aurkitu.",
@@ -5662,6 +5691,7 @@ const eu = {
   ui_stats_speed: "Abiadura",
   ui_stats_evasion: "Saihestea",
   ui_stats_mpreduce: "MP Kostu Murrizketa",
+  ui_stats_stamina: "IRA",
   item_tiny_hp_potion: "HP Edabe Txikia",
   item_tiny_hp_potion_desc: "20 HP berritzen ditu.",
   item_tiny_mp_potion: "MP Edabe Txikia",
@@ -6014,6 +6044,7 @@ const gl = {
   error_not_enough_gold: "Non tes ouro suficiente para completar esta acción.",
   error_not_enough_materials: "Non tes materiais suficientes para completar esta acción.",
   error_not_enough_items: "Non hai obxectos suficientes dispoñibles.",
+  error_not_enough_stamina: "Resistencia insuficiente!",
   error_storage_full: "O almacén está cheo! Constrúe un Almacén para aumentar a capacidade.",
   error_no_available_labor: "Non hai traballadores libres para iniciar a construción.",
   error_hero_not_found: "Heroe non atopado.",
@@ -6124,6 +6155,7 @@ const gl = {
   ui_stats_speed: "Velocidade",
   ui_stats_evasion: "Evasión",
   ui_stats_mpreduce: "Redución Costo MP",
+  ui_stats_stamina: "RES",
   item_tiny_hp_potion: "Poción HP Pequena",
   item_tiny_hp_potion_desc: "Restaura 20 HP.",
   item_tiny_mp_potion: "Poción MP Pequena",
@@ -7981,6 +8013,8 @@ class HeroesView extends BaseView {
         maxHp: activeHero.maxHp,
         mp: activeHero.mp,
         maxMp: activeHero.maxMp,
+        stamina: activeHero.stamina,
+        maxStamina: activeHero.maxStamina,
         strength: activeHero.strength,
         speed: activeHero.speed,
         defense: activeHero.defense,
@@ -8182,6 +8216,12 @@ class HeroesView extends BaseView {
                         <div class="stat-value-group">
                             <span>${hero.mp} / ${hero.maxMp}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxMp">+</button>` : ""}
+                        </div>
+                    </div>
+                    <div class="stat-row stamina-row">
+                        <span>${this.t("ui_stats_stamina") || "STA"}</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.stamina} / ${hero.maxStamina}</span>
                         </div>
                     </div>
                     <div class="stat-row">
@@ -11326,6 +11366,28 @@ body {
     0%, 100% { transform: translateX(0); }
     15%, 45%, 75% { transform: translateX(-8px); }
     30%, 60%, 90% { transform: translateX(8px); }
+}
+
+
+
+
+/* Stamina System Styles */
+
+.stamina-row {
+    color: #f59e0b;
+}
+
+.stamina-row .btn-assign-stat {
+    display: none;
+}
+
+.stamina-bar {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.stamina-bar .stat-bar-fill {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }</style>
 </head>
 <body>

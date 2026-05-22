@@ -1266,3 +1266,22 @@ body {
 
 
 
+
+/* Stamina System Styles */
+
+.stamina-row {
+    color: #f59e0b;
+}
+
+.stamina-row .btn-assign-stat {
+    display: none;
+}
+
+.stamina-bar {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.stamina-bar .stat-bar-fill {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}

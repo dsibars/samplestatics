@@ -181,9 +181,14 @@ export class BattleService {
         const skillData = SKILLS_DATA[skillId];
         if (!skillData) return Result.fail('error_invalid_skill');
 
-        if (actor.mp < skillData.mpCost) return Result.fail('error_not_enough_mp');
-
-        actor.mp -= skillData.mpCost;
+        // Resource cost: physical uses stamina, magic uses MP
+        if (skillData.category === 'physical') {
+            if (actor.stamina < skillData.staminaCost) return Result.fail('error_not_enough_stamina');
+            actor.stamina -= skillData.staminaCost;
+        } else {
+            if (actor.mp < skillData.mpCost) return Result.fail('error_not_enough_mp');
+            actor.mp -= skillData.mpCost;
+        }
         const skillLevel = (actor.skills && actor.skills[skillId]) || 0;
 
         const isActorHero = this.heroes.includes(actor);

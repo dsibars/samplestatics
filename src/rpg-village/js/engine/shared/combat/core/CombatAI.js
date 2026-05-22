@@ -9,10 +9,14 @@ export class CombatAI {
     static decideAction(context) {
         const { actor, allies, enemies, type } = context;
         
-        // Filter skills by MP availability
+        // Filter skills by resource availability (stamina for physical, MP for magic/support)
         const availableSkills = Object.keys(actor.skills || {}).filter(sId => {
             const data = SKILLS_DATA[sId];
-            return data && actor.mp >= data.mpCost;
+            if (!data) return false;
+            if (data.category === 'physical') {
+                return (actor.stamina || 0) >= (data.staminaCost || 0);
+            }
+            return actor.mp >= data.mpCost;
         });
 
         // 1. Check for Healing needs (Smart only)

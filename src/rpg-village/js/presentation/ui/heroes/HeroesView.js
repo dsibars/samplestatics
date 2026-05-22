@@ -81,6 +81,8 @@ export class HeroesView extends BaseView {
                 maxHp: activeHero.maxHp,
                 mp: activeHero.mp,
                 maxMp: activeHero.maxMp,
+                stamina: activeHero.stamina,
+                maxStamina: activeHero.maxStamina,
                 strength: activeHero.strength,
                 speed: activeHero.speed,
                 defense: activeHero.defense,
@@ -312,6 +314,12 @@ export class HeroesView extends BaseView {
                         <div class="stat-value-group">
                             <span>${hero.mp} / ${hero.maxMp}</span>
                             ${canAllocate ? `<button class="btn-assign-stat" data-stat="baseMaxMp">+</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="stat-row stamina-row">
+                        <span>${this.t('ui_stats_stamina') || 'STA'}</span> 
+                        <div class="stat-value-group">
+                            <span>${hero.stamina} / ${hero.maxStamina}</span>
                         </div>
                     </div>
                     <div class="stat-row">
