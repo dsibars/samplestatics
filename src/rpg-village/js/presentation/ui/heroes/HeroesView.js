@@ -80,6 +80,12 @@ export class HeroesView extends BaseView {
                     this._openWitchModal();
                     return;
                 }
+
+                const academyBtn = e.target.closest('.btn-academy');
+                if (academyBtn) {
+                    this._openAcademyModal();
+                    return;
+                }
             });
         }
     }
@@ -332,6 +338,9 @@ export class HeroesView extends BaseView {
                         </button>
                         <button class="btn btn-secondary btn-sm btn-witch" data-action="open-witch" style="margin-top: 8px; margin-left: 6px;">
                             🔮 ${this.t('witch_title') || 'Witch\'s Hut'}
+                        </button>
+                        <button class="btn btn-secondary btn-sm btn-academy" data-action="open-academy" style="margin-top: 8px; margin-left: 6px;">
+                            📚 ${this.t('academy_title') || 'Glyph Academy'}
                         </button>
                     </div>
                 </div>
@@ -636,6 +645,47 @@ export class HeroesView extends BaseView {
         };
 
         overlay.querySelector('#btn-witch-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+        });
+    }
+
+    _openAcademyModal() {
+        const hero = this.lastRawState?.heroes?.find(h => h.id === this.selectedHeroId);
+        if (!hero) return;
+
+        const designs = this.ui?.adapter?.engine?.getSpellDesigns() || [];
+        const allHeroes = this.lastRawState?.heroes || [];
+        const otherHeroes = allHeroes.filter(h => h.id !== hero.id);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay trainer-modal-overlay';
+        overlay.innerHTML = `
+            <div class="trainer-dialogue-box academy-dialogue-box" style="max-width: 540px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">📚</span>
+                    <h3>${this.t('academy_title') || 'Glyph Academy'}</h3>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px;">${this.t('ui_design_library') || 'Design Library'}</h4>
+                    ${designs.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.85rem;">No designs saved yet.</p>` :
+                        designs.map(d => `<div class="academy-design-card"><strong>${d.name}</strong> — ${d.glyphIds.length} glyphs, ${d.mpCost} MP</div>`).join('')}
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-academy-close">${this.t('ui_btn_close') || 'Close'}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#btn-academy-close').addEventListener('click', close);
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) close();
         });

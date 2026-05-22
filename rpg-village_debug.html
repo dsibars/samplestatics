@@ -569,6 +569,22 @@ function getRefineCost(item) {
   }
   return cost;
 }
+const GLYPH_DATA = {
+  // Core Glyphs
+  core_fire: { id: "core_fire", type: "core", nameKey: "glyph_core_fire", element: "fire", baseDamage: 12, baseCost: 5, tier: 1 },
+  core_water: { id: "core_water", type: "core", nameKey: "glyph_core_water", element: "water", baseDamage: 10, baseCost: 5, tier: 1 },
+  core_wind: { id: "core_wind", type: "core", nameKey: "glyph_core_wind", element: "wind", baseDamage: 11, baseCost: 5, tier: 1 },
+  core_storm: { id: "core_storm", type: "core", nameKey: "glyph_core_storm", element: "storm", baseDamage: 13, baseCost: 6, tier: 1 },
+  // Power Glyphs
+  power_plus: { id: "power_plus", type: "power", nameKey: "glyph_power_plus", damageMult: 1.2, costMult: 1.15, tier: 1 },
+  power_plus2: { id: "power_plus2", type: "power", nameKey: "glyph_power_plus2", damageMult: 1.5, costMult: 1.3, tier: 2 },
+  power_plus3: { id: "power_plus3", type: "power", nameKey: "glyph_power_plus3", damageMult: 2, costMult: 1.6, tier: 3 },
+  // Effect Glyphs
+  effect_multi: { id: "effect_multi", type: "effect", nameKey: "glyph_effect_multi", targetType: "all_enemies", costMult: 2.5, tier: 2 },
+  effect_repeat: { id: "effect_repeat", type: "effect", nameKey: "glyph_effect_repeat", waves: 2, costMult: 1.8, tier: 2 },
+  // Efficiency Glyphs
+  efficiency_stream: { id: "efficiency_stream", type: "efficiency", nameKey: "glyph_efficiency_stream", costMult: 0.8, tier: 1 }
+};
 class CombatLogFormatter {
   constructor(i18n2) {
     this.i18n = i18n2;
@@ -4168,6 +4184,95 @@ class CalendarService {
     };
   }
 }
+class AcademyService {
+  constructor(heroService) {
+    this.heroService = heroService;
+    this.designLibrary = this._loadDesigns();
+  }
+  _loadDesigns() {
+    try {
+      const raw = localStorage.getItem("academy_designs");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+  _saveDesigns() {
+    localStorage.setItem("academy_designs", JSON.stringify(this.designLibrary));
+  }
+  /**
+   * Teach a glyph from teacher to student.
+   * @param {string} teacherId
+   * @param {string} studentId
+   * @param {string} glyphId
+   * @returns {Result}
+   */
+  teachGlyph(teacherId, studentId, glyphId) {
+    const teacher = this.heroService.get(teacherId);
+    const student = this.heroService.get(studentId);
+    if (!teacher || !student) return Result.fail("error_hero_not_found");
+    if (!teacher.glyphRepertoire || !teacher.glyphRepertoire.includes(glyphId)) {
+      return Result.fail("error_teacher_does_not_know_glyph");
+    }
+    if (!student.glyphRepertoire) student.glyphRepertoire = [];
+    if (student.glyphRepertoire.includes(glyphId)) {
+      return Result.fail("error_student_already_knows_glyph");
+    }
+    const glyph = GLYPH_DATA[glyphId];
+    if (!glyph) return Result.fail("error_invalid_glyph");
+    student.glyphRepertoire.push(glyphId);
+    this.heroService.saveAll();
+    return Result.ok({ glyphId, studentId });
+  }
+  /**
+   * Save a spell design to the Design Library.
+   * @param {Object} design - { name, glyphIds, mpCost, damage }
+   * @returns {Result}
+   */
+  saveDesign(design) {
+    if (!design || !design.name || !design.glyphIds) {
+      return Result.fail("error_invalid_design");
+    }
+    const entry = {
+      id: `design_${Date.now()}`,
+      ...design,
+      createdAt: Date.now()
+    };
+    this.designLibrary.push(entry);
+    this._saveDesigns();
+    return Result.ok(entry);
+  }
+  /**
+   * Get all saved designs.
+   * @returns {Object[]}
+   */
+  getDesigns() {
+    return [...this.designLibrary];
+  }
+  /**
+   * Copy a design's glyphs to a hero's repertoire (if they don't already have them).
+   * @param {string} designId
+   * @param {string} heroId
+   * @returns {Result}
+   */
+  copyDesignToHero(designId, heroId) {
+    const design = this.designLibrary.find((d) => d.id === designId);
+    if (!design) return Result.fail("error_design_not_found");
+    const hero = this.heroService.get(heroId);
+    if (!hero) return Result.fail("error_hero_not_found");
+    if (!hero.glyphRepertoire) hero.glyphRepertoire = [];
+    let added = 0;
+    for (const glyphId of design.glyphIds) {
+      if (!hero.glyphRepertoire.includes(glyphId)) {
+        hero.glyphRepertoire.push(glyphId);
+        added++;
+      }
+    }
+    if (added === 0) return Result.fail("error_hero_already_has_all_glyphs");
+    this.heroService.saveAll();
+    return Result.ok({ added, designId });
+  }
+}
 const en = {
   // UI General
   btn_back: "BACK",
@@ -4328,6 +4433,14 @@ const en = {
   ui_back: "Back",
   trainer_title: "Training Grounds",
   witch_title: "Witch's Hut",
+  academy_title: "Glyph Academy",
+  error_teacher_does_not_know_glyph: "Teacher does not know this glyph",
+  error_student_already_knows_glyph: "Student already knows this glyph",
+  error_invalid_design: "Invalid spell design",
+  error_design_not_found: "Design not found",
+  error_hero_already_has_all_glyphs: "Hero already knows all glyphs in this design",
+  ui_design_library: "Design Library",
+  ui_teach_glyphs: "Teach Glyphs",
   witch_novice_1: "The threads of fate are... tangled around you.",
   witch_novice_2: "Come back when you've seen the unseen.",
   witch_awakened_1: "Ah, {name}... the spark is in you.",
@@ -4857,6 +4970,14 @@ const es = {
   ui_back: "Volver",
   trainer_title: "Campos de Entrenamiento",
   witch_title: "Cabaña de la Bruja",
+  academy_title: "Academia de Glifos",
+  error_teacher_does_not_know_glyph: "El maestro no conoce este glifo",
+  error_student_already_knows_glyph: "El estudiante ya conoce este glifo",
+  error_invalid_design: "Diseño de hechizo inválido",
+  error_design_not_found: "Diseño no encontrado",
+  error_hero_already_has_all_glyphs: "El héroe ya conoce todos los glifos de este diseño",
+  ui_design_library: "Biblioteca de Diseños",
+  ui_teach_glyphs: "Enseñar Glifos",
   witch_novice_1: "Los hilos del destino están... enredados a tu alrededor.",
   witch_novice_2: "Vuelve cuando hayas visto lo invisible.",
   witch_awakened_1: "Ah, {name}... la chispa está en ti.",
@@ -5725,6 +5846,14 @@ const ca = {
   ui_back: "Enrere",
   trainer_title: "Camps d'Entrenament",
   witch_title: "Cabana de la Bruixa",
+  academy_title: "Acadèmia de Glifs",
+  error_teacher_does_not_know_glyph: "El mestre no coneix aquest glif",
+  error_student_already_knows_glyph: "L'estudiant ja coneix aquest glif",
+  error_invalid_design: "Disseny d'encanteri invàlid",
+  error_design_not_found: "Disseny no trobat",
+  error_hero_already_has_all_glyphs: "L'heroi ja coneix tots els glifs d'aquest disseny",
+  ui_design_library: "Biblioteca de Dissenys",
+  ui_teach_glyphs: "Ensenyar Glifs",
   witch_novice_1: "Els fils del destí estan... embolicats al teu voltant.",
   witch_novice_2: "Torna quan hagis vist allò invisible.",
   witch_awakened_1: "Ah, {name}... la espurna és en tu.",
@@ -6253,6 +6382,14 @@ const eu = {
   ui_back: "Atzera",
   trainer_title: "Entrenamendu Zelaiak",
   witch_title: "Sorginaren etxola",
+  academy_title: "Glifo Akademia",
+  error_teacher_does_not_know_glyph: "Irakasleak ez du glifo hau ezagutzen",
+  error_student_already_knows_glyph: "Ikasleak glifo hau jada ezagutzen du",
+  error_invalid_design: "Sorginkari diseinu baliogabea",
+  error_design_not_found: "Diseinua ez da aurkitu",
+  error_hero_already_has_all_glyphs: "Heroiak diseinu honetako glifo guztiak jada ezagutzen ditu",
+  ui_design_library: "Diseinu Liburutegia",
+  ui_teach_glyphs: "Glifoak Irakatsi",
   witch_novice_1: "Kondairaren harizpiak... zure inguruan nahastuta daude.",
   witch_novice_2: "Ikusi ezinezkoa ikusi duzunean itzuli zaitez.",
   witch_awakened_1: "Ah, {name}... txinparta zugan dago.",
@@ -6779,6 +6916,14 @@ const gl = {
   ui_back: "Volver",
   trainer_title: "Campos de Adestramento",
   witch_title: "Cabana da Meiga",
+  academy_title: "Academia de Glifos",
+  error_teacher_does_not_know_glyph: "O mestre non coñece este glifo",
+  error_student_already_knows_glyph: "O estudiante xa coñece este glifo",
+  error_invalid_design: "Deseño de feitizo inválido",
+  error_design_not_found: "Deseño non atopado",
+  error_hero_already_has_all_glyphs: "O heroe xa coñece todos os glifos deste deseño",
+  ui_design_library: "Biblioteca de Deseños",
+  ui_teach_glyphs: "Ensinar Glifos",
   witch_novice_1: "Os fíos do destino están... enredados ao teu redor.",
   witch_novice_2: "Volve cando vexas o invisible.",
   witch_awakened_1: "Ah, {name}... a chispa está en ti.",
@@ -6852,6 +6997,7 @@ const _GameEngine = class _GameEngine {
     );
     this.dailyObjectivesService = new DailyObjectivesService(this.inventoryService);
     this.calendarService = new CalendarService(this.villageService, this.heroService);
+    this.academyService = new AcademyService(this.heroService);
     this.i18n = i18n;
     const hasHeroes = persistence.load("heroes_data", null) !== null;
     const hasVillage = persistence.load("village_state", null) !== null;
@@ -7276,6 +7422,19 @@ const _GameEngine = class _GameEngine {
   }
   retireExpedition(expId) {
     return this.expeditionService.retire(expId);
+  }
+  // --- Academy Facade ---
+  teachGlyph(teacherId, studentId, glyphId) {
+    return this.academyService.teachGlyph(teacherId, studentId, glyphId);
+  }
+  saveSpellDesign(design) {
+    return this.academyService.saveDesign(design);
+  }
+  getSpellDesigns() {
+    return this.academyService.getDesigns();
+  }
+  copyDesignToHero(designId, heroId) {
+    return this.academyService.copyDesignToHero(designId, heroId);
   }
 };
 // --- Shop & Forge Facade ---
@@ -8630,6 +8789,11 @@ class HeroesView extends BaseView {
           this._openWitchModal();
           return;
         }
+        const academyBtn = e.target.closest(".btn-academy");
+        if (academyBtn) {
+          this._openAcademyModal();
+          return;
+        }
       });
     }
   }
@@ -8848,6 +9012,9 @@ class HeroesView extends BaseView {
                         </button>
                         <button class="btn btn-secondary btn-sm btn-witch" data-action="open-witch" style="margin-top: 8px; margin-left: 6px;">
                             🔮 ${this.t("witch_title") || "Witch's Hut"}
+                        </button>
+                        <button class="btn btn-secondary btn-sm btn-academy" data-action="open-academy" style="margin-top: 8px; margin-left: 6px;">
+                            📚 ${this.t("academy_title") || "Glyph Academy"}
                         </button>
                     </div>
                 </div>
@@ -9120,6 +9287,41 @@ class HeroesView extends BaseView {
       setTimeout(() => overlay.remove(), 300);
     };
     overlay.querySelector("#btn-witch-close").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+  }
+  _openAcademyModal() {
+    var _a, _b, _c, _d, _e, _f;
+    const hero = (_b = (_a = this.lastRawState) == null ? void 0 : _a.heroes) == null ? void 0 : _b.find((h) => h.id === this.selectedHeroId);
+    if (!hero) return;
+    const designs = ((_e = (_d = (_c = this.ui) == null ? void 0 : _c.adapter) == null ? void 0 : _d.engine) == null ? void 0 : _e.getSpellDesigns()) || [];
+    const allHeroes = ((_f = this.lastRawState) == null ? void 0 : _f.heroes) || [];
+    allHeroes.filter((h) => h.id !== hero.id);
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay trainer-modal-overlay";
+    overlay.innerHTML = `
+            <div class="trainer-dialogue-box academy-dialogue-box" style="max-width: 540px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">📚</span>
+                    <h3>${this.t("academy_title") || "Glyph Academy"}</h3>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px;">${this.t("ui_design_library") || "Design Library"}</h4>
+                    ${designs.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.85rem;">No designs saved yet.</p>` : designs.map((d) => `<div class="academy-design-card"><strong>${d.name}</strong> — ${d.glyphIds.length} glyphs, ${d.mpCost} MP</div>`).join("")}
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-academy-close">${this.t("ui_btn_close") || "Close"}</button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.3s ease";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    overlay.querySelector("#btn-academy-close").addEventListener("click", close);
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) close();
     });
@@ -12353,6 +12555,23 @@ body {
 .witch-category {
     background: rgba(156, 39, 176, 0.15);
     color: #ce93d8;
+}
+
+
+/* Glyph Academy Styles */
+
+.academy-dialogue-box {
+    border-color: rgba(63, 81, 181, 0.3);
+    background: linear-gradient(180deg, rgba(18, 20, 30, 0.98), rgba(22, 25, 40, 0.98));
+}
+
+.academy-design-card {
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
 }</style>
 </head>
 <body>

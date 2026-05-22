@@ -9,6 +9,7 @@ import { VillageService } from './village/services/VillageService.js';
 import { ExpeditionService } from './explore/services/ExpeditionService.js';
 import { DailyObjectivesService } from './daily/services/DailyObjectivesService.js';
 import { CalendarService } from './calendar/services/CalendarService.js';
+import { AcademyService } from './academy/AcademyService.js';
 import { persistence } from './shared/core/Persistence.js';
 const DEBUG = false;
 
@@ -33,6 +34,7 @@ export class GameEngine {
         );
         this.dailyObjectivesService = new DailyObjectivesService(this.inventoryService);
         this.calendarService = new CalendarService(this.villageService, this.heroService);
+        this.academyService = new AcademyService(this.heroService);
         this.i18n = i18n;
         
         // New Game Experience
@@ -595,5 +597,22 @@ export class GameEngine {
     }
     retireExpedition(expId) {
         return this.expeditionService.retire(expId);
+    }
+
+    // --- Academy Facade ---
+    teachGlyph(teacherId, studentId, glyphId) {
+        return this.academyService.teachGlyph(teacherId, studentId, glyphId);
+    }
+
+    saveSpellDesign(design) {
+        return this.academyService.saveDesign(design);
+    }
+
+    getSpellDesigns() {
+        return this.academyService.getDesigns();
+    }
+
+    copyDesignToHero(designId, heroId) {
+        return this.academyService.copyDesignToHero(designId, heroId);
     }
 }
