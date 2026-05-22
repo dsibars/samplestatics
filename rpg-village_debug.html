@@ -585,6 +585,58 @@ const GLYPH_DATA = {
   // Efficiency Glyphs
   efficiency_stream: { id: "efficiency_stream", type: "efficiency", nameKey: "glyph_efficiency_stream", costMult: 0.8, tier: 1 }
 };
+const MAGIC_TIER_THRESHOLDS = [
+  0,
+  // Tier 1 (base)
+  500,
+  // Tier 2
+  1300,
+  // Tier 3
+  2500,
+  // Tier 4
+  4300,
+  // Tier 5
+  6800,
+  // Tier 6
+  10300,
+  // Tier 7  (Ring 1 complete)
+  15300,
+  // Tier 8  (Ring 2 opens)
+  21800,
+  // Tier 9
+  30300,
+  // Tier 10
+  41300,
+  // Tier 11
+  55300,
+  // Tier 12
+  73300,
+  // Tier 13 (Ring 2 complete)
+  96300,
+  // Tier 14 (Ring 3 opens)
+  126300,
+  // Tier 15
+  165300,
+  // Tier 16
+  215300,
+  // Tier 17
+  279300,
+  // Tier 18
+  361300,
+  // Tier 19 (Ring 3 complete)
+  466300,
+  // Tier 20 (Ring 4 opens)
+  601300,
+  // Tier 21
+  774300,
+  // Tier 22
+  996300,
+  // Tier 23
+  1281300,
+  // Tier 24
+  1646300
+  // Tier 25 (Ring 4 complete)
+];
 class CombatLogFormatter {
   constructor(i18n2) {
     this.i18n = i18n2;
@@ -1334,6 +1386,12 @@ class UIController {
     this.isShopUnlocked = false;
     this.isForgeUnlocked = false;
     this.lastState = null;
+    this.categoryLastView = {
+      village: "village",
+      heroes: "heroes",
+      adventure: "explore",
+      town: "shop"
+    };
     this.combatView = new CombatView({ i18n: this.i18n });
     this.views = /* @__PURE__ */ new Map();
     this.activeView = null;
@@ -1353,11 +1411,8 @@ class UIController {
       item.addEventListener("click", () => {
         const category = item.getAttribute("data-category");
         const defaultView = item.getAttribute("data-default");
-        if (category === "town") {
-          this.switchView("shop");
-        } else {
-          this.switchView(defaultView);
-        }
+        const targetView = this.categoryLastView[category] || defaultView;
+        this.switchView(targetView);
       });
     });
   }
@@ -1367,6 +1422,7 @@ class UIController {
   async switchView(domain) {
     if (this.activeDomain === domain) return;
     const category = this.VIEW_CATEGORIES[domain] || domain;
+    this.categoryLastView[category] = domain;
     this.elements.navItems.forEach((item) => {
       if (item.getAttribute("data-category") === category) {
         item.classList.add("active");
@@ -1658,10 +1714,97 @@ class Result {
     return new Result(false, null, error, context);
   }
 }
+class MagicCircleService {
+  /**
+   * Get the number of circle slots for a given magic tier.
+   * Tier = slot count (Tier 1 = 1 slot, Tier 25 = 25 slots).
+   */
+  static getSlotCount(magicTier) {
+    return Math.max(1, Math.min(25, magicTier || 1));
+  }
+  /**
+   * Compose a spell from a list of glyph IDs.
+   * @param {string[]} glyphIds - Array of glyph IDs (first must be core)
+   * @param {number} magicTier - Hero's magic tier (determines max slots)
+   * @returns {Result} { spell: { name, mpCost, damage, element, targetType, waves, glyphIds } }
+   */
+  static compose(glyphIds, magicTier = 1) {
+    if (!glyphIds || glyphIds.length === 0) {
+      return Result.fail("error_no_glyphs");
+    }
+    const glyphs = glyphIds.map((id) => GLYPH_DATA[id]).filter(Boolean);
+    if (glyphs.length === 0) {
+      return Result.fail("error_invalid_glyphs");
+    }
+    const core = glyphs.find((g) => g.type === "core");
+    if (!core) {
+      return Result.fail("error_no_core_glyph");
+    }
+    const maxSlots = this.getSlotCount(magicTier);
+    if (glyphs.length > maxSlots) {
+      return Result.fail("error_too_many_glyphs");
+    }
+    let totalDamageMult = 1;
+    let totalCostMult = 1;
+    let targetType = "single_enemy";
+    let waves = 1;
+    for (const glyph of glyphs) {
+      if (glyph.damageMult) {
+        totalDamageMult *= glyph.damageMult;
+      }
+      if (glyph.costMult) {
+        totalCostMult *= glyph.costMult;
+      }
+      if (glyph.targetType) {
+        targetType = glyph.targetType;
+      }
+      if (glyph.waves) {
+        waves = glyph.waves;
+      }
+    }
+    const mpCost = Math.max(1, Math.floor(core.baseCost * totalCostMult));
+    const damage = Math.floor(core.baseDamage * totalDamageMult);
+    const spell = {
+      id: `spell_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      name: `${core.element} Spell`,
+      mpCost,
+      damage,
+      element: core.element,
+      targetType,
+      waves,
+      glyphIds: [...glyphIds]
+    };
+    return Result.ok(spell);
+  }
+  /**
+   * Get available glyphs for a hero based on their magic tier.
+   * @param {number} magicTier
+   * @returns {Object[]} Array of glyph data objects
+   */
+  static getAvailableGlyphs(magicTier = 1) {
+    return Object.values(GLYPH_DATA).filter((g) => g.tier <= magicTier);
+  }
+  /**
+   * Calculate magic tier from spell casting experience.
+   * @param {number} magicXp - cumulative Magic Insight
+   * @returns {number} Current magic tier (1-25)
+   */
+  static getMagicTier(magicXp) {
+    let tier = 1;
+    for (let i = 1; i < MAGIC_TIER_THRESHOLDS.length; i++) {
+      if (magicXp >= MAGIC_TIER_THRESHOLDS[i]) {
+        tier = i + 1;
+      } else {
+        break;
+      }
+    }
+    return Math.min(25, tier);
+  }
+}
 class Hero {
   constructor(data) {
     this.id = data.id || crypto.randomUUID();
-    this.name = data.name;
+    this.name = data.name || "Unknown Hero";
     this.origin = data.origin || "origin_warrior";
     this.level = data.level || 1;
     this.exp = data.exp || 0;
@@ -1680,7 +1823,8 @@ class Hero {
     this.techniqueUses = data.techniqueUses || {};
     this.techniqueTiers = data.techniqueTiers || {};
     this.magicXp = data.magicXp || 0;
-    this.glyphRepertoire = data.glyphRepertoire || ["core_fire", "power_plus"];
+    this.magicTier = data.magicTier || MagicCircleService.getMagicTier(this.magicXp);
+    this.knownGlyphs = data.knownGlyphs || data.glyphRepertoire || (this.origin === "origin_arcane_initiate" ? ["core_fire", "power_plus"] : []);
     this.spellCodex = data.spellCodex || [];
     this.lifetimeStats = data.lifetimeStats || {
       enemiesDefeated: 0,
@@ -2071,7 +2215,8 @@ class Hero {
       techniqueUses: JSON.parse(JSON.stringify(this.techniqueUses)),
       techniqueTiers: JSON.parse(JSON.stringify(this.techniqueTiers)),
       magicXp: this.magicXp,
-      glyphRepertoire: JSON.parse(JSON.stringify(this.glyphRepertoire)),
+      magicTier: this.magicTier,
+      knownGlyphs: JSON.parse(JSON.stringify(this.knownGlyphs)),
       spellCodex: JSON.parse(JSON.stringify(this.spellCodex)),
       lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
       titles: JSON.parse(JSON.stringify(this.titles)),
@@ -2738,6 +2883,13 @@ class BattleService {
         actor.stamina -= staCost;
       }
     }
+    if (isActorHero && skillData.category === "magic" && actor.magicXp !== void 0) {
+      const insight = Math.floor((skillData.mpCost || 0) * 0.5);
+      if (insight > 0) {
+        actor.magicXp += insight;
+        actor.magicTier = MagicCircleService.getMagicTier(actor.magicXp);
+      }
+    }
     if (skillData.family && actor.recordTechniqueUse) {
       actor.recordTechniqueUse(skillData.family);
     }
@@ -2929,8 +3081,8 @@ class BattleService {
 class Equipment {
   constructor(data) {
     this.id = data.id || crypto.randomUUID();
-    this.type = data.type;
-    this.material = data.material;
+    this.type = data.type || "weapon";
+    this.material = data.material || "wooden";
     this.set = data.set || data.material || null;
     this.level = data.level || 0;
     this.affixes = data.affixes || [];
@@ -2981,6 +3133,10 @@ class InventoryService {
       equipment: []
     };
     const loaded = persistence.load(this.STORAGE_KEY, defaultData);
+    if (!loaded.materials) loaded.materials = defaultData.materials;
+    if (!loaded.food) loaded.food = defaultData.food;
+    if (!loaded.consumables) loaded.consumables = defaultData.consumables;
+    if (!loaded.equipment) loaded.equipment = [];
     if (loaded.consumables && Object.keys(loaded.consumables).length > 0) {
       for (const id in loaded.consumables) {
         if (id.startsWith("material_")) {
@@ -3129,6 +3285,8 @@ class VillageService {
       daysSinceLastRecruit: 0
     };
     const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+    if (loaded.daysSinceLastRecruit === void 0) loaded.daysSinceLastRecruit = defaultState.daysSinceLastRecruit;
+    if (loaded.lastRecruitDay === void 0) loaded.lastRecruitDay = 0;
     if (typeof loaded.population === "number") {
       loaded.population = {
         total: loaded.population,
@@ -3417,6 +3575,8 @@ class ExpeditionService {
       }
     };
     const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+    if (!loaded.regions) loaded.regions = defaultState.regions;
+    if (!loaded.completedIds) loaded.completedIds = [];
     if (loaded.activeExpedition && !loaded.activeExpeditions) {
       loaded.activeExpeditions = [loaded.activeExpedition];
       loaded.activeCombatExpeditionId = loaded.activeExpedition.id;
@@ -4221,7 +4381,10 @@ class CalendarService {
       defenseAssigned: []
       // Array of hero IDs assigned to defense
     };
-    return persistence.load(this.STORAGE_KEY, defaultState);
+    const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+    if (!loaded.events) loaded.events = [];
+    if (!loaded.defenseAssigned) loaded.defenseAssigned = [];
+    return loaded;
   }
   save() {
     persistence.save(this.STORAGE_KEY, this.state);
@@ -4444,16 +4607,16 @@ class AcademyService {
     const teacher = this.heroService.get(teacherId);
     const student = this.heroService.get(studentId);
     if (!teacher || !student) return Result.fail("error_hero_not_found");
-    if (!teacher.glyphRepertoire || !teacher.glyphRepertoire.includes(glyphId)) {
+    if (!teacher.knownGlyphs || !teacher.knownGlyphs.includes(glyphId)) {
       return Result.fail("error_teacher_does_not_know_glyph");
     }
-    if (!student.glyphRepertoire) student.glyphRepertoire = [];
-    if (student.glyphRepertoire.includes(glyphId)) {
+    if (!student.knownGlyphs) student.knownGlyphs = [];
+    if (student.knownGlyphs.includes(glyphId)) {
       return Result.fail("error_student_already_knows_glyph");
     }
     const glyph = GLYPH_DATA[glyphId];
     if (!glyph) return Result.fail("error_invalid_glyph");
-    student.glyphRepertoire.push(glyphId);
+    student.knownGlyphs.push(glyphId);
     this.heroService.saveAll();
     return Result.ok({ glyphId, studentId });
   }
@@ -4493,11 +4656,11 @@ class AcademyService {
     if (!design) return Result.fail("error_design_not_found");
     const hero = this.heroService.get(heroId);
     if (!hero) return Result.fail("error_hero_not_found");
-    if (!hero.glyphRepertoire) hero.glyphRepertoire = [];
+    if (!hero.knownGlyphs) hero.knownGlyphs = [];
     let added = 0;
     for (const glyphId of design.glyphIds) {
-      if (!hero.glyphRepertoire.includes(glyphId)) {
-        hero.glyphRepertoire.push(glyphId);
+      if (!hero.knownGlyphs.includes(glyphId)) {
+        hero.knownGlyphs.push(glyphId);
         added++;
       }
     }
@@ -9274,11 +9437,11 @@ class TrainerService {
 class WitchService {
   static getDialogue(hero, i18n2) {
     const hasMage = hero.origin === "origin_arcane_initiate";
-    const hasGlyphs = hero.glyphRepertoire && hero.glyphRepertoire.length > 2;
+    const hasGlyphs = hero.knownGlyphs && hero.knownGlyphs.length > 0;
     const hasSpells = hero.spellCodex && hero.spellCodex.length > 0;
-    const magicTier = this._estimateMagicTier(hero);
+    const magicTier = hero.magicTier || 0;
     let category = "novice";
-    if (hasSpells && magicTier >= 3) category = "master";
+    if (hasSpells && magicTier >= 13) category = "master";
     else if (hasSpells) category = "practitioner";
     else if (hasGlyphs) category = "seeker";
     else if (hasMage) category = "awakened";
@@ -9286,14 +9449,6 @@ class WitchService {
       category,
       lines: this._getLines(category, i18n2, { heroName: hero.name, tier: magicTier })
     };
-  }
-  static _estimateMagicTier(hero) {
-    if (!hero.spellCodex) return 0;
-    const maxCost = hero.spellCodex.reduce((max, s) => Math.max(max, s.mpCost || 0), 0);
-    if (maxCost >= 30) return 4;
-    if (maxCost >= 20) return 3;
-    if (maxCost >= 10) return 2;
-    return 1;
   }
   static _getLines(category, i18n2, ctx) {
     const t = (key) => i18n2 ? i18n2.t(key) : key;
@@ -15167,7 +15322,7 @@ body {
 
 .lock-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 52px; left: 0; right: 0; bottom: 0;
     background: rgba(10, 11, 16, 0.92);
     display: flex;
     justify-content: center;
@@ -15175,6 +15330,11 @@ body {
     z-index: 10;
     backdrop-filter: blur(10px);
     border-radius: var(--radius-lg);
+    pointer-events: none;
+}
+
+.lock-overlay .lock-card {
+    pointer-events: auto;
 }
 
 .lock-card {
@@ -15562,7 +15722,7 @@ body {
 
 .forge-view .lock-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 52px; left: 0; right: 0; bottom: 0;
     background: rgba(10, 11, 16, 0.92);
     display: flex;
     justify-content: center;
@@ -15570,6 +15730,11 @@ body {
     z-index: 10;
     backdrop-filter: blur(10px);
     border-radius: var(--radius-lg);
+    pointer-events: none;
+}
+
+.forge-view .lock-overlay .lock-card {
+    pointer-events: auto;
 }
 
 .forge-view .lock-card {

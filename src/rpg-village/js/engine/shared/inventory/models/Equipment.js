@@ -1,8 +1,8 @@
 export class Equipment {
     constructor(data) {
         this.id = data.id || crypto.randomUUID();
-        this.type = data.type; // 'weapon' or 'armor'
-        this.material = data.material; // 'wooden', 'iron', etc
+        this.type = data.type || 'weapon'; // 'weapon' or 'armor'
+        this.material = data.material || 'wooden'; // 'wooden', 'iron', etc
         this.set = data.set || data.material || null; // equipment set (defaults to material)
         this.level = data.level || 0;
         this.affixes = data.affixes || [];

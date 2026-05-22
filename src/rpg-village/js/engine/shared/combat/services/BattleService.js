@@ -2,6 +2,7 @@ import { CombatCalculator } from '../core/CombatCalculator.js';
 import { CombatAI } from '../core/CombatAI.js';
 import { Result } from '../../core/Result.js';
 import { SKILLS_DATA, CONSUMABLES_DATA } from '../../data/GameConstants.js';
+import { MagicCircleService } from '../../../magic_circle/MagicCircleService.js';
 
 export class BattleService {
     constructor(inventoryService) {
@@ -200,6 +201,15 @@ export class BattleService {
                 const staCost = skillData.staminaCost || Math.ceil(skillData.mpCost * 0.5);
                 if (actor.stamina < staCost) return Result.fail('error_not_enough_stamina');
                 actor.stamina -= staCost;
+            }
+        }
+
+        // Gain Magic Insight for casting magic spells
+        if (isActorHero && skillData.category === 'magic' && actor.magicXp !== undefined) {
+            const insight = Math.floor((skillData.mpCost || 0) * 0.5);
+            if (insight > 0) {
+                actor.magicXp += insight;
+                actor.magicTier = MagicCircleService.getMagicTier(actor.magicXp);
             }
         }
 

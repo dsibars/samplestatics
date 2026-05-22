@@ -40,6 +40,12 @@ export class UIController {
         this.isShopUnlocked = false;
         this.isForgeUnlocked = false;
         this.lastState = null;
+        this.categoryLastView = {
+            village: 'village',
+            heroes: 'heroes',
+            adventure: 'explore',
+            town: 'shop'
+        };
         this.combatView = new CombatView({ i18n: this.i18n });
         
         this.views = new Map(); // domainName -> BaseView instance
@@ -63,12 +69,8 @@ export class UIController {
             item.addEventListener('click', () => {
                 const category = item.getAttribute('data-category');
                 const defaultView = item.getAttribute('data-default');
-                if (category === 'town') {
-                    // Town has locked sub-views; default to shop which handles its own lock
-                    this.switchView('shop');
-                } else {
-                    this.switchView(defaultView);
-                }
+                const targetView = this.categoryLastView[category] || defaultView;
+                this.switchView(targetView);
             });
         });
     }
@@ -79,10 +81,13 @@ export class UIController {
     async switchView(domain) {
         if (this.activeDomain === domain) return;
 
+        // Remember this view as the last viewed for its category
+        const category = this.VIEW_CATEGORIES[domain] || domain;
+        this.categoryLastView[category] = domain;
+
         if (DEBUG) console.log(`Switching to domain: ${domain}`);
 
         // Update Nav UI: highlight the category tab
-        const category = this.VIEW_CATEGORIES[domain] || domain;
         this.elements.navItems.forEach(item => {
             if (item.getAttribute('data-category') === category) {
                 item.classList.add('active');

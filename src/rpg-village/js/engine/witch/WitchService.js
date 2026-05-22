@@ -4,12 +4,12 @@
 export class WitchService {
     static getDialogue(hero, i18n) {
         const hasMage = hero.origin === 'origin_arcane_initiate';
-        const hasGlyphs = hero.glyphRepertoire && hero.glyphRepertoire.length > 2;
+        const hasGlyphs = hero.knownGlyphs && hero.knownGlyphs.length > 0;
         const hasSpells = hero.spellCodex && hero.spellCodex.length > 0;
-        const magicTier = this._estimateMagicTier(hero);
+        const magicTier = hero.magicTier || 0;
 
         let category = 'novice';
-        if (hasSpells && magicTier >= 3) category = 'master';
+        if (hasSpells && magicTier >= 13) category = 'master';
         else if (hasSpells) category = 'practitioner';
         else if (hasGlyphs) category = 'seeker';
         else if (hasMage) category = 'awakened';
@@ -18,15 +18,6 @@ export class WitchService {
             category,
             lines: this._getLines(category, i18n, { heroName: hero.name, tier: magicTier })
         };
-    }
-
-    static _estimateMagicTier(hero) {
-        if (!hero.spellCodex) return 0;
-        const maxCost = hero.spellCodex.reduce((max, s) => Math.max(max, s.mpCost || 0), 0);
-        if (maxCost >= 30) return 4;
-        if (maxCost >= 20) return 3;
-        if (maxCost >= 10) return 2;
-        return 1;
     }
 
     static _getLines(category, i18n, ctx) {

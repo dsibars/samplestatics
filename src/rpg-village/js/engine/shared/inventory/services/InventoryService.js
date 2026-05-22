@@ -26,6 +26,12 @@ export class InventoryService {
             equipment: []
         };
         const loaded = persistence.load(this.STORAGE_KEY, defaultData);
+
+        // Fallback for fields missing in old saves
+        if (!loaded.materials) loaded.materials = defaultData.materials;
+        if (!loaded.food) loaded.food = defaultData.food;
+        if (!loaded.consumables) loaded.consumables = defaultData.consumables;
+        if (!loaded.equipment) loaded.equipment = [];
         
         // Migration: Move old consumables if they exist
         if (loaded.consumables && Object.keys(loaded.consumables).length > 0) {

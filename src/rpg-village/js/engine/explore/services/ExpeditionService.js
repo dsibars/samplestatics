@@ -47,6 +47,10 @@ export class ExpeditionService {
         };
         const loaded = persistence.load(this.STORAGE_KEY, defaultState);
 
+        // Fallback for fields missing in old saves
+        if (!loaded.regions) loaded.regions = defaultState.regions;
+        if (!loaded.completedIds) loaded.completedIds = [];
+
         // Migrate old singular activeExpedition to array
         if (loaded.activeExpedition && !loaded.activeExpeditions) {
             loaded.activeExpeditions = [loaded.activeExpedition];

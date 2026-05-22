@@ -37,6 +37,10 @@ export class VillageService {
             daysSinceLastRecruit: 0
         };
         const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+
+        // Fallback for fields missing in old saves
+        if (loaded.daysSinceLastRecruit === undefined) loaded.daysSinceLastRecruit = defaultState.daysSinceLastRecruit;
+        if (loaded.lastRecruitDay === undefined) loaded.lastRecruitDay = 0;
         
         // Migrate old state if population was a simple number
         if (typeof loaded.population === 'number') {

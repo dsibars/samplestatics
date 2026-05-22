@@ -24,7 +24,11 @@ export class CalendarService {
             events: [],         // Array of { day, type, resolved, data }
             defenseAssigned: [] // Array of hero IDs assigned to defense
         };
-        return persistence.load(this.STORAGE_KEY, defaultState);
+        const loaded = persistence.load(this.STORAGE_KEY, defaultState);
+        // Fallback for fields missing in old saves
+        if (!loaded.events) loaded.events = [];
+        if (!loaded.defenseAssigned) loaded.defenseAssigned = [];
+        return loaded;
     }
 
     save() {

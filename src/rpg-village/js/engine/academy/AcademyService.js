@@ -35,19 +35,19 @@ export class AcademyService {
         const student = this.heroService.get(studentId);
         if (!teacher || !student) return Result.fail('error_hero_not_found');
 
-        if (!teacher.glyphRepertoire || !teacher.glyphRepertoire.includes(glyphId)) {
+        if (!teacher.knownGlyphs || !teacher.knownGlyphs.includes(glyphId)) {
             return Result.fail('error_teacher_does_not_know_glyph');
         }
 
-        if (!student.glyphRepertoire) student.glyphRepertoire = [];
-        if (student.glyphRepertoire.includes(glyphId)) {
+        if (!student.knownGlyphs) student.knownGlyphs = [];
+        if (student.knownGlyphs.includes(glyphId)) {
             return Result.fail('error_student_already_knows_glyph');
         }
 
         const glyph = GLYPH_DATA[glyphId];
         if (!glyph) return Result.fail('error_invalid_glyph');
 
-        student.glyphRepertoire.push(glyphId);
+        student.knownGlyphs.push(glyphId);
         this.heroService.saveAll();
         return Result.ok({ glyphId, studentId });
     }
@@ -92,11 +92,11 @@ export class AcademyService {
         const hero = this.heroService.get(heroId);
         if (!hero) return Result.fail('error_hero_not_found');
 
-        if (!hero.glyphRepertoire) hero.glyphRepertoire = [];
+        if (!hero.knownGlyphs) hero.knownGlyphs = [];
         let added = 0;
         for (const glyphId of design.glyphIds) {
-            if (!hero.glyphRepertoire.includes(glyphId)) {
-                hero.glyphRepertoire.push(glyphId);
+            if (!hero.knownGlyphs.includes(glyphId)) {
+                hero.knownGlyphs.push(glyphId);
                 added++;
             }
         }

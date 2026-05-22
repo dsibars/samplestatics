@@ -19,18 +19,18 @@ function createService() {
 
 test('AcademyService: teach glyph from teacher to student', () => {
     const service = createService();
-    const teacher = service.heroService.add({ name: 'Teacher', origin: 'origin_arcane_initiate', level: 1, statPoints: 5, glyphRepertoire: ['core_fire', 'power_plus'] }).data;
-    const student = service.heroService.add({ name: 'Student', origin: 'origin_warrior', level: 1, statPoints: 5, glyphRepertoire: [] }).data;
+    const teacher = service.heroService.add({ name: 'Teacher', origin: 'origin_arcane_initiate', level: 1, statPoints: 5, knownGlyphs: ['core_fire', 'power_plus'] }).data;
+    const student = service.heroService.add({ name: 'Student', origin: 'origin_warrior', level: 1, statPoints: 5, knownGlyphs: [] }).data;
 
     const result = service.teachGlyph(teacher.id, student.id, 'core_fire');
     assert.strictEqual(result.success, true);
-    assert.ok(student.glyphRepertoire.includes('core_fire'));
+    assert.ok(student.knownGlyphs.includes('core_fire'));
 });
 
 test('AcademyService: teach fails if teacher does not know glyph', () => {
     const service = createService();
-    const teacher = service.heroService.add({ name: 'Teacher', origin: 'origin_warrior', level: 1, statPoints: 5, glyphRepertoire: [] }).data;
-    const student = service.heroService.add({ name: 'Student', origin: 'origin_warrior', level: 1, statPoints: 5, glyphRepertoire: [] }).data;
+    const teacher = service.heroService.add({ name: 'Teacher', origin: 'origin_warrior', level: 1, statPoints: 5, knownGlyphs: [] }).data;
+    const student = service.heroService.add({ name: 'Student', origin: 'origin_warrior', level: 1, statPoints: 5, knownGlyphs: [] }).data;
 
     const result = service.teachGlyph(teacher.id, student.id, 'core_fire');
     assert.strictEqual(result.success, false);
@@ -52,9 +52,9 @@ test('AcademyService: copy design to hero adds missing glyphs', () => {
     service.saveDesign({ name: 'Fireball', glyphIds: ['core_fire', 'power_plus'], mpCost: 6, damage: 14 });
     const design = service.getDesigns()[0];
 
-    const hero = service.heroService.add({ name: 'Hero', origin: 'origin_warrior', level: 1, statPoints: 5, glyphRepertoire: ['core_fire'] }).data;
+    const hero = service.heroService.add({ name: 'Hero', origin: 'origin_warrior', level: 1, statPoints: 5, knownGlyphs: ['core_fire'] }).data;
     const result = service.copyDesignToHero(design.id, hero.id);
     assert.strictEqual(result.success, true);
     assert.strictEqual(result.data.added, 1);
-    assert.ok(hero.glyphRepertoire.includes('power_plus'));
+    assert.ok(hero.knownGlyphs.includes('power_plus'));
 });

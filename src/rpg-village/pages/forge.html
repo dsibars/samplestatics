@@ -43,7 +43,7 @@
 
 .forge-view .lock-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 52px; left: 0; right: 0; bottom: 0;
     background: rgba(10, 11, 16, 0.92);
     display: flex;
     justify-content: center;
@@ -51,6 +51,11 @@
     z-index: 10;
     backdrop-filter: blur(10px);
     border-radius: var(--radius-lg);
+    pointer-events: none;
+}
+
+.forge-view .lock-overlay .lock-card {
+    pointer-events: auto;
 }
 
 .forge-view .lock-card {

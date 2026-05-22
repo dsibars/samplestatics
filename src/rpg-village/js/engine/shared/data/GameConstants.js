@@ -555,6 +555,36 @@ export const GLYPH_DATA = {
     efficiency_stream: { id: 'efficiency_stream', type: 'efficiency', nameKey: 'glyph_efficiency_stream', costMult: 0.80, tier: 1 },
 };
 
-export const MAGIC_CIRCLE_SLOTS = 4; // 1 Core + 3 Ring
-
-export const MAGIC_TIER_THRESHOLDS = [0, 5, 15, 30, 50]; // XP thresholds for magic tiers 1-4
+/**
+ * Magic Tier thresholds (cumulative Magic Insight XP).
+ * Tier N requires MAGIC_TIER_THRESHOLDS[N] XP.
+ * Tier = number of circle slots (1 slot at Tier 1, 25 slots at Tier 25).
+ * Ring 1 fills at Tier 7, Ring 2 at Tier 13, Ring 3 at Tier 19, Ring 4 at Tier 25.
+ */
+export const MAGIC_TIER_THRESHOLDS = [
+    0,      // Tier 1 (base)
+    500,    // Tier 2
+    1300,   // Tier 3
+    2500,   // Tier 4
+    4300,   // Tier 5
+    6800,   // Tier 6
+    10300,  // Tier 7  (Ring 1 complete)
+    15300,  // Tier 8  (Ring 2 opens)
+    21800,  // Tier 9
+    30300,  // Tier 10
+    41300,  // Tier 11
+    55300,  // Tier 12
+    73300,  // Tier 13 (Ring 2 complete)
+    96300,  // Tier 14 (Ring 3 opens)
+    126300, // Tier 15
+    165300, // Tier 16
+    215300, // Tier 17
+    279300, // Tier 18
+    361300, // Tier 19 (Ring 3 complete)
+    466300, // Tier 20 (Ring 4 opens)
+    601300, // Tier 21
+    774300, // Tier 22
+    996300, // Tier 23
+    1281300,// Tier 24
+    1646300 // Tier 25 (Ring 4 complete)
+];

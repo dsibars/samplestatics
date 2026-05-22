@@ -1,4 +1,4 @@
-import { GLYPH_DATA, MAGIC_CIRCLE_SLOTS } from '../shared/data/GameConstants.js';
+import { GLYPH_DATA, MAGIC_TIER_THRESHOLDS } from '../shared/data/GameConstants.js';
 import { Result } from '../shared/core/Result.js';
 
 /**
@@ -6,11 +6,20 @@ import { Result } from '../shared/core/Result.js';
  */
 export class MagicCircleService {
     /**
+     * Get the number of circle slots for a given magic tier.
+     * Tier = slot count (Tier 1 = 1 slot, Tier 25 = 25 slots).
+     */
+    static getSlotCount(magicTier) {
+        return Math.max(1, Math.min(25, magicTier || 1));
+    }
+
+    /**
      * Compose a spell from a list of glyph IDs.
      * @param {string[]} glyphIds - Array of glyph IDs (first must be core)
+     * @param {number} magicTier - Hero's magic tier (determines max slots)
      * @returns {Result} { spell: { name, mpCost, damage, element, targetType, waves, glyphIds } }
      */
-    static compose(glyphIds) {
+    static compose(glyphIds, magicTier = 1) {
         if (!glyphIds || glyphIds.length === 0) {
             return Result.fail('error_no_glyphs');
         }
@@ -25,7 +34,8 @@ export class MagicCircleService {
             return Result.fail('error_no_core_glyph');
         }
 
-        if (glyphs.length > MAGIC_CIRCLE_SLOTS) {
+        const maxSlots = this.getSlotCount(magicTier);
+        if (glyphs.length > maxSlots) {
             return Result.fail('error_too_many_glyphs');
         }
 
@@ -77,13 +87,18 @@ export class MagicCircleService {
 
     /**
      * Calculate magic tier from spell casting experience.
-     * @param {number} magicXp
-     * @returns {number} Current magic tier (1-4)
+     * @param {number} magicXp - cumulative Magic Insight
+     * @returns {number} Current magic tier (1-25)
      */
     static getMagicTier(magicXp) {
-        if (magicXp >= 50) return 4;
-        if (magicXp >= 30) return 3;
-        if (magicXp >= 15) return 2;
-        return 1;
+        let tier = 1;
+        for (let i = 1; i < MAGIC_TIER_THRESHOLDS.length; i++) {
+            if (magicXp >= MAGIC_TIER_THRESHOLDS[i]) {
+                tier = i + 1;
+            } else {
+                break;
+            }
+        }
+        return Math.min(25, tier);
     }
 }

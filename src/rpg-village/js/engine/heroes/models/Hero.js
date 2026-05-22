@@ -1,10 +1,11 @@
 import { WEAPON_FAMILIES, ARMOR_ARCHETYPES, MATERIAL_TIERS, EQUIPMENT_SET_BONUSES } from '../../shared/data/GameConstants.js';
 import { Result } from '../../shared/core/Result.js';
+import { MagicCircleService } from '../../magic_circle/MagicCircleService.js';
 
 export class Hero {
     constructor(data) {
         this.id = data.id || crypto.randomUUID();
-        this.name = data.name;
+        this.name = data.name || 'Unknown Hero';
         this.origin = data.origin || 'origin_warrior';
         this.level = data.level || 1;
         this.exp = data.exp || 0;
@@ -28,7 +29,8 @@ export class Hero {
         this.techniqueUses = data.techniqueUses || {};
         this.techniqueTiers = data.techniqueTiers || {};
         this.magicXp = data.magicXp || 0;
-        this.glyphRepertoire = data.glyphRepertoire || ['core_fire', 'power_plus'];
+        this.magicTier = data.magicTier || MagicCircleService.getMagicTier(this.magicXp);
+        this.knownGlyphs = data.knownGlyphs || data.glyphRepertoire || (this.origin === 'origin_arcane_initiate' ? ['core_fire', 'power_plus'] : []);
         this.spellCodex = data.spellCodex || [];
         this.lifetimeStats = data.lifetimeStats || {
             enemiesDefeated: 0,
@@ -476,7 +478,8 @@ export class Hero {
             techniqueUses: JSON.parse(JSON.stringify(this.techniqueUses)),
             techniqueTiers: JSON.parse(JSON.stringify(this.techniqueTiers)),
             magicXp: this.magicXp,
-            glyphRepertoire: JSON.parse(JSON.stringify(this.glyphRepertoire)),
+            magicTier: this.magicTier,
+            knownGlyphs: JSON.parse(JSON.stringify(this.knownGlyphs)),
             spellCodex: JSON.parse(JSON.stringify(this.spellCodex)),
             lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
             titles: JSON.parse(JSON.stringify(this.titles)),

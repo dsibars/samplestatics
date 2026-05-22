@@ -24,7 +24,10 @@ const mockHero = {
     defense: 5,
     speed: 10,
     avatar: '⚔️',
-    skills: ['double_attack']
+    skills: { double_attack: 0 },
+    magicXp: 0,
+    magicTier: 1,
+    knownGlyphs: []
 };
 
 const mockEnemy = {
