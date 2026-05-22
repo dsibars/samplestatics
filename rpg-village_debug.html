@@ -1682,6 +1682,16 @@ class Hero {
     this.magicXp = data.magicXp || 0;
     this.glyphRepertoire = data.glyphRepertoire || ["core_fire", "power_plus"];
     this.spellCodex = data.spellCodex || [];
+    this.lifetimeStats = data.lifetimeStats || {
+      enemiesDefeated: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+      expeditionsCompleted: 0,
+      battlesWon: 0,
+      battlesLost: 0,
+      highestDamageDealt: 0
+    };
+    this.titles = data.titles || [];
     this.statusEffects = data.statusEffects || [];
     this.phoenixUsed = data.phoenixUsed || false;
     this.mealBuffs = data.mealBuffs || [];
@@ -2014,6 +2024,8 @@ class Hero {
       magicXp: this.magicXp,
       glyphRepertoire: JSON.parse(JSON.stringify(this.glyphRepertoire)),
       spellCodex: JSON.parse(JSON.stringify(this.spellCodex)),
+      lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
+      titles: JSON.parse(JSON.stringify(this.titles)),
       statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
       phoenixUsed: this.phoenixUsed,
       equipment: JSON.parse(JSON.stringify(this.equipment)),
@@ -2593,6 +2605,18 @@ class BattleService {
           target.hp = Math.max(0, target.hp - damage);
           event.amount = damage;
           if (target.hp <= 0) event.targetDefeated = true;
+          if (isActorHero && actor.lifetimeStats) {
+            actor.lifetimeStats.damageDealt += damage;
+            if (damage > actor.lifetimeStats.highestDamageDealt) {
+              actor.lifetimeStats.highestDamageDealt = damage;
+            }
+          }
+          if (this.heroes.includes(target) && target.lifetimeStats) {
+            target.lifetimeStats.damageTaken += damage;
+          }
+          if (isActorHero && actor.lifetimeStats && target.hp <= 0 && !this.heroes.includes(target)) {
+            actor.lifetimeStats.enemiesDefeated++;
+          }
           if (skillId === "poison_dart" && Math.random() < 0.5) {
             this._applyStatusEffect(target, { type: "poison", duration: 3, power: 0.05 });
             event.statusApplied = "poison";
@@ -3539,6 +3563,12 @@ class ExpeditionService {
     heroes.forEach((h) => {
       let leveledUp = false;
       let expEarned = 0;
+      if (!h.lifetimeStats) h.lifetimeStats = { enemiesDefeated: 0, damageDealt: 0, damageTaken: 0, expeditionsCompleted: 0, battlesWon: 0, battlesLost: 0, highestDamageDealt: 0 };
+      if (isVictory) {
+        h.lifetimeStats.battlesWon++;
+      } else {
+        h.lifetimeStats.battlesLost++;
+      }
       if (isVictory) {
         if (h.hp > 0) {
           expEarned = ctx.expPerHero;
@@ -3679,6 +3709,11 @@ class ExpeditionService {
   }
   _finishExpedition(exp, activeExp) {
     this.state.completedIds.push(exp.id);
+    const heroes = this.heroService.list().filter((h) => activeExp.heroIds.includes(h.id));
+    heroes.forEach((h) => {
+      if (!h.lifetimeStats) h.lifetimeStats = { enemiesDefeated: 0, damageDealt: 0, damageTaken: 0, expeditionsCompleted: 0, battlesWon: 0, battlesLost: 0, highestDamageDealt: 0 };
+      h.lifetimeStats.expeditionsCompleted++;
+    });
     const idx = this.state.activeExpeditions.findIndex((e) => e.id === activeExp.id);
     if (idx >= 0) {
       this.state.activeExpeditions.splice(idx, 1);
@@ -4273,6 +4308,40 @@ class AcademyService {
     return Result.ok({ added, designId });
   }
 }
+class TitleService {
+  /**
+   * Evaluate a hero and return any newly earned titles.
+   * @param {Hero} hero
+   * @returns {string[]} Array of newly earned title IDs
+   */
+  static evaluate(hero) {
+    const stats = hero.lifetimeStats || {};
+    const currentTitles = hero.titles || [];
+    const newTitles = [];
+    for (const title of this.TITLES) {
+      if (!currentTitles.includes(title.id) && title.check(stats)) {
+        newTitles.push(title.id);
+      }
+    }
+    if (newTitles.length > 0) {
+      hero.titles = [...currentTitles, ...newTitles];
+    }
+    return newTitles;
+  }
+  static getAllTitles() {
+    return this.TITLES.map((t) => t.id);
+  }
+}
+__publicField(TitleService, "TITLES", [
+  { id: "title_first_blood", key: "title_first_blood", check: (s) => s.enemiesDefeated >= 1 },
+  { id: "title_veteran", key: "title_veteran", check: (s) => s.enemiesDefeated >= 50 },
+  { id: "title_slayer", key: "title_slayer", check: (s) => s.enemiesDefeated >= 200 },
+  { id: "title_legend", key: "title_legend", check: (s) => s.enemiesDefeated >= 500 },
+  { id: "title_explorer", key: "title_explorer", check: (s) => s.expeditionsCompleted >= 5 },
+  { id: "title_survivor", key: "title_survivor", check: (s) => s.battlesWon >= 10 },
+  { id: "title_titan", key: "title_titan", check: (s) => s.damageDealt >= 1e3 },
+  { id: "title_unstoppable", key: "title_unstoppable", check: (s) => s.highestDamageDealt >= 100 }
+]);
 const en = {
   // UI General
   btn_back: "BACK",
@@ -4441,6 +4510,19 @@ const en = {
   error_hero_already_has_all_glyphs: "Hero already knows all glyphs in this design",
   ui_design_library: "Design Library",
   ui_teach_glyphs: "Teach Glyphs",
+  hall_of_fame_title: "Hall of Fame",
+  title_first_blood: "First Blood",
+  title_veteran: "Veteran",
+  title_slayer: "Slayer",
+  title_legend: "Legend",
+  title_explorer: "Explorer",
+  title_survivor: "Survivor",
+  title_titan: "Titan",
+  title_unstoppable: "Unstoppable",
+  ui_stats_enemies_defeated: "Enemies Defeated",
+  ui_stats_damage_dealt: "Damage Dealt",
+  ui_stats_expeditions: "Expeditions",
+  ui_stats_battles_won: "Battles Won",
   witch_novice_1: "The threads of fate are... tangled around you.",
   witch_novice_2: "Come back when you've seen the unseen.",
   witch_awakened_1: "Ah, {name}... the spark is in you.",
@@ -4978,6 +5060,19 @@ const es = {
   error_hero_already_has_all_glyphs: "El héroe ya conoce todos los glifos de este diseño",
   ui_design_library: "Biblioteca de Diseños",
   ui_teach_glyphs: "Enseñar Glifos",
+  hall_of_fame_title: "Salón de la Fama",
+  title_first_blood: "Primera Sangre",
+  title_veteran: "Veterano",
+  title_slayer: "Exterminador",
+  title_legend: "Leyenda",
+  title_explorer: "Explorador",
+  title_survivor: "Superviviente",
+  title_titan: "Titán",
+  title_unstoppable: "Imparable",
+  ui_stats_enemies_defeated: "Enemigos Derrotados",
+  ui_stats_damage_dealt: "Daño Infligido",
+  ui_stats_expeditions: "Expediciones",
+  ui_stats_battles_won: "Batallas Ganadas",
   witch_novice_1: "Los hilos del destino están... enredados a tu alrededor.",
   witch_novice_2: "Vuelve cuando hayas visto lo invisible.",
   witch_awakened_1: "Ah, {name}... la chispa está en ti.",
@@ -5854,6 +5949,19 @@ const ca = {
   error_hero_already_has_all_glyphs: "L'heroi ja coneix tots els glifs d'aquest disseny",
   ui_design_library: "Biblioteca de Dissenys",
   ui_teach_glyphs: "Ensenyar Glifs",
+  hall_of_fame_title: "Saló de la Fama",
+  title_first_blood: "Primera Sang",
+  title_veteran: "Veterà",
+  title_slayer: "Exterminador",
+  title_legend: "Llegenda",
+  title_explorer: "Explorador",
+  title_survivor: "Supervivent",
+  title_titan: "Tità",
+  title_unstoppable: "Imparable",
+  ui_stats_enemies_defeated: "Enemics Derrotats",
+  ui_stats_damage_dealt: "Dany Infligit",
+  ui_stats_expeditions: "Expedicions",
+  ui_stats_battles_won: "Batalles Guanyades",
   witch_novice_1: "Els fils del destí estan... embolicats al teu voltant.",
   witch_novice_2: "Torna quan hagis vist allò invisible.",
   witch_awakened_1: "Ah, {name}... la espurna és en tu.",
@@ -6390,6 +6498,19 @@ const eu = {
   error_hero_already_has_all_glyphs: "Heroiak diseinu honetako glifo guztiak jada ezagutzen ditu",
   ui_design_library: "Diseinu Liburutegia",
   ui_teach_glyphs: "Glifoak Irakatsi",
+  hall_of_fame_title: "Ospearen Aretoa",
+  title_first_blood: "Lehenengo Odola",
+  title_veteran: "Veteranoa",
+  title_slayer: "Hiltzailea",
+  title_legend: "Kondaira",
+  title_explorer: "Esploratzailea",
+  title_survivor: "Biziraunlea",
+  title_titan: "Titana",
+  title_unstoppable: "Geldiezina",
+  ui_stats_enemies_defeated: "Garaitutako Etsaiak",
+  ui_stats_damage_dealt: "Eginiko Kaltea",
+  ui_stats_expeditions: "Espedizioak",
+  ui_stats_battles_won: "Irabazitako Guduak",
   witch_novice_1: "Kondairaren harizpiak... zure inguruan nahastuta daude.",
   witch_novice_2: "Ikusi ezinezkoa ikusi duzunean itzuli zaitez.",
   witch_awakened_1: "Ah, {name}... txinparta zugan dago.",
@@ -6924,6 +7045,19 @@ const gl = {
   error_hero_already_has_all_glyphs: "O heroe xa coñece todos os glifos deste deseño",
   ui_design_library: "Biblioteca de Deseños",
   ui_teach_glyphs: "Ensinar Glifos",
+  hall_of_fame_title: "Salón da Fama",
+  title_first_blood: "Primeira Sangue",
+  title_veteran: "Veterano",
+  title_slayer: "Matador",
+  title_legend: "Lenda",
+  title_explorer: "Explorador",
+  title_survivor: "Supervivente",
+  title_titan: "Titán",
+  title_unstoppable: "Imparable",
+  ui_stats_enemies_defeated: "Inimigos Derrotados",
+  ui_stats_damage_dealt: "Danho Infligido",
+  ui_stats_expeditions: "Expedicións",
+  ui_stats_battles_won: "Batallas Gañadas",
   witch_novice_1: "Os fíos do destino están... enredados ao teu redor.",
   witch_novice_2: "Volve cando vexas o invisible.",
   witch_awakened_1: "Ah, {name}... a chispa está en ti.",
@@ -7435,6 +7569,15 @@ const _GameEngine = class _GameEngine {
   }
   copyDesignToHero(designId, heroId) {
     return this.academyService.copyDesignToHero(designId, heroId);
+  }
+  // --- Hall of Fame Facade ---
+  evaluateHeroTitles(heroId) {
+    const hero = this.heroService.get(heroId);
+    if (!hero) return [];
+    return TitleService.evaluate(hero);
+  }
+  getAllTitles() {
+    return TitleService.getAllTitles();
   }
 };
 // --- Shop & Forge Facade ---
@@ -8794,6 +8937,11 @@ class HeroesView extends BaseView {
           this._openAcademyModal();
           return;
         }
+        const hallBtn = e.target.closest(".btn-hall");
+        if (hallBtn) {
+          this._openHallOfFameModal();
+          return;
+        }
       });
     }
   }
@@ -9015,6 +9163,9 @@ class HeroesView extends BaseView {
                         </button>
                         <button class="btn btn-secondary btn-sm btn-academy" data-action="open-academy" style="margin-top: 8px; margin-left: 6px;">
                             📚 ${this.t("academy_title") || "Glyph Academy"}
+                        </button>
+                        <button class="btn btn-secondary btn-sm btn-hall" data-action="open-hall" style="margin-top: 8px; margin-left: 6px;">
+                            🏆 ${this.t("hall_of_fame_title") || "Hall of Fame"}
                         </button>
                     </div>
                 </div>
@@ -9322,6 +9473,50 @@ class HeroesView extends BaseView {
       setTimeout(() => overlay.remove(), 300);
     };
     overlay.querySelector("#btn-academy-close").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+  }
+  _openHallOfFameModal() {
+    var _a, _b;
+    const hero = (_b = (_a = this.lastRawState) == null ? void 0 : _a.heroes) == null ? void 0 : _b.find((h) => h.id === this.selectedHeroId);
+    if (!hero) return;
+    const stats = hero.lifetimeStats || {};
+    const titles = hero.titles || [];
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay trainer-modal-overlay";
+    overlay.innerHTML = `
+            <div class="trainer-dialogue-box hall-dialogue-box" style="max-width: 480px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">🏆</span>
+                    <h3>${this.t("hall_of_fame_title") || "Hall of Fame"}</h3>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <div class="hall-stat-grid">
+                        <div class="hall-stat"><span>${this.t("ui_stats_enemies_defeated") || "Enemies"}</span><strong>${stats.enemiesDefeated || 0}</strong></div>
+                        <div class="hall-stat"><span>${this.t("ui_stats_damage_dealt") || "Damage"}</span><strong>${stats.damageDealt || 0}</strong></div>
+                        <div class="hall-stat"><span>${this.t("ui_stats_expeditions") || "Expeditions"}</span><strong>${stats.expeditionsCompleted || 0}</strong></div>
+                        <div class="hall-stat"><span>${this.t("ui_stats_battles_won") || "Wins"}</span><strong>${stats.battlesWon || 0}</strong></div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Titles</h4>
+                    <div class="hall-titles">
+                        ${titles.length === 0 ? '<span style="color: var(--text-muted); font-size: 0.85rem;">No titles yet.</span>' : titles.map((t) => `<span class="hall-title-badge">${this.t(t) || t}</span>`).join("")}
+                    </div>
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-hall-close">${this.t("ui_btn_close") || "Close"}</button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.style.opacity = "0";
+      overlay.style.transition = "opacity 0.3s ease";
+      setTimeout(() => overlay.remove(), 300);
+    };
+    overlay.querySelector("#btn-hall-close").addEventListener("click", close);
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) close();
     });
@@ -12572,6 +12767,60 @@ body {
     border-radius: var(--radius-md);
     font-size: 0.9rem;
     margin-bottom: 8px;
+}
+
+
+/* Hall of Fame Styles */
+
+.hall-dialogue-box {
+    border-color: rgba(255, 193, 7, 0.3);
+    background: linear-gradient(180deg, rgba(25, 22, 15, 0.98), rgba(30, 25, 18, 0.98));
+}
+
+.hall-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.hall-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+}
+
+.hall-stat span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hall-stat strong {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    margin-top: 4px;
+}
+
+.hall-titles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.hall-title-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 160, 0, 0.15));
+    border: 1px solid rgba(255, 193, 7, 0.4);
+    border-radius: var(--radius-lg);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffc107;
 }</style>
 </head>
 <body>

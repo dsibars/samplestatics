@@ -30,6 +30,16 @@ export class Hero {
         this.magicXp = data.magicXp || 0;
         this.glyphRepertoire = data.glyphRepertoire || ['core_fire', 'power_plus'];
         this.spellCodex = data.spellCodex || [];
+        this.lifetimeStats = data.lifetimeStats || {
+            enemiesDefeated: 0,
+            damageDealt: 0,
+            damageTaken: 0,
+            expeditionsCompleted: 0,
+            battlesWon: 0,
+            battlesLost: 0,
+            highestDamageDealt: 0
+        };
+        this.titles = data.titles || [];
         this.statusEffects = data.statusEffects || [];
         this.phoenixUsed = data.phoenixUsed || false;
         this.mealBuffs = data.mealBuffs || [];
@@ -413,6 +423,8 @@ export class Hero {
             magicXp: this.magicXp,
             glyphRepertoire: JSON.parse(JSON.stringify(this.glyphRepertoire)),
             spellCodex: JSON.parse(JSON.stringify(this.spellCodex)),
+            lifetimeStats: JSON.parse(JSON.stringify(this.lifetimeStats)),
+            titles: JSON.parse(JSON.stringify(this.titles)),
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
             phoenixUsed: this.phoenixUsed,
             equipment: JSON.parse(JSON.stringify(this.equipment)),

@@ -272,6 +272,20 @@ export class BattleService {
                     event.amount = damage;
                     if (target.hp <= 0) event.targetDefeated = true;
 
+                    // Track lifetime stats for heroes
+                    if (isActorHero && actor.lifetimeStats) {
+                        actor.lifetimeStats.damageDealt += damage;
+                        if (damage > actor.lifetimeStats.highestDamageDealt) {
+                            actor.lifetimeStats.highestDamageDealt = damage;
+                        }
+                    }
+                    if (this.heroes.includes(target) && target.lifetimeStats) {
+                        target.lifetimeStats.damageTaken += damage;
+                    }
+                    if (isActorHero && actor.lifetimeStats && target.hp <= 0 && !this.heroes.includes(target)) {
+                        actor.lifetimeStats.enemiesDefeated++;
+                    }
+
                     // Side effects (Poison from Poison Dart, etc.)
                     if (skillId === 'poison_dart' && Math.random() < 0.5) {
                         this._applyStatusEffect(target, { type: 'poison', duration: 3, power: 0.05 });

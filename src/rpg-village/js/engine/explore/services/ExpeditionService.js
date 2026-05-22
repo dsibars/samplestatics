@@ -470,6 +470,14 @@ export class ExpeditionService {
             let leveledUp = false;
             let expEarned = 0;
 
+            // Track lifetime stats
+            if (!h.lifetimeStats) h.lifetimeStats = { enemiesDefeated: 0, damageDealt: 0, damageTaken: 0, expeditionsCompleted: 0, battlesWon: 0, battlesLost: 0, highestDamageDealt: 0 };
+            if (isVictory) {
+                h.lifetimeStats.battlesWon++;
+            } else {
+                h.lifetimeStats.battlesLost++;
+            }
+
             if (isVictory) {
                 if (h.hp > 0) {
                     expEarned = ctx.expPerHero;
@@ -632,6 +640,13 @@ export class ExpeditionService {
 
     _finishExpedition(exp, activeExp) {
         this.state.completedIds.push(exp.id);
+
+        // Track expedition completion for heroes
+        const heroes = this.heroService.list().filter(h => activeExp.heroIds.includes(h.id));
+        heroes.forEach(h => {
+            if (!h.lifetimeStats) h.lifetimeStats = { enemiesDefeated: 0, damageDealt: 0, damageTaken: 0, expeditionsCompleted: 0, battlesWon: 0, battlesLost: 0, highestDamageDealt: 0 };
+            h.lifetimeStats.expeditionsCompleted++;
+        });
         
         // Remove from active expeditions
         const idx = this.state.activeExpeditions.findIndex(e => e.id === activeExp.id);

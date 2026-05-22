@@ -10,6 +10,7 @@ import { ExpeditionService } from './explore/services/ExpeditionService.js';
 import { DailyObjectivesService } from './daily/services/DailyObjectivesService.js';
 import { CalendarService } from './calendar/services/CalendarService.js';
 import { AcademyService } from './academy/AcademyService.js';
+import { TitleService } from './hall_of_fame/TitleService.js';
 import { persistence } from './shared/core/Persistence.js';
 const DEBUG = false;
 
@@ -614,5 +615,16 @@ export class GameEngine {
 
     copyDesignToHero(designId, heroId) {
         return this.academyService.copyDesignToHero(designId, heroId);
+    }
+
+    // --- Hall of Fame Facade ---
+    evaluateHeroTitles(heroId) {
+        const hero = this.heroService.get(heroId);
+        if (!hero) return [];
+        return TitleService.evaluate(hero);
+    }
+
+    getAllTitles() {
+        return TitleService.getAllTitles();
     }
 }

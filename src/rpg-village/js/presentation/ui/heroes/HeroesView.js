@@ -86,6 +86,12 @@ export class HeroesView extends BaseView {
                     this._openAcademyModal();
                     return;
                 }
+
+                const hallBtn = e.target.closest('.btn-hall');
+                if (hallBtn) {
+                    this._openHallOfFameModal();
+                    return;
+                }
             });
         }
     }
@@ -341,6 +347,9 @@ export class HeroesView extends BaseView {
                         </button>
                         <button class="btn btn-secondary btn-sm btn-academy" data-action="open-academy" style="margin-top: 8px; margin-left: 6px;">
                             📚 ${this.t('academy_title') || 'Glyph Academy'}
+                        </button>
+                        <button class="btn btn-secondary btn-sm btn-hall" data-action="open-hall" style="margin-top: 8px; margin-left: 6px;">
+                            🏆 ${this.t('hall_of_fame_title') || 'Hall of Fame'}
                         </button>
                     </div>
                 </div>
@@ -686,6 +695,56 @@ export class HeroesView extends BaseView {
         };
 
         overlay.querySelector('#btn-academy-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+        });
+    }
+
+    _openHallOfFameModal() {
+        const hero = this.lastRawState?.heroes?.find(h => h.id === this.selectedHeroId);
+        if (!hero) return;
+
+        const stats = hero.lifetimeStats || {};
+        const titles = hero.titles || [];
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay trainer-modal-overlay';
+        overlay.innerHTML = `
+            <div class="trainer-dialogue-box hall-dialogue-box" style="max-width: 480px;">
+                <div class="trainer-header">
+                    <span class="trainer-icon">🏆</span>
+                    <h3>${this.t('hall_of_fame_title') || 'Hall of Fame'}</h3>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <div class="hall-stat-grid">
+                        <div class="hall-stat"><span>${this.t('ui_stats_enemies_defeated') || 'Enemies'}</span><strong>${stats.enemiesDefeated || 0}</strong></div>
+                        <div class="hall-stat"><span>${this.t('ui_stats_damage_dealt') || 'Damage'}</span><strong>${stats.damageDealt || 0}</strong></div>
+                        <div class="hall-stat"><span>${this.t('ui_stats_expeditions') || 'Expeditions'}</span><strong>${stats.expeditionsCompleted || 0}</strong></div>
+                        <div class="hall-stat"><span>${this.t('ui_stats_battles_won') || 'Wins'}</span><strong>${stats.battlesWon || 0}</strong></div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Titles</h4>
+                    <div class="hall-titles">
+                        ${titles.length === 0 ? '<span style="color: var(--text-muted); font-size: 0.85rem;">No titles yet.</span>' :
+                            titles.map(t => `<span class="hall-title-badge">${this.t(t) || t}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="trainer-footer">
+                    <button class="btn btn-secondary btn-sm" id="btn-hall-close">${this.t('ui_btn_close') || 'Close'}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#btn-hall-close').addEventListener('click', close);
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) close();
         });

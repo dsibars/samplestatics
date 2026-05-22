@@ -1511,3 +1511,57 @@ body {
     font-size: 0.9rem;
     margin-bottom: 8px;
 }
+
+
+/* Hall of Fame Styles */
+
+.hall-dialogue-box {
+    border-color: rgba(255, 193, 7, 0.3);
+    background: linear-gradient(180deg, rgba(25, 22, 15, 0.98), rgba(30, 25, 18, 0.98));
+}
+
+.hall-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.hall-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+}
+
+.hall-stat span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hall-stat strong {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    margin-top: 4px;
+}
+
+.hall-titles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.hall-title-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 160, 0, 0.15));
+    border: 1px solid rgba(255, 193, 7, 0.4);
+    border-radius: var(--radius-lg);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffc107;
+}
