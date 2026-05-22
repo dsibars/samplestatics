@@ -142,6 +142,8 @@ export const eu = {
     ui_unequip: "Kendu",
     ui_no_slots: "Beteta",
     ui_busy: "Lanpetuta",
+    ui_mastery: "Masterra",
+    technique_evolved: "Teknika eboluzionatu da!",
 
     // Domain: Village
     ui_village_status: "Herriaren Egoera",

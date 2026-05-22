@@ -142,6 +142,8 @@ export const ca = {
     ui_unequip: "Desequipar",
     ui_no_slots: "Ple",
     ui_busy: "Ocupat",
+    ui_mastery: "Domini",
+    technique_evolved: "Tècnica evolucionada!",
 
     // Domain: Village
     ui_village_status: "Estat de l'Aldea",

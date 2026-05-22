@@ -189,6 +189,13 @@ export class BattleService {
             if (actor.mp < skillData.mpCost) return Result.fail('error_not_enough_mp');
             actor.mp -= skillData.mpCost;
         }
+
+        // Record technique use for infinite tier progression
+        let evolutionResult = null;
+        if (skillData.family && actor.recordTechniqueUse) {
+            evolutionResult = actor.recordTechniqueUse(skillData.family);
+        }
+
         const skillLevel = (actor.skills && actor.skills[skillId]) || 0;
 
         const isActorHero = this.heroes.includes(actor);

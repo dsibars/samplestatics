@@ -25,6 +25,8 @@ export class Hero {
         this.status = data.status || 'resting'; // 'active', 'resting', 'training'
 
         this.skills = data.skills || { basic_attack: 0 };
+        this.techniqueUses = data.techniqueUses || {};
+        this.techniqueTiers = data.techniqueTiers || {};
         this.statusEffects = data.statusEffects || [];
         this.phoenixUsed = data.phoenixUsed || false;
         this.mealBuffs = data.mealBuffs || [];
@@ -343,6 +345,32 @@ export class Hero {
         return Result.ok(true);
     }
 
+    /**
+     * Records a technique use and checks for infinite tier evolution.
+     * @returns {Object|null} evolution info if tier increased, null otherwise
+     */
+    recordTechniqueUse(family) {
+        if (!family) return null;
+
+        this.techniqueUses[family] = (this.techniqueUses[family] || 0) + 1;
+
+        const currentTier = this.techniqueTiers[family] || 1;
+        const uses = this.techniqueUses[family];
+        const threshold = this._getTierThreshold(currentTier + 1);
+
+        if (uses >= threshold) {
+            this.techniqueTiers[family] = currentTier + 1;
+            return { family, fromTier: currentTier, toTier: currentTier + 1, uses };
+        }
+        return null;
+    }
+
+    _getTierThreshold(tier) {
+        if (tier <= 1) return 0;
+        // Exponential growth: 100, 300, 900, 2700, 8100, 24300, 72900...
+        return Math.floor(100 * Math.pow(3, tier - 2));
+    }
+
     toJSON() {
         return {
             id: this.id,
@@ -371,6 +399,8 @@ export class Hero {
             stamina: this.stamina,
             status: this.status,
             skills: JSON.parse(JSON.stringify(this.skills)),
+            techniqueUses: JSON.parse(JSON.stringify(this.techniqueUses)),
+            techniqueTiers: JSON.parse(JSON.stringify(this.techniqueTiers)),
             statusEffects: JSON.parse(JSON.stringify(this.statusEffects)),
             phoenixUsed: this.phoenixUsed,
             equipment: JSON.parse(JSON.stringify(this.equipment)),

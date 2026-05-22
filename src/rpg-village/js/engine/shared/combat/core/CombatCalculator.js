@@ -82,7 +82,9 @@ export class CombatCalculator {
             return { amount: 0, evasionChance, isMiss: true, elementMult: 1, isCrit: false };
         }
 
-        const multiplier = 1.0 + (0.005 * (skillData.tier || 1) * skillLevel);
+        // Use hero's technique tier if available (infinite tier system), else fall back to skillData.tier
+        const effectiveTier = (skillData.family && attacker.techniqueTiers && attacker.techniqueTiers[skillData.family]) || skillData.tier || 1;
+        const multiplier = 1.0 + (0.005 * effectiveTier * skillLevel);
         let baseStatValue = this.getFinalStat(attacker, skillData.stat);
         
         // Apply Party Traits
@@ -102,7 +104,7 @@ export class CombatCalculator {
             let effect = null;
 
             if (familyData) {
-                const tier = skillData.tier || 1;
+                const tier = effectiveTier;
                 if (familyData.id === 'multiple_attack') {
                     // Multi-hit: hits = tier, per-hit decays slightly
                     hits = Math.max(1, tier);

@@ -142,6 +142,8 @@ export const es = {
     ui_unequip: "Desequipar",
     ui_no_slots: "Lleno",
     ui_busy: "Ocupado",
+    ui_mastery: "Maestría",
+    technique_evolved: "¡Técnica evolucionada!",
     nav_settings: "Ajustes",
     ui_back: "Volver",
 

@@ -150,6 +150,8 @@ export const en = {
     ui_unequip: "Unequip",
     ui_no_slots: "Full",
     ui_busy: "Busy",
+    ui_mastery: "Mastery",
+    technique_evolved: "Technique evolved!",
     nav_settings: "Settings",
     ui_back: "Back",
 

@@ -247,12 +247,15 @@ export class HeroesView extends BaseView {
             const categoryClass = `skill-cat-${skill.category}`;
             const tierClass = `skill-tier-${skill.tier}`;
             const learnedClass = learned ? 'skill-learned' : 'skill-locked';
+            const techTier = (skill.family && hero.techniqueTiers && hero.techniqueTiers[skill.family]) || skill.tier;
+            const techUses = (skill.family && hero.techniqueUses && hero.techniqueUses[skill.family]) || 0;
+            const masteryLabel = skill.family && learned ? ` · ${this.t('ui_mastery') || 'Mastery'} ${techTier} (${techUses})` : '';
 
             return `
                 <div class="skill-item ${categoryClass} ${tierClass} ${learnedClass}">
                     <div class="skill-info">
                         <span class="skill-name">${this.t(skillId)}</span>
-                        <span class="skill-meta">${skill.category === 'physical' ? (skill.staminaCost + ' STA') : (skill.mpCost + ' MP')} · ${this.t('cat_' + skill.category) || skill.category}</span>
+                        <span class="skill-meta">${skill.category === 'physical' ? (skill.staminaCost + ' STA') : (skill.mpCost + ' MP')} · ${this.t('cat_' + skill.category) || skill.category}${masteryLabel}</span>
                     </div>
                     <div class="skill-actions">
                         ${learned ? `<span class="skill-level">Lv.${level}</span>` : ''}

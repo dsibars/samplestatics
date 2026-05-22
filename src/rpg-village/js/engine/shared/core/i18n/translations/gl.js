@@ -142,6 +142,8 @@ export const gl = {
     ui_unequip: "Desequipar",
     ui_no_slots: "Cheo",
     ui_busy: "Ocupado",
+    ui_mastery: "Maestría",
+    technique_evolved: "¡Técnica evolucionada!",
 
     // Domain: Village
     ui_village_status: "Estado da Aldea",
