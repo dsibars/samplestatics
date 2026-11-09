@@ -13,6 +13,8 @@ export const TRANSLATIONS = {
     app_rpg_desc: "Recluta héroes y embárcate en una aventura sin fin.",
     app_magic_title: "Aventura Mágica",
     app_magic_desc: "Dibuja poderosos hechizos y pon a prueba tus habilidades mágicas.",
+    app_exercise_title: "Exercise World",
+    app_exercise_desc: "Tu compañero personal de entrenamiento diario.",
     static_badge: "App Estática",
     lang: "Idioma"
   },
@@ -30,6 +32,8 @@ export const TRANSLATIONS = {
     app_rpg_desc: "Recruit heroes and embark on an endless adventure.",
     app_magic_title: "Magic Adventure",
     app_magic_desc: "Draw powerful spells and test your magic skills.",
+    app_exercise_title: "Exercise World",
+    app_exercise_desc: "Your personal daily training companion.",
     static_badge: "Static App",
     lang: "Language"
   },
@@ -45,6 +49,8 @@ export const TRANSLATIONS = {
     app_td_desc: "Joc èpic d'estrategia i onades per posar a prova les teves defenses.",
     app_magic_title: "Aventura Màgica",
     app_magic_desc: "Dibuixa encanteris poderosos i posa a prova les teves habilitats màgiques.",
+    app_exercise_title: "Exercise World",
+    app_exercise_desc: "El teu company personal d'entrenament diari.",
     static_badge: "App Estàtica",
     lang: "Idioma"
   },
@@ -60,6 +66,8 @@ export const TRANSLATIONS = {
     app_td_desc: "Estrategia eta olatu joko epikoa zure defentsak probatzeko.",
     app_magic_title: "Aventurazko Magia",
     app_magic_desc: "Marraztu sorginkeria indartsuak eta probatu zure magia trebetasunak.",
+    app_exercise_title: "Exercise World",
+    app_exercise_desc: "Zure entrenamendu eguneroko lagun pertsonala.",
     static_badge: "App Estatikoa",
     lang: "Hizkuntza"
   },
@@ -75,6 +83,8 @@ export const TRANSLATIONS = {
     app_td_desc: "Xogo épico de estratexia e oleadas para poñer a proba as túas defensas.",
     app_magic_title: "Aventura Máxica",
     app_magic_desc: "Debuxa poderosos hechizos e pon a proba as túas habilidades máxicas.",
+    app_exercise_title: "Exercise World",
+    app_exercise_desc: "O teu compañeiro persoal de adestramento diario.",
     static_badge: "App Estática",
     lang: "Idioma"
   }
